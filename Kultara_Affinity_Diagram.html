@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kultara — Affinity Diagram</title>
+<style>
+  :root{
+    --bg:#f4f1ea;
+    --ink:#1f2430;
+    --muted:#6b7280;
+    --find:#dbeafe;      --find-b:#3b82f6;   --find-t:#1e3a8a;
+    --insight:#dcfce7;   --insight-b:#22c55e;--insight-t:#14532d;
+    --pain:#fee2e2;      --pain-b:#ef4444;   --pain-t:#7f1d1d;
+    --col:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:var(--bg);color:var(--ink);padding:32px 28px 60px;
+  }
+  header h1{margin:0 0 4px;font-size:26px;letter-spacing:-.2px}
+  header .sub{color:var(--muted);font-size:14px;margin-bottom:2px}
+  header .meta{color:var(--muted);font-size:12.5px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:20px 0 26px}
+  .legend{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{
+    display:inline-flex;align-items:center;gap:7px;border:1px solid #d7d2c6;background:#fff;
+    padding:7px 12px;border-radius:999px;font-size:13px;cursor:pointer;user-select:none;
+    transition:.15s;font-weight:600;
+  }
+  .chip .dot{width:11px;height:11px;border-radius:50%}
+  .chip.find .dot{background:var(--find-b)}
+  .chip.insight .dot{background:var(--insight-b)}
+  .chip.pain .dot{background:var(--pain-b)}
+  .chip.off{opacity:.35}
+  .count{margin-left:auto;color:var(--muted);font-size:12.5px}
+  .board{
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;align-items:start;
+  }
+  .col{background:var(--col);border:1px solid #e5e1d6;border-radius:14px;padding:14px 14px 16px;
+    box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .col h2{font-size:15px;margin:2px 0 12px;display:flex;gap:8px;align-items:baseline}
+  .col h2 .num{
+    background:var(--ink);color:#fff;font-size:12px;width:22px;height:22px;border-radius:6px;
+    display:inline-flex;align-items:center;justify-content:center;flex:0 0 auto;font-weight:700
+  }
+  .cards{display:flex;flex-direction:column;gap:10px}
+  .card{
+    border-radius:8px;padding:11px 12px;font-size:13.5px;line-height:1.4;position:relative;
+    border-left:5px solid;box-shadow:0 1px 1px rgba(0,0,0,.05)
+  }
+  .card .tag{
+    font-size:10px;font-weight:800;letter-spacing:.6px;text-transform:uppercase;display:block;margin-bottom:4px
+  }
+  .card.find{background:var(--find);border-color:var(--find-b)}
+  .card.find .tag{color:var(--find-t)}
+  .card.insight{background:var(--insight);border-color:var(--insight-b)}
+  .card.insight .tag{color:var(--insight-t)}
+  .card.pain{background:var(--pain);border-color:var(--pain-b)}
+  .card.pain .tag{color:var(--pain-t)}
+  .card.hide{display:none}
+  footer{margin-top:34px;color:var(--muted);font-size:12px;line-height:1.5;max-width:760px}
+  @media print{.toolbar .count{display:none}body{background:#fff}}
+</style>
+</head>
+<body>
+<header>
+  <h1>Kultara — Affinity Diagram</h1>
+  <div class="sub">Tourist behaviour from a tour guide's perspective &middot; Interview with Kak Dea (Storyteller, ~3 yrs)</div>
+  <div class="meta">30 Jul 2026 &middot; Researchers: Imelda, Raffi, Alief &middot; Mapped by Finding / Insight / Pain Point</div>
+</header>
+
+<div class="toolbar">
+  <div class="legend">
+    <span class="chip find"   data-type="find"><span class="dot"></span>Finding</span>
+    <span class="chip insight" data-type="insight"><span class="dot"></span>Insight</span>
+    <span class="chip pain"   data-type="pain"><span class="dot"></span>Pain Point</span>
+  </div>
+  <span class="count" id="count"></span>
+</div>
+
+<div class="board" id="board"></div>
+
+<footer>
+  <strong>How to read this:</strong> click a legend chip to show/hide that category. Each card is one grouped observation.
+  Findings are raw facts from the interview; insights interpret why they matter; pain points flag friction and unmet needs.
+  <br><br>
+  <em>Data note:</em> several sticky notes on the source board were misplaced or were joke/placeholder text — those were re-mapped to their questions or dropped during synthesis.
+</footer>
+
+<script>
+const data = [
+  {num:1, title:"Guide Role & Work Structure", cards:[
+    {t:"find", x:"Guides work freelance across 4–5 travel agents; roles vary (guiding, airport transfers, group collection)."},
+    {t:"find", x:"Licensing is per-province via HPI — ~2 yrs supervised before an own license; this year's quota was cut and postponed."},
+    {t:"find", x:"Kultara is a social business, not a formal agency — no license required; trains storytellers via Kultara Academy."},
+    {t:"insight", x:"Guiding attracts people who value flexibility over office work — motivation is freedom, not just income."},
+    {t:"insight", x:"Outside formal licensing, Kultara is free to design its own experience & training — room for product innovation."},
+  ]},
+  {num:2, title:"Tourist Segments & Demographics", cards:[
+    {t:"find", x:"Kultara open trips = mostly Indonesian; private trips = highly mixed nationalities (AU, SG, HK, couples, groups, students)."},
+    {t:"find", x:"~20–30% of Kultara guests are repeaters (usually a different route); the rest are first-timers."},
+    {t:"find", x:"Teens on school trips show low interest — the trip is booked by teachers, not the students."},
+    {t:"find", x:"Self-booking adults arrive already interested — they researched the route beforehand."},
+    {t:"find", x:"Older guests avoid walking; they prefer food tours, 1–3 spots, and relaxed listening."},
+    {t:"find", x:"Indonesians handle heat poorly → they choose early-morning or late-afternoon routes."},
+    {t:"insight", x:"Interest tracks WHO booked and WHY, more than age or nationality — self-selected guests are pre-engaged."},
+    {t:"insight", x:"The real challenge is low-interest segments (teens, tag-alongs), not 'foreign vs local'."},
+    {t:"pain", x:"School groups have low buy-in because the decision-maker (teacher) isn't the participant."},
+  ]},
+  {num:3, title:"Engagement — Hands-On = Memorable", cards:[
+    {t:"find", x:"Engagement peaks during hands-on activities: wood carving, plowing rice fields with cattle, dancing."},
+    {t:"find", x:"Post-tour highlights are the active/moving moments (dancing with kids, the turtles, the museum)."},
+    {t:"insight", x:"Memory is built by DOING, not listening — 'when something moves or they're in charge, that's most interesting.'"},
+    {t:"insight", x:"Passive explanation is the weakest part of the experience; participation is the strongest."},
+  ]},
+  {num:4, title:"Disengagement & Boredom", cards:[
+    {t:"find", x:"Boredom appears when a guest is only accompanying an interested friend."},
+    {t:"find", x:"Dea re-engages by asking questions / opening Q&A; if interest is lost, she lets them be."},
+    {t:"find", x:"Photo-taking & phone use are tolerated as long as guests stay with the group and aren't bored."},
+    {t:"insight", x:"The guide triages attention toward the engaged and doesn't fight disengagement."},
+    {t:"pain", x:"'Tag-along' companions get no tailored experience — the guide effectively gives up on them."},
+  ]},
+  {num:5, title:"Information-Seeking Behaviour", cards:[
+    {t:"find", x:"Tourists pre-search on Google but only superficially; they rely on the guide for detail."},
+    {t:"find", x:"Foreigners ask 'what is this? / what is that?' about new things while walking."},
+    {t:"find", x:"Indonesians ask to validate curiosity or something they heard from a friend."},
+    {t:"insight", x:"The guide is the primary, trusted information layer; digital search is shallow and pre-trip."},
+    {t:"insight", x:"Segments ask different questions — discovery (foreigners) vs validation (locals) — so content could be tailored."},
+  ]},
+  {num:6, title:"Operational Friction & Pain Points", cards:[
+    {t:"pain", x:"Heritage sites close suddenly for Balinese ceremonies → the guide must skip or divert."},
+    {t:"pain", x:"Guests can't swap a disliked destination (it's pre-decided) — the only option is to skip."},
+    {t:"pain", x:"The most common complaint is the route — tired, too far, too winding."},
+    {t:"pain", x:"Open trips get complaints when bookings are low and the group feels empty; guests want it lively."},
+    {t:"pain", x:"Detailed permit/licensing questions are beyond a guide's authority to answer."},
+    {t:"pain", x:"Free-time gaps (guide prepping tickets/bikes) leave guests idle."},
+    {t:"insight", x:"Idle / unguided moments are a recurring, unowned gap — the clearest product opportunity."},
+    {t:"insight", x:"'Empty = bad' for open trips shows social atmosphere is part of perceived value, not just content."},
+  ]},
+  {num:7, title:"Opportunities & Product Direction", cards:[
+    {t:"find", x:"Routes are tuned early via feedback (Sanur was shortened for more cycling), then fixed."},
+    {t:"find", x:"The interview explicitly probed for a 'helper tool' to fill idle time and boost engagement."},
+    {t:"insight", x:"Biggest leverage = self-guided content/tool for unguided free time (aligns with the prototype direction)."},
+    {t:"insight", x:"With routes now fixed, improvement must come from layering content/interaction, not re-routing."},
+  ]},
+];
+const LABEL={find:"Finding",insight:"Insight",pain:"Pain Point"};
+const board=document.getElementById('board');
+data.forEach(col=>{
+  const c=document.createElement('div');c.className='col';
+  c.innerHTML=`<h2><span class="num">${col.num}</span><span>${col.title}</span></h2>`;
+  const wrap=document.createElement('div');wrap.className='cards';
+  col.cards.forEach(cd=>{
+    const el=document.createElement('div');
+    el.className='card '+cd.t;el.dataset.type=cd.t;
+    el.innerHTML=`<span class="tag">${LABEL[cd.t]}</span>${cd.x}`;
+    wrap.appendChild(el);
+  });
+  c.appendChild(wrap);board.appendChild(c);
+});
+const active={find:true,insight:true,pain:true};
+function refresh(){
+  document.querySelectorAll('.card').forEach(el=>{
+    el.classList.toggle('hide',!active[el.dataset.type]);
+  });
+  const n=document.querySelectorAll('.card:not(.hide)').length;
+  document.getElementById('count').textContent=n+' notes shown';
+}
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click',()=>{
+    const t=chip.dataset.type;active[t]=!active[t];
+    chip.classList.toggle('off',!active[t]);refresh();
+  });
+});
+refresh();
+</script>
+</body>
+</html>
