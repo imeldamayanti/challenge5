@@ -1,0 +1,106 @@
+{
+  "id": "contoh-puri-gerbang-utara",
+  "nameOfficial": {
+    "id": "Puri Contoh Gerbang Utara",
+    "en": "Puri Contoh Gerbang Utara"
+  },
+  "nameVariants": [],
+  "type": "puri",
+  "isSacred": true,
+  "coordinate": {
+    "lat": -8.657,
+    "lon": 115.2085
+  },
+  "arrivalRadiusM": 75,
+  "address": {
+    "id": "Jl. Contoh Utara No.1, Denpasar",
+    "en": "Jl. Contoh Utara No.1, Denpasar"
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Tutup tanpa pemberitahuan saat upacara.",
+      "en": "Closes without notice during ceremonies."
+    },
+    "weekly": [
+      {
+        "weekday": 1,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 2,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 3,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 4,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 5,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 6,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 7,
+        "open": "08:00",
+        "close": "17:00"
+      }
+    ]
+  },
+  "dressCode": {
+    "id": "Kamen dan selendang wajib di halaman dalam.",
+    "en": "Sarong and sash required in the inner courtyard."
+  },
+  "photoPolicy": {
+    "level": "restricted",
+    "notes": {
+      "id": "Tidak memotret di area pemujaan.",
+      "en": "No photography in the worship area."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": true,
+    "stepCount": 6,
+    "surface": "paving",
+    "notes": {
+      "id": "Enam undakan rendah di gerbang, tanpa pegangan.",
+      "en": "Six shallow steps at the gate, no handrail."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Puri contoh ini dipakai sebagai data uji, bukan catatan sejarah.",
+        "en": "This example puri exists as test data, not as a historical record."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Data placeholder Milestone 5",
+      "url": null
+    }
+  ],
+  "consentRecordId": "contoh-puri-gerbang-utara"
+}

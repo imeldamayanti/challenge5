@@ -1,0 +1,16 @@
+{
+  "placeId": "contoh-monumen-lapangan-kota",
+  "grantingBody": "Pengelola Monumen Contoh Lapangan Kota (fiktif)",
+  "grantedByName": "Nama Contoh (fiktif)",
+  "grantedByRole": "Peran Contoh (fiktif)",
+  "grantedAt": "2026-07-01",
+  "expiresAt": "2030-07-01",
+  "scope": [
+    "inclusion",
+    "naming",
+    "photography"
+  ],
+  "documentRef": "consent/placeholder/contoh-monumen-lapangan-kota.pdf",
+  "status": "granted",
+  "regionOwner": "Nama Contoh (fiktif)"
+}

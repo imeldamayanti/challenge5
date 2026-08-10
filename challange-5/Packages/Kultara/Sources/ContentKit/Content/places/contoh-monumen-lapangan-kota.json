@@ -1,0 +1,106 @@
+{
+  "id": "contoh-monumen-lapangan-kota",
+  "nameOfficial": {
+    "id": "Monumen Contoh Lapangan Kota",
+    "en": "Monumen Contoh Lapangan Kota"
+  },
+  "nameVariants": [],
+  "type": "monumen",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.6561,
+    "lon": 115.2138
+  },
+  "arrivalRadiusM": 80,
+  "address": {
+    "id": "Lapangan Contoh, Denpasar",
+    "en": "Contoh Square, Denpasar"
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Ruang terbuka, akses sepanjang hari.",
+      "en": "Open space, accessible all day."
+    },
+    "weekly": [
+      {
+        "weekday": 1,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 2,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 3,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 4,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 5,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 6,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 7,
+        "open": "08:00",
+        "close": "18:00"
+      }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan khusus.",
+    "en": "No specific requirement."
+  },
+  "photoPolicy": {
+    "level": "allowed",
+    "notes": {
+      "id": "Bebas memotret.",
+      "en": "Photography is unrestricted."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": false,
+    "stepCount": null,
+    "surface": "beton",
+    "notes": {
+      "id": "Permukaan datar, tanpa undakan.",
+      "en": "Flat surface, no steps."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Monumen contoh dipakai untuk menguji tata letak daftar checkpoint.",
+        "en": "An example monument used to exercise the checkpoint list layout."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Data placeholder Milestone 5",
+      "url": null
+    }
+  ],
+  "consentRecordId": "contoh-monumen-lapangan-kota"
+}

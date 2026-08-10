@@ -21,7 +21,18 @@ let package = Package(
         // build-level impossibility, which is the point — see system-design.md §3.
         .target(
             name: "ContentKit",
-            resources: [.copy("Content")]
+            // `Content/consent` is a build input, not a runtime resource (`schema.md` §A.1).
+            // It is excluded rather than moved so consent records live beside the content they
+            // govern, while staying out of every user's copy of the app — shipping the names,
+            // roles and document references of named individuals would serve no purpose the
+            // build-time validator does not already serve.
+            exclude: ["Content/consent"],
+            resources: [
+                .copy("Content/manifest.json"),
+                .copy("Content/places"),
+                .copy("Content/quests"),
+                .copy("Content/assets"),
+            ]
         ),
         .target(
             name: "DesignSystem"

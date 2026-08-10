@@ -1,0 +1,18 @@
+{
+  "schemaVersion": 1,
+  "contentBundleVersion": "2026.08.1",
+  "languages": [
+    "id",
+    "en"
+  ],
+  "places": [
+    "contoh-puri-gerbang-utara",
+    "contoh-pura-tirta-sari",
+    "contoh-monumen-lapangan-kota",
+    "contoh-museum-arsip-kota",
+    "contoh-pasar-pagi-timur"
+  ],
+  "quests": [
+    "contoh-jejak-kota-lama"
+  ]
+}

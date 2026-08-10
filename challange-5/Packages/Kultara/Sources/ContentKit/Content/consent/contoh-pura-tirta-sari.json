@@ -1,0 +1,15 @@
+{
+  "placeId": "contoh-pura-tirta-sari",
+  "grantingBody": "Pengelola Pura Contoh Tirta Sari (fiktif)",
+  "grantedByName": "Nama Contoh (fiktif)",
+  "grantedByRole": "Peran Contoh (fiktif)",
+  "grantedAt": "2026-07-01",
+  "expiresAt": "2030-07-01",
+  "scope": [
+    "inclusion",
+    "naming"
+  ],
+  "documentRef": "consent/placeholder/contoh-pura-tirta-sari.pdf",
+  "status": "granted",
+  "regionOwner": "Nama Contoh (fiktif)"
+}

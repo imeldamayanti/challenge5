@@ -1,0 +1,16 @@
+{
+  "placeId": "contoh-pasar-pagi-timur",
+  "grantingBody": "Pengelola Pasar Contoh Pagi Timur (fiktif)",
+  "grantedByName": "Nama Contoh (fiktif)",
+  "grantedByRole": "Peran Contoh (fiktif)",
+  "grantedAt": "2026-07-01",
+  "expiresAt": "2030-07-01",
+  "scope": [
+    "inclusion",
+    "naming",
+    "photography"
+  ],
+  "documentRef": "consent/placeholder/contoh-pasar-pagi-timur.pdf",
+  "status": "granted",
+  "regionOwner": "Nama Contoh (fiktif)"
+}

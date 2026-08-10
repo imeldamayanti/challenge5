@@ -1,0 +1,106 @@
+{
+  "id": "contoh-museum-arsip-kota",
+  "nameOfficial": {
+    "id": "Museum Contoh Arsip Kota",
+    "en": "Museum Contoh Arsip Kota"
+  },
+  "nameVariants": [],
+  "type": "museum",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.6577,
+    "lon": 115.2152
+  },
+  "arrivalRadiusM": 60,
+  "address": {
+    "id": "Jl. Contoh Arsip No.12, Denpasar",
+    "en": "Jl. Contoh Arsip No.12, Denpasar"
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Tutup lebih awal dibanding situs lain di rute ini.",
+      "en": "Closes earlier than the other sites on this route."
+    },
+    "weekly": [
+      {
+        "weekday": 1,
+        "open": "08:00",
+        "close": "15:30"
+      },
+      {
+        "weekday": 2,
+        "open": "08:00",
+        "close": "15:30"
+      },
+      {
+        "weekday": 3,
+        "open": "08:00",
+        "close": "15:30"
+      },
+      {
+        "weekday": 4,
+        "open": "08:00",
+        "close": "15:30"
+      },
+      {
+        "weekday": 5,
+        "open": "08:00",
+        "close": "15:30"
+      },
+      {
+        "weekday": 6,
+        "open": "08:00",
+        "close": "15:30"
+      },
+      {
+        "weekday": 7,
+        "open": "08:00",
+        "close": "15:30"
+      }
+    ]
+  },
+  "dressCode": {
+    "id": "Pakaian sopan.",
+    "en": "Modest dress."
+  },
+  "photoPolicy": {
+    "level": "restricted",
+    "notes": {
+      "id": "Tanpa lampu kilat di ruang arsip.",
+      "en": "No flash in the archive room."
+    }
+  },
+  "entryCost": {
+    "amount": 50000,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": true,
+    "stepCount": 4,
+    "surface": "keramik",
+    "notes": {
+      "id": "Empat undakan, tersedia jalur samping.",
+      "en": "Four steps; a side ramp is available."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Biaya masuk contoh ada di sini agar rincian biaya punya isi.",
+        "en": "An example entry fee sits here so the cost breakdown has something in it."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Data placeholder Milestone 5",
+      "url": null
+    }
+  ],
+  "consentRecordId": "contoh-museum-arsip-kota"
+}
