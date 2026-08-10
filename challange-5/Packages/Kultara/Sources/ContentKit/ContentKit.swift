@@ -1,4 +1,4 @@
-import CoreLocation
+import Foundation
 
-// Placeholder — replaced in T03.
+// Placeholder — replaced by the content model in T03.
 public enum ContentKitPlaceholder {}
