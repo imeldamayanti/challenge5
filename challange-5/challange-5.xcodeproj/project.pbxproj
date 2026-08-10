@@ -103,11 +103,11 @@
 			);
 			mainGroup = A031C9C9302A038800764D07;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
-			productRefGroup = A031C9D3302A038800764D07 /* Products */;
 			packageReferences = (
 				A0A0A0A0000000000000A001 /* XCLocalSwiftPackageReference "Packages/Kultara" */,
 			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A031C9D3302A038800764D07 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
@@ -322,24 +322,6 @@
 		};
 /* End XCBuildConfiguration section */
 
-/* Begin XCLocalSwiftPackageReference section */
-		A0A0A0A0000000000000A001 /* XCLocalSwiftPackageReference "Packages/Kultara" */ = {
-			isa = XCLocalSwiftPackageReference;
-			relativePath = Packages/Kultara;
-		};
-/* End XCLocalSwiftPackageReference section */
-
-/* Begin XCSwiftPackageProductDependency section */
-		A0A0A0A0000000000000A002 /* AppFeatures */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = AppFeatures;
-		};
-		A0A0A0A0000000000000A003 /* ContentKit */ = {
-			isa = XCSwiftPackageProductDependency;
-			productName = ContentKit;
-		};
-/* End XCSwiftPackageProductDependency section */
-
 /* Begin XCConfigurationList section */
 		A031C9CD302A038800764D07 /* Build configuration list for PBXProject "challange-5" */ = {
 			isa = XCConfigurationList;
@@ -360,6 +342,24 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		A0A0A0A0000000000000A001 /* XCLocalSwiftPackageReference "Packages/Kultara" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/Kultara;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A0A0A0A0000000000000A002 /* AppFeatures */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = AppFeatures;
+		};
+		A0A0A0A0000000000000A003 /* ContentKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContentKit;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = A031C9CA302A038800764D07 /* Project object */;
 }
