@@ -130,15 +130,29 @@ public struct QuestListView: View {
     private var language: ContentLanguage { model.language }
 
     public var body: some View {
-        Group {
-            if surface == .map, let mapModel {
-                RegionMapView(model: mapModel, onSelect: onSelect)
-            } else {
-                list
+        VStack(alignment: .leading, spacing: 0) {
+            // The screen's name is set on the page, not in the chrome — the theme's heading is a
+            // line typed at the top of a sheet, and a navigation bar cannot hold one. `.inline`
+            // below keeps the system from setting it a second time in its own face.
+            Text(UIStrings.string(.questListTitle, language))
+                .kultaraFont(.questTitleLarge)
+                .foregroundStyle(palette.ink.color)
+                .accessibilityAddTraits(.isHeader)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, KultaraMetrics.lg)
+                .padding(.bottom, KultaraMetrics.sm)
+
+            Group {
+                if surface == .map, let mapModel {
+                    RegionMapView(model: mapModel, onSelect: onSelect)
+                } else {
+                    list
+                }
             }
         }
         .background(palette.paper.color)
         .navigationTitle(UIStrings.string(.questListTitle, language))
+        .kultaraInlineNavigationTitle()
         .toolbar {
             if mapModel != nil {
                 ToolbarItem(placement: .principal) {
@@ -197,7 +211,7 @@ private struct QuestCard: View {
     let language: ContentLanguage
 
     var body: some View {
-        // The card from the Home design: photograph, scrim, serif title, one metadata row. What the
+        // The card from the Home design: photograph, scrim, typed title, one metadata row. What the
         // design left out is back — FR-DISC-02 requires distance, FR-DISC-05 requires the cost total
         // on the card itself, and NFR-CONT-06 requires walking time and total time as two figures.
         // So the metadata runs to two lines rather than one, and the layout stacks it at

@@ -128,7 +128,7 @@ public struct OnboardingView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
                 Image(systemName: model.currentPage.symbolName)
-                    .font(.system(.largeTitle, design: .serif))
+                    .font(.system(.largeTitle, design: .monospaced))
                     .foregroundStyle(palette.seal.color)
                     .accessibilityHidden(true)
                 Text(UIStrings.string(model.currentPage.titleKey, language))

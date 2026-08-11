@@ -42,6 +42,42 @@ public enum KultaraTypography {
             }
         }
 
+        /// Typed roles use a monospaced face — the theme's whole identity is a page that came out
+        /// of a machine, and a proportional label next to a monospaced heading reads as a mistake.
+        ///
+        /// Long-form reading is the exception. `body` and `lore` stay proportional: monospace sets
+        /// roughly 20% wider per character, and lore is the one place where that turns into extra
+        /// wrapping at the largest accessibility sizes — precisely what `NFR-A11Y-01` is about.
+        /// Charm loses to reading a paragraph.
+        public var design: Font.Design {
+            switch self {
+            case .body, .lore: .default
+            default: .monospaced
+            }
+        }
+
+        /// Letter-spacing on the typed roles, taken from the reference's headings. Applied only
+        /// where the string is short; tracking a paragraph is how a wall of text stops being one.
+        public var tracking: CGFloat {
+            switch self {
+            case .questTitleLarge: 2
+            case .sectionHeading, .chipLabel: 1.5
+            case .questTitle, .buttonLabel, .metadata: 0.5
+            case .body, .lore: 0
+            }
+        }
+
+        /// Headings are set in caps, as on the reference sheet — and only headings. A capitalised
+        /// sentence is slower to read; a capitalised quest title would flatten the proper nouns the
+        /// content is made of; and an all-caps chip label risks VoiceOver taking a short word for
+        /// an initialism and spelling it out, which `FR-CP-05` cannot afford.
+        public var isUppercased: Bool {
+            switch self {
+            case .sectionHeading: true
+            default: false
+            }
+        }
+
         /// Whether WCAG's large-text allowance genuinely applies: ≥ 24 pt regular or ≥ 19 pt bold
         /// at the default content size. Only the two title roles qualify.
         public var isLargeText: Bool {
@@ -66,7 +102,7 @@ public enum KultaraTypography {
     }
 
     public static func font(_ role: Role) -> Font {
-        .system(role.textStyle, design: .serif, weight: role.weight)
+        .system(role.textStyle, design: role.design, weight: role.weight)
     }
 }
 

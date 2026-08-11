@@ -267,6 +267,12 @@ public struct SettingsView: View {
     public var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: KultaraMetrics.xl) {
+                // Typed at the top of the sheet rather than set in the bar, for the same reason as
+                // the quest list: the theme's heading is a line on the page.
+                Text(UIStrings.string(.settingsTitle, language))
+                    .kultaraFont(.questTitleLarge)
+                    .foregroundStyle(palette.ink.color)
+                    .accessibilityAddTraits(.isHeader)
                 languageSection
                 locationSection
                 storageSection
@@ -277,7 +283,11 @@ public struct SettingsView: View {
             .padding(KultaraMetrics.lg)
         }
         .background(palette.paper.color)
-        .navigationTitle(UIStrings.string(.settingsTitle, language))
+        // Deliberately empty: the sheet's name is the typed heading at the top of the page, and a
+        // bar title as well would print it twice. The heading carries the header trait, so nothing
+        // is lost to VoiceOver.
+        .navigationTitle("")
+        .kultaraInlineNavigationTitle()
         .confirmationDialog(
             model.deleteConfirmTitle,
             isPresented: Binding(get: { model.isConfirmingDelete },

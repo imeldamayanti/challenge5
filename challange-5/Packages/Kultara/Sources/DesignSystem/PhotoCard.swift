@@ -78,7 +78,7 @@ public struct PhotoCardFact: View {
         }
         .kultaraFont(.metadata)
         // Emphasised facts use the full-strength ink rather than a different hue: on a photograph
-        // the seal red is not measurable, and `NFR-A11Y-05` forbids colour carrying the meaning
+        // the sage accent is not measurable, and `NFR-A11Y-05` forbids colour carrying the meaning
         // alone in any case. Weight and the symbol carry it.
         .foregroundStyle(emphasised ? palette.inkOnPhoto.color : palette.inkMutedOnPhoto.color)
         .accessibilityElement(children: .ignore)

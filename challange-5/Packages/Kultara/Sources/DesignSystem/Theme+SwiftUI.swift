@@ -28,6 +28,9 @@ public extension EnvironmentValues {
 /// (`NFR-PLAT-04`).
 public struct KultaraThemeProvider<Content: View>: View {
     @Environment(\.colorScheme) private var colorScheme
+    /// Read but not used directly: it is what makes `body` re-run when the reader changes their
+    /// text size, which is what keeps the navigation bar's font in step with everything else.
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     private let content: Content
 
     public init(@ViewBuilder content: () -> Content) {
@@ -36,7 +39,10 @@ public struct KultaraThemeProvider<Content: View>: View {
 
     public var body: some View {
         let palette = KultaraTheme.palette(for: colorScheme)
-        content
+        #if canImport(UIKit)
+        KultaraNavigationChrome.apply(palette)
+        #endif
+        return content
             .environment(\.kultaraPalette, palette)
             .background(palette.paper.color.ignoresSafeArea())
             .tint(palette.seal.color)
@@ -44,11 +50,25 @@ public struct KultaraThemeProvider<Content: View>: View {
 }
 
 public extension View {
-    /// Applies a role's font and its line spacing together. Splitting them is how lore ends up
-    /// with body type and caption leading.
+    /// Applies a role's font with everything that belongs to it — leading, tracking, and case.
+    /// Splitting them is how lore ends up with body type and caption leading, or how one heading
+    /// keeps its tracking while the next one loses it.
     func kultaraFont(_ role: KultaraTypography.Role) -> some View {
         font(KultaraTypography.font(role))
             .lineSpacing(role.lineSpacing)
+            .tracking(role.tracking)
+            .textCase(role.isUppercased ? .uppercase : nil)
+    }
+
+    /// Keeps the system from setting a screen's name a second time, in its own face, above a page
+    /// that already carries a typed heading. Platform-conditional because the modifier does not
+    /// exist off iOS, and the package builds for macOS in test.
+    func kultaraInlineNavigationTitle() -> some View {
+        #if os(iOS)
+        return navigationBarTitleDisplayMode(.inline)
+        #else
+        return self
+        #endif
     }
 
     /// `NFR-A11Y-06`. Applied to the hit region, not the glyph, so a small icon still has a

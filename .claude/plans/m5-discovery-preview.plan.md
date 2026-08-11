@@ -301,3 +301,63 @@ meaning alone.
 Known rough edge, not claimed as fixed: the map opens with the cluster in the lower third rather than
 centred. Every marker is on screen and hittable; the centring is approximate because `scrollTo`
 resolves against a `.position`-ed view's ambiguous layout frame.
+
+---
+
+## Stage 8 — Retheme to the typed page (`image 16.svg`)
+
+A second reference replaced the visual direction: a sheet in a typewriter. Cream stock, one sage
+accent, monospaced type, thin rules, headings in tracked caps. It supersedes the aged-paper "royal
+letter" palette of Stage 4, and it is a **divergence from the PRD**, which names that direction by
+name. Recorded here rather than quietly applied: the palette and the typeface changed, no
+requirement did, and every `NFR-A11Y-03` measurement was re-run rather than re-used.
+
+### What was sampled, and what survived
+
+| Sampled from the reference | Shipped | Why the difference |
+|---|---|---|
+| sheet `#F9F3E5`, card stock `#F1EBDD` | paper `#F7F1E2`, raised `#FCF8EE`, sunken `#EAE2CF` | Three surfaces, because text lands on all three. |
+| ink `#362627` | ink `#26231C` | The sampled ink is a red-brown; at body size on cream it reads as faded rather than typed. |
+| sage `#8E9574`–`#A8AB8C` | seal `#3D5138` light, `#A9C094` dark | The sage as sampled is 2.4:1 on cream — a painted steel body, not a text or control colour. Same hue, carried to the readable end of each appearance. |
+
+### Measured again, in full
+
+| Pair | Light | Dark |
+|---|---|---|
+| Body ink on paper / card / inset | 13.91 · 14.78 · 12.15 | 15.52 · 13.71 · 16.41 |
+| Secondary ink | 7.15 · 7.60 · 6.25 | 9.04 · 7.99 · 9.56 |
+| Sage accent | 7.66 · 8.14 · 6.69 | 9.24 · 8.16 · 9.77 |
+| Warning | 6.39 · 6.79 · 5.58 | 9.50 · 8.39 · 10.04 |
+| `documented` / `oral` chip ink | 12.15 / 7.18 | 16.41 / 11.67 |
+| Text on filled accent button | 8.14 | 9.24 |
+| On-photo ink / muted, on scrim `#16170F` | 16.03 / 10.28 | 16.03 / 10.28 |
+| Hairline (needs 3:1) | 3.84 · 4.08 | 4.54 · 4.01 |
+
+Lowest text ratio: **5.58:1** light, **7.99:1** dark. Lowest hairline: **3.84:1** light, **4.01:1**
+dark. Every pair passes on the first measurement this time, because the accent was chosen against
+the surfaces rather than sampled and hoped for.
+
+### Type
+
+Monospaced everywhere except `body` and `lore`, which stay proportional. Monospace sets roughly a
+fifth wider per character, and long-form lore is the one place that turns into extra wrapping at the
+largest accessibility sizes — the failure `NFR-A11Y-01` exists to prevent. Section headings are set
+in tracked caps; quest titles and chip labels are not, because an all-caps title flattens the proper
+nouns the content is made of and an all-caps chip risks VoiceOver spelling a short word out.
+
+### The navigation bar, and a bug it caused
+
+SwiftUI's bar was the one surface still using system fonts, so it is styled through the UIKit
+appearance proxy, re-applied from `KultaraThemeProvider.body` and therefore following both the
+colour scheme and the content size category.
+
+Styling the *large* title there broke the quest list: a monospaced, kerned large title behind a
+`.principal` toolbar item laid out to nothing, and the screen's name simply disappeared. The fix is
+also the better design — each screen's name is now typed at the top of the page, as on the
+reference sheet, and the bar title is inline. `largeTitleTextAttributes` is deliberately unset, with
+the reason written where the next person will look.
+
+### Verified
+
+234 package tests and all four XCUITests pass, including the largest-Dynamic-Type flow. Screens
+checked by screenshot in both appearances: quest list, quest preview, settings.
