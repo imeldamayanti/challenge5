@@ -74,6 +74,11 @@ public struct ContentFormatter: Sendable {
         "\(time(window.from, calendar: calendar))–\(time(window.to, calendar: calendar))"
     }
 
+    /// Named checkpoints, not quests — see `QuestListRow.checkpointCount`.
+    public func checkpointCount(_ count: Int) -> String {
+        "\(count) \(string(count == 1 ? .unitCheckpointSingular : .unitCheckpointPlural))"
+    }
+
     public func bytes(_ count: Int) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file

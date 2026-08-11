@@ -16,6 +16,12 @@ public struct KultaraPalette: Sendable, Equatable {
     public let inkMuted: SRGBColor
     public let inkOnSeal: SRGBColor
 
+    // Over a photograph. `NFR-A11Y-03` cannot be satisfied against an arbitrary image, so the
+    // text block sits on an opaque scrim and the gradient above it is decoration.
+    public let photoScrim: SRGBColor
+    public let inkOnPhoto: SRGBColor
+    public let inkMutedOnPhoto: SRGBColor
+
     // Accents
     public let seal: SRGBColor
     public let sealFill: SRGBColor
@@ -31,6 +37,9 @@ public struct KultaraPalette: Sendable, Equatable {
         ink: SRGBColor,
         inkMuted: SRGBColor,
         inkOnSeal: SRGBColor,
+        photoScrim: SRGBColor,
+        inkOnPhoto: SRGBColor,
+        inkMutedOnPhoto: SRGBColor,
         seal: SRGBColor,
         sealFill: SRGBColor,
         rule: SRGBColor,
@@ -44,6 +53,9 @@ public struct KultaraPalette: Sendable, Equatable {
         self.ink = ink
         self.inkMuted = inkMuted
         self.inkOnSeal = inkOnSeal
+        self.photoScrim = photoScrim
+        self.inkOnPhoto = inkOnPhoto
+        self.inkMutedOnPhoto = inkMutedOnPhoto
         self.seal = seal
         self.sealFill = sealFill
         self.rule = rule
@@ -55,6 +67,7 @@ public struct KultaraPalette: Sendable, Equatable {
     public var allTokens: [(name: String, value: SRGBColor)] {
         [("paper", paper), ("paperRaised", paperRaised), ("paperSunken", paperSunken),
          ("ink", ink), ("inkMuted", inkMuted), ("inkOnSeal", inkOnSeal),
+         ("photoScrim", photoScrim), ("inkOnPhoto", inkOnPhoto), ("inkMutedOnPhoto", inkMutedOnPhoto),
          ("seal", seal), ("sealFill", sealFill), ("rule", rule),
          ("documentedInk", documentedInk), ("oralInk", oralInk), ("warning", warning)]
     }
@@ -82,6 +95,12 @@ public struct KultaraPalette: Sendable, Equatable {
                                   foreground: documentedInk, background: paperSunken, requirement: .bodyText))
         pairs.append(ContrastPair(label: "oralInk on paperSunken",
                                   foreground: oralInk, background: paperSunken, requirement: .bodyText))
+
+        // Over a photograph, against the scrim the text actually lands on.
+        pairs.append(ContrastPair(label: "inkOnPhoto on photoScrim",
+                                  foreground: inkOnPhoto, background: photoScrim, requirement: .bodyText))
+        pairs.append(ContrastPair(label: "inkMutedOnPhoto on photoScrim",
+                                  foreground: inkMutedOnPhoto, background: photoScrim, requirement: .bodyText))
 
         // Filled controls.
         pairs.append(ContrastPair(label: "inkOnSeal on sealFill",
@@ -140,6 +159,9 @@ public enum KultaraTheme {
         ink: SRGBColor(hex: "#2A2118"),             // 13.22:1 on paper
         inkMuted: SRGBColor(hex: "#57462F"),        // 7.57:1 — dark enough to read, not just to imply
         inkOnSeal: SRGBColor(hex: "#FBF5E8"),       // 9.13:1 on the seal fill
+        photoScrim: SRGBColor(hex: "#17120D"),      // opaque; the gradient's endpoint
+        inkOnPhoto: SRGBColor(hex: "#F7F1E4"),
+        inkMutedOnPhoto: SRGBColor(hex: "#CFC2AC"),
         seal: SRGBColor(hex: "#7A2617"),            // oxblood wax; 8.30:1 on paper
         sealFill: SRGBColor(hex: "#7A2617"),
         rule: SRGBColor(hex: "#8A7550"),            // 3.71:1 — structural, not decorative
@@ -156,6 +178,10 @@ public enum KultaraTheme {
         ink: SRGBColor(hex: "#F0E6D4"),             // 14.52:1 on paper
         inkMuted: SRGBColor(hex: "#C0B198"),        // 8.54:1
         inkOnSeal: SRGBColor(hex: "#1B1610"),       // 6.68:1 on the seal fill
+        // A photograph does not get lighter in light mode, so the scrim does not flip.
+        photoScrim: SRGBColor(hex: "#17120D"),
+        inkOnPhoto: SRGBColor(hex: "#F7F1E4"),
+        inkMutedOnPhoto: SRGBColor(hex: "#CFC2AC"),
         seal: SRGBColor(hex: "#E8A08C"),            // 8.42:1
         sealFill: SRGBColor(hex: "#E0866F"),
         rule: SRGBColor(hex: "#8A7A62"),            // 4.31:1

@@ -31,6 +31,8 @@ Content/
     ├── places/{place_id}/hero.heic
     ├── quests/{quest_id}/route-preview.png
     ├── quests/{quest_id}/route.geojson
+    ├── quests/{quest_id}/hero.png            # discovery card image
+    ├── maps/{region}.png                     # illustrated region map (manifest.regionMap)
     └── badges/{badge_id}.png
 ```
 
@@ -62,11 +64,16 @@ There is deliberately **no fallback**. A missing translation fails the build; it
   "contentBundleVersion": "2026.08.1",
   "languages": ["id", "en"],
   "places": ["puri-agung-pemecutan", "pura-maospahit-gerenceng", "…"],
-  "quests": ["jejak-terakhir-badung", "siklus-ubud"]
+  "quests": ["jejak-terakhir-badung", "siklus-ubud"],
+  "regionMap": { "asset": "maps/bali-illustrated.png", "aspectRatio": 0.4626 }
 }
 ```
 
 `contentBundleVersion` is what a Run pins (AD-4). Any change to any content file **must** bump it.
+
+`regionMap` is optional. When present, the discovery screen offers a map surface drawn from that
+shipped illustration — no live tiles, so it works offline by construction (FR-MAP-01, FR-OFF-03).
+When absent, the map surface is not offered at all rather than shown empty.
 
 ### A.4 Place
 
@@ -111,6 +118,12 @@ There is deliberately **no fallback**. A missing translation fails the build; it
 | `photoPolicy.level` | `allowed \| restricted \| prohibited` — `prohibited` bans photo tasks outright (FR-TASK-06) |
 | `sources` | ≥ 1 required (NFR-CONT-02) |
 | `consentRecordId` | must resolve to a `granted`, unexpired record (NFR-GOV-01) |
+| `mapPoint` | `{ x, y }`, each within 0…1 — position on `manifest.regionMap`, required for every Place a quest visits when a region map ships (V17) |
+
+**`mapPoint` is authored, not derived from `coordinate`.** The region map is an illustration:
+hand-drawn, taller than the island is, with a stylised coastline. Projecting a real coordinate onto
+it would put every pin somewhere wrong while looking precise. A drawing's pin positions are a
+drawing decision, so the validator checks the range and not the geography.
 
 ### A.5 Quest
 
@@ -140,6 +153,7 @@ There is deliberately **no fallback**. A missing translation fails the build; it
   "proximityRadiusM": 200,
   "safetyNotes": { "id": "…", "en": "…" },
   "badgeId": "penjaga-ingatan-badung",
+  "heroImageAsset": "quests/jejak-terakhir-badung/hero.jpg",
 
   "checkpoints": [ /* Checkpoint[] — ordered */ ]
 }
@@ -151,6 +165,7 @@ There is deliberately **no fallback**. A missing translation fails the build; it
 | `walkingTimeMin` / `totalDurationMin` | both required, must differ (NFR-CONT-06) |
 | `hardLatestStart` | derived: earliest checkpoint closing time − `totalDurationMin`; validator recomputes and rejects a stale value |
 | `proximityRadiusM` | **must exceed** the start checkpoint's `arrivalRadiusM` (FR-PROX-11) |
+| `heroImageAsset` | optional; the photograph the discovery card is built around. A quest without one lists as type on paper rather than as a gap |
 
 ### A.6 Checkpoint, LoreBlock, Task
 
@@ -257,6 +272,15 @@ CI fails on any of these. This is the enforcement mechanism for requirements tha
 | V14 | Every asset path referenced exists | — |
 | V15 | Total content payload ≤ 200 MB (leaves headroom under the 250 MB app budget) | NFR-PERF-07 |
 | V16 | `hardLatestStart` matches recomputation from visiting hours | FR-DISC-06 |
+| V17 | When `manifest.regionMap` is present, every Place a quest visits has a `mapPoint` within 0…1 | FR-DISC-02/03 |
+
+**Two rules cannot run against decoded content**, because the type system makes their violations
+unrepresentable: `LocalizedText` refuses to decode with a gap (V1) and `TaskType` has only the three
+mechanics FR-TASK-05 permits (V7). Both remain perfectly *authorable*, so both run over the raw JSON
+instead — otherwise a translation gap surfaces as an opaque `keyNotFound` naming no requirement, and
+a puzzle task at a temple as an unreadable enum error. A consequence worth knowing: a V1 gap blocks
+the decode-dependent rules rather than merely adding a finding, so content with several faults may
+need fixing in two passes.
 
 ---
 

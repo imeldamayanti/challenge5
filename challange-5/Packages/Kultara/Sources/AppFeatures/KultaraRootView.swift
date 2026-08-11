@@ -87,6 +87,7 @@ public struct KultaraRootView: View {
                 // Rebuilt when the language changes: every string in the list is resolved at
                 // construction, so the identity of the view model *is* the language.
                 model: QuestListViewModel(repository: environment.repository, language: language),
+                mapModel: RegionMapViewModel(repository: environment.repository, language: language),
                 onSelect: { selectedQuestID = $0 },
                 onOpenSettings: { showsSettings = true })
                 .navigationDestination(isPresented: Binding(

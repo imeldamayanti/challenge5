@@ -28,6 +28,10 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case questListTitle
     case questListSubtitle
     case questListEmpty
+    case questListMapTab
+    case questListListTab
+    case mapUnavailable
+    case mapPinHint
     case labelRegion
     case labelDistance
     case labelWalkingTime
@@ -37,6 +41,8 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case unitMetres
     case unitKilometres
     case unitMinutes
+    case unitCheckpointSingular
+    case unitCheckpointPlural
 
     // Preview — FR-DISC-03/04/06
     case previewHookHeading
@@ -152,6 +158,14 @@ public enum UIStrings {
         .questListEmpty: LocalizedText(
             id: "Belum ada kuis yang tersedia.",
             en: "No quests are available yet."),
+        .questListMapTab: LocalizedText(id: "Peta", en: "Map"),
+        .questListListTab: LocalizedText(id: "Daftar", en: "List"),
+        .mapUnavailable: LocalizedText(
+            id: "Peta wilayah belum ikut di versi konten ini.",
+            en: "This content version ships no region map."),
+        .mapPinHint: LocalizedText(
+            id: "Ketuk penanda untuk melihat pratinjau kuis.",
+            en: "Tap a marker to see the quest preview."),
         .labelRegion: LocalizedText(id: "Wilayah", en: "Region"),
         .labelDistance: LocalizedText(id: "Jarak", en: "Distance"),
         .labelWalkingTime: LocalizedText(id: "Waktu jalan", en: "Walking time"),
@@ -161,6 +175,8 @@ public enum UIStrings {
         .unitMetres: LocalizedText(id: "m", en: "m"),
         .unitKilometres: LocalizedText(id: "km", en: "km"),
         .unitMinutes: LocalizedText(id: "menit", en: "min"),
+        .unitCheckpointSingular: LocalizedText(id: "titik", en: "checkpoint"),
+        .unitCheckpointPlural: LocalizedText(id: "titik", en: "checkpoints"),
 
         // MARK: Preview
         .previewHookHeading: LocalizedText(id: "Pembuka", en: "The opening"),

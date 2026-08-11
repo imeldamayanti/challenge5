@@ -292,3 +292,124 @@ struct FailingContentRepository: ContentRepository {
     }
     func assetURL(_ relativePath: String) throws -> URL? { throw Failure() }
 }
+
+@MainActor
+struct QuestCardAndMapTests {
+
+    // MARK: - The card from the Home design, with the fields the mockup dropped
+
+    @Test func theCardCarriesAHeroImageAndACheckpointCount() throws {
+        let row = try #require(QuestListViewModel(
+            repository: try BundledContentRepository(), language: .en).rows.first)
+        #expect(row.heroImageURL != nil)
+        #expect(row.checkpointCount == 5)
+        #expect(row.checkpointCountText.contains("5"))
+    }
+
+    @Test func theCardSaysCheckpointsRatherThanQuests() throws {
+        // The mockup labels this "5 quests". The glossary calls them checkpoints and FR-CP-08
+        // counts progress in them; a quest containing quests makes both readings ambiguous.
+        let row = try #require(QuestListViewModel(
+            repository: try BundledContentRepository(), language: .en).rows.first)
+        #expect(row.checkpointCountText.lowercased().contains("checkpoint"))
+        #expect(!row.checkpointCountText.lowercased().contains("quest"))
+    }
+
+    @Test func theCardStillCarriesDistanceAndCostThatTheMockupOmitted() throws {
+        // FR-DISC-02 requires distance; FR-DISC-05 requires the cost total on the card itself.
+        // The design shows neither, so this test is the reason both survived the restyle.
+        for row in try QuestListViewModel(repository: try BundledContentRepository(), language: .en).rows {
+            #expect(!row.distanceText.isEmpty)
+            #expect(!row.costText.isEmpty)
+        }
+    }
+
+    @Test func theCardStillSeparatesWalkingTimeFromTotalTime() throws {
+        // The mockup shows a single "30 mins". NFR-CONT-06 requires two figures.
+        for row in try QuestListViewModel(repository: try BundledContentRepository(), language: .en).rows {
+            #expect(row.walkingTimeText != row.totalDurationText)
+        }
+    }
+
+    // MARK: - The map screen
+
+    @Test func theMapModelPlacesOnePinPerQuestAtItsStartPlace() throws {
+        let repository = try BundledContentRepository()
+        let model = try #require(RegionMapViewModel(repository: repository, language: .en))
+        let quests = try repository.quests()
+
+        #expect(model.pins.count == quests.count)
+        for quest in quests {
+            let pin = try #require(model.pins.first { $0.questID == quest.id })
+            let startPlaceID = try #require(quest.startCheckpoint?.placeId)
+            let place = try #require(try repository.place(id: startPlaceID))
+            #expect(pin.point == place.mapPoint)
+            #expect(pin.title == quest.title.value(for: .en))
+        }
+    }
+
+    @Test func everyPinSitsInsideTheImage() throws {
+        // A pin at 1.4 would render off the map and be untappable — V17 catches it at build time,
+        // and this catches a runtime transform that reintroduces it.
+        let model = try #require(RegionMapViewModel(
+            repository: try BundledContentRepository(), language: .en))
+        for pin in model.pins {
+            #expect(pin.point.isInsideImage, "\(pin.questID) at \(pin.point)")
+        }
+    }
+
+    @Test func theMapDrawsFromAShippedImageRatherThanTiles() throws {
+        // FR-MAP-01 / FR-OFF-03.
+        let model = try #require(RegionMapViewModel(
+            repository: try BundledContentRepository(), language: .en))
+        #expect(model.mapImageURL != nil)
+        #expect(model.aspectRatio > 0)
+    }
+
+    @Test func suppressedQuestsLoseTheirPinToo() throws {
+        // FR-DISC-08: hidden from discovery means hidden from every discovery surface, not just
+        // the list. A pin for a withdrawn site is the failure this rule exists to prevent.
+        let repository = try BundledContentRepository()
+        let victim = try #require(try repository.quests().first).id
+        let model = try #require(RegionMapViewModel(
+            repository: repository, language: .en, suppressedQuestIDs: [victim]))
+        #expect(!model.pins.contains { $0.questID == victim })
+    }
+
+    @Test func contentWithNoRegionMapYieldsNoMapModelRatherThanAnEmptyFrame() throws {
+        #expect(RegionMapViewModel(repository: MapLessContentRepository(), language: .en) == nil)
+    }
+
+    @Test func aPinCarriesEnoughToOpenPreviewInOneTap() throws {
+        let model = try #require(RegionMapViewModel(
+            repository: try BundledContentRepository(), language: .en))
+        for pin in model.pins {
+            #expect(!pin.questID.isEmpty)
+            #expect(!pin.title.isEmpty)
+            #expect(!pin.accessibilityLabel.isEmpty)
+            // NFR-A11Y-02: a pin is a control, so it says what it is and where it goes.
+            #expect(pin.accessibilityLabel.contains(pin.title))
+        }
+    }
+}
+
+/// A repository whose content ships no illustrated map.
+struct MapLessContentRepository: ContentRepository {
+    struct Unavailable: Error {}
+    private let inner = try? BundledContentRepository()
+
+    func manifest() throws -> Manifest {
+        guard let inner else { throw Unavailable() }
+        let m = try inner.manifest()
+        return Manifest(schemaVersion: m.schemaVersion, contentBundleVersion: m.contentBundleVersion,
+                        languages: m.languages, places: m.places, quests: m.quests, regionMap: nil)
+    }
+    func contentBundleVersion() throws -> String { try manifest().contentBundleVersion }
+    func quests() throws -> [Quest] { try inner?.quests() ?? [] }
+    func quest(id: String) throws -> Quest? { try inner?.quest(id: id) ?? nil }
+    func place(id: String) throws -> Place? { try inner?.place(id: id) ?? nil }
+    func quests(suppressingQuestIDs: Set<String>, suppressingPlaceIDs: Set<String>) throws -> [Quest] {
+        try inner?.quests(suppressingQuestIDs: suppressingQuestIDs, suppressingPlaceIDs: suppressingPlaceIDs) ?? []
+    }
+    func assetURL(_ relativePath: String) throws -> URL? { try inner?.assetURL(relativePath) ?? nil }
+}

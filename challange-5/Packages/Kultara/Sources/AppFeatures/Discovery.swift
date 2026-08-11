@@ -14,6 +14,12 @@ public struct QuestListRow: Sendable, Identifiable, Equatable {
     public let costText: String
     /// `FR-DISC-05` — a quest that costs money shows its total on the card, not only in preview.
     public let showsCostOnCard: Bool
+    /// `FR-CP-08` counts progress in checkpoints, so the card counts them by that name. The Home
+    /// mockup labels this "5 quests"; a quest containing quests collides with the glossary.
+    public let checkpointCount: Int
+    public let checkpointCountText: String
+    /// The photograph the card is built around. Nil renders as type on paper rather than as a gap.
+    public let heroImageURL: URL?
 
     public var id: String { questID }
 
@@ -25,7 +31,10 @@ public struct QuestListRow: Sendable, Identifiable, Equatable {
         walkingTimeText: String,
         totalDurationText: String,
         costText: String,
-        showsCostOnCard: Bool
+        showsCostOnCard: Bool,
+        checkpointCount: Int = 0,
+        checkpointCountText: String = "",
+        heroImageURL: URL? = nil
     ) {
         self.questID = questID
         self.title = title
@@ -35,6 +44,9 @@ public struct QuestListRow: Sendable, Identifiable, Equatable {
         self.totalDurationText = totalDurationText
         self.costText = costText
         self.showsCostOnCard = showsCostOnCard
+        self.checkpointCount = checkpointCount
+        self.checkpointCountText = checkpointCountText
+        self.heroImageURL = heroImageURL
     }
 }
 
@@ -73,7 +85,10 @@ public final class QuestListViewModel {
                     totalDurationText: formatter.duration(minutes: quest.route.totalDurationMin),
                     costText: formatter.cost(
                         amount: quest.estimatedCost.amount, currency: quest.estimatedCost.currency),
-                    showsCostOnCard: !quest.estimatedCost.isFree)
+                    showsCostOnCard: !quest.estimatedCost.isFree,
+                    checkpointCount: quest.checkpointCount,
+                    checkpointCountText: formatter.checkpointCount(quest.checkpointCount),
+                    heroImageURL: quest.heroImageAsset.flatMap { (try? repository.assetURL($0)) ?? nil })
             }
         } catch {
             rows = []
@@ -89,16 +104,25 @@ public final class QuestListViewModel {
 public struct QuestListView: View {
     @Environment(\.kultaraPalette) private var palette
 
+    public enum Surface: String, CaseIterable {
+        case list, map
+    }
+
     private let model: QuestListViewModel
+    private let mapModel: RegionMapViewModel?
     private let onSelect: (String) -> Void
     private let onOpenSettings: () -> Void
 
+    @State private var surface: Surface = .list
+
     public init(
         model: QuestListViewModel,
+        mapModel: RegionMapViewModel? = nil,
         onSelect: @escaping (String) -> Void,
         onOpenSettings: @escaping () -> Void
     ) {
         self.model = model
+        self.mapModel = mapModel
         self.onSelect = onSelect
         self.onOpenSettings = onOpenSettings
     }
@@ -106,6 +130,37 @@ public struct QuestListView: View {
     private var language: ContentLanguage { model.language }
 
     public var body: some View {
+        Group {
+            if surface == .map, let mapModel {
+                RegionMapView(model: mapModel, onSelect: onSelect)
+            } else {
+                list
+            }
+        }
+        .background(palette.paper.color)
+        .navigationTitle(UIStrings.string(.questListTitle, language))
+        .toolbar {
+            if mapModel != nil {
+                ToolbarItem(placement: .principal) {
+                    Picker("", selection: $surface) {
+                        Text(UIStrings.string(.questListListTab, language)).tag(Surface.list)
+                        Text(UIStrings.string(.questListMapTab, language)).tag(Surface.map)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(maxWidth: 220)
+                }
+            }
+            ToolbarItem(placement: .primaryAction) {
+                Button { onOpenSettings() } label: {
+                    Image(systemName: "gearshape")
+                        .kultaraTapTarget()
+                }
+                .accessibilityLabel(UIStrings.string(.settingsTitle, language))
+            }
+        }
+    }
+
+    private var list: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
                 Text(UIStrings.string(.questListSubtitle, language))
@@ -133,17 +188,6 @@ public struct QuestListView: View {
             }
             .padding(KultaraMetrics.lg)
         }
-        .background(palette.paper.color)
-        .navigationTitle(UIStrings.string(.questListTitle, language))
-        .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button { onOpenSettings() } label: {
-                    Image(systemName: "gearshape")
-                        .kultaraTapTarget()
-                }
-                .accessibilityLabel(UIStrings.string(.settingsTitle, language))
-            }
-        }
     }
 }
 
@@ -153,30 +197,93 @@ private struct QuestCard: View {
     let language: ContentLanguage
 
     var body: some View {
-        KultaraCard {
-            VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-                Text(row.title)
-                    .kultaraFont(.questTitle)
-                    .foregroundStyle(palette.ink.color)
+        // The card from the Home design: photograph, scrim, serif title, one metadata row. What the
+        // design left out is back — FR-DISC-02 requires distance, FR-DISC-05 requires the cost total
+        // on the card itself, and NFR-CONT-06 requires walking time and total time as two figures.
+        // So the metadata runs to two lines rather than one, and the layout stacks it at
+        // accessibility sizes instead of dropping any of it.
+        ZStack(alignment: .bottomLeading) {
+            hero
+            PhotoScrim(height: scrimHeight)
+                .frame(maxHeight: .infinity, alignment: .bottom)
+            caption
+        }
+        .frame(minHeight: 210)
+        .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.sm))
+        .overlay(
+            RoundedRectangle(cornerRadius: KultaraMetrics.sm)
+                .stroke(palette.rule.color, lineWidth: KultaraMetrics.hairline))
+        .overlay(alignment: .topTrailing) {
+            SealArrowBadge()
+                .padding(KultaraMetrics.sm)
+        }
+        .accessibilityElement(children: .combine)
+    }
 
-                LabelledValue(label: UIStrings.string(.labelRegion, language), value: row.region)
-                KultaraRule()
+    /// Grows with Dynamic Type, because the caption block does.
+    @ScaledMetric(relativeTo: .subheadline) private var scrimHeight: CGFloat = 190
 
-                // A grid rather than a single line: at accessibility sizes a row of four metrics
-                // wraps into an unreadable ribbon (`NFR-A11Y-01`).
-                VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-                    LabelledValue(label: UIStrings.string(.labelDistance, language), value: row.distanceText)
-                    LabelledValue(label: UIStrings.string(.labelWalkingTime, language), value: row.walkingTimeText)
-                    LabelledValue(label: UIStrings.string(.labelTotalDuration, language), value: row.totalDurationText)
-                    // Shown either way; `showsCostOnCard` marks the case FR-DISC-05 is about,
-                    // which gets the seal ink so a cost is not something the eye skips.
-                    LabelledValue(
-                        label: UIStrings.string(.labelEstimatedCost, language),
-                        value: row.costText,
-                        emphasised: row.showsCostOnCard)
+    @ViewBuilder private var hero: some View {
+        if let url = row.heroImageURL, let image = BundledImage.load(url) {
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(maxWidth: .infinity)
+                .accessibilityHidden(true)
+        } else {
+            // No hero is not a broken card, just a plainer one.
+            palette.paperSunken.color
+        }
+    }
+
+    private var caption: some View {
+        VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
+            Text(row.title)
+                .kultaraFont(.questTitle)
+                .foregroundStyle(palette.inkOnPhoto.color)
+                .fixedSize(horizontal: false, vertical: true)
+
+            // Two rows of facts, wrapping rather than truncating. FR-DISC-02's six fields do not
+            // fit on one line at any accessibility size, and dropping one is not an option.
+            ViewThatFits(in: .horizontal) {
+                VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
+                    HStack(spacing: KultaraMetrics.md) { region; checkpoints; walking }
+                    HStack(spacing: KultaraMetrics.md) { total; distance; cost }
+                }
+                VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
+                    region; checkpoints; walking; total; distance; cost
                 }
             }
         }
+        .padding(KultaraMetrics.md)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var region: some View {
+        PhotoCardFact(symbolName: "mappin", label: UIStrings.string(.labelRegion, language), value: row.region)
+    }
+    private var checkpoints: some View {
+        PhotoCardFact(symbolName: "flag", label: UIStrings.string(.previewCheckpointsHeading, language),
+                      value: row.checkpointCountText)
+    }
+    private var walking: some View {
+        PhotoCardFact(symbolName: "figure.walk", label: UIStrings.string(.labelWalkingTime, language),
+                      value: row.walkingTimeText)
+    }
+    private var total: some View {
+        PhotoCardFact(symbolName: "clock", label: UIStrings.string(.labelTotalDuration, language),
+                      value: row.totalDurationText)
+    }
+    private var distance: some View {
+        PhotoCardFact(symbolName: "point.topleft.down.curvedto.point.bottomright.up",
+                      label: UIStrings.string(.labelDistance, language), value: row.distanceText)
+    }
+    /// `FR-DISC-05`. Emphasised when the quest costs money — by weight and symbol, not by hue,
+    /// since on a photograph the seal red is not a measurable colour.
+    private var cost: some View {
+        PhotoCardFact(symbolName: row.showsCostOnCard ? "banknote" : "gift",
+                      label: UIStrings.string(.labelEstimatedCost, language),
+                      value: row.costText, emphasised: row.showsCostOnCard)
     }
 }
 

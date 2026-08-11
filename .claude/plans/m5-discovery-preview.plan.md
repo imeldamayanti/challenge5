@@ -240,3 +240,62 @@ Worth recording: a V1 translation gap *blocks* the decode-dependent rules rather
 a finding, and the report says `BLOCKED` rather than reporting a pass. That is the intended
 behaviour — V1 and V7 run on raw JSON precisely so a gap is still attributable to a rule — but it
 means a run with several faults may need fixing in two passes.
+
+---
+
+## Stage 7 — Home design applied (`Home.svg`)
+
+The design supplied two screens: an illustrated Bali map with quest markers, and a discovery list of
+full-bleed photo cards. Both were built. Three things in the design conflicted with P0 requirements
+and were resolved in favour of the requirements, not the drawing.
+
+| Design shows | Requirement | Resolution |
+|---|---|---|
+| No distance, no cost on the card | `FR-DISC-02`, `FR-DISC-05` (cost on the card, not only in preview) | Both kept. The metadata runs to two lines instead of one, and stacks at accessibility sizes rather than dropping a field. |
+| One duration, `30 mins` | `NFR-CONT-06` — walking time and total time as separate figures | Two figures, distinct symbols. |
+| `5 quests` | Glossary: those are checkpoints; `FR-CP-08` counts progress in them | `5 checkpoints`. A quest containing quests makes both readings ambiguous. |
+
+Each is held by a test, in the unit suite and again in the UI suite against the rendered card.
+
+### Two judgement calls the design implied but the PRD does not specify
+
+- **The fog over parts of the island** implies a progressive-reveal mechanic. Nothing in the PRD
+  describes one, and hiding content behind an unspecified mechanic is not a styling decision. Not
+  built; every quest's marker is visible. Flagged for the product decision.
+- **Photographs of real sites, one showing identifiable people at a ceremony.** Attaching those to
+  fictional placeholder Places would tie real imagery to consent records that do not exist, and
+  `NFR-GOV-02` treats `scope: imagery` as a separate grant from `inclusion`. The fixture draws its own
+  hero art instead. The real photographs remain available for content that has the grant.
+
+### Schema additions, documented in `docs/schema.md`
+
+`Manifest.regionMap`, `Quest.heroImageAsset`, `Place.mapPoint`, and validator rule **V17**.
+
+`mapPoint` is authored rather than projected from `coordinate`, because the map is a drawing — taller
+than Bali is, with a stylised coastline — and projecting onto it would place every pin somewhere
+wrong while looking precise. V17 checks the range, not the geography, and catches the failure that
+would otherwise be silent: a map that quietly drops a stop the list shows.
+
+### Contrast over a photograph
+
+Text on an image has no measurable background, so `NFR-A11Y-03` cannot be satisfied by inspection.
+The caption block sits on an opaque scrim and the gradient above it is decoration, which makes the
+ratio real again: **inkOnPhoto 14.05:1**, **inkMutedOnPhoto 8.20:1**, both against `#17120D`, both
+appearances. The card's emphasis for a paid quest is weight plus symbol rather than the seal red,
+because on a photograph a hue is not a measurable colour and `NFR-A11Y-05` forbids colour carrying
+meaning alone.
+
+### Two defects the screenshots caught, and the assertions now holding them
+
+1. **The map opened on empty ocean.** Bali's south coast sits two thirds down a portrait drawing, so
+   the scroll origin showed sea and no markers. The UI test had passed, because XCUITest finds and
+   taps elements that are scrolled out of view. It now asserts the first marker `isHittable`, not
+   merely that it exists.
+2. **Marker labels overlapped each other.** Quests in one city sit metres apart, so their labels
+   landed in the same strip of map — the `NFR-A11Y-01` overlap failure arriving through placement
+   rather than type size. Labels now alternate above and below the pin down the cluster, the map is
+   drawn wider, and the test compares every pair of marker frames for intersection.
+
+Known rough edge, not claimed as fixed: the map opens with the cluster in the lower third rather than
+centred. Every marker is on screen and hittable; the centring is approximate because `scrollTo`
+resolves against a `.position`-ed view's ambiguous layout frame.

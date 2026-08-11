@@ -81,3 +81,37 @@ struct KultaraThemeTests {
         }
     }
 }
+
+/// Text over a photograph is where a measured theme usually stops being measured: the background is
+/// whatever the photo happens to be, so no ratio can be claimed. `NFR-A11Y-03` still applies.
+///
+/// The fix is to stop guessing — the text block sits on a fully opaque scrim colour, and the
+/// gradient above it is decoration. Then the ratio is measurable again, and these tests measure it.
+struct PhotoScrimTests {
+
+    @Test(arguments: KultaraTheme.allAppearances)
+    func textOnAPhotoIsMeasuredAgainstAnOpaqueScrimRatherThanThePhoto(_ appearance: KultaraTheme.Appearance) {
+        let palette = KultaraTheme.palette(for: appearance)
+        let pairs = palette.contrastPairs.filter { $0.label.lowercased().contains("onphoto") }
+        #expect(pairs.count >= 2, "\(appearance): on-photo inks are not enumerated in contrastPairs")
+        for pair in pairs {
+            #expect(pair.passes, "\(appearance) · \(pair.measurementLine)")
+            #expect(pair.background == palette.photoScrim,
+                    "\(pair.label) is measured against something other than the scrim")
+        }
+    }
+
+    @Test func theScrimIsTheSameInBothAppearancesBecauseAPhotographIsNot() {
+        // A photo does not get lighter in light mode. Flipping the scrim would make the card
+        // legible in one appearance and not the other for no reason a reader would recognise.
+        #expect(KultaraTheme.light.photoScrim == KultaraTheme.dark.photoScrim)
+        #expect(KultaraTheme.light.inkOnPhoto == KultaraTheme.dark.inkOnPhoto)
+    }
+
+    @Test func theScrimIsOpaqueEnoughToBeMeasurable() {
+        // Its own contrast against white — the brightest a photograph can be — is what makes the
+        // gradient's endpoint a real background rather than a hopeful one.
+        let againstWhite = contrastRatio(KultaraTheme.light.photoScrim, SRGBColor(hex: "#FFFFFF"))
+        #expect(againstWhite > 10, "scrim vs white is \(againstWhite):1")
+    }
+}
