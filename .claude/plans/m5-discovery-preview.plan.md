@@ -163,3 +163,80 @@ To be restated in the final report rather than buried here:
 - `NFR-A11Y-02` (VoiceOver) — labels are set as encountered, but a full VoiceOver traversal is a release gate on the complete core loop and is not run in M5.
 - `NFR-CONT-03` — fixture content is placeholder and field-unvalidated by construction.
 - Deployment target 18.0 is not runtime-verified; no iOS 18 simulator runtime is installed on this machine.
+
+---
+
+## Stage 6 — Verification results (executed)
+
+Recorded here rather than only in a chat message, because acceptance criteria 5 and 6 of the PRD
+ask for evidence.
+
+### 1. Test suites
+
+```
+swift test      → 204 tests in 19 suites, all passing
+xcodebuild test → ** TEST SUCCEEDED **, 3 UI tests
+                  (iPhone 17 simulator, iOS 26.3 runtime)
+```
+
+Nothing red, nothing skipped, no `withKnownIssue`.
+
+### 2. Screenshots — `docs/screenshots/`
+
+`quest-list.png`, `quest-preview.png`, `settings.png`, plus the three `a11y-*` counterparts at
+`UICTContentSizeCategoryAccessibilityXXXL`. Captured as XCUITest attachments from the same run
+that asserted the flow, so they cannot drift from a passing test.
+
+### 3. Dynamic Type, largest accessibility size
+
+Automated: every `staticText` frame on all three screens is compared to the window bounds; the test
+fails and names any label crossing an edge. Result: none on any screen.
+
+By eye, two defects the automated check could not see — both fixed, both with a regression test:
+
+| Defect | Fix |
+|---|---|
+| Storage row read as the word "Zero" instead of a number | `ByteCountFormatter.allowsNonnumericFormatting = false` |
+| Language rows sat flush against their divider — the label outgrows a 44 pt minimum height | vertical padding in addition to `minHeight` |
+
+Remaining observation, not a defect: the preview title wraps mid-word at the largest size
+("Example Old-|Town Trail"). It wraps rather than truncates, and the frame stays inside the window.
+
+### 4. Measured contrast on the final theme
+
+Produced by `KultaraThemeTests.reportMeasuredContrastRatios`. Every pair passes.
+
+| | Light | Dark |
+|---|---|---|
+| Body ink on page / card / inset | 13.22 · 14.54 · 11.43 | 14.52 · 13.03 · 15.53 |
+| Secondary ink | 7.57 · 8.32 · 6.54 | 8.54 · 7.66 · 9.13 |
+| Seal accent | 8.30 · 9.13 · 7.17 | 8.42 · 7.55 · 9.00 |
+| Warning | 6.03 · 6.63 · 5.21 | 9.37 · 8.41 · 10.02 |
+| `documented` / `oral` chip ink on chip | 11.43 / 7.39 | 15.53 / 11.35 |
+| Text on filled seal button | 9.13 | 6.68 |
+| Hairline (needs 3:1) | 3.71 · 4.08 | 4.31 · 3.87 |
+
+Lowest text ratio: **5.21:1** light, **6.68:1** dark. Lowest hairline: **3.71:1** light,
+**3.87:1** dark.
+
+The first attempt — the visual direction taken literally — failed 15 of 30 pairs, worst cases
+2.76:1 (warning), 2.90:1 (secondary text on a card), 1.50:1 (hairline). The theme was changed, not
+the threshold.
+
+### 5. Validator CLI
+
+```
+content-validator Sources/ContentKit/Content
+  → OK  1 quest(s), 5 place(s), 30805 bytes — all 16 rules pass.     exit 0
+```
+
+On deliberately corrupted copies, exit 1 every time. Rules demonstrated firing from the CLI:
+**V1, V2, V3, V4, V5, V6, V7, V8, V9, V10, V11, V12, V13, V14, V16** — 15 of 16.
+
+V15 (payload ≤ 200 MB) is covered by unit test only; demonstrating it from the CLI would mean
+committing 200 MB of filler.
+
+Worth recording: a V1 translation gap *blocks* the decode-dependent rules rather than merely adding
+a finding, and the report says `BLOCKED` rather than reporting a pass. That is the intended
+behaviour — V1 and V7 run on raw JSON precisely so a gap is still attributable to a rule — but it
+means a run with several faults may need fixing in two passes.
