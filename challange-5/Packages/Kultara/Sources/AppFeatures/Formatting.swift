@@ -77,6 +77,8 @@ public struct ContentFormatter: Sendable {
     public func bytes(_ count: Int) -> String {
         let formatter = ByteCountFormatter()
         formatter.countStyle = .file
+        // Without this, zero renders as "Zero KB", which reads as a bug rather than as a number.
+        formatter.allowsNonnumericFormatting = false
         return formatter.string(fromByteCount: Int64(count))
     }
 

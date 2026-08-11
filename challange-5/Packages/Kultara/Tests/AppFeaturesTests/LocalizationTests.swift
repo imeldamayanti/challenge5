@@ -134,3 +134,39 @@ struct AppPreferencesStoreTests {
         #expect(store.onboardingCompletedAt == nil)
     }
 }
+
+struct ContentFormatterTests {
+
+    @Test func zeroBytesReadsAsANumberNotAsTheWordZero() {
+        // ByteCountFormatter's default renders 0 as "Zero KB", which reads as a bug in a Settings
+        // row rather than as a measurement.
+        let text = ContentFormatter(language: .en).bytes(0)
+        #expect(!text.lowercased().contains("zero"), "\(text)")
+        #expect(text.contains("0"), "\(text)")
+    }
+
+    @Test func distanceSwitchesToKilometresAtOneThousandMetres() {
+        let formatter = ContentFormatter(language: .en)
+        #expect(formatter.distance(metres: 999).contains("999"))
+        #expect(formatter.distance(metres: 999).hasSuffix("m"))
+        #expect(formatter.distance(metres: 1000).contains("1.0"))
+        #expect(formatter.distance(metres: 2600).contains("2.6"))
+    }
+
+    @Test func indonesianUsesACommaAsTheDecimalSeparator() {
+        // NFR-I18N-05 is about units; this is about the language the user is reading. "2.6 km" in
+        // an Indonesian interface is wrong even on a US-locale phone.
+        #expect(ContentFormatter(language: .id).distance(metres: 2600).contains("2,6"))
+    }
+
+    @Test func aFreeQuestFormatsAsFreeRatherThanAsZeroCurrency() {
+        #expect(ContentFormatter(language: .en).cost(amount: 0, currency: "IDR") == "Free")
+        #expect(ContentFormatter(language: .id).cost(amount: 0, currency: "IDR") == "Gratis")
+    }
+
+    @Test func indonesianRupiahIsShownWithoutMinorUnits() {
+        let text = ContentFormatter(language: .id).cost(amount: 50_000, currency: "IDR")
+        #expect(!text.contains(",00"), "\(text)")
+        #expect(text.contains("50"), "\(text)")
+    }
+}

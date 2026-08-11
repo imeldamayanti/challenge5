@@ -308,6 +308,9 @@ public struct SettingsView: View {
                                     .foregroundStyle(palette.seal.color)
                             }
                         }
+                        // Vertical padding as well as a minimum height: at accessibility sizes the
+                        // label outgrows 44 pt and the rows would sit flush against the divider.
+                        .padding(.vertical, KultaraMetrics.sm)
                         .frame(minHeight: KultaraMetrics.minimumTapTarget)
                         .contentShape(Rectangle())
                     }
