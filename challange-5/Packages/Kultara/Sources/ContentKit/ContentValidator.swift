@@ -10,6 +10,7 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
     case v5 = "V5", v6 = "V6", v7 = "V7", v8 = "V8"
     case v9 = "V9", v10 = "V10", v11 = "V11", v12 = "V12"
     case v13 = "V13", v14 = "V14", v15 = "V15", v16 = "V16"
+    case v17 = "V17"
 
     public var title: String {
         switch self {
@@ -29,6 +30,7 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
         case .v14: "Every referenced asset path exists"
         case .v15: "Total content payload is at most 200 MB"
         case .v16: "hardLatestStart matches recomputation from visiting hours"
+        case .v17: "Every Place a quest visits has a map pin inside the region map"
         }
     }
 
@@ -52,6 +54,7 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
         case .v14: "—"
         case .v15: "NFR-PERF-07"
         case .v16: "FR-DISC-06"
+        case .v17: "FR-DISC-02, FR-DISC-03"
         }
     }
 }
@@ -265,6 +268,32 @@ public enum ContentValidator {
             findings.append(contentsOf: questFindings(quest, bundle: bundle, assets: assets))
         }
 
+        // V17 — every Place a quest visits must be findable on the map, or the map screen
+        // silently drops a stop the list shows.
+        if let regionMap = bundle.manifest.regionMap {
+            if !assets.exists(regionMap.asset) {
+                findings.append(ValidationFinding(
+                    rule: .v14, path: "manifest.json",
+                    message: "Region map asset \"\(regionMap.asset)\" does not exist."))
+            }
+            let visited = Set(bundle.quests.flatMap { $0.checkpoints.map(\.placeId) })
+            for placeID in visited.sorted() {
+                guard let place = bundle.place(id: placeID) else { continue }
+                let path = "places/\(place.id).json"
+                guard let point = place.mapPoint else {
+                    findings.append(ValidationFinding(
+                        rule: .v17, path: path,
+                        message: "Content ships a region map but \(place.id) has no mapPoint, so the map cannot show it."))
+                    continue
+                }
+                if !point.isInsideImage {
+                    findings.append(ValidationFinding(
+                        rule: .v17, path: path,
+                        message: "mapPoint (\(point.x), \(point.y)) is outside the image; both values must be within 0…1."))
+                }
+            }
+        }
+
         // V15 — NFR-PERF-07
         let bytes = assets.totalPayloadBytes()
         if bytes > payloadBudgetBytes {
@@ -293,7 +322,7 @@ public enum ContentValidator {
         }
 
         // V14 — referenced assets
-        for asset in [quest.route.geometryAsset, quest.route.previewImageAsset] {
+        for asset in [quest.route.geometryAsset, quest.route.previewImageAsset, quest.heroImageAsset].compactMap({ $0 }) {
             if !assets.exists(asset) {
                 findings.append(ValidationFinding(
                     rule: .v14, path: path, message: "Referenced asset \"\(asset)\" does not exist."))

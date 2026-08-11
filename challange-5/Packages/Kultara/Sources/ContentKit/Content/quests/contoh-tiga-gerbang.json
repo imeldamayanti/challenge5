@@ -1,0 +1,203 @@
+{
+  "id": "contoh-tiga-gerbang",
+  "contentVersion": "2026.08.2",
+  "title": {
+    "id": "Tiga Gerbang Contoh",
+    "en": "Example Three Gates"
+  },
+  "region": "Denpasar",
+  "city": "Denpasar",
+  "hookLore": [
+    {
+      "text": {
+        "id": "Pembuka contoh untuk Tiga Gerbang Contoh.",
+        "en": "An example opening for Example Three Gates."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    }
+  ],
+  "description": {
+    "id": "Rute contoh ketiga, berbiaya, untuk menguji rincian biaya di kartu dan pratinjau.",
+    "en": "A third example route that costs money, to exercise the cost breakdown on the card and in preview."
+  },
+  "route": {
+    "totalDistanceM": 2100,
+    "distanceSource": "walking-directions",
+    "walkingTimeMin": 30,
+    "totalDurationMin": 95,
+    "geometryAsset": "quests/contoh-tiga-gerbang/route.geojson",
+    "previewImageAsset": "quests/contoh-tiga-gerbang/route-preview.png"
+  },
+  "estimatedCost": {
+    "amount": 50000,
+    "currency": "IDR",
+    "breakdown": [
+      {
+        "placeId": "contoh-museum-arsip-kota",
+        "amount": 50000
+      }
+    ]
+  },
+  "terrainSummary": {
+    "id": "Undakan batu di titik pertama, sisanya beraspal.",
+    "en": "Stone steps at the first stop, paved after that."
+  },
+  "recommendedStartWindow": {
+    "from": "08:00",
+    "to": "12:00"
+  },
+  "hardLatestStart": "13:55",
+  "proximityRadiusM": 235,
+  "safetyNotes": {
+    "id": "Trotoar menyempit di dua ruas.",
+    "en": "The pavement narrows on two stretches."
+  },
+  "languages": [
+    "id",
+    "en"
+  ],
+  "badgeId": "badge-contoh-tiga-gerbang",
+  "heroImageAsset": "quests/contoh-tiga-gerbang/hero.png",
+  "checkpoints": [
+    {
+      "id": "contoh-tiga-gerbang-cp1",
+      "orderIndex": 0,
+      "placeId": "contoh-pura-tirta-sari",
+      "role": "start",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Segmen contoh 1 untuk rute Tiga Gerbang Contoh.",
+            "en": "Example segment 1 for the Example Three Gates route."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Lanjut ke titik berikutnya, ikuti jalan utama.",
+        "en": "Carry on to the next stop, following the main street."
+      },
+      "tasks": [
+        {
+          "id": "contoh-tiga-gerbang-cp1-t1",
+          "type": "reflection",
+          "prompt": {
+            "id": "Catat satu detail yang kamu ingat.",
+            "en": "Note one detail you will remember."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [],
+      "stampId": "stamp-contoh-tiga-gerbang-1"
+    },
+    {
+      "id": "contoh-tiga-gerbang-cp2",
+      "orderIndex": 1,
+      "placeId": "contoh-museum-arsip-kota",
+      "role": "middle",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Segmen contoh 2 untuk rute Tiga Gerbang Contoh.",
+            "en": "Example segment 2 for the Example Three Gates route."
+          },
+          "accuracy": "oral",
+          "sourceRefs": [
+            0
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Lanjut ke titik berikutnya, ikuti jalan utama.",
+        "en": "Carry on to the next stop, following the main street."
+      },
+      "tasks": [
+        {
+          "id": "contoh-tiga-gerbang-cp2-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Catat satu detail yang kamu ingat.",
+            "en": "Note one detail you will remember."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [],
+      "stampId": "stamp-contoh-tiga-gerbang-2"
+    },
+    {
+      "id": "contoh-tiga-gerbang-cp3",
+      "orderIndex": 2,
+      "placeId": "contoh-monumen-lapangan-kota",
+      "role": "middle",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Segmen contoh 3 untuk rute Tiga Gerbang Contoh.",
+            "en": "Example segment 3 for the Example Three Gates route."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Lanjut ke titik berikutnya, ikuti jalan utama.",
+        "en": "Carry on to the next stop, following the main street."
+      },
+      "tasks": [
+        {
+          "id": "contoh-tiga-gerbang-cp3-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Catat satu detail yang kamu ingat.",
+            "en": "Note one detail you will remember."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [],
+      "stampId": "stamp-contoh-tiga-gerbang-3"
+    },
+    {
+      "id": "contoh-tiga-gerbang-cp4",
+      "orderIndex": 3,
+      "placeId": "contoh-puri-gerbang-utara",
+      "role": "finish",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Segmen contoh 4 untuk rute Tiga Gerbang Contoh.",
+            "en": "Example segment 4 for the Example Three Gates route."
+          },
+          "accuracy": "oral",
+          "sourceRefs": [
+            0
+          ]
+        }
+      ],
+      "clueToNext": null,
+      "tasks": [
+        {
+          "id": "contoh-tiga-gerbang-cp4-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Catat satu detail yang kamu ingat.",
+            "en": "Note one detail you will remember."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [],
+      "stampId": "stamp-contoh-tiga-gerbang-4"
+    }
+  ]
+}

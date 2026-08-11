@@ -102,5 +102,9 @@
       "url": null
     }
   ],
-  "consentRecordId": "contoh-monumen-lapangan-kota"
+  "consentRecordId": "contoh-monumen-lapangan-kota",
+  "mapPoint": {
+    "x": 0.545,
+    "y": 0.635
+  }
 }

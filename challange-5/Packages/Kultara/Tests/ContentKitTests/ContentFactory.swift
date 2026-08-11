@@ -21,7 +21,8 @@ enum ContentFactory {
         sources: [Source] = [Source(kind: .documented, citation: "Sumber", url: nil)],
         consentRecordId: String = "place-a",
         entryCost: Money = Money(amount: 0, currency: "IDR"),
-        close: TimeOfDay = TimeOfDay(hour: 17, minute: 0)
+        close: TimeOfDay = TimeOfDay(hour: 17, minute: 0),
+        mapPoint: MapPoint? = nil
     ) -> Place {
         Place(
             id: id,
@@ -40,7 +41,8 @@ enum ContentFactory {
             accessibility: AccessibilityInfo(hasSteps: false, stepCount: nil, surface: "paving", notes: text("Rata")),
             loreStandalone: [lore()],
             sources: sources,
-            consentRecordId: consentRecordId)
+            consentRecordId: consentRecordId,
+            mapPoint: mapPoint)
     }
 
     static func task(
@@ -78,6 +80,7 @@ enum ContentFactory {
         hardLatestStart: TimeOfDay = TimeOfDay(hour: 15, minute: 15),
         totalDurationMin: Int = 105,
         estimatedCost: EstimatedCost = EstimatedCost(amount: 0, currency: "IDR", breakdown: []),
+        heroImageAsset: String? = nil,
         checkpoints: [Checkpoint]? = nil
     ) -> Quest {
         Quest(
@@ -102,6 +105,7 @@ enum ContentFactory {
             proximityRadiusM: proximityRadiusM,
             safetyNotes: text("Hati-hati"),
             badgeId: "badge-\(id)",
+            heroImageAsset: heroImageAsset,
             checkpoints: checkpoints ?? [
                 checkpoint(id: "cp1", orderIndex: 0, placeId: "place-a", role: .start),
                 checkpoint(id: "cp2", orderIndex: 1, placeId: "place-b", role: .finish, clueToNext: nil),
@@ -144,7 +148,8 @@ enum ContentFactory {
                 contentBundleVersion: "2026.08.1",
                 languages: [.id, .en],
                 places: resolvedPlaces.map(\.id),
-                quests: resolvedQuests.map(\.id)),
+                quests: resolvedQuests.map(\.id),
+                regionMap: nil),
             places: resolvedPlaces,
             quests: resolvedQuests,
             consentRecords: consentRecords ?? [consent(placeId: "place-a"), consent(placeId: "place-b")])

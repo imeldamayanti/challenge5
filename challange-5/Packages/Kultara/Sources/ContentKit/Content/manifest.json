@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "contentBundleVersion": "2026.08.1",
+  "contentBundleVersion": "2026.08.2",
   "languages": [
     "id",
     "en"
@@ -13,6 +13,12 @@
     "contoh-pasar-pagi-timur"
   ],
   "quests": [
-    "contoh-jejak-kota-lama"
-  ]
+    "contoh-jejak-kota-lama",
+    "contoh-tiga-gerbang",
+    "contoh-tepi-sungai"
+  ],
+  "regionMap": {
+    "asset": "maps/bali-illustrated.png",
+    "aspectRatio": 0.4626
+  }
 }

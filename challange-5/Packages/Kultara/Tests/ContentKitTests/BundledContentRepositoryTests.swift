@@ -20,7 +20,7 @@ struct BundledContentRepositoryTests {
         let repository = try repository()
         let quests = try repository.quests()
 
-        #expect(quests.count == 1)
+        #expect(quests.count == 3)
         let quest = try #require(quests.first)
         #expect(quest.orderedCheckpoints.count == 5)
         #expect(quest.orderedCheckpoints.map(\.orderIndex) == [0, 1, 2, 3, 4])
@@ -59,7 +59,7 @@ struct BundledContentRepositoryTests {
         // AD-4: a Run pins this at start. Nothing in M5 starts a Run, but the value a Run would
         // pin must already be readable, or the pin has nothing to attach to.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.08.1")
+        #expect(try repository.contentBundleVersion() == "2026.08.2")
     }
 
     @Test func questsAreReturnedInManifestOrder() throws {
@@ -78,6 +78,7 @@ struct BundledContentRepositoryTests {
         let remaining = try repository.quests(suppressingQuestIDs: [victim], suppressingPlaceIDs: [])
         #expect(!remaining.contains { $0.id == victim })
         #expect(remaining.count == all.count - 1)
+        #expect(all.count > 1, "The suppression test is only meaningful with more than one quest.")
     }
 
     @Test func aQuestIsSuppressedWhenAnyOfItsPlacesIsSuppressed() throws {
@@ -150,6 +151,38 @@ struct BundledContentRepositoryTests {
         #expect(quest.estimatedCost.amount > 0)
         #expect(!quest.estimatedCost.breakdown.isEmpty)
         #expect(quest.estimatedCost.breakdown.reduce(0) { $0 + $1.amount } == quest.estimatedCost.amount)
+    }
+
+    @Test func everyQuestHasAHeroImagePresentInTheBundle() throws {
+        // The discovery card is built around it; a missing hero means a card that silently falls
+        // back to type on paper (validator rule V14 catches the authoring side).
+        let repository = try repository()
+        for quest in try repository.quests() {
+            let asset = try #require(quest.heroImageAsset, "\(quest.id) has no hero image")
+            #expect(try repository.assetURL(asset) != nil, "\(asset) is missing from the bundle")
+        }
+    }
+
+    @Test func theRegionMapAndEveryPinAreInTheBundle() throws {
+        // FR-MAP-01 / FR-OFF-03: the map screen draws a shipped illustration, so it works with no
+        // network and no tile cache.
+        let repository = try repository()
+        let regionMap = try #require(try repository.manifest().regionMap)
+        #expect(try repository.assetURL(regionMap.asset) != nil)
+
+        for quest in try repository.quests() {
+            for checkpoint in quest.orderedCheckpoints {
+                let place = try #require(try repository.place(id: checkpoint.placeId))
+                let point = try #require(place.mapPoint, "\(place.id) has no map pin")
+                #expect(point.isInsideImage)
+            }
+        }
+    }
+
+    @Test func theFixtureHasAFreeQuestAndAPaidOneSoBothCardStatesRender() throws {
+        let quests = try repository().quests()
+        #expect(quests.contains { $0.estimatedCost.isFree })
+        #expect(quests.contains { !$0.estimatedCost.isFree })
     }
 
     @Test func theFixtureCarriesBothAccuracyLabelsSoTheLabelConventionIsExercised() throws {

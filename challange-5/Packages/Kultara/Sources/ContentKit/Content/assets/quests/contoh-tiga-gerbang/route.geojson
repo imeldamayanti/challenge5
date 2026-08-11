@@ -1,0 +1,92 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "role": "route"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            115.2101,
+            -8.6552
+          ],
+          [
+            115.2152,
+            -8.6577
+          ],
+          [
+            115.2138,
+            -8.6561
+          ],
+          [
+            115.2085,
+            -8.657
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "contoh-tiga-gerbang-cp1",
+        "orderIndex": 0,
+        "placeId": "contoh-pura-tirta-sari"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.2101,
+          -8.6552
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "contoh-tiga-gerbang-cp2",
+        "orderIndex": 1,
+        "placeId": "contoh-museum-arsip-kota"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.2152,
+          -8.6577
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "contoh-tiga-gerbang-cp3",
+        "orderIndex": 2,
+        "placeId": "contoh-monumen-lapangan-kota"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.2138,
+          -8.6561
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "contoh-tiga-gerbang-cp4",
+        "orderIndex": 3,
+        "placeId": "contoh-puri-gerbang-utara"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          115.2085,
+          -8.657
+        ]
+      }
+    }
+  ]
+}

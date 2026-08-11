@@ -25,7 +25,7 @@ public struct ValidationReport: Sendable {
             lines.append(finding.description)
         }
         if lines.isEmpty {
-            lines.append("OK  \(questCount) quest(s), \(placeCount) place(s), \(payloadBytes) bytes — all 16 rules pass.")
+            lines.append("OK  \(questCount) quest(s), \(placeCount) place(s), \(payloadBytes) bytes — all \(ValidationRule.allCases.count) rules pass.")
         } else {
             lines.append("")
             lines.append("\(findings.count) finding(s), \(blockers.count) blocker(s).")

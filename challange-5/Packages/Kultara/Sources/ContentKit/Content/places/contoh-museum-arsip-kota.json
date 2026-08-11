@@ -102,5 +102,9 @@
       "url": null
     }
   ],
-  "consentRecordId": "contoh-museum-arsip-kota"
+  "consentRecordId": "contoh-museum-arsip-kota",
+  "mapPoint": {
+    "x": 0.435,
+    "y": 0.695
+  }
 }

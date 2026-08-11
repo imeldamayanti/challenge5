@@ -20,6 +20,37 @@ public struct Coordinate: Codable, Sendable, Equatable, Hashable {
     }
 }
 
+/// Where a Place sits on the region map, as a fraction of the image: `{0,0}` top-left,
+/// `{1,1}` bottom-right.
+///
+/// Authored, not derived. The region map is an illustration — hand-drawn, taller than the island
+/// is, with a stylised coastline — so projecting `coordinate` onto it would place every pin
+/// somewhere wrong while looking precise. A drawing's pin positions are a drawing decision.
+public struct MapPoint: Codable, Sendable, Equatable, Hashable {
+    public let x: Double
+    public let y: Double
+
+    public init(x: Double, y: Double) {
+        self.x = x
+        self.y = y
+    }
+
+    public var isInsideImage: Bool { (0...1).contains(x) && (0...1).contains(y) }
+}
+
+/// The illustrated map the discovery screen draws on. Ships as an asset, so the map screen works
+/// with no network and no tile cache (`FR-MAP-01`, `FR-OFF-03`).
+public struct RegionMapAsset: Codable, Sendable, Equatable, Hashable {
+    public let asset: String
+    /// Width ÷ height of the image, so the layout can reserve the right space before decoding it.
+    public let aspectRatio: Double
+
+    public init(asset: String, aspectRatio: Double) {
+        self.asset = asset
+        self.aspectRatio = aspectRatio
+    }
+}
+
 public struct Money: Codable, Sendable, Equatable, Hashable {
     public let amount: Int
     public let currency: String
@@ -130,6 +161,8 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
     public let loreStandalone: [LoreBlock]
     public let sources: [Source]
     public let consentRecordId: String
+    /// Position on the region map, when content ships one (validator rule V17).
+    public let mapPoint: MapPoint?
 
     public init(
         id: String,
@@ -147,7 +180,8 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         accessibility: AccessibilityInfo,
         loreStandalone: [LoreBlock] = [],
         sources: [Source],
-        consentRecordId: String
+        consentRecordId: String,
+        mapPoint: MapPoint? = nil
     ) {
         self.id = id
         self.nameOfficial = nameOfficial
@@ -165,6 +199,7 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         self.loreStandalone = loreStandalone
         self.sources = sources
         self.consentRecordId = consentRecordId
+        self.mapPoint = mapPoint
     }
 
     public init(from decoder: any Decoder) throws {
@@ -185,6 +220,7 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         loreStandalone = try c.decodeIfPresent([LoreBlock].self, forKey: .loreStandalone) ?? []
         sources = try c.decode([Source].self, forKey: .sources)
         consentRecordId = try c.decode(String.self, forKey: .consentRecordId)
+        mapPoint = try c.decodeIfPresent(MapPoint.self, forKey: .mapPoint)
     }
 }
 
@@ -347,6 +383,9 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
     public let safetyNotes: LocalizedText
     public let languages: [ContentLanguage]
     public let badgeId: String
+    /// The photograph the discovery card is built around. Optional: a quest with no hero still
+    /// lists, it just reads as type on paper rather than type on an image.
+    public let heroImageAsset: String?
     public let checkpoints: [Checkpoint]
 
     public init(
@@ -366,6 +405,7 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         safetyNotes: LocalizedText,
         languages: [ContentLanguage] = [.id, .en],
         badgeId: String,
+        heroImageAsset: String? = nil,
         checkpoints: [Checkpoint]
     ) {
         self.id = id
@@ -384,6 +424,7 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         self.safetyNotes = safetyNotes
         self.languages = languages
         self.badgeId = badgeId
+        self.heroImageAsset = heroImageAsset
         self.checkpoints = checkpoints
     }
 
@@ -405,6 +446,7 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         safetyNotes = try c.decode(LocalizedText.self, forKey: .safetyNotes)
         languages = try c.decodeIfPresent([ContentLanguage].self, forKey: .languages) ?? [.id, .en]
         badgeId = try c.decode(String.self, forKey: .badgeId)
+        heroImageAsset = try c.decodeIfPresent(String.self, forKey: .heroImageAsset)
         checkpoints = try c.decode([Checkpoint].self, forKey: .checkpoints)
     }
 
@@ -415,6 +457,11 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
     public var orderedCheckpoints: [Checkpoint] {
         checkpoints.sorted { $0.orderIndex < $1.orderIndex }
     }
+
+    /// What the discovery card counts. The Home mockup labels this "5 quests"; the glossary calls
+    /// them checkpoints, and `FR-CP-08` counts progress in them — a quest containing quests would
+    /// make both readings ambiguous for no gain.
+    public var checkpointCount: Int { checkpoints.count }
 }
 
 // MARK: - Manifest
@@ -426,19 +473,34 @@ public struct Manifest: Codable, Sendable, Equatable {
     public let languages: [ContentLanguage]
     public let places: [String]
     public let quests: [String]
+    /// Absent when content ships no illustrated map; the map screen then has nothing to draw and
+    /// says so rather than showing an empty frame.
+    public let regionMap: RegionMapAsset?
 
     public init(
         schemaVersion: Int,
         contentBundleVersion: String,
         languages: [ContentLanguage],
         places: [String],
-        quests: [String]
+        quests: [String],
+        regionMap: RegionMapAsset? = nil
     ) {
         self.schemaVersion = schemaVersion
         self.contentBundleVersion = contentBundleVersion
         self.languages = languages
         self.places = places
         self.quests = quests
+        self.regionMap = regionMap
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try c.decode(Int.self, forKey: .schemaVersion)
+        contentBundleVersion = try c.decode(String.self, forKey: .contentBundleVersion)
+        languages = try c.decode([ContentLanguage].self, forKey: .languages)
+        places = try c.decode([String].self, forKey: .places)
+        quests = try c.decode([String].self, forKey: .quests)
+        regionMap = try c.decodeIfPresent(RegionMapAsset.self, forKey: .regionMap)
     }
 }
 

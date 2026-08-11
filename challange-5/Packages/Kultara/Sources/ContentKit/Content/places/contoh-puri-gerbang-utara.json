@@ -102,5 +102,9 @@
       "url": null
     }
   ],
-  "consentRecordId": "contoh-puri-gerbang-utara"
+  "consentRecordId": "contoh-puri-gerbang-utara",
+  "mapPoint": {
+    "x": 0.4,
+    "y": 0.62
+  }
 }

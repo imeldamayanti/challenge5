@@ -64,8 +64,8 @@ struct QuestListTests {
         let victim = try #require(try repository.quests().first).id
         let model = QuestListViewModel(
             repository: repository, language: .id, suppressedQuestIDs: [victim])
-        #expect(model.rows.isEmpty)
-        #expect(model.isEmpty)
+        #expect(!model.rows.contains { $0.questID == victim })
+        #expect(model.rows.count == (try repository.quests().count) - 1)
     }
 
     @Test func anEmptyListSaysSoRatherThanShowingNothing() throws {

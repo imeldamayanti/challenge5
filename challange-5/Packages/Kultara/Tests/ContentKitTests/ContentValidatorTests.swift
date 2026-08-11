@@ -364,9 +364,9 @@ struct ContentValidatorTests {
     @Test func everyRuleInTheSchemaIsRepresented() {
         // If a rule is added to the enum without a test, this fails and names it.
         let tested: Set<ValidationRule> = [.v1, .v2, .v3, .v4, .v5, .v6, .v7, .v8,
-                                           .v9, .v10, .v11, .v12, .v13, .v14, .v15, .v16]
+                                           .v9, .v10, .v11, .v12, .v13, .v14, .v15, .v16, .v17]
         #expect(Set(ValidationRule.allCases) == tested)
-        #expect(ValidationRule.allCases.count == 16)
+        #expect(ValidationRule.allCases.count == 17)
     }
 
     @Test func everyRuleNamesTheRequirementItEnforces() {
@@ -380,5 +380,81 @@ struct ContentValidatorTests {
 
     private func findings(_ bundle: ContentBundle) -> [ValidationFinding] {
         ContentValidator.validate(bundle, assets: ContentFactory.assets(), today: ContentFactory.today)
+    }
+}
+
+/// V17 — when content ships a region map, every Place a quest visits must have a pin on it, inside
+/// the image. A Place with no pin is a quest the map screen silently drops.
+struct RegionMapValidationTests {
+
+    private func bundle(
+        regionMap: RegionMapAsset? = RegionMapAsset(asset: "maps/region.png", aspectRatio: 0.46),
+        mapPoints: [String: MapPoint?] = ["place-a": MapPoint(x: 0.4, y: 0.5),
+                                          "place-b": MapPoint(x: 0.6, y: 0.7)]
+    ) -> ContentBundle {
+        let places = ["place-a", "place-b"].map { id in
+            ContentFactory.place(id: id, mapPoint: mapPoints[id] ?? nil)
+        }
+        let base = ContentFactory.bundle(places: places)
+        return ContentBundle(
+            manifest: Manifest(
+                schemaVersion: 1,
+                contentBundleVersion: base.manifest.contentBundleVersion,
+                languages: base.manifest.languages,
+                places: base.manifest.places,
+                quests: base.manifest.quests,
+                regionMap: regionMap),
+            places: base.places,
+            quests: base.quests,
+            consentRecords: base.consentRecords)
+    }
+
+    private func findings(_ bundle: ContentBundle) -> [ValidationFinding] {
+        ContentValidator.validate(
+            bundle,
+            assets: ContentFactory.assets(present: [
+                "quests/quest-a/route.geojson", "quests/quest-a/route-preview.png", "maps/region.png",
+            ]),
+            today: ContentFactory.today)
+    }
+
+    @Test func v17AcceptsContentWhereEveryVisitedPlaceHasAPin() {
+        #expect(!findings(bundle()).contains { $0.rule == .v17 })
+    }
+
+    @Test func v17RejectsAVisitedPlaceWithNoPin() {
+        let broken = bundle(mapPoints: ["place-a": MapPoint(x: 0.4, y: 0.5), "place-b": nil])
+        #expect(findings(broken).contains { $0.rule == .v17 })
+    }
+
+    @Test(arguments: [-0.01, 1.01, 2.0])
+    func v17RejectsAPinOutsideTheImage(_ offending: Double) {
+        let broken = bundle(mapPoints: [
+            "place-a": MapPoint(x: offending, y: 0.5),
+            "place-b": MapPoint(x: 0.6, y: 0.7),
+        ])
+        #expect(findings(broken).contains { $0.rule == .v17 })
+    }
+
+    @Test func v17IsSilentWhenContentShipsNoRegionMap() {
+        // No map, no pins required. The map screen has nothing to draw and says so.
+        let noMap = bundle(regionMap: nil, mapPoints: ["place-a": nil, "place-b": nil])
+        #expect(!findings(noMap).contains { $0.rule == .v17 })
+    }
+
+    @Test func v14CoversTheRegionMapAssetItself() {
+        let missing = ContentValidator.validate(
+            bundle(),
+            assets: ContentFactory.assets(present: [
+                "quests/quest-a/route.geojson", "quests/quest-a/route-preview.png",
+            ]),
+            today: ContentFactory.today)
+        #expect(missing.contains { $0.rule == .v14 })
+    }
+
+    @Test func v14CoversAQuestHeroImage() {
+        let base = ContentFactory.bundle(quests: [ContentFactory.quest(heroImageAsset: "quests/quest-a/hero.jpg")])
+        let found = ContentValidator.validate(base, assets: ContentFactory.assets(), today: ContentFactory.today)
+        #expect(found.contains { $0.rule == .v14 })
     }
 }

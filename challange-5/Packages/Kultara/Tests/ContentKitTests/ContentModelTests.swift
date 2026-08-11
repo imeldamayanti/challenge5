@@ -329,3 +329,71 @@ struct ContentModelTests {
     }
     """#
 }
+
+/// Additions the Home mockup requires: a hero image per quest, a region map for the map screen,
+/// and an authored pin position per Place.
+struct RegionMapAndHeroTests {
+
+    private let decoder = JSONDecoder()
+
+    @Test func manifestCarriesAnOptionalRegionMap() throws {
+        let manifest = try decoder.decode(Manifest.self, from: Data(#"""
+        { "schemaVersion": 1, "contentBundleVersion": "2026.08.2",
+          "languages": ["id", "en"], "places": ["p"], "quests": ["q"],
+          "regionMap": { "asset": "maps/bali.png", "aspectRatio": 0.4626 } }
+        """#.utf8))
+        #expect(manifest.regionMap?.asset == "maps/bali.png")
+    }
+
+    @Test func manifestWithoutARegionMapStillDecodes() throws {
+        // Content that ships no map is valid; the map screen simply has nothing to draw.
+        let manifest = try decoder.decode(Manifest.self, from: Data(#"""
+        { "schemaVersion": 1, "contentBundleVersion": "2026.08.2",
+          "languages": ["id", "en"], "places": ["p"], "quests": ["q"] }
+        """#.utf8))
+        #expect(manifest.regionMap == nil)
+    }
+
+    @Test func mapPointIsNormalisedAndAuthoredRatherThanDerived() throws {
+        // The region map is a drawing, not a projection: it is taller than Bali is and the
+        // coastline is stylised. Deriving a pin position from lat/lon would put every pin in the
+        // wrong place with an air of precision, so the position is authored as a fraction of the
+        // image and the validator checks the range rather than the geography.
+        let point = try decoder.decode(MapPoint.self, from: Data(#"{ "x": 0.42, "y": 0.63 }"#.utf8))
+        #expect(point.x == 0.42)
+        #expect(point.y == 0.63)
+    }
+
+    @Test func aPlaceMayCarryAMapPoint() throws {
+        var json = ContentModelTests.placeJSON
+        json = json.replacingOccurrences(
+            of: #""arrivalRadiusM": 75,"#,
+            with: #""arrivalRadiusM": 75, "mapPoint": { "x": 0.5, "y": 0.5 },"#)
+        let place = try decoder.decode(Place.self, from: Data(json.utf8))
+        #expect(place.mapPoint == MapPoint(x: 0.5, y: 0.5))
+    }
+
+    @Test func aPlaceWithoutAMapPointStillDecodes() throws {
+        #expect(try decoder.decode(Place.self, from: Data(ContentModelTests.placeJSON.utf8)).mapPoint == nil)
+    }
+
+    @Test func aQuestMayCarryAHeroImage() throws {
+        let json = ContentModelTests.questJSON.replacingOccurrences(
+            of: #""region": "Denpasar","#,
+            with: #""region": "Denpasar", "heroImageAsset": "quests/jejak-terakhir-badung/hero.jpg","#)
+        let quest = try decoder.decode(Quest.self, from: Data(json.utf8))
+        #expect(quest.heroImageAsset == "quests/jejak-terakhir-badung/hero.jpg")
+    }
+
+    @Test func aQuestWithoutAHeroImageStillDecodes() throws {
+        #expect(try decoder.decode(Quest.self, from: Data(ContentModelTests.questJSON.utf8)).heroImageAsset == nil)
+    }
+
+    @Test func checkpointCountIsExposedForTheCardMetadata() throws {
+        // The mockup's card says "5 quests" for what the glossary calls checkpoints. A quest
+        // containing quests would collide with the vocabulary FR-CP-08 counts in, so the model
+        // names it what it is.
+        let quest = try decoder.decode(Quest.self, from: Data(ContentModelTests.questJSON.utf8))
+        #expect(quest.checkpointCount == quest.checkpoints.count)
+    }
+}

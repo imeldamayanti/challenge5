@@ -1,6 +1,6 @@
 {
   "id": "contoh-jejak-kota-lama",
-  "contentVersion": "2026.08.1",
+  "contentVersion": "2026.08.2",
   "title": {
     "id": "Jejak Contoh Kota Lama",
     "en": "Example Old-Town Trail"
@@ -267,5 +267,6 @@
       ],
       "stampId": "stamp-contoh-jejak-kota-lama-5"
     }
-  ]
+  ],
+  "heroImageAsset": "quests/contoh-jejak-kota-lama/hero.png"
 }

@@ -181,7 +181,10 @@ struct SettingsTests {
         // A report that does not say which content it is about costs a round trip to triage.
         let model = try model()
         let url = try #require(model.reportDestination)
-        #expect(url.absoluteString.contains("2026.08.1"), "\(url.absoluteString)")
+        // Read from the repository rather than hardcoded: a content bump must not break this test,
+        // it must keep asserting that whatever version ships is the one in the report.
+        let version = try BundledContentRepository().contentBundleVersion()
+        #expect(url.absoluteString.contains(version), "\(url.absoluteString) lacks \(version)")
     }
 }
 

@@ -117,5 +117,9 @@
       "url": null
     }
   ],
-  "consentRecordId": "contoh-pura-tirta-sari"
+  "consentRecordId": "contoh-pura-tirta-sari",
+  "mapPoint": {
+    "x": 0.47,
+    "y": 0.585
+  }
 }
