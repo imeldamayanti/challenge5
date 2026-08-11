@@ -280,8 +280,10 @@ would otherwise be silent: a map that quietly drops a stop the list shows.
 
 Text on an image has no measurable background, so `NFR-A11Y-03` cannot be satisfied by inspection.
 The caption block sits on an opaque scrim and the gradient above it is decoration, which makes the
-ratio real again: **inkOnPhoto 14.05:1**, **inkMutedOnPhoto 8.20:1**, both against `#17120D`, both
-appearances. The card's emphasis for a paid quest is weight plus symbol rather than the seal red,
+ratio real again: **inkOnPhoto `#F7F1E4` 16.53:1**, **inkMutedOnPhoto `#CFC2AC` 10.60:1**, both
+against the scrim `#17120D`, identical in both appearances — a photograph does not get lighter in
+light mode, so the scrim does not flip. Measured by
+`KultaraThemeTests.reportMeasuredContrastRatios`, like every other pair. The card's emphasis for a paid quest is weight plus symbol rather than the seal red,
 because on a photograph a hue is not a measurable colour and `NFR-A11Y-05` forbids colour carrying
 meaning alone.
 
