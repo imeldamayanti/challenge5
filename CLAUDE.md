@@ -13,8 +13,12 @@ Milestone 5 (Discovery & Preview) is implemented. The quest execution loop, comp
 The repo root and the Xcode project directory share a name, which is confusing:
 
 ```
-/                              repo root — specs, research artifacts
-├── docs/                      system-design.md, schema.md, screenshots/
+/                              repo root — CLAUDE.md and .gitignore only
+├── docs/                      system-design.md, schema.md
+│   ├── screenshots/           captured UI verification screenshots
+│   └── research/              field research artifacts — interview summary,
+│                              affinity diagram, tourist-findings and
+│                              top-insights photos, the team research deck
 ├── .claude/prds/              product requirements (the spec)
 ├── .claude/plans/             implementation plans, including executed verification results
 └── challange-5/               Xcode project directory

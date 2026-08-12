@@ -1,9 +1,30 @@
+# macOS
 .DS_Store
+**/.DS_Store
+
+# Xcode / iOS
 *.xcuserstate
-xcuserdata/
+**/*.xcuserstate
+**/xcuserdata/
+**/project.xcworkspace/xcuserdata/
+**/xcworkspace/xcuserdata/
 DerivedData/
+**/DerivedData/
 build/
-.remember/
+**/build/
+
+# SwiftPM / package manager
 .build/
+**/.build/
 .swiftpm/
+**/.swiftpm/
 Package.resolved
+**/Package.resolved
+
+# Local editor / project metadata
+.remember/
+**/.remember/
+.idea/
+**/.idea/
+.vscode/
+**/.vscode/
