@@ -58,7 +58,12 @@ public struct KultaraRootView: View {
     @State private var language: ContentLanguage
     @State private var showsOnboarding: Bool
     @State private var selectedQuestID: String?
-    @State private var showsSettings = false
+    /// The floating bar's selection. Two destinations is what the app has in M5; the bar exists
+    /// because the Home design puts one there, and because a settings screen reached only from a
+    /// gear in a bar has nowhere to live once the bar is gone.
+    @State private var tab = Tab.quests.rawValue
+
+    private enum Tab: String { case quests, settings }
 
     public init(environment: KultaraEnvironment) {
         self.environment = environment
@@ -82,23 +87,45 @@ public struct KultaraRootView: View {
     }
 
     private var browser: some View {
+        // The bar is drawn rather than taken from `TabView`, and it is attached as a safe-area
+        // inset rather than stacked on top: the inset reserves exactly the height the bar actually
+        // has, so a bar whose labels have grown at an accessibility size cannot end up sitting on
+        // the last card. The full-bleed map ignores the safe area and still runs underneath it.
+        Group {
+            if tab == Tab.settings.rawValue {
+                NavigationStack { settingsDestination }
+            } else {
+                questsStack
+            }
+        }
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            KultaraTabBar(tabs: tabs, selection: $tab)
+        }
+    }
+
+    private var tabs: [KultaraTab] {
+        [KultaraTab(id: Tab.quests.rawValue,
+                    title: UIStrings.string(.questListTitle, language),
+                    symbolName: "map"),
+         KultaraTab(id: Tab.settings.rawValue,
+                    title: UIStrings.string(.settingsTitle, language),
+                    symbolName: "gearshape")]
+    }
+
+    private var questsStack: some View {
         NavigationStack {
             QuestListView(
                 // Rebuilt when the language changes: every string in the list is resolved at
                 // construction, so the identity of the view model *is* the language.
                 model: QuestListViewModel(repository: environment.repository, language: language),
                 mapModel: RegionMapViewModel(repository: environment.repository, language: language),
-                onSelect: { selectedQuestID = $0 },
-                onOpenSettings: { showsSettings = true })
+                onSelect: { selectedQuestID = $0 })
                 .navigationDestination(isPresented: Binding(
                     get: { selectedQuestID != nil },
                     set: { if !$0 { selectedQuestID = nil } })
                 ) {
                     previewDestination
                 }
-        }
-        .sheet(isPresented: $showsSettings) {
-            NavigationStack { settingsDestination }
         }
     }
 

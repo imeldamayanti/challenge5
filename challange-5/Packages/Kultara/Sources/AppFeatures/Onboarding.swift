@@ -107,9 +107,7 @@ public struct OnboardingView: View {
 
     private var header: some View {
         HStack {
-            Text(UIStrings.string(.appName, language))
-                .kultaraFont(.sectionHeading)
-                .foregroundStyle(palette.inkMuted.color)
+            KultaraEyebrow(UIStrings.string(.appName, language))
             Spacer()
             if model.isSkipAvailable {
                 Button { model.skip() } label: {
@@ -127,13 +125,21 @@ public struct OnboardingView: View {
         // is far taller than any iPhone (`NFR-A11Y-01`).
         ScrollView {
             VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
+                // The symbol sits inside a ruled square, the way the reference sets an ornament:
+                // framed rather than floating, so it belongs to the page instead of decorating it.
                 Image(systemName: model.currentPage.symbolName)
-                    .font(.system(.largeTitle, design: .monospaced))
+                    .font(.system(.title, design: .default))
                     .foregroundStyle(palette.seal.color)
+                    .frame(width: 64, height: 64)
+                    .overlay(Rectangle()
+                        .stroke(palette.rule.color, lineWidth: KultaraMetrics.hairline))
                     .accessibilityHidden(true)
                 Text(UIStrings.string(model.currentPage.titleKey, language))
                     .kultaraFont(.questTitleLarge)
                     .foregroundStyle(palette.ink.color)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                KultaraRule()
                 Text(UIStrings.string(model.currentPage.bodyKey, language))
                     .kultaraFont(.body)
                     .foregroundStyle(palette.ink.color)
@@ -160,15 +166,10 @@ public struct OnboardingView: View {
             .accessibilityElement(children: .ignore)
             .accessibilityLabel("\(model.pageIndex + 1) / \(model.pages.count)")
 
-            Button { model.advance() } label: {
-                Text(UIStrings.string(model.primaryActionKey, language))
-                    .kultaraFont(.buttonLabel)
-                    .foregroundStyle(palette.inkOnSeal.color)
-                    .frame(maxWidth: .infinity)
-                    .frame(minHeight: KultaraMetrics.minimumTapTarget)
-                    .background(palette.sealFill.color)
-                    .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.cardCornerRadius))
-            }
+            // The ticket button: the page's one filled control, so it is unmistakably the thing to
+            // press. Skip, above, stays a plain word — `FR-ONB-02` wants it available, not loud.
+            Button(UIStrings.string(model.primaryActionKey, language)) { model.advance() }
+                .buttonStyle(.seal)
         }
     }
 }

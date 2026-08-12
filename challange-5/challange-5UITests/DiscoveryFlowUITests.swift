@@ -37,6 +37,20 @@ final class DiscoveryFlowUITests: XCTestCase {
         return app
     }
 
+    /// Taps the quest's card. The card is one accessibility element — a single button that reads as
+    /// one thing — so the title inside it is a label, not a control: at accessibility sizes the
+    /// static text reports as not hittable and tapping it throws. The button is what a user taps.
+    private func tapQuestCard(_ app: XCUIApplication, titled title: String) {
+        let card = app.buttons.containing(
+            NSPredicate(format: "label CONTAINS %@", title)).firstMatch
+        XCTAssertTrue(card.waitForExistence(timeout: 15), "No card for \(title)")
+        // Tapped near the top of the card rather than at its centre. At the largest accessibility
+        // size a card is most of the screen tall, and its centre point lands underneath the
+        // floating tab bar — which XCUITest hits instead, because it always taps the centre. A
+        // person taps the part of the card they can see.
+        card.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.12)).tap()
+    }
+
     private func attach(_ app: XCUIApplication, named name: String) {
         let screenshot = XCTAttachment(screenshot: app.windows.firstMatch.screenshot())
         screenshot.name = name
@@ -71,16 +85,17 @@ final class DiscoveryFlowUITests: XCTestCase {
         attach(app, named: "quest-list")
 
         // Preview, one tap away (FR-DISC-07)
-        questTitle.tap()
+        tapQuestCard(app, titled: "Example Old-Town Trail")
         XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 10),
                       "Preview did not open")
         XCTAssertTrue(app.staticTexts["Safety"].exists, "FR-DISC-03: safety notice missing")
         attach(app, named: "quest-preview")
 
-        // Back, then Settings
+        // Back, then Settings. Settings is a tab now rather than a gear in the bar: the Home
+        // design has no navigation bar to hold one.
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(questTitle.waitForExistence(timeout: 10))
-        app.navigationBars.buttons["Settings"].tap()
+        app.buttons["Settings"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Language"].waitForExistence(timeout: 10),
                       "Settings did not open")
         attach(app, named: "settings")
@@ -125,7 +140,7 @@ final class DiscoveryFlowUITests: XCTestCase {
         let app = launch()
         let questTitle = app.staticTexts["Example Old-Town Trail"]
         XCTAssertTrue(questTitle.waitForExistence(timeout: 10))
-        questTitle.tap()
+        tapQuestCard(app, titled: "Example Old-Town Trail")
         XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 10))
 
         // Sentences that exist only in checkpoint lore or in clues, from the fixture.
@@ -152,7 +167,7 @@ final class DiscoveryFlowUITests: XCTestCase {
         attach(app, named: "a11y-quest-list")
         reportTruncation(in: app, screen: "quest list")
 
-        questTitle.tap()
+        tapQuestCard(app, titled: "Example Old-Town Trail")
         XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 15),
                       "Preview unreachable at the largest accessibility size")
         attach(app, named: "a11y-quest-preview")
@@ -160,7 +175,7 @@ final class DiscoveryFlowUITests: XCTestCase {
 
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(questTitle.waitForExistence(timeout: 15))
-        app.navigationBars.buttons["Settings"].tap()
+        app.buttons["Settings"].firstMatch.tap()
         XCTAssertTrue(app.staticTexts["Language"].waitForExistence(timeout: 15),
                       "Settings unreachable at the largest accessibility size")
         attach(app, named: "a11y-settings")

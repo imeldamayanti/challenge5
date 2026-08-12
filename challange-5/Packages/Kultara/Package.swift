@@ -35,7 +35,14 @@ let package = Package(
             ]
         ),
         .target(
-            name: "DesignSystem"
+            name: "DesignSystem",
+            resources: [
+                // Instrument Serif, SIL OFL 1.1 (licence shipped beside the faces). Registered at
+                // runtime by `KultaraFonts` rather than declared in the app's Info.plist, so the
+                // package carries its own typeface instead of depending on the host target
+                // remembering to list it.
+                .copy("Resources/Fonts"),
+            ]
         ),
         .target(
             name: "AppFeatures",

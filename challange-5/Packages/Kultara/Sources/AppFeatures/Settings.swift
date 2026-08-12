@@ -436,9 +436,7 @@ private struct SettingsSection<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            Text(UIStrings.string(heading, language))
-                .kultaraFont(.sectionHeading)
-                .foregroundStyle(palette.seal.color)
+            KultaraSectionHeading(UIStrings.string(heading, language))
             KultaraCard { content }
         }
         .frame(maxWidth: .infinity, alignment: .leading)

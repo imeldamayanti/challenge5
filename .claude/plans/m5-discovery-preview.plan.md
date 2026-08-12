@@ -361,3 +361,186 @@ the reason written where the next person will look.
 
 234 package tests and all four XCUITests pass, including the largest-Dynamic-Type flow. Screens
 checked by screenshot in both appearances: quest list, quest preview, settings.
+
+---
+
+## Stage 9 — Retheme to the museum catalogue (`image 8.svg`, `image 15.svg`, lofi `IMG_0090`)
+
+A third reference replaced the visual direction again: a museum longread. Uncoated cream stock, one
+deep brick red, a display serif for anything that names something, and the platform's sans for
+everything a reader reads or operates. Objects are presented as plates — framed, numbered, captioned
+in brackets. It supersedes the typed-page palette of Stage 8 and, like it, is a **divergence from the
+PRD**, which names the aged-paper "royal letter" direction. Recorded rather than quietly applied: the
+palette and both typefaces changed, no requirement did, and every `NFR-A11Y-03` measurement was
+re-run rather than re-used.
+
+The lofi wireframe supplied the structure — masthead, plate, entry, then the route and the numbered
+stops — and the two reference spreads supplied the treatment.
+
+### Typeface
+
+Instrument Serif (SIL OFL 1.1) ships inside the package, in `DesignSystem/Resources/Fonts`, with its
+licence beside it. It is registered at runtime by `KultaraFonts` through
+`CTFontManagerRegisterGraphicsFont` rather than declared in the app target's `Info.plist`, because
+`DesignSystem` is a package and a host target that forgets the `UIAppFonts` entry would get a silent
+fallback to the system serif. `KultaraFontTests` asserts the face actually registers, so a mis-copied
+resource fails the suite instead of shipping as a subtly wrong app.
+
+The serif carries `questTitleLarge`, `questTitle` and `sectionHeading` — the roles that name
+something — and section names are set in its italic, as on the reference. Everything else is SF Pro.
+`body` and `lore` stay sans for the same reason they were never monospaced: Instrument Serif is a
+display cut, and long-form lore is where a display face turns into extra wrapping at the largest
+accessibility sizes, which is the failure `NFR-A11Y-01` exists to prevent. Caps and tracking are now
+confined to one new role, `eyebrow`, the ruled kicker above a heading; the old all-caps section
+heading is gone.
+
+### What was sampled, and what survived
+
+| Sampled from the references | Shipped | Why the difference |
+|---|---|---|
+| stock `#E9E5D9`–`#F9F5E9` | paper `#F6F1E4`, raised `#FCF9F1`, sunken `#E9E1D0` | Three surfaces, because text lands on all three. |
+| brick red `#6C2A1A`–`#8B3324` | seal `#8C2F1E` light | Survived close to as sampled — unusual. At 7.33:1 on cream it can carry text *and* fill a control without being pushed around. |
+| the same red, dark spread | seal `#E4907B` dark | The sampled red on charcoal is 2.1:1. Same hue, carried to the readable end. |
+| charcoal `#1F1F1F` | paper `#1B1A18`, raised `#26241F`, sunken `#121110` | As above: three surfaces, not one. |
+| — | warning `#7A4E0C` light | Ochre, not a second red. A warning beside the seal red has to be a different hue, or the page has two accents that mean different things and look the same. |
+
+### Measured again, in full
+
+| Pair | Light | Dark |
+|---|---|---|
+| Body ink on paper / card / inset | 15.01 · 16.09 · 13.01 | 14.76 · 13.15 · 16.00 |
+| Secondary ink | 7.05 · 7.56 · 6.11 | 8.62 · 7.68 · 9.35 |
+| Seal accent | 7.33 · 7.86 · 6.36 | 7.10 · 6.33 · 7.70 |
+| Warning | 6.37 · 6.83 · 5.52 | 9.07 · 8.09 · 9.84 |
+| `documented` / `oral` chip ink | 13.01 / 7.13 | 16.00 / 11.44 |
+| Text on filled accent button | 7.86 | 7.10 |
+| On-photo ink / muted, on scrim `#17130F` | 16.42 / 10.53 | 16.42 / 10.53 |
+| Hairline (needs 3:1) | 4.06 · 4.36 | 4.25 · 3.78 |
+
+Lowest text ratio: **5.52:1** light, **6.33:1** dark. Lowest hairline: **3.78:1** dark. Every pair
+passes.
+
+### The quest card moved its type off the photograph
+
+The Stage 7 card laid the title and the facts over the hero on an opaque scrim. The catalogue does
+not: it frames the plate and sets the entry beneath it on the page. Adopting that is also the
+stronger accessibility position — every ratio on the card is now measured against a surface the theme
+owns rather than against a gradient over an arbitrary image. `PhotoScrim`, `PhotoCardFact` and the
+on-photo tokens stay, measured, for the map labels and for the preview, and `KultaraFact` is their
+on-paper sibling. The two are separate views rather than one with a colour parameter, because that is
+how a token measured against the scrim ends up on cream.
+
+Everything `FR-DISC-02` and `FR-DISC-05` require is still on the card, still stacking rather than
+truncating at accessibility sizes. The region moved into the plate number's eyebrow — `DENPASAR //
+01` — where it is still read out as part of the card's combined label.
+
+### Two layout bugs the retheme caused, both found by the XXXL test
+
+`testTheWholeFlowSurvivesTheLargestDynamicTypeSize` failed on the first run with every label on the
+quest list reporting a frame starting at x = −170 in a 402-point window.
+
+1. The hero was a `.fill` image inside a fixed-height frame. Asked for its own width it reports the
+   width its aspect ratio wants — at XXXL, roughly 990 points — and the enclosing column adopted it,
+   so the whole card was drawn wider than the screen and centred. The photograph is now an overlay on
+   a clear box of the plate's size; an overlay cannot affect its parent's size. The plate's height is
+   also capped at 300 points, because past about a third of the screen it pushes the required facts
+   off the first screenful.
+2. `KultaraEyebrow` laid its label and its number side by side in a plain `HStack`. Two short strings
+   is a default-size claim; at XXXL the row ran several hundred points past the window. It wraps now,
+   and each string wraps within it.
+
+A third, caught by inspection rather than by the test: the section heading's trailing rule needed
+`layoutPriority` on the heading, or a long section name at an accessibility size gets squeezed into a
+column of single letters while the rule keeps its width.
+
+### Verified
+
+239 package tests and all four XCUITests pass, including the largest-Dynamic-Type flow. Screens
+checked by screenshot: quest list, quest preview and settings in light, quest list in dark.
+
+---
+
+## Stage 10 — Home, from `App Design-4`
+
+A fourth reference, and this one is a screen rather than a mood: `Home.svg` is the map surface at
+exactly 402 × 874, and the two files beside it (`Home-1`, `Home-2`) are the list surface. They are
+one design, so both were built. The catalogue typography and the cream-and-brick-red palette of
+Stage 9 carry over unchanged; what changed is the Home screen's structure.
+
+### What the design specifies, and what was built
+
+| In the reference | Built |
+|---|---|
+| Masthead in the serif, in red | `questListTitle` in `seal`, not `ink` |
+| A pill search field, "Find cultural heritage" | `KultaraSearchField`, filtering the rows already in memory |
+| A map thumbnail beside it | `MapSurfaceButton`, showing the region illustration itself |
+| Photo cards, rounded, title and facts over the image | The card's type moved back onto the photograph, on the measured scrim |
+| A filled red arrow on each card | `SealArrowBadge`, unchanged from Stage 7 |
+| A floating tab bar | `KultaraTabBar`, with Quests and Settings |
+| A full-bleed illustrated map with named places | `RegionMapView`, rewritten |
+
+The Stage 9 card set its type on cream below a framed plate. This design puts it back on the
+photograph, so `PhotoScrim` and the on-photo inks — which were kept and kept measured — are load
+bearing again. Everything `FR-DISC-02` and `FR-DISC-05` require is still on the card.
+
+### Search
+
+`FR-DISC-01` and `AD-3` mean discovery works in airplane mode, so the field filters `rows`, which
+are already in memory, and queries nothing. It matches title and region, folds case and diacritics
+because Indonesian place names carry marks a reader will not type, preserves the authored order
+rather than ranking by relevance (`FR-DISC-03`), and says so when nothing matched instead of
+quietly showing everything.
+
+### Settings moved from a bar button to a tab
+
+The design has no navigation bar on Home, which leaves a gear icon nowhere to live. Settings is a
+tab now. The bar is drawn rather than taken from `TabView` — the system bar cannot be given this
+theme's face or its stock — and it is attached with `safeAreaInset` rather than stacked on top, so
+the space it occupies is exactly the space it has even when its labels grow.
+
+### The map, and the one place the design cannot be followed literally
+
+The shipped illustration is the same artwork as the reference's, and its aspect ratio is within a
+percent of the screen's, so it fills the screen with almost no crop. Place names are drawn on it in
+the display serif with a hard outline of eight offset copies rather than a shadow — a shadow's
+contrast against a parchment coastline is not a number anyone can state, while a hard outline means
+the ink sits on a colour the theme owns and measures.
+
+What cannot be followed literally is the opening zoom. The reference has two pins at opposite ends
+of Bali; the shipped example content has three quests inside one town, roughly 41 points apart at
+island scale. Any faithful whole-island view puts those three markers on top of one another —
+`NFR-A11Y-01`'s overlap, and the end of `NFR-A11Y-06`'s 44-point target. So the opening zoom is
+derived from the content: `initialZoom(drawnAt:minimumSeparation:maximum:)` returns 1 when the pins
+are far enough apart, and otherwise the factor that separates the closest two, capped at 6×. Spread
+content opens exactly as the design draws it; clustered content opens on the cluster. Pinch and
+double-tap move between the two, and a double tap always returns to the whole island.
+
+Markers are drawn outside the `scaleEffect`, in screen space. Inside it they scaled with the
+artwork, so zooming separated two labels and enlarged them by the same factor and never pulled them
+apart — the first version of this did exactly that, and the overlap assertion caught it.
+
+### Four bugs, three of them caught by the tests
+
+1. `accessibilityLabel` on the map's container turned the entire map into one accessibility element
+   and swallowed every marker inside it. `NFR-A11Y-02` failure; the marker assertions found nothing.
+2. The card was a fixed-height photograph with the caption overlaid, so at the largest accessibility
+   size the title was clipped off the top of the scrim. The caption now lays out first and the
+   photograph is its background — a background cannot shrink its parent, so the card grows to fit
+   the words.
+3. The import-boundary scan's `Map(` needle matched Swift's own `flatMap(`. The needle now requires
+   a word boundary on the left, because a guard that fires on `flatMap` is a guard someone deletes
+   rather than fixes.
+4. At `AccessibilityXXXL` a card is most of the screen tall and its centre point lands under the
+   floating bar — which XCUITest taps, because it always taps the centre. The test taps near the top
+   of the card now, which is what a person does. The app itself is fine: the bar reserves its own
+   space and the rest of the card scrolls out from under it.
+
+### Verified
+
+246 package tests and all four XCUITests pass, including the largest-Dynamic-Type flow. Screens
+checked by screenshot: Home list, the map surface, quest preview, settings, and Home at
+`AccessibilityXXXL`.
+
+One environmental note, not a code problem: `xcodebuild test` intermittently fails to launch the
+runner on a cloned simulator ("Application failed preflight checks"). Running with
+`-parallel-testing-enabled NO` against the booted device avoids the clone entirely.

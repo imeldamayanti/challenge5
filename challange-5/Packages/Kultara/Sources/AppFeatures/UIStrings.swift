@@ -28,6 +28,9 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case questListTitle
     case questListSubtitle
     case questListEmpty
+    case questListSearchPlaceholder
+    case questListSearchClear
+    case questListSearchEmpty
     case questListMapTab
     case questListListTab
     case mapUnavailable
@@ -158,6 +161,12 @@ public enum UIStrings {
         .questListEmpty: LocalizedText(
             id: "Belum ada kuis yang tersedia.",
             en: "No quests are available yet."),
+        .questListSearchPlaceholder: LocalizedText(
+            id: "Cari warisan budaya", en: "Find cultural heritage"),
+        .questListSearchClear: LocalizedText(id: "Hapus pencarian", en: "Clear search"),
+        .questListSearchEmpty: LocalizedText(
+            id: "Tidak ada kuis yang cocok dengan pencarian itu.",
+            en: "No quest matches that search."),
         .questListMapTab: LocalizedText(id: "Peta", en: "Map"),
         .questListListTab: LocalizedText(id: "Daftar", en: "List"),
         .mapUnavailable: LocalizedText(

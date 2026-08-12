@@ -150,11 +150,30 @@ struct PermissionCallBoundaryTests {
                 // Skip comments: these strings appear in the requirement notes on purpose.
                 let trimmed = line.trimmingCharacters(in: .whitespaces)
                 guard !trimmed.hasPrefix("//"), !trimmed.hasPrefix("*"), !trimmed.hasPrefix("/*") else { continue }
-                for needle in needles where line.contains(needle) {
+                for needle in needles where contains(line: String(line), needle: needle) {
                     offenders.append("\(file.lastPathComponent):\(number + 1) \(needle)")
                 }
             }
         }
         return offenders
+    }
+
+    /// Substring matching with a left word boundary, because a bare `contains` cannot tell
+    /// SwiftUI's `Map(` from Swift's `flatMap(` — and a guard that fires on `flatMap` is a guard
+    /// someone eventually deletes rather than fixes. The boundary is only needed on the left: the
+    /// needles all end in a delimiter or are whole tokens.
+    private static func contains(line: String, needle: String) -> Bool {
+        var search = line[...]
+        while let found = search.range(of: needle) {
+            let isBoundary = found.lowerBound == line.startIndex
+                || !isIdentifierCharacter(line[line.index(before: found.lowerBound)])
+            if isBoundary { return true }
+            search = line[found.upperBound...]
+        }
+        return false
+    }
+
+    private static func isIdentifierCharacter(_ character: Character) -> Bool {
+        character.isLetter || character.isNumber || character == "_"
     }
 }

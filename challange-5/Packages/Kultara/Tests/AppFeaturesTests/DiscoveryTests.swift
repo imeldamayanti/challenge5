@@ -21,6 +21,61 @@ struct QuestListTests {
         #expect(!row.costText.isEmpty)
     }
 
+    // MARK: - Search
+    //
+    // The Home design puts a search field above the list. It filters what is already loaded and
+    // asks nothing of the network — `FR-DISC-01` and `AD-3` mean discovery has to keep working in
+    // airplane mode, and a search that queries anything would be the first thing in the app that
+    // does not.
+
+    @Test func anEmptySearchLeavesEveryQuestVisible() throws {
+        let model = try model()
+        model.searchText = "   "
+        #expect(model.visibleRows.count == model.rows.count)
+    }
+
+    @Test func searchMatchesOnTitleAndOnRegion() throws {
+        let model = try model()
+        let row = try #require(model.rows.first)
+
+        model.searchText = String(row.title.prefix(6))
+        #expect(model.visibleRows.contains { $0.questID == row.questID })
+
+        model.searchText = row.region
+        #expect(model.visibleRows.contains { $0.questID == row.questID })
+    }
+
+    @Test func searchIgnoresCaseAndDiacritics() throws {
+        // Indonesian place names carry diacritics the reader will not type, and a search that only
+        // matches an exact byte sequence is a search that appears broken.
+        let model = try model()
+        let row = try #require(model.rows.first)
+        let folded = row.title.folding(options: [.diacriticInsensitive], locale: nil).uppercased()
+
+        model.searchText = folded
+        #expect(model.visibleRows.contains { $0.questID == row.questID })
+    }
+
+    @Test func aSearchThatMatchesNothingEmptiesTheListRatherThanFallingBackToEverything() throws {
+        // Silently showing all results when nothing matched is worse than showing none: the reader
+        // cannot tell the difference between "no match" and "search is broken".
+        let model = try model()
+        model.searchText = "zzzzz-no-such-quest"
+        #expect(model.visibleRows.isEmpty)
+        #expect(model.hasNoSearchResults)
+    }
+
+    @Test func searchDoesNotDisturbTheAuthoredOrder() throws {
+        // FR-DISC-03 fixes the order of the list. Filtering may remove rows; it may not reorder
+        // what is left by relevance or by anything else.
+        let model = try model()
+        model.searchText = ""
+        let authored = model.visibleRows.map(\.questID)
+        model.searchText = "a"
+        let filtered = model.visibleRows.map(\.questID)
+        #expect(filtered == authored.filter(filtered.contains))
+    }
+
     @Test func walkingTimeAndTotalDurationAreShownAsSeparateFigures() throws {
         // NFR-CONT-06. A single "duration" figure is the version of this that misleads a walker.
         let row = try #require(try model().rows.first)
@@ -346,6 +401,34 @@ struct QuestCardAndMapTests {
             #expect(pin.point == place.mapPoint)
             #expect(pin.title == quest.title.value(for: .en))
         }
+    }
+
+    @Test func aClusterOfPinsOpensZoomedInFarEnoughToSeparateTheMarkers() throws {
+        // The Home design draws the island whole. Whole is only usable when the pins are spread:
+        // the shipped example content puts three quests inside one town, and at island scale their
+        // markers land on top of one another (`NFR-A11Y-01`) and stop being 44-point targets
+        // (`NFR-A11Y-06`). So the opening zoom is derived from the content.
+        let model = try #require(RegionMapViewModel(
+            repository: try BundledContentRepository(), language: .en))
+        let drawn = CGSize(width: 402, height: 874)
+
+        let zoom = model.initialZoom(drawnAt: drawn, minimumSeparation: 132, maximum: 4)
+        let separation = try #require(model.closestPinSeparation(drawnAt: drawn))
+
+        #expect(zoom > 1, "three quests in one town should not open at island scale")
+        #expect(separation * zoom >= 132 || zoom == 4)
+    }
+
+    @Test func pinsThatAreAlreadyFarApartOpenTheMapWhole() throws {
+        // The other half of the same rule: content whose quests are spread across the island must
+        // open showing the island, not zoomed into nothing.
+        let model = try #require(RegionMapViewModel(
+            repository: try BundledContentRepository(), language: .en))
+        // A drawn size large enough that even the clustered example content clears the threshold
+        // stands in for spread-out content, and exercises the same branch.
+        let zoom = model.initialZoom(
+            drawnAt: CGSize(width: 40_000, height: 87_000), minimumSeparation: 132, maximum: 4)
+        #expect(zoom == 1)
     }
 
     @Test func everyPinSitsInsideTheImage() throws {

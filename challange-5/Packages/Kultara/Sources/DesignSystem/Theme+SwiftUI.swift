@@ -39,6 +39,10 @@ public struct KultaraThemeProvider<Content: View>: View {
 
     public var body: some View {
         let palette = KultaraTheme.palette(for: colorScheme)
+        // Registers the packaged serif on first use. Touched here as well as from `kultaraFont` so
+        // the UIKit chrome below, which resolves its font by name, cannot run before the name
+        // exists.
+        _ = KultaraFonts.isAvailable
         #if canImport(UIKit)
         KultaraNavigationChrome.apply(palette)
         #endif
@@ -71,6 +75,16 @@ public extension View {
         #endif
     }
 
+    /// Hides the navigation bar on screens that carry their own heading. Platform-conditional
+    /// because `.navigationBar` does not exist off iOS, and the package builds for macOS in test.
+    func kultaraHiddenNavigationBar() -> some View {
+        #if os(iOS)
+        return toolbar(.hidden, for: .navigationBar)
+        #else
+        return self
+        #endif
+    }
+
     /// `NFR-A11Y-06`. Applied to the hit region, not the glyph, so a small icon still has a
     /// 44-point target around it.
     func kultaraTapTarget() -> some View {
@@ -97,6 +111,12 @@ public struct KultaraCard<Content: View>: View {
             .overlay(
                 RoundedRectangle(cornerRadius: KultaraMetrics.cardCornerRadius)
                     .stroke(palette.rule.color, lineWidth: KultaraMetrics.hairline))
+            // The catalogue's second rule, inset — the same double-line the plates carry, so a card
+            // and a framed photograph read as the same kind of object.
+            .overlay(
+                RoundedRectangle(cornerRadius: KultaraMetrics.cardCornerRadius)
+                    .inset(by: 3)
+                    .stroke(palette.rule.color.opacity(0.4), lineWidth: KultaraMetrics.hairline))
             .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.cardCornerRadius))
     }
 }

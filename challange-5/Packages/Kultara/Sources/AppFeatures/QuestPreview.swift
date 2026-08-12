@@ -264,13 +264,14 @@ public struct QuestPreviewView: View {
     }
 
     private var heading: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
+        VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
+            KultaraEyebrow(model.region)
             Text(model.title)
                 .kultaraFont(.questTitleLarge)
                 .foregroundStyle(palette.ink.color)
-            Text(model.region)
-                .kultaraFont(.metadata)
-                .foregroundStyle(palette.inkMuted.color)
+                .fixedSize(horizontal: false, vertical: true)
+                .accessibilityAddTraits(.isHeader)
+            KultaraRule()
         }
     }
 
@@ -310,13 +311,17 @@ public struct QuestPreviewView: View {
                 // FR-MAP-01 / FR-OFF-03: a shipped image, so the route renders with no network and
                 // no tile cache to miss.
                 if let url = model.routeImageURL, let image = routeImage(url) {
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fit)
-                        .frame(maxWidth: .infinity)
-                        .overlay(RoundedRectangle(cornerRadius: KultaraMetrics.cardCornerRadius)
-                            .stroke(palette.rule.color, lineWidth: KultaraMetrics.hairline))
-                        .accessibilityLabel(UIStrings.string(.previewRouteImageAlt, language))
+                    VStack(spacing: KultaraMetrics.sm) {
+                        KultaraPlate {
+                            image
+                                .resizable()
+                                .aspectRatio(contentMode: .fit)
+                                .frame(maxWidth: .infinity)
+                                .accessibilityLabel(UIStrings.string(.previewRouteImageAlt, language))
+                        }
+                        KultaraPlateCaption(title: model.title, detail: model.region,
+                                            alignment: .center)
+                    }
                 }
                 LabelledValue(label: UIStrings.string(.labelDistance, language), value: model.distanceText)
                 LabelledValue(label: UIStrings.string(.labelWalkingTime, language), value: model.walkingTimeText)
@@ -340,8 +345,14 @@ public struct QuestPreviewView: View {
                 ForEach(model.checkpoints) { row in
                     KultaraCard {
                         VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-                            Text("\(row.orderIndex + 1). \(row.placeName)")
-                                .kultaraFont(.sectionHeading)
+                            // The stop's number as the catalogue sets a plate number, and the name
+                            // in the serif beneath it. The number stays part of the name's
+                            // accessibility label rather than becoming a separate element, because
+                            // the order is the one thing `FR-CP-08` makes load-bearing.
+                            KultaraEyebrow(UIStrings.string(.previewCheckpointsHeading, language),
+                                           index: row.orderIndex + 1)
+                            Text(row.placeName)
+                                .kultaraFont(.questTitle)
                                 .foregroundStyle(palette.ink.color)
                                 .fixedSize(horizontal: false, vertical: true)
                             if row.isSacred {
@@ -415,7 +426,7 @@ public struct QuestPreviewView: View {
             VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
                 Text(UIStrings.string(.previewStartUnavailable, language))
                     .kultaraFont(.sectionHeading)
-                    .foregroundStyle(palette.ink.color)
+                    .foregroundStyle(palette.seal.color)
                 Text(model.startUnavailableExplanation)
                     .kultaraFont(.body)
                     .foregroundStyle(palette.inkMuted.color)
@@ -426,17 +437,13 @@ public struct QuestPreviewView: View {
 }
 
 private struct Section<Content: View>: View {
-    @Environment(\.kultaraPalette) private var palette
     let heading: UIStringKey
     let language: ContentLanguage
     @ViewBuilder let content: Content
 
     var body: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            Text(UIStrings.string(heading, language))
-                .kultaraFont(.sectionHeading)
-                .foregroundStyle(palette.seal.color)
-                .textCase(nil)
+            KultaraSectionHeading(UIStrings.string(heading, language))
             content
         }
         .frame(maxWidth: .infinity, alignment: .leading)

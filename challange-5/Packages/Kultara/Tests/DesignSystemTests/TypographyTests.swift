@@ -58,6 +58,44 @@ struct TypographyTests {
     }
 }
 
+/// The theme is set in two faces: Instrument Serif, shipped inside the package, for the roles that
+/// name something, and the system sans for everything a reader reads or operates.
+struct KultaraFontTests {
+
+    @Test func thePackagedSerifIsActuallyPresentAndRegisters() {
+        // Without this, a missing or mis-copied resource degrades silently to the system serif —
+        // the app still runs, every heading is subtly wrong, and nothing says so.
+        #expect(KultaraFonts.isAvailable,
+                "Instrument Serif did not register from Bundle.module — check Package.swift resources")
+    }
+
+    @Test func longFormReadingIsNotSetInTheDisplaySerif() {
+        // Instrument Serif is a display cut. Lore is the one thing in this app someone reads for
+        // minutes at a time, and at the largest accessibility sizes a display face is where extra
+        // wrapping comes from (`NFR-A11Y-01`).
+        #expect(KultaraTypography.Role.lore.face == .sans)
+        #expect(KultaraTypography.Role.body.face == .sans)
+    }
+
+    @Test func theRolesThatNameSomethingAreSetInTheSerif() {
+        for role in [KultaraTypography.Role.questTitleLarge, .questTitle, .sectionHeading] {
+            #expect(role.face == .serif, "\(role)")
+        }
+    }
+
+    @Test func onlyTheEyebrowIsSetInCaps() {
+        // An all-caps chip label risks VoiceOver taking a short word for an initialism and spelling
+        // it out, which `FR-CP-05` cannot afford; a capitalised title flattens proper nouns.
+        let uppercased = KultaraTypography.Role.allCases.filter(\.isUppercased)
+        #expect(uppercased == [.eyebrow])
+    }
+
+    @Test func trackingIsNeverAppliedToAParagraph() {
+        #expect(KultaraTypography.Role.body.tracking == 0)
+        #expect(KultaraTypography.Role.lore.tracking == 0)
+    }
+}
+
 /// `FR-CP-05` — the accuracy label is rendered with a consistent, legible visual convention and is
 /// never hidden behind a tap. `NFR-A11Y-05` — colour must not be the sole carrier of meaning,
 /// explicitly including these labels.
