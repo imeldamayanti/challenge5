@@ -38,6 +38,10 @@ public enum LanguageResolver {
 public protocol AppPreferencesStore: AnyObject {
     var preferredLanguage: ContentLanguage? { get set }
     var onboardingCompletedAt: Date? { get set }
+    /// `FR-START-04` — the safety notice is acknowledged once per quest, before its first Run.
+    /// Per quest rather than once globally: the notice names that route's traffic, pavements and
+    /// terrain, so a blanket acknowledgement would be an acknowledgement of nothing.
+    var safetyNoticeAckedQuestIDs: Set<String> { get set }
     func removeAll()
 }
 
@@ -46,6 +50,7 @@ public final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
 
     public static let preferredLanguageKey = "kultara.preferredLanguage"
     public static let onboardingCompletedAtKey = "kultara.onboardingCompletedAt"
+    public static let safetyNoticeAckedQuestIDsKey = "kultara.safetyNoticeAckedQuestIDs"
 
     private let defaults: UserDefaults
 
@@ -80,9 +85,15 @@ public final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
         }
     }
 
+    public var safetyNoticeAckedQuestIDs: Set<String> {
+        get { Set(defaults.stringArray(forKey: Self.safetyNoticeAckedQuestIDsKey) ?? []) }
+        set { defaults.set(Array(newValue).sorted(), forKey: Self.safetyNoticeAckedQuestIDsKey) }
+    }
+
     public func removeAll() {
         defaults.removeObject(forKey: Self.preferredLanguageKey)
         defaults.removeObject(forKey: Self.onboardingCompletedAtKey)
+        defaults.removeObject(forKey: Self.safetyNoticeAckedQuestIDsKey)
     }
 }
 
@@ -90,14 +101,21 @@ public final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
 public final class InMemoryAppPreferencesStore: AppPreferencesStore {
     public var preferredLanguage: ContentLanguage?
     public var onboardingCompletedAt: Date?
+    public var safetyNoticeAckedQuestIDs: Set<String>
 
-    public init(preferredLanguage: ContentLanguage? = nil, onboardingCompletedAt: Date? = nil) {
+    public init(
+        preferredLanguage: ContentLanguage? = nil,
+        onboardingCompletedAt: Date? = nil,
+        safetyNoticeAckedQuestIDs: Set<String> = []
+    ) {
         self.preferredLanguage = preferredLanguage
         self.onboardingCompletedAt = onboardingCompletedAt
+        self.safetyNoticeAckedQuestIDs = safetyNoticeAckedQuestIDs
     }
 
     public func removeAll() {
         preferredLanguage = nil
         onboardingCompletedAt = nil
+        safetyNoticeAckedQuestIDs = []
     }
 }

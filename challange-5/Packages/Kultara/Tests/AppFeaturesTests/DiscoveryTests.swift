@@ -2,6 +2,7 @@ import Foundation
 import Testing
 @testable import AppFeatures
 @testable import ContentKit
+@testable import RunEngine
 
 @MainActor
 struct QuestListTests {
@@ -151,6 +152,13 @@ struct QuestPreviewTests {
         return try #require(QuestPreviewViewModel(
             repository: repository, questID: questID, language: language,
             now: now, calendar: Self.calendar))
+    }
+
+    /// The first quest in the shipped bundle — the same one `model()` builds.
+    static var questID: String {
+        get throws {
+            try #require(try BundledContentRepository().quests().first).id
+        }
     }
 
     static let calendar: Calendar = {
@@ -317,13 +325,40 @@ struct QuestPreviewTests {
 
     // MARK: - FR-START-08 / FR-DISC-01
 
-    @Test func previewOffersNoWayToStartFromHere() throws {
-        // FR-START-08: a quest must not be startable from outside the start radius by any path,
-        // and M5 ships no arrival detection at all — so preview must not present a start control
-        // that appears to work.
+    @Test func previewWithNoRunStoreOffersNoStartControl() throws {
+        // FR-START-08 / FR-DISC-01: preview works anywhere, and it never starts a Run itself. With
+        // no Run store wired the screen says so rather than showing a control that does nothing.
         let model = try model()
-        #expect(model.startIsUnavailable)
+        #expect(model.startState == .unavailable)
         #expect(!model.startUnavailableExplanation.isEmpty)
+    }
+
+    @Test func previewOffersAStartControlWhenARunStoreIsWired() throws {
+        // The control leads to the arrival screen; it does not start the walk. The radius and
+        // accuracy gate live there, which is what keeps FR-START-08 true with a live button.
+        let repository = try BundledContentRepository()
+        let engine = RunEngine(repository: repository, store: InMemoryRunStore())
+        let model = try #require(QuestPreviewViewModel(
+            repository: repository, questID: Self.questID, language: .id, runEngine: engine))
+        #expect(model.startState == .start)
+    }
+
+    @Test func previewOffersResumeWhenADraftExists() throws {
+        // FR-START-06 — an existing draft is surfaced as resume-or-restart, never as a second Run.
+        let repository = try BundledContentRepository()
+        let store = InMemoryRunStore()
+        let engine = RunEngine(repository: repository, store: store)
+        let draft = try engine.start(
+            questID: Self.questID, language: .id, method: .gps, accuracyM: 8)
+
+        let model = try #require(QuestPreviewViewModel(
+            repository: repository, questID: Self.questID, language: .id, runEngine: engine))
+        guard case .resume(let runID, let progressText) = model.startState else {
+            Issue.record("Expected a resume state, got \(model.startState)")
+            return
+        }
+        #expect(runID == draft.id)
+        #expect(!progressText.isEmpty)
     }
 
     @Test func aMissingQuestYieldsNoViewModelRatherThanAnEmptyScreen() throws {

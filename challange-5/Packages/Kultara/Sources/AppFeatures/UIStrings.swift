@@ -73,6 +73,82 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case previewStartUnavailable
     case previewStartUnavailableDetail
 
+    // Starting a run — FR-START-01..10
+    case runStartAction
+    case runStartSafetyTitle
+    case runStartSafetyAck
+    case runStartLocationTitle
+    case runStartLocationBody
+    case runStartLocationContinue
+    case runStartLocationDeniedTitle
+    case runStartLocationDeniedBody
+    case runResumeHeading
+    case runResumeAction
+    case runRestartAction
+    case runRestartWarning
+    case runStartConfirmTitle
+    case runStartConfirmBody
+    case runStartConfirmYes
+    case runCancel
+
+    // Arrival — FR-ARR-01..07, FR-ERR-01
+    case arrivalHeading
+    case arrivalStep
+    case arrivalSearching
+    case arrivalDistanceRemaining
+    case arrivalAccuracy
+    case arrivalAccuracyInsufficient
+    case arrivalNoFix
+    case arrivalManualAction
+    case arrivalManualNote
+    case arrivalManualPending
+    case arrivalClueHeading
+    case arrivalNoClue
+    case arrivalOutOfSequence
+
+    // Checkpoint — FR-CP-01..08, FR-TASK-01..07
+    case checkpointArrivedHeading
+    case checkpointStampAwarded
+    case checkpointLoreHeading
+    case checkpointSourcesHeading
+    case checkpointSourcesEmpty
+    case checkpointTasksHeading
+    case checkpointClueHeading
+    case checkpointAdvanceAction
+    case checkpointProgress
+    case taskOptionalNote
+    case taskSkipAction
+    case taskSaveAction
+    case taskAnswerPlaceholder
+    case taskSkippedNote
+    case taskAnsweredNote
+    case taskPhotoNotInThisBuild
+
+    // Completion and summary — FR-DONE-01..06
+    case runCompletedHeading
+    case runCompletedBody
+    case runBadgeAwarded
+    case summaryHeading
+    case summaryOpenAction
+    case summaryStampsHeading
+    case summaryReflectionHeading
+    case summarySnapshotNote
+    case runAbandonAction
+    case runAbandonConfirmTitle
+    case runAbandonConfirmBody
+    case runAbandonConfirmAction
+    case runAbandonedNote
+
+    // Home — FR-RUN-03, FR-DONE-06
+    case homeActiveRunHeading
+    case homeActiveRunAction
+    case homeCompletedHeading
+
+    // Developer build only
+    case devHeading
+    case devSimulateArrivalTitle
+    case devSimulateArrivalNote
+
     // Accuracy labels — FR-CP-05
     case accuracyDocumented
     case accuracyOral
@@ -225,6 +301,126 @@ public enum UIStrings {
             id: "Kuis dimulai saat kamu berada di titik pertama. Dari sini kamu bisa membaca semuanya kecuali ceritanya.",
             en: "A quest begins when you are at its first checkpoint. From here you can read everything except the story."),
 
+        // MARK: Starting a run
+        .runStartAction: LocalizedText(id: "Mulai dari titik pertama", en: "Start at the first checkpoint"),
+        .runStartSafetyTitle: LocalizedText(id: "Sebelum berangkat", en: "Before you set off"),
+        .runStartSafetyAck: LocalizedText(id: "Saya mengerti", en: "I understand"),
+        .runStartLocationTitle: LocalizedText(
+            id: "Kenapa lokasi diperlukan", en: "Why location is needed"),
+        .runStartLocationBody: LocalizedText(
+            id: "Lokasi dipakai hanya untuk memastikan kamu benar-benar berdiri di sebuah titik, dan hanya saat aplikasi terbuka. Tidak ada pelacakan saat kamu berjalan, dan lokasi tidak pernah keluar dari perangkat ini.",
+            en: "Location is used only to confirm you are standing at a checkpoint, and only while the app is open. Nothing is tracked while you walk, and your location never leaves this device."),
+        .runStartLocationContinue: LocalizedText(id: "Lanjut", en: "Continue"),
+        .runStartLocationDeniedTitle: LocalizedText(
+            id: "Izin lokasi ditolak", en: "Location permission denied"),
+        .runStartLocationDeniedBody: LocalizedText(
+            id: "Tanpa izin lokasi, kedatangan tidak bisa dipastikan sendiri oleh aplikasi. Kamu tetap bisa membaca seluruh pratinjau, dan tetap bisa menandai kedatangan sendiri di layar titik.",
+            en: "Without location permission the app cannot confirm arrival on its own. You can still read the whole preview, and you can still mark your arrival yourself on the checkpoint screen."),
+        .runResumeHeading: LocalizedText(
+            id: "Perjalanan yang belum selesai", en: "An unfinished walk"),
+        .runResumeAction: LocalizedText(id: "Lanjutkan", en: "Resume"),
+        .runRestartAction: LocalizedText(id: "Mulai ulang", en: "Start over"),
+        .runRestartWarning: LocalizedText(
+            id: "Mulai ulang akan menghapus foto dan catatan refleksi dari perjalanan yang belum selesai itu. Stempel yang sudah didapat ikut hilang.",
+            en: "Starting over discards the photos and reflections from that unfinished walk. The stamps earned go with them."),
+        .runStartConfirmTitle: LocalizedText(
+            id: "Kamu sedang berdiri di %@?", en: "Are you standing at %@?"),
+        .runStartConfirmBody: LocalizedText(
+            id: "Sinyal lokasi kadang gagal di gang sempit dan di dalam pasar. Konfirmasi ini ada untuk keadaan itu — bukan untuk memulai rute dari jauh, karena ceritanya dibuat untuk dibaca di tempatnya.",
+            en: "Location fixes fail in narrow lanes and inside markets. This confirmation exists for that — not for starting the route from elsewhere, because the story is written to be read where it happened."),
+        .runStartConfirmYes: LocalizedText(id: "Ya, saya di sini", en: "Yes, I am here"),
+        .runCancel: LocalizedText(id: "Batal", en: "Cancel"),
+
+        // MARK: Arrival
+        .arrivalHeading: LocalizedText(id: "Menuju %@", en: "Heading to %@"),
+        .arrivalStep: LocalizedText(id: "Titik %d dari %d", en: "Checkpoint %d of %d"),
+        .arrivalSearching: LocalizedText(
+            id: "Mencari sinyal lokasi…", en: "Looking for a location fix…"),
+        .arrivalDistanceRemaining: LocalizedText(id: "Sisa jarak", en: "Distance remaining"),
+        .arrivalAccuracy: LocalizedText(id: "Ketelitian sinyal", en: "Fix accuracy"),
+        .arrivalAccuracyInsufficient: LocalizedText(
+            id: "Kamu terlihat sudah dekat, tetapi sinyalnya terlalu kasar untuk memastikannya.",
+            en: "You look close, but the fix is too coarse to prove it."),
+        .arrivalNoFix: LocalizedText(
+            id: "Belum ada sinyal lokasi yang bisa dipakai.",
+            en: "No usable location fix yet."),
+        .arrivalManualAction: LocalizedText(
+            id: "Saya sudah sampai di sini", en: "I have arrived here"),
+        .arrivalManualNote: LocalizedText(
+            id: "Menandai sendiri tidak mengurangi apa pun: stempel, cerita, dan ringkasannya sama persis.",
+            en: "Marking it yourself costs nothing: the stamp, the story and the summary are identical."),
+        .arrivalManualPending: LocalizedText(
+            id: "Kalau sinyal tidak juga datang, pilihan menandai sendiri muncul setelah satu menit.",
+            en: "If no fix arrives, the option to mark it yourself appears after a minute."),
+        .arrivalClueHeading: LocalizedText(id: "Petunjuk", en: "The clue"),
+        .arrivalNoClue: LocalizedText(
+            id: "Titik pertama. Alamatnya ada di pratinjau rute.",
+            en: "The first checkpoint. Its address is in the route preview."),
+        .arrivalOutOfSequence: LocalizedText(
+            id: "Titik yang ditunggu sekarang adalah %@.",
+            en: "The checkpoint expected right now is %@."),
+
+        // MARK: Checkpoint
+        .checkpointArrivedHeading: LocalizedText(id: "Kamu sampai", en: "You have arrived"),
+        .checkpointStampAwarded: LocalizedText(id: "Stempel didapat", en: "Stamp earned"),
+        .checkpointLoreHeading: LocalizedText(id: "Ceritanya", en: "The story"),
+        .checkpointSourcesHeading: LocalizedText(id: "Sumber", en: "Sources"),
+        .checkpointSourcesEmpty: LocalizedText(
+            id: "Tidak ada sumber yang tercatat untuk bagian ini.",
+            en: "No source is recorded for this passage."),
+        .checkpointTasksHeading: LocalizedText(id: "Kegiatan", en: "Things to do"),
+        .checkpointClueHeading: LocalizedText(
+            id: "Petunjuk ke titik berikutnya", en: "The clue to the next stop"),
+        .checkpointAdvanceAction: LocalizedText(
+            id: "Berangkat ke titik berikutnya", en: "Set off for the next stop"),
+        .checkpointProgress: LocalizedText(id: "%d dari %d titik", en: "%d of %d checkpoints"),
+        .taskOptionalNote: LocalizedText(
+            id: "Semuanya boleh dilewati. Tidak ada yang terkunci karenanya.",
+            en: "Every one of these is skippable. Nothing is locked behind them."),
+        .taskSkipAction: LocalizedText(id: "Lewati", en: "Skip"),
+        .taskSaveAction: LocalizedText(id: "Simpan", en: "Save"),
+        .taskAnswerPlaceholder: LocalizedText(id: "Tulis di sini…", en: "Write here…"),
+        .taskSkippedNote: LocalizedText(id: "Dilewati", en: "Skipped"),
+        .taskAnsweredNote: LocalizedText(id: "Tersimpan", en: "Saved"),
+        .taskPhotoNotInThisBuild: LocalizedText(
+            id: "Kegiatan foto belum ada di versi ini. Titik ini tetap selesai tanpa foto.",
+            en: "Photo activities are not in this build yet. This checkpoint completes without one."),
+
+        // MARK: Completion and summary
+        .runCompletedHeading: LocalizedText(id: "Rute selesai", en: "Route complete"),
+        .runCompletedBody: LocalizedText(
+            id: "Kamu sampai di titik terakhir. Ringkasannya tersimpan di perangkat ini dan bisa dibuka kapan saja, tanpa jaringan.",
+            en: "You reached the final checkpoint. The summary is saved on this device and opens any time, with no network."),
+        .runBadgeAwarded: LocalizedText(id: "Lencana didapat: %@", en: "Badge earned: %@"),
+        .summaryHeading: LocalizedText(id: "Ringkasan perjalanan", en: "Trip summary"),
+        .summaryOpenAction: LocalizedText(id: "Buka ringkasan", en: "Open the summary"),
+        .summaryStampsHeading: LocalizedText(id: "Stempel dan lencana", en: "Stamps and badges"),
+        .summaryReflectionHeading: LocalizedText(id: "Catatanmu", en: "What you wrote"),
+        .summarySnapshotNote: LocalizedText(
+            id: "Ringkasan ini menyimpan teks yang kamu baca saat itu, versi konten %@. Perbaikan konten setelahnya tidak mengubahnya.",
+            en: "This summary holds the text you read at the time, content version %@. Later corrections do not rewrite it."),
+        .runAbandonAction: LocalizedText(id: "Hentikan perjalanan", en: "End this walk"),
+        .runAbandonConfirmTitle: LocalizedText(
+            id: "Hentikan perjalanan ini?", en: "End this walk?"),
+        .runAbandonConfirmBody: LocalizedText(
+            id: "Titik yang sudah kamu capai tetap tersimpan beserta ceritanya. Yang berhenti hanyalah sisa rutenya.",
+            en: "The checkpoints you reached stay, with their stories. Only the rest of the route stops."),
+        .runAbandonConfirmAction: LocalizedText(id: "Hentikan", en: "End it"),
+        .runAbandonedNote: LocalizedText(id: "Dihentikan", en: "Ended early"),
+
+        // MARK: Home
+        .homeActiveRunHeading: LocalizedText(id: "Sedang berjalan", en: "In progress"),
+        .homeActiveRunAction: LocalizedText(id: "Lanjutkan", en: "Resume"),
+        .homeCompletedHeading: LocalizedText(id: "Sudah selesai", en: "Finished"),
+
+        // MARK: Developer build only
+        .devHeading: LocalizedText(id: "Alat pengembang", en: "Developer tools"),
+        .devSimulateArrivalTitle: LocalizedText(
+            id: "Simulasikan kedatangan di mana saja", en: "Simulate arrival anywhere"),
+        .devSimulateArrivalNote: LocalizedText(
+            id: "Menempatkan posisimu tepat di titik berikutnya supaya rute bisa dites dari meja. Hanya ada di build debug; aturan FR-START-08 tetap berlaku di build rilis, yang bahkan tidak memuat kode ini.",
+            en: "Places you exactly at the next checkpoint so the route can be walked from a desk. Debug builds only; FR-START-08 still holds in a release build, which does not contain this code at all."),
+
         // MARK: Accuracy labels
         .accuracyDocumented: LocalizedText(id: "Tercatat", en: "Documented"),
         .accuracyOral: LocalizedText(id: "Babad/Cerita rakyat", en: "Oral tradition"),
@@ -256,8 +452,8 @@ public enum UIStrings {
         .settingsDeleteCancel: LocalizedText(id: "Batal", en: "Cancel"),
         .settingsDeleteDone: LocalizedText(id: "Data lokal sudah dihapus.", en: "Local data deleted."),
         .settingsDeleteScopeNote: LocalizedText(
-            id: "Pada versi ini yang tersimpan di perangkat baru berupa preferensi. Perjalanan, foto, refleksi, dan penghargaan belum ada karena fitur menjalankan kuis belum dirilis.",
-            en: "In this build the only thing stored on the device is your preferences. Runs, photos, reflections and awards do not exist yet, because walking a quest has not shipped."),
+            id: "Yang terhapus: preferensi, seluruh perjalanan beserta stempel dan lencananya, dan catatan refleksi yang kamu tulis. Foto belum ada di versi ini karena kegiatan foto belum dirilis.",
+            en: "This removes your preferences, every walk with its stamps and badges, and the reflections you wrote. There are no photos yet in this build, because photo activities have not shipped."),
         .settingsAttributionHeading: LocalizedText(id: "Sumber dan penghargaan", en: "Sources and credits"),
         .settingsAttributionBody: LocalizedText(
             id: "Cerita di aplikasi ini berdiri di atas catatan dan tutur dari komunitas pengelola setiap tempat. Setiap klaim membawa sumbernya.",

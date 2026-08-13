@@ -1,5 +1,6 @@
 import ContentKit
 import DesignSystem
+import RunEngine
 import SwiftUI
 
 /// A labelled claim, ready to render. `FR-CP-05` — the accuracy label is visible, as text, never
@@ -78,15 +79,34 @@ public final class QuestPreviewViewModel {
     /// is not actionable.
     public let lateStartWarning: String?
 
-    /// `FR-START-08` — there is no path to start from here. M5 ships no arrival detection, so
-    /// preview must not present a control that looks like it works.
-    public let startIsUnavailable = true
+    /// What the start control does when tapped.
+    ///
+    /// `FR-START-08` is not weakened by any of these: none of them starts a Run. They open the
+    /// arrival screen, where the radius and the accuracy gate decide. The distinction matters —
+    /// preview must remain fully usable at any location on earth (`FR-DISC-01`), and the only way
+    /// to have both is for the button to lead to the gate rather than through it.
+    public enum StartState: Sendable, Equatable {
+        /// No Run store is wired — previews and tests. The screen says so rather than offering a
+        /// control that does nothing.
+        case unavailable
+        case start
+        /// `FR-START-06` — an existing draft, offering resume or restart.
+        case resume(runID: UUID, progressText: String)
+    }
+
+    public private(set) var startState: StartState = .unavailable
+    public private(set) var isChoosingResumeOrRestart = false
     public let startUnavailableExplanation: String
+
+    /// Called with `restart == true` when the user chose to discard an existing draft. The screen
+    /// that owns location does the starting; this one only asks which walk is meant.
+    public var onBeginRun: ((_ restart: Bool) -> Void)?
 
     public init?(
         repository: any ContentRepository,
         questID: String,
         language: ContentLanguage,
+        runEngine: RunEngine? = nil,
         now: Date = Date(),
         calendar: Calendar = .current
     ) {
@@ -159,6 +179,18 @@ public final class QuestPreviewViewModel {
 
         startUnavailableExplanation = UIStrings.string(.previewStartUnavailableDetail, language)
 
+        if let runEngine {
+            if let draft = (try? runEngine.activeRun(questID: quest.id)) ?? nil {
+                startState = .resume(
+                    runID: draft.id,
+                    progressText: String(
+                        format: UIStrings.string(.checkpointProgress, language),
+                        draft.reachedCount, draft.checkpointCount))
+            } else {
+                startState = .start
+            }
+        }
+
         // FR-DISC-06. The boundary belongs to the user: exactly at `hardLatestStart` is a start
         // time the content endorses, so the warning fires strictly after it.
         let minutesNow = calendar.component(.hour, from: now) * 60 + calendar.component(.minute, from: now)
@@ -172,6 +204,32 @@ public final class QuestPreviewViewModel {
         } else {
             lateStartWarning = nil
         }
+    }
+
+    // MARK: - Starting
+
+    public func tapStart() {
+        switch startState {
+        case .unavailable: break
+        case .start: onBeginRun?(false)
+        case .resume: isChoosingResumeOrRestart = true
+        }
+    }
+
+    public func chooseResume() {
+        isChoosingResumeOrRestart = false
+        onBeginRun?(false)
+    }
+
+    /// `FR-START-06` — the warning that photos and reflections go is shown by the dialog that calls
+    /// this, not buried afterwards.
+    public func chooseRestart() {
+        isChoosingResumeOrRestart = false
+        onBeginRun?(true)
+    }
+
+    public func cancelResumeChoice() {
+        isChoosingResumeOrRestart = false
     }
 
     /// The site that shuts first is the one that decides whether the walk can finish, so it is the
@@ -238,12 +296,29 @@ public struct QuestPreviewView: View {
                 startNotice
             }
             .padding(KultaraMetrics.lg)
+            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
         }
         .background(palette.paper.color)
         .navigationTitle(model.title)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
+        .confirmationDialog(
+            UIStrings.string(.runResumeHeading, language),
+            isPresented: Binding(get: { model.isChoosingResumeOrRestart },
+                                 set: { if !$0 { model.cancelResumeChoice() } }),
+            titleVisibility: .visible
+        ) {
+            Button(UIStrings.string(.runResumeAction, language)) { model.chooseResume() }
+            Button(UIStrings.string(.runRestartAction, language), role: .destructive) {
+                model.chooseRestart()
+            }
+            Button(UIStrings.string(.runCancel, language), role: .cancel) {
+                model.cancelResumeChoice()
+            }
+        } message: {
+            Text(UIStrings.string(.runRestartWarning, language))
+        }
     }
 
     private func lateWarning(_ warning: String) -> some View {
@@ -423,14 +498,29 @@ public struct QuestPreviewView: View {
 
     private var startNotice: some View {
         KultaraCard {
-            VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
+            VStack(alignment: .leading, spacing: KultaraMetrics.md) {
                 Text(UIStrings.string(.previewStartUnavailable, language))
                     .kultaraFont(.sectionHeading)
                     .foregroundStyle(palette.seal.color)
+                // The explanation stays whatever the button says. `FR-START-08` is a fact about
+                // the product, not a message shown only while the feature is missing.
                 Text(model.startUnavailableExplanation)
                     .kultaraFont(.body)
                     .foregroundStyle(palette.inkMuted.color)
                     .fixedSize(horizontal: false, vertical: true)
+
+                switch model.startState {
+                case .unavailable:
+                    EmptyView()
+                case .start:
+                    Button(UIStrings.string(.runStartAction, language)) { model.tapStart() }
+                        .buttonStyle(.seal)
+                case .resume(_, let progressText):
+                    LabelledValue(label: UIStrings.string(.homeActiveRunHeading, language),
+                                  value: progressText, emphasised: true)
+                    Button(UIStrings.string(.runResumeAction, language)) { model.tapStart() }
+                        .buttonStyle(.seal)
+                }
             }
         }
     }

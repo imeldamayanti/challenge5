@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A native iOS app (SwiftUI, iOS 18.0) for story-led cultural heritage walking quests in Bali. Users walk a fixed-order route of physical checkpoints, unlock narrative lore at each one, and finish with a shareable recap.
 
-Milestone 5 (Discovery & Preview) is implemented. The quest execution loop, completion, share, telemetry, and proximity alerts are not yet built.
+Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. Photo tasks, the share card, the recall survey, telemetry, proximity alerts, and the kill-switch are not built. See `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
 
 ## Directory layout
 
@@ -56,7 +56,16 @@ xcodebuild test -project challange-5.xcodeproj -scheme challange-5 \
 
 Check `xcrun simctl list devices available` before assuming a device name — the installed set here is iPhone 17 / 17 Pro / 17 Pro Max / 17e / 16e, with no iPhone 16.
 
-Schemes: `challange-5` (app + UI tests), plus `ContentKit`, `DesignSystem`, `AppFeatures`, `content-validator` from the package.
+Schemes: `challange-5` (app + UI tests), plus `ContentKit`, `RunEngine`, `DesignSystem`, `AppFeatures`, `content-validator` from the package.
+
+### Walking a quest without walking
+
+A quest starts only inside its first checkpoint's radius (`FR-START-08`), which makes the run loop
+untestable from a desk. Debug builds carry a switch — **Settings → Developer tools → Simulate arrival
+anywhere** — that reports a position at the next checkpoint. The arrival rule still runs on it: the
+radius and accuracy gate in `ArrivalEvaluator` is unmodified, so what gets exercised is the walker's
+code path with a different input. The switch, its provider, and the Settings section are all inside
+`#if DEBUG`; a release build does not contain them.
 
 ## The specs are authoritative
 
@@ -91,9 +100,11 @@ The protocol deliberately has no notion of loading, refreshing, connectivity, or
 
 ### Layering
 
-`ContentKit` (Foundation only) → `DesignSystem` → `AppFeatures` (SwiftUI) → app target shell.
+`ContentKit` (Foundation only) → `RunEngine` (Foundation + ContentKit) → `DesignSystem` → `AppFeatures` (SwiftUI) → app target shell.
 
-`ContentKit` must not import SwiftUI, UIKit, CoreLocation, MapKit, or AppKit. Target linkage enforces this in the app build, but on macOS all those modules exist in the SDK and an import would compile fine — so `ImportBoundaryTests` scans the source tree and is what actually holds the boundary.
+`ContentKit` and `RunEngine` must not import SwiftUI, UIKit, CoreLocation, MapKit, or AppKit. Target linkage enforces this in the app build, but on macOS all those modules exist in the SDK and an import would compile fine — so `ImportBoundaryTests` scans the source tree and is what actually holds the boundary.
+
+`RunEngine` owns the Run lifecycle and the rules that write user data: ordering, arrival acceptance, awards, snapshot-on-complete. Arrival reaches it as a decided fact — a method and an accuracy, never a `CLLocation` — which is what keeps those rules testable without a simulator. `RunStore` fronts persistence; `FileRunStore` writes one JSON document per Run today, and SwiftData or a Supabase-backed sync layer is a swap behind the protocol, never a call in front of it.
 
 ## Invariants held by tests, not by review
 
@@ -104,6 +115,10 @@ These are the places where a reasonable-looking change silently breaks a guarant
 - **Contrast is measured, not reviewed.** `DesignSystem/Contrast.swift` plus `KultaraThemeTests` assert every theme pair against WCAG ratios (`NFR-A11Y-03`). The aged-paper visual direction fails contrast easily; the theme yields, not the threshold.
 - **`mapPoint` is authored, not derived from `coordinate`.** The region map is a hand-drawn illustration with a stylised coastline; projecting real coordinates onto it puts every pin somewhere wrong while looking precise. The validator checks range, not geography.
 - **Tasks never gate progression.** `blocksProgression` must be `false` for all content (`AD-2`, rule V8). Photos are keepsakes; the GPS radius is the gate.
+- **Arrival needs the accuracy check, not just the distance check.** `FR-ARR-01` is two conditions, and the second is the load-bearing one: without `horizontalAccuracy <= radius`, a 500 m cell-tower fix unlocks a 75 m checkpoint from the next neighbourhood. It is also why the manual override is mandatory rather than a nicety (`FR-START-10`) — inside a covered market the accuracy test fails legitimately and often.
+- **A completed Run stays writable for reading and answering.** The final checkpoint completes the walk the instant it is reached (`FR-DONE-01`), while the walker is still standing there with the closing reflection unanswered. `markLoreOpened` and `recordTaskResult` therefore accept `completed` as well as `active`; gating them on `active` makes completion swallow the ending that `FR-TASK-07` requires.
+- **The summary model takes no `ContentRepository`.** `RunSummaryViewModel` renders from snapshots alone, which is how `FR-DONE-04/05` and `FR-RUN-06` are guaranteed rather than intended. Handing it a repository would make a withdrawn Place able to blank a walk somebody finished.
+- **A screen's view model belongs in `@State`.** Building one inside a `body` rebuilds it on every redraw, which orphans anything in flight — see `ScreenHost` in `KultaraRootView.swift`. This presented as an arrival screen that never found a fix.
 
 ## Content
 

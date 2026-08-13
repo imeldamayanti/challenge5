@@ -12,6 +12,7 @@ let package = Package(
     ],
     products: [
         .library(name: "ContentKit", targets: ["ContentKit"]),
+        .library(name: "RunEngine", targets: ["RunEngine"]),
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
         .library(name: "AppFeatures", targets: ["AppFeatures"]),
         .executable(name: "content-validator", targets: ["ContentValidatorCLI"]),
@@ -34,6 +35,13 @@ let package = Package(
                 .copy("Content/assets"),
             ]
         ),
+        // The user store and the rules that write it. Foundation and `ContentKit` only: the
+        // ordering, award and snapshot rules are where correctness bugs hide, and they are worth
+        // being able to test without a simulator (`system-design.md` §3, §14).
+        .target(
+            name: "RunEngine",
+            dependencies: ["ContentKit"]
+        ),
         .target(
             name: "DesignSystem",
             resources: [
@@ -46,7 +54,7 @@ let package = Package(
         ),
         .target(
             name: "AppFeatures",
-            dependencies: ["ContentKit", "DesignSystem"]
+            dependencies: ["ContentKit", "RunEngine", "DesignSystem"]
         ),
         .executableTarget(
             name: "ContentValidatorCLI",
@@ -55,6 +63,10 @@ let package = Package(
         .testTarget(
             name: "ContentKitTests",
             dependencies: ["ContentKit"]
+        ),
+        .testTarget(
+            name: "RunEngineTests",
+            dependencies: ["RunEngine", "ContentKit"]
         ),
         .testTarget(
             name: "DesignSystemTests",

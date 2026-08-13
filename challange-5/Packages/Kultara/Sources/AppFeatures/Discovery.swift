@@ -139,18 +139,24 @@ public struct QuestListView: View {
 
     private let model: QuestListViewModel
     private let mapModel: RegionMapViewModel?
+    private let journal: RunJournalSummary
     private let onSelect: (String) -> Void
+    private let onOpenRun: (UUID) -> Void
 
     @State private var surface: Surface = .list
 
     public init(
         model: QuestListViewModel,
         mapModel: RegionMapViewModel? = nil,
-        onSelect: @escaping (String) -> Void
+        journal: RunJournalSummary = .empty,
+        onSelect: @escaping (String) -> Void,
+        onOpenRun: @escaping (UUID) -> Void = { _ in }
     ) {
         self.model = model
         self.mapModel = mapModel
+        self.journal = journal
         self.onSelect = onSelect
+        self.onOpenRun = onOpenRun
     }
 
     private var language: ContentLanguage { model.language }
@@ -227,6 +233,18 @@ public struct QuestListView: View {
     private var list: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
+                // `FR-RUN-03` — a walk in progress has a visible entry point on the home screen,
+                // naming the quest and how far it got. Above the catalogue, because an unfinished
+                // walk is the one thing on this screen with a claim on the user's attention.
+                if let active = journal.activeRun {
+                    JournalEntryCard(
+                        heading: UIStrings.string(.homeActiveRunHeading, language),
+                        entry: active,
+                        actionTitle: UIStrings.string(.homeActiveRunAction, language),
+                        language: language,
+                        action: { onOpenRun(active.id) })
+                }
+
                 if model.isEmpty || model.hasNoSearchResults {
                     KultaraCard {
                         Text(UIStrings.string(
@@ -244,13 +262,27 @@ public struct QuestListView: View {
                     }
                 }
 
+                // `FR-DONE-06` — completed walks are listed and re-openable before the Journal
+                // exists. Below the catalogue: these are finished, and they keep.
+                if !journal.completed.isEmpty {
+                    KultaraSectionHeading(UIStrings.string(.homeCompletedHeading, language))
+                    ForEach(journal.completed) { entry in
+                        JournalEntryCard(
+                            heading: UIStrings.string(.summaryHeading, language),
+                            entry: entry,
+                            actionTitle: UIStrings.string(.summaryOpenAction, language),
+                            language: language,
+                            action: { onOpenRun(entry.id) })
+                    }
+                }
+
                 Text(UIStrings.string(.settingsPlaceholderContentNotice, language))
                     .kultaraFont(.caption)
                     .foregroundStyle(palette.inkMuted.color)
                     .padding(.top, KultaraMetrics.sm)
             }
             .padding(.horizontal, KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.lg)
+            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
         }
     }
 }

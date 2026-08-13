@@ -87,16 +87,33 @@ struct OnboardingTests {
 /// because nothing is collected for tracking. `NFR-BAT-01` — no continuous background location in
 /// any release.
 ///
-/// M5 builds no quest-start path at all, so the correct state of this module is that none of these
-/// calls appear anywhere in it. A comment saying so would decay; this does not.
+/// Now that a quest-start path exists, "nowhere in the module" is the wrong shape for the
+/// foreground calls and still the right shape for everything else. So the list is split: two calls
+/// are confined to the two files that own arrival, and the rest remain banned outright.
+///
+/// Confinement rather than absence is what the requirements actually say. A comment saying so would
+/// decay; this does not.
 struct PermissionCallBoundaryTests {
 
+    /// Permitted only where arrival lives: the CoreLocation wrapper, and the arrival screen's model
+    /// that starts and stops it. Anywhere else — onboarding, discovery, preview, settings — would
+    /// break `FR-ONB-04` (in context, at the first start attempt) or `NFR-BAT-04` (sampling stops
+    /// when the arrival screen is not visible).
+    static let foregroundArrivalCalls = [
+        "requestWhenInUseAuthorization",   // FR-ONB-04, FR-START-02
+        "startUpdatingLocation",           // FR-ARR-02, NFR-BAT-04
+    ]
+
+    static let arrivalOwningFiles: Set<String> = ["LocationService.swift", "QuestRun.swift"]
+
+    /// Banned everywhere, in every release. `NFR-BAT-01` allows no continuous background location
+    /// at all, `FR-PROX` is not this milestone, and `FR-ONB-06` forbids the tracking prompt because
+    /// nothing is collected for tracking.
     static let forbiddenCalls = [
-        "requestWhenInUseAuthorization",   // FR-ONB-04
         "requestAlwaysAuthorization",      // FR-ONB-04, FR-PROX-03
-        "startUpdatingLocation",           // NFR-BAT-01
         "startMonitoringSignificantLocationChanges",
-        "startMonitoring(for:",            // FR-PROX is out of scope for M5
+        "startMonitoring(for:",            // FR-PROX is not built yet
+        "allowsBackgroundLocationUpdates", // NFR-BAT-01
         "ATTrackingManager",               // FR-ONB-06
         "AppTrackingTransparency",
         "requestTrackingAuthorization",
@@ -109,9 +126,27 @@ struct PermissionCallBoundaryTests {
         "isReachable",
     ]
 
-    @Test func appFeaturesRequestsNoPermissionAndStartsNoLocationUpdates() throws {
+    @Test func appFeaturesUsesNoBackgroundLocationAndNoTrackingPrompt() throws {
         let offenders = try Self.occurrences(of: Self.forbiddenCalls, inTargetNamed: "AppFeatures")
         #expect(offenders.isEmpty, "\(offenders)")
+    }
+
+    @Test func foregroundLocationCallsStayInTheTwoFilesThatOwnArrival() throws {
+        let offenders = try Self
+            .occurrences(of: Self.foregroundArrivalCalls, inTargetNamed: "AppFeatures")
+            .filter { offender in
+                let file = offender.split(separator: ":").first.map(String.init) ?? offender
+                return !Self.arrivalOwningFiles.contains(file)
+            }
+        #expect(offenders.isEmpty,
+                "Location sampling and its prompt belong to the arrival path only; found: \(offenders)")
+    }
+
+    @Test func theArrivalPathIsActuallyWhereThoseCallsAre() throws {
+        // Without this the filter above passes vacuously the day someone renames the files, and a
+        // guard that can pass by finding nothing is not a guard.
+        let found = try Self.occurrences(of: Self.foregroundArrivalCalls, inTargetNamed: "AppFeatures")
+        #expect(!found.isEmpty)
     }
 
     @Test func noModuleChecksReachability() throws {

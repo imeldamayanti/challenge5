@@ -15,6 +15,15 @@ struct ImportBoundaryTests {
         #expect(offenders.isEmpty, "ContentKit must not import \(Self.forbiddenModules.joined(separator: ", ")); found: \(offenders)")
     }
 
+    /// `RunEngine` holds the ordering, award and snapshot rules. `system-design.md` §3 keeps it
+    /// free of UI and location frameworks for the same reason as `ContentKit`: those rules must be
+    /// testable on a laptop, and an `import CoreLocation` here is how a `CLLocation` ends up inside
+    /// a decision that has to stay a value.
+    @Test func runEngineImportsNoUIOrLocationFramework() throws {
+        let offenders = try Self.forbiddenImports(inTargetNamed: "RunEngine")
+        #expect(offenders.isEmpty, "RunEngine must not import \(Self.forbiddenModules.joined(separator: ", ")); found: \(offenders)")
+    }
+
     @Test func contentValidatorCLIImportsNoUIOrLocationFramework() throws {
         let offenders = try Self.forbiddenImports(inTargetNamed: "ContentValidatorCLI")
         #expect(offenders.isEmpty, "The validator CLI must stay headless; found: \(offenders)")

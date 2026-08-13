@@ -156,6 +156,18 @@ public enum KultaraMetrics {
     public static let xl: CGFloat = 24
     public static let xxl: CGFloat = 32
 
+    /// How much room a scrolling screen leaves at its foot for the floating tab bar.
+    ///
+    /// `KultaraTabBar` is published as a `safeAreaInset`, which reserves space for the two root
+    /// tabs but is not reaching content pushed inside the navigation stack — the last card of a
+    /// preview ends up underneath the pill. Until that is understood rather than guessed at, the
+    /// screens that scroll pad their own foot by this much, because a control the walker cannot
+    /// reach is worse than a gap at the end of a scroll.
+    ///
+    /// 64 for the pill, 8 for the padding under it, and 16 of air so the last line is not flush
+    /// against it.
+    public static let floatingTabBarClearance: CGFloat = 88
+
     public static let cardCornerRadius: CGFloat = 4
     /// The photo cards on Home are rounded far more than a sheet of paper is — they are
     /// photographs, not documents, and the design draws them that way.
