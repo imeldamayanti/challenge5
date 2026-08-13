@@ -14,7 +14,6 @@ let package = Package(
         .library(name: "ContentKit", targets: ["ContentKit"]),
         .library(name: "RunEngine", targets: ["RunEngine"]),
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
-        .library(name: "AppFeatures", targets: ["AppFeatures"]),
         .executable(name: "content-validator", targets: ["ContentValidatorCLI"]),
     ],
     targets: [
@@ -52,10 +51,6 @@ let package = Package(
                 .copy("Resources/Fonts"),
             ]
         ),
-        .target(
-            name: "AppFeatures",
-            dependencies: ["ContentKit", "RunEngine", "DesignSystem"]
-        ),
         .executableTarget(
             name: "ContentValidatorCLI",
             dependencies: ["ContentKit"]
@@ -71,10 +66,6 @@ let package = Package(
         .testTarget(
             name: "DesignSystemTests",
             dependencies: ["DesignSystem"]
-        ),
-        .testTarget(
-            name: "AppFeaturesTests",
-            dependencies: ["AppFeatures"]
         ),
     ]
 )
