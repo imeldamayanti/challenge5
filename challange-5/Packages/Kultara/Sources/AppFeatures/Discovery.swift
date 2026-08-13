@@ -143,17 +143,22 @@ public struct QuestListView: View {
     private let onSelect: (String) -> Void
     private let onOpenRun: (UUID) -> Void
 
-    @State private var surface: Surface = .list
+    /// Owned by whatever presents this screen rather than held here, because the map is full-bleed
+    /// and the floating tab bar belongs to the root: the root cannot hide a bar for a surface it
+    /// cannot see.
+    @Binding private var surface: Surface
 
     public init(
         model: QuestListViewModel,
         mapModel: RegionMapViewModel? = nil,
+        surface: Binding<Surface>,
         journal: RunJournalSummary = .empty,
         onSelect: @escaping (String) -> Void,
         onOpenRun: @escaping (UUID) -> Void = { _ in }
     ) {
         self.model = model
         self.mapModel = mapModel
+        _surface = surface
         self.journal = journal
         self.onSelect = onSelect
         self.onOpenRun = onOpenRun

@@ -102,6 +102,9 @@ public struct KultaraRootView: View {
     /// because the Home design puts one there, and because a settings screen reached only from a
     /// gear in a bar has nowhere to live once the bar is gone.
     @State private var tab = Tab.quests.rawValue
+    /// Which surface the quests tab is showing. Held here, not inside `QuestListView`, because the
+    /// bar below is drawn by this view and the map is the one screen that wants it gone.
+    @State private var questSurface = QuestListView.Surface.list
 
     private enum Tab: String { case quests, settings }
 
@@ -139,8 +142,18 @@ public struct KultaraRootView: View {
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            KultaraTabBar(tabs: tabs, selection: $tab)
+            // The map is a full-bleed illustration the reader pinches and drags edge to edge, and
+            // it carries its own way back. A floating bar over it both covers artwork and puts
+            // buttons under the fingers doing the panning, so on that surface there is no bar and
+            // the inset reserves nothing.
+            if !hidesTabBar {
+                KultaraTabBar(tabs: tabs, selection: $tab)
+            }
         }
+    }
+
+    private var hidesTabBar: Bool {
+        tab == Tab.quests.rawValue && questSurface == .map
     }
 
     private var tabs: [KultaraTab] {
@@ -159,6 +172,7 @@ public struct KultaraRootView: View {
                 // construction, so the identity of the view model *is* the language.
                 model: QuestListViewModel(repository: environment.repository, language: language),
                 mapModel: RegionMapViewModel(repository: environment.repository, language: language),
+                surface: $questSurface,
                 journal: journal,
                 onSelect: { selectedQuestID = $0 },
                 onOpenRun: openRun)
