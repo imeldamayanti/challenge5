@@ -34,7 +34,6 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case questListMapTab
     case questListListTab
     case mapUnavailable
-    case mapPinHint
     case labelRegion
     case labelDistance
     case labelWalkingTime
@@ -172,9 +171,6 @@ public enum UIStrings {
         .mapUnavailable: LocalizedText(
             id: "Peta wilayah belum ikut di versi konten ini.",
             en: "This content version ships no region map."),
-        .mapPinHint: LocalizedText(
-            id: "Ketuk penanda untuk melihat pratinjau kuis.",
-            en: "Tap a marker to see the quest preview."),
         .labelRegion: LocalizedText(id: "Wilayah", en: "Region"),
         .labelDistance: LocalizedText(id: "Jarak", en: "Distance"),
         .labelWalkingTime: LocalizedText(id: "Waktu jalan", en: "Walking time"),
