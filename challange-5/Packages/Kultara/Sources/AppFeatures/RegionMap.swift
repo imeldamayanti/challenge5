@@ -143,6 +143,11 @@ public struct RegionMapView: View {
     @GestureState private var drag: CGSize = .zero
     @State private var hasOpened = false
 
+    /// The viewport and the drawn artwork, recorded so the gesture handlers can clamp the pan they
+    /// store. A gesture callback has no `GeometryProxy`.
+    @State private var viewport: CGSize = .zero
+    @State private var content: CGSize = .zero
+
     private static let maximumZoom: CGFloat = 6
 
     public init(
@@ -186,14 +191,24 @@ public struct RegionMapView: View {
             .frame(width: proxy.size.width, height: proxy.size.height)
             .clipped()
             .contentShape(Rectangle())
-            .gesture(panGesture)
-            .simultaneousGesture(zoomGesture)
+            // One combined gesture, not `.gesture` plus `.simultaneousGesture`. Attached
+            // separately, the drag claims the touch sequence the moment a finger moves and the
+            // magnify gesture never receives the second one — pinch-to-zoom silently does
+            // nothing. `SimultaneousGesture` hands both the same events.
+            .gesture(SimultaneousGesture(panGesture, zoomGesture))
             .onTapGesture(count: 2) { toggleZoom() }
-            .onAppear { openOnThePins(drawnAt: size, viewport: proxy.size) }
+            .onAppear {
+                viewport = proxy.size
+                content = size
+                openOnThePins(drawnAt: size, viewport: proxy.size)
+            }
+            .onChange(of: proxy.size) { _, newViewport in
+                viewport = newViewport
+                content = filledSize(in: newViewport)
+            }
         }
         .background(palette.photoScrim.color)
         .ignoresSafeArea()
-        .overlay(alignment: .top) { hint }
         .overlay(alignment: .topLeading) { closeButton }
         // Deliberately no `accessibilityLabel` on this container: naming it turns the whole map
         // into a single accessibility element and swallows every marker inside it, which is both a
@@ -271,17 +286,22 @@ public struct RegionMapView: View {
         let scaled = CGSize(width: content.width * scale, height: content.height * scale)
         let limitX = max((scaled.width - viewport.width) / 2, 0)
         let limitY = max((scaled.height - viewport.height) / 2, 0)
+        // The stored pan was measured at the stored zoom, so it grows with the live pinch. Without
+        // this the artwork slides under the fingers during a pinch and snaps back the moment the
+        // gesture ends.
+        let ratio = scale / max(zoom, 0.0001)
         return CGSize(
-            width: min(max(pan.width + drag.width, -limitX), limitX),
-            height: min(max(pan.height + drag.height, -limitY), limitY))
+            width: min(max(pan.width * ratio + drag.width, -limitX), limitX),
+            height: min(max(pan.height * ratio + drag.height, -limitY), limitY))
     }
 
     private var panGesture: some Gesture {
         DragGesture()
             .updating($drag) { value, state, _ in state = value.translation }
             .onEnded { value in
-                pan.width += value.translation.width
-                pan.height += value.translation.height
+                commitPan(CGSize(width: pan.width + value.translation.width,
+                                 height: pan.height + value.translation.height),
+                          at: zoom)
             }
     }
 
@@ -289,9 +309,27 @@ public struct RegionMapView: View {
         MagnifyGesture()
             .updating($pinch) { value, state, _ in state = value.magnification }
             .onEnded { value in
-                zoom = min(max(zoom * value.magnification, 1), Self.maximumZoom)
-                if zoom == 1 { pan = .zero }
+                let target = min(max(zoom * value.magnification, 1), Self.maximumZoom)
+                let ratio = target / max(zoom, 0.0001)
+                zoom = target
+                if target == 1 {
+                    pan = .zero
+                } else {
+                    commitPan(CGSize(width: pan.width * ratio, height: pan.height * ratio), at: target)
+                }
             }
+    }
+
+    /// Stores a pan already clamped to the artwork's edges. `clampedPan` clamps what is *drawn*, but
+    /// the stored value has to be clamped too — otherwise repeated drags accumulate an offset far
+    /// outside the map and the next drag back spends its whole distance unwinding a number nothing
+    /// on screen ever reflected.
+    private func commitPan(_ proposed: CGSize, at scale: CGFloat) {
+        let scaled = CGSize(width: content.width * scale, height: content.height * scale)
+        let limitX = max((scaled.width - viewport.width) / 2, 0)
+        let limitY = max((scaled.height - viewport.height) / 2, 0)
+        pan = CGSize(width: min(max(proposed.width, -limitX), limitX),
+                     height: min(max(proposed.height, -limitY), limitY))
     }
 
     private func toggleZoom() {
@@ -343,17 +381,6 @@ public struct RegionMapView: View {
         .buttonStyle(.plain)
         .accessibilityLabel(pin.accessibilityLabel)
         .accessibilityAddTraits(.isButton)
-    }
-
-    private var hint: some View {
-        Text(UIStrings.string(.mapPinHint, model.language))
-            .kultaraFont(.metadata)
-            .foregroundStyle(palette.inkOnPhoto.color)
-            .padding(.horizontal, KultaraMetrics.md)
-            .padding(.vertical, KultaraMetrics.sm)
-            .background(palette.photoScrim.color, in: Capsule())
-            .padding(.top, KultaraMetrics.xxl)
-            .allowsHitTesting(false)
     }
 
     /// The way back to the list. The map is full-bleed, so there is no navigation bar to hold it —
