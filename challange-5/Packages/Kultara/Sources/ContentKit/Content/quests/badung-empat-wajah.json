@@ -1,0 +1,385 @@
+{
+  "id": "badung-empat-wajah",
+  "contentVersion": "2026.08.3",
+  "title": {
+    "id": "Empat Wajah Kota Badung",
+    "en": "The Four Faces of Badung"
+  },
+  "region": "Badung",
+  "city": "Denpasar",
+  "hookLore": [
+    {
+      "text": {
+        "id": "Inti kota lama Denpasar tersusun di sekitar sebuah perempatan. Empat lengannya menahan empat hal yang berbeda: kuasa, kepercayaan, penghidupan, dan ingatan.",
+        "en": "The old core of Denpasar is arranged around a single crossroads. Its four arms hold four different things: power, faith, livelihood, and memory."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        1
+      ]
+    },
+    {
+      "text": {
+        "id": "Jalan ini mulai di sisi barat, di gerbang sebuah puri, dan berakhir di sisi timur, di ruang tempat benda-benda kota disimpan.",
+        "en": "This walk starts on the western side, at the gate of a puri, and ends on the eastern side, in the rooms where the city's objects are kept."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    },
+    {
+      "text": {
+        "id": "Di titik keempat kamu akan berdiri di perempatan itu sendiri, dengan tiga titik sebelumnya di belakang punggungmu.",
+        "en": "At the fourth stop you will be standing at that crossroads itself, with the previous three behind your back."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        1
+      ]
+    }
+  ],
+  "description": {
+    "id": "Lima titik berjalan kaki menyeberangi inti kota lama Denpasar, dari barat ke timur: puri, pura, pasar, perempatan, museum. Sekitar 2 km, kurang lebih 105 menit termasuk berhenti di tiap titik. Museum Bali menjual tiket masuk dan tarifnya belum diverifikasi — bawa uang tunai. Koordinat dan jam buka pada versi ini belum diverifikasi di lapangan.",
+    "en": "Five walking stops across the old core of Denpasar, west to east: a puri, a temple, a market, a crossroads, a museum. Roughly 2 km, about 105 minutes including time at each stop. Museum Bali sells an entry ticket whose price has not been verified — bring cash. The coordinates and opening hours in this version have not been verified in the field."
+  },
+  "route": {
+    "totalDistanceM": 2000,
+    "distanceSource": "walking-directions",
+    "walkingTimeMin": 30,
+    "totalDurationMin": 105,
+    "geometryAsset": "quests/badung-empat-wajah/route.geojson",
+    "previewImageAsset": "quests/badung-empat-wajah/route-preview.png"
+  },
+  "estimatedCost": {
+    "amount": 0,
+    "currency": "IDR",
+    "breakdown": []
+  },
+  "terrainSummary": {
+    "id": "Trotoar kota sepanjang Jl. Sutomo dan Jl. Gajah Mada, satu lantai pasar yang sering basah, dan satu perempatan besar yang harus diseberangi. Pasar Kumbasari berlantai empat dan lantai atasnya hanya dicapai lewat tangga. Halaman pura dan gedung museum umumnya berdiri di atas undakan. Jumlah anak tangga di empat dari lima titik belum disurvei.",
+    "en": "City pavement along Jl. Sutomo and Jl. Gajah Mada, one frequently wet market floor, and one large junction to cross. Pasar Kumbasari has four storeys and its upper floors are reached only by stairs. Temple courtyards and museum pavilions generally stand on steps. Step counts at four of the five stops have not been surveyed."
+  },
+  "recommendedStartWindow": {
+    "from": "08:00",
+    "to": "10:00"
+  },
+  "hardLatestStart": "10:45",
+  "proximityRadiusM": 250,
+  "safetyNotes": {
+    "id": "Jl. Gajah Mada ramai dan sebagian penyeberangannya tanpa lampu. Perempatan Catur Muka adalah simpang aktif: berdiri di trotoar, jangan di jalur kendaraan. Simpan ponsel di kantong saat berjalan dan buka hanya di titik berhenti. Jumat, rute harus dimulai paling lambat pukul 10.45 agar masih sempat sampai Museum Bali sebelum tutup pukul 12.30.",
+    "en": "Jl. Gajah Mada is busy and some of its crossings have no signals. The Catur Muka junction is live traffic: stand on the pavement, not in the roadway. Pocket the phone while walking and open it only at stops. On Fridays the route must start by 10:45 to reach Museum Bali before it closes at 12:30."
+  },
+  "languages": [
+    "id",
+    "en"
+  ],
+  "badgeId": "badge-badung-empat-wajah",
+  "checkpoints": [
+    {
+      "id": "badung-empat-wajah-cp1",
+      "orderIndex": 0,
+      "placeId": "badung-puri-agung-pemecutan",
+      "role": "start",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Wajah pertama adalah kuasa. Puri Agung Pemecutan berdiri di sisi barat inti kota lama, dan jalan ini mulai di depan gerbangnya.",
+            "en": "The first face is power. Puri Agung Pemecutan stands on the western side of the old core, and this walk starts in front of its gate."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Riwayat puri ini sengaja tidak diceritakan di sini. Sumber yang dapat dibuka dan dikutip belum tersedia, dan aturan konten aplikasi ini melarang kalimat tanpa sumber.",
+            "en": "The puri's history is deliberately not told here. No openable, citable source is available yet, and this app's content rules forbid a sentence without a source."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Yang bisa dipakai sekarang adalah bentuk kotanya: inti kota lama tersusun mengelilingi sebuah perempatan, dan puri menempati salah satu sisinya.",
+            "en": "What can be used now is the shape of the city: the old core is arranged around a crossroads, and the puri occupies one of its sides."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            1
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Ambil arah timur laut menuju Jl. Sutomo. Cari tembok dan gerbang bata merah — bukan batu abu-abu — di sisi jalan.",
+        "en": "Head north-east towards Jl. Sutomo. Look for red brick walls and a red brick gateway — not grey stone — on the side of the street."
+      },
+      "tasks": [
+        {
+          "id": "badung-empat-wajah-cp1-t1",
+          "type": "reflection",
+          "prompt": {
+            "id": "Berdiri di depan gerbang. Catat satu hal yang menandakan tempat ini masih dipakai orang, bukan sekadar dilihat.",
+            "en": "Stand in front of the gate. Note one thing that shows this place is still lived in, not merely looked at."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [
+        {
+          "id": "badung-empat-wajah-cp1-s1",
+          "prompt": {
+            "id": "Jika ada penjaga di gerbang, tanyakan hari apa puri paling ramai.",
+            "en": "If someone is at the gate, ask which day the puri is busiest."
+          }
+        }
+      ],
+      "stampId": "stamp-badung-empat-wajah-1"
+    },
+    {
+      "id": "badung-empat-wajah-cp2",
+      "orderIndex": 1,
+      "placeId": "badung-pura-maospahit",
+      "role": "middle",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Wajah kedua adalah kepercayaan. Pura Maospahit berada di lingkungan Jl. Sutomo, Pemecutan Kaja, dibangun dari bata merah dengan langgam arsitektur Majapahit.",
+            "en": "The second face is faith. Pura Maospahit sits in the Jl. Sutomo neighbourhood of Pemecutan Kaja, built of red brick in a Majapahit architectural idiom."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Tata ruangnya mengikuti konsep Panca Mandala — halaman-halaman yang menahan orang di ambang tertentu, bukan sekadar membaginya.",
+            "en": "Its layout follows the Panca Mandala concept — courtyards that hold people at particular thresholds rather than merely dividing the ground."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Sumber tersier menyebut angka 1278 Masehi untuk pendiriannya dan sekitar 1553 untuk pemugarannya. Angka itu belum dicek terhadap sumber primer, dan sebaiknya dibaca sebagai klaim yang belum selesai.",
+            "en": "A tertiary source gives 1278 CE for its founding and around 1553 for its restoration. Those figures have not been checked against a primary source, and are best read as an unfinished claim."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            1
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Turun ke timur laut sampai bertemu Jl. Gajah Mada, lalu ikuti keramaian ke arah sungai. Bangunan pasarnya bertingkat empat.",
+        "en": "Head north-east until you meet Jl. Gajah Mada, then follow the crowd towards the river. The market building is four storeys tall."
+      },
+      "tasks": [
+        {
+          "id": "badung-empat-wajah-cp2-t1",
+          "type": "question",
+          "prompt": {
+            "id": "Berapa lapis halaman yang bisa kamu lihat dari luar, dan di lapis mana kamu berhenti?",
+            "en": "How many courtyard layers can you see from outside, and at which layer do you stop?"
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [
+        {
+          "id": "badung-empat-wajah-cp2-s1",
+          "prompt": {
+            "id": "Perhatikan bata merahnya. Cari satu bagian yang jelas lebih baru daripada bagian di sebelahnya.",
+            "en": "Look closely at the red brick. Find one section that is visibly newer than the section beside it."
+          }
+        }
+      ],
+      "stampId": "stamp-badung-empat-wajah-2"
+    },
+    {
+      "id": "badung-empat-wajah-cp3",
+      "orderIndex": 2,
+      "placeId": "badung-pasar-kumbasari",
+      "role": "middle",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Wajah ketiga adalah penghidupan. Pasar Kumbasari di Jl. Gajah Mada berdiri pada 1977, mula-mula bernama Pasar Peken atau Pasar Priuk, di lahan sekitar 800 meter persegi.",
+            "en": "The third face is livelihood. Pasar Kumbasari on Jl. Gajah Mada was established in 1977, first called Pasar Peken or Pasar Priuk, on a site of about 800 square metres."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Bangunannya empat lantai dan urutannya berarti: lantai dasar untuk kebutuhan pokok, lantai dua sampai empat untuk seni dan kerajinan. Yang dipakai tiap hari ada di bawah; yang dibawa pulang orang jauh ada di atas.",
+            "en": "The building has four floors and the order means something: the ground floor for everyday necessities, floors two to four for art and crafts. What is used daily sits below; what visitors carry home sits above."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Harga di sini ditawar, bukan dibaca. Pengunjung juga diimbau membawa tas belanja sendiri, bagian dari kampanye menghentikan kantong plastik.",
+            "en": "Prices here are bargained, not read. Shoppers are also asked to bring their own bag, part of a campaign against plastic ones."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Kembali ke Jl. Gajah Mada dan berjalan lurus ke timur sampai jalan bertemu perempatan besar. Patungnya berdiri di tengah.",
+        "en": "Return to Jl. Gajah Mada and walk straight east until the street meets a large junction. The statue stands in the middle of it."
+      },
+      "tasks": [
+        {
+          "id": "badung-empat-wajah-cp3-t1",
+          "type": "question",
+          "prompt": {
+            "id": "Berdiri di lantai dasar dan lihat ke atas. Barang apa yang dijual tepat di lantai di atasmu?",
+            "en": "Stand on the ground floor and look up. What is sold on the floor directly above you?"
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [
+        {
+          "id": "badung-empat-wajah-cp3-s1",
+          "prompt": {
+            "id": "Tanya satu pedagang sejak kapan mereka berjualan di gedung ini.",
+            "en": "Ask one trader how long they have traded in this building."
+          }
+        }
+      ],
+      "stampId": "stamp-badung-empat-wajah-3"
+    },
+    {
+      "id": "badung-empat-wajah-cp4",
+      "orderIndex": 3,
+      "placeId": "badung-catur-muka",
+      "role": "middle",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Ini poros jalannya. Patung Catur Muka berdiri di catus patha, perempatan yang dihitung sebagai titik nol Kota Denpasar; kompleks Jaya Sabha berada di timur lautnya.",
+            "en": "This is the walk's pivot. The Catur Muka statue stands at the catus patha, the crossroads counted as Denpasar's zero point; the Jaya Sabha complex lies to its north-east."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Catur Muka berarti empat wajah, dan patung ini menghadap keempat lengan perempatan sekaligus. Ikonografinya belum dicek terhadap sumber yang dapat dikutip, jadi yang dipakai di sini hanya apa yang terlihat.",
+            "en": "Catur Muka means four faces, and the statue looks along all four arms of the junction at once. Its iconography has not been checked against a citable source, so only what is visible is used here."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            1
+          ]
+        },
+        {
+          "text": {
+            "id": "Puri, pura, dan pasar yang sudah kamu lewati semuanya ada di belakang punggungmu sekarang. Yang tersisa satu arah lagi.",
+            "en": "The puri, the temple, and the market you have already passed are all behind your back now. One direction is left."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Ambil arah tenggara menuju Lapangan Puputan Badung. Museumnya di sisi timur lapangan, di selatan pura besar berpagar putih.",
+        "en": "Head south-east towards Lapangan Puputan Badung. The museum is on the east side of the square, south of the large white-walled temple."
+      },
+      "tasks": [
+        {
+          "id": "badung-empat-wajah-cp4-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Dari trotoar — bukan dari jalur kendaraan — foto satu wajah patung, lalu catat arah mana yang dilihatnya.",
+            "en": "From the pavement — not from the roadway — photograph one of the statue's faces, then note which direction it looks."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [],
+      "stampId": "stamp-badung-empat-wajah-4"
+    },
+    {
+      "id": "badung-empat-wajah-cp5",
+      "orderIndex": 4,
+      "placeId": "badung-museum-bali",
+      "role": "finish",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Wajah terakhir adalah ingatan. Museum Bali berada di Jl. Mayor Wisnu, di timur Lapangan Puputan Badung dan di selatan Pura Jagatnatha.",
+            "en": "The last face is memory. Museum Bali stands on Jl. Mayor Wisnu, east of Lapangan Puputan Badung and south of Pura Jagatnatha."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Museum ini adalah UPTD di bawah Dinas Kebudayaan Provinsi Bali. Benda-benda yang disimpan di sini datang dari tempat-tempat seperti empat titik yang baru kamu lewati.",
+            "en": "The museum is a UPTD under the Bali Provincial Culture Office. The objects kept here came from places like the four stops you have just walked."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            1
+          ]
+        },
+        {
+          "text": {
+            "id": "Hari Jumat museum tutup pukul 12.30 WITA, dan hari Sabtu tutup sepenuhnya. Jam itulah yang menentukan batas paling lambat memulai jalan ini.",
+            "en": "On Fridays the museum closes at 12:30 WITA, and on Saturdays it does not open at all. That hour is what sets the latest possible start for this walk."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        }
+      ],
+      "clueToNext": null,
+      "tasks": [
+        {
+          "id": "badung-empat-wajah-cp5-t1",
+          "type": "reflection",
+          "prompt": {
+            "id": "Empat wajah sudah kamu lewati: kuasa, kepercayaan, penghidupan, dan sekarang ingatan. Wajah mana yang paling terasa masih hidup hari ini, dan kenapa?",
+            "en": "You have passed four faces: power, faith, livelihood, and now memory. Which one felt most alive today, and why?"
+          },
+          "blocksProgression": false
+        }
+      ],
+      "sideQuests": [
+        {
+          "id": "badung-empat-wajah-cp5-s1",
+          "prompt": {
+            "id": "Cari satu benda di ruang pameran yang bisa saja berasal dari salah satu dari empat titik sebelumnya.",
+            "en": "Find one object in the galleries that could plausibly have come from one of the four earlier stops."
+          }
+        }
+      ],
+      "stampId": "stamp-badung-empat-wajah-5"
+    }
+  ],
+  "heroImageAsset": "quests/badung-empat-wajah/hero.png"
+}

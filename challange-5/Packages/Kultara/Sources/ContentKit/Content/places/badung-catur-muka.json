@@ -1,0 +1,100 @@
+{
+  "id": "badung-catur-muka",
+  "nameOfficial": {
+    "id": "Catur Muka",
+    "en": "Catur Muka"
+  },
+  "nameVariants": [
+    "Patung Catur Muka",
+    "Catus Patha Denpasar"
+  ],
+  "type": "monumen",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.6535,
+    "lon": 115.216
+  },
+  "arrivalRadiusM": 120,
+  "address": {
+    "id": "Perempatan Jl. Gajah Mada dan Jl. Veteran, Denpasar. Alamat persis belum diverifikasi.",
+    "en": "Junction of Jl. Gajah Mada and Jl. Veteran, Denpasar. Exact address not yet verified."
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Patung berdiri di tengah perempatan umum dan dapat dilihat kapan saja; jam di bawah dicatat sebagai sepanjang hari. Waktu aman untuk berhenti dan membaca adalah siang hari, bukan tengah malam.",
+      "en": "The statue stands in the middle of a public junction and can be seen at any hour; the hours below are recorded as all-day. The safe time to stop and read is daylight, not the middle of the night."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "00:00", "close": "23:59" },
+      { "weekday": 2, "open": "00:00", "close": "23:59" },
+      { "weekday": 3, "open": "00:00", "close": "23:59" },
+      { "weekday": 4, "open": "00:00", "close": "23:59" },
+      { "weekday": 5, "open": "00:00", "close": "23:59" },
+      { "weekday": 6, "open": "00:00", "close": "23:59" },
+      { "weekday": 7, "open": "00:00", "close": "23:59" }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan busana di ruang publik ini.",
+    "en": "There is no dress code in this public space."
+  },
+  "photoPolicy": {
+    "level": "allowed",
+    "notes": {
+      "id": "Monumen publik di ruang terbuka; memotret dari trotoar tidak dibatasi. Jangan berdiri di jalur kendaraan untuk mengambil gambar.",
+      "en": "A public monument in an open space; photographing it from the pavement is unrestricted. Do not step into traffic to take the picture."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": false,
+    "stepCount": null,
+    "surface": "asphalt and pavement",
+    "notes": {
+      "id": "Perempatan terbuka tanpa undakan menuju titik berhenti, tetapi lebar dan ramai. Kondisi trotoar dan keberadaan penyeberangan berpemandu belum disurvei.",
+      "en": "An open junction with no steps up to the stopping point, but wide and busy. Pavement condition and the presence of guided crossings have not been surveyed."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Patung Catur Muka berdiri di catus patha, perempatan yang dihitung sebagai titik nol Kota Denpasar. Kompleks Jaya Sabha berada di timur laut perempatan itu.",
+        "en": "The Catur Muka statue stands at the catus patha, the crossroads counted as Denpasar's zero point. The Jaya Sabha complex lies to the north-east of that junction."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    },
+    {
+      "text": {
+        "id": "Nama Catur Muka berarti empat wajah, dan patung ini menghadap keempat arah perempatan. Ikonografinya belum dicek terhadap sumber yang dapat dikutip.",
+        "en": "The name Catur Muka means four faces, and the statue looks out along all four arms of the junction. Its iconography has not been checked against a citable source."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        1
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Wikipedia EN — \"Jaya Sabha Complex\" (sumber tersier; dipakai untuk posisi relatif terhadap catus patha)",
+      "url": "https://en.wikipedia.org/wiki/Jaya_Sabha_Complex"
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Ikonografi dan sejarah pendirian patung Catur Muka di catus patha Denpasar (perlu sumber yang dapat dibuka)",
+      "url": null
+    }
+  ],
+  "consentRecordId": "badung-catur-muka",
+  "mapPoint": {
+    "x": 0.406,
+    "y": 0.613
+  }
+}

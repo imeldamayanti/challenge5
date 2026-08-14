@@ -1,0 +1,89 @@
+{
+  "id": "badung-puri-agung-pemecutan",
+  "nameOfficial": {
+    "id": "Puri Agung Pemecutan",
+    "en": "Puri Agung Pemecutan"
+  },
+  "nameVariants": [
+    "Puri Pemecutan"
+  ],
+  "type": "puri",
+  "isSacred": true,
+  "coordinate": {
+    "lat": -8.6595,
+    "lon": 115.2077
+  },
+  "arrivalRadiusM": 75,
+  "address": {
+    "id": "Kawasan Pemecutan, Denpasar Barat, Kota Denpasar. Alamat persis belum diverifikasi.",
+    "en": "Pemecutan area, West Denpasar, Denpasar city. Exact address not yet verified."
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Jam kunjung belum dikonfirmasi ke pengelola. Puri adalah tempat tinggal dan tempat upacara: bisa tertutup sewaktu-waktu. Tanya dulu di gerbang sebelum masuk.",
+      "en": "Visiting hours have not been confirmed with the management. A puri is a residence and a ceremonial site, and may be closed without notice. Ask at the gate before entering."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "08:00", "close": "17:00" },
+      { "weekday": 2, "open": "08:00", "close": "17:00" },
+      { "weekday": 3, "open": "08:00", "close": "17:00" },
+      { "weekday": 4, "open": "08:00", "close": "17:00" },
+      { "weekday": 5, "open": "08:00", "close": "17:00" },
+      { "weekday": 6, "open": "08:00", "close": "17:00" },
+      { "weekday": 7, "open": "08:00", "close": "17:00" }
+    ]
+  },
+  "dressCode": {
+    "id": "Kenakan kamen dan selendang, dan tutup bahu. Aturan busana khusus dari pengelola belum dikonfirmasi; pakai standar yang berlaku umum di puri dan pura.",
+    "en": "Wear a kamen and a sash, and cover your shoulders. The management's own dress rules have not been confirmed; follow the standard that applies at any puri or pura."
+  },
+  "photoPolicy": {
+    "level": "restricted",
+    "notes": {
+      "id": "Kebijakan foto belum dikonfirmasi ke pengelola. Anggap terbatas: minta izin sebelum memotret, dan jangan memotret di area pemujaan atau tempat tinggal.",
+      "en": "The photography policy has not been confirmed with the management. Treat it as restricted: ask before photographing, and do not photograph worship or living areas."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": true,
+    "stepCount": null,
+    "surface": "paving",
+    "notes": {
+      "id": "Jumlah undakan dan permukaan belum disurvei. Asumsikan ada undakan di gerbang tanpa pegangan; periksa di lokasi sebelum merencanakan kunjungan dengan keterbatasan mobilitas.",
+      "en": "Step count and surface have not been surveyed. Assume there are steps at the gate with no handrail; check on site before planning a visit with limited mobility."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Puri Agung Pemecutan berdiri di sisi barat inti kota lama Denpasar. Riwayatnya belum dituliskan di sini karena sumber yang dapat dibuka dan dikutip belum tersedia.",
+        "en": "Puri Agung Pemecutan stands on the western side of the old core of Denpasar. Its history is not written here, because no openable, citable source is available yet."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Sejarah dan kedudukan Puri Agung Pemecutan (perlu sumber pustaka atau arsip yang dapat dibuka)",
+      "url": null
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Konsep catus patha dan tata ruang inti kota lama Badung (perlu sumber pustaka yang dapat dibuka)",
+      "url": null
+    }
+  ],
+  "consentRecordId": "badung-puri-agung-pemecutan",
+  "mapPoint": {
+    "x": 0.398,
+    "y": 0.618
+  }
+}

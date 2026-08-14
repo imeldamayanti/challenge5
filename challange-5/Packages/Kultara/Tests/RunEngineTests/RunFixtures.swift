@@ -5,7 +5,7 @@ import Foundation
 /// A three-checkpoint quest with two places, built in memory.
 ///
 /// Written out rather than read from the shipped bundle so these tests assert the *rules* and not
-/// the current example content: a checkpoint added to `contoh-tiga-gerbang` must not turn an
+/// the shipped authored content: a checkpoint added to `badung-empat-wajah` must not turn an
 /// ordering test red.
 enum Fixture {
 

@@ -1,0 +1,95 @@
+{
+  "id": "badung-pasar-kumbasari",
+  "nameOfficial": {
+    "id": "Pasar Kumbasari",
+    "en": "Pasar Kumbasari"
+  },
+  "nameVariants": [
+    "Pasar Peken",
+    "Pasar Priuk"
+  ],
+  "type": "pasar",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.654,
+    "lon": 115.2115
+  },
+  "arrivalRadiusM": 100,
+  "address": {
+    "id": "Jl. Gajah Mada, Pemecutan, Denpasar",
+    "en": "Jl. Gajah Mada, Pemecutan, Denpasar"
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Jam buka belum diverifikasi ke pengelola pasar. Nilai di bawah adalah perkiraan konservatif untuk lantai seni dan kerajinan, bukan untuk lantai dasar yang buka jauh lebih pagi. Periksa sebelum berangkat.",
+      "en": "Opening hours have not been verified with the market authority. The values below are a conservative estimate for the art and craft floors, not for the ground floor, which opens far earlier. Check before setting out."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "08:00", "close": "18:00" },
+      { "weekday": 2, "open": "08:00", "close": "18:00" },
+      { "weekday": 3, "open": "08:00", "close": "18:00" },
+      { "weekday": 4, "open": "08:00", "close": "18:00" },
+      { "weekday": 5, "open": "08:00", "close": "18:00" },
+      { "weekday": 6, "open": "08:00", "close": "18:00" },
+      { "weekday": 7, "open": "08:00", "close": "18:00" }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan busana. Pakai alas kaki tertutup dan bertapak: lantai pasar sering basah.",
+    "en": "There is no dress code. Wear closed, gripping footwear: the market floor is frequently wet."
+  },
+  "photoPolicy": {
+    "level": "restricted",
+    "notes": {
+      "id": "Kebijakan foto belum dikonfirmasi ke pengelola. Anggap terbatas: minta izin pedagang sebelum memotret orang atau lapaknya.",
+      "en": "The photography policy has not been confirmed with the market authority. Treat it as restricted: ask a trader's permission before photographing them or their stall."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": true,
+    "stepCount": null,
+    "surface": "concrete and tile",
+    "notes": {
+      "id": "Bangunan empat lantai. Lantai dasar menjual kebutuhan pokok; lantai dua sampai empat menjual seni dan kerajinan, dan hanya dapat dicapai lewat undakan. Titik checkpoint berada di lantai dasar, tetapi bagian cerita yang menyebut lantai atas berarti naik tangga. Jumlah anak tangga belum dihitung dan keberadaan lift belum diverifikasi.",
+      "en": "A four-storey building. The ground floor sells everyday goods; floors two to four sell art and crafts and are reached by stairs. The checkpoint itself is on the ground floor, but the part of the story that names the upper floors means climbing. Step counts have not been counted and the presence of a lift has not been verified."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Pasar Kumbasari di Jl. Gajah Mada menempati bangunan empat lantai: lantai dasar untuk kebutuhan pokok, lantai dua sampai empat untuk seni dan kerajinan.",
+        "en": "Pasar Kumbasari on Jl. Gajah Mada occupies a four-storey building: the ground floor for everyday goods, floors two to four for art and crafts."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    },
+    {
+      "text": {
+        "id": "Pasar ini berdiri pada 1977 dengan nama awal Pasar Peken atau Pasar Priuk, di lahan seluas kurang lebih 800 meter persegi.",
+        "en": "The market was established in 1977, first known as Pasar Peken or Pasar Priuk, on a site of roughly 800 square metres."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Dinas Pariwisata Kota Denpasar — \"Pasar Kumbasari\"",
+      "url": "https://denpasartourism.com/en/article/pasar-kumbasari"
+    }
+  ],
+  "consentRecordId": "badung-pasar-kumbasari",
+  "mapPoint": {
+    "x": 0.403,
+    "y": 0.614
+  }
+}

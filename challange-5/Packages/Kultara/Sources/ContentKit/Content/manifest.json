@@ -1,21 +1,19 @@
 {
   "schemaVersion": 1,
-  "contentBundleVersion": "2026.08.2",
+  "contentBundleVersion": "2026.08.3",
   "languages": [
     "id",
     "en"
   ],
   "places": [
-    "contoh-puri-gerbang-utara",
-    "contoh-pura-tirta-sari",
-    "contoh-monumen-lapangan-kota",
-    "contoh-museum-arsip-kota",
-    "contoh-pasar-pagi-timur"
+    "badung-puri-agung-pemecutan",
+    "badung-pura-maospahit",
+    "badung-pasar-kumbasari",
+    "badung-catur-muka",
+    "badung-museum-bali"
   ],
   "quests": [
-    "contoh-jejak-kota-lama",
-    "contoh-tiga-gerbang",
-    "contoh-tepi-sungai"
+    "badung-empat-wajah"
   ],
   "regionMap": {
     "asset": "maps/bali-illustrated.png",

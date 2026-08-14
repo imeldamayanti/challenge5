@@ -20,7 +20,7 @@ struct BundledContentRepositoryTests {
         let repository = try repository()
         let quests = try repository.quests()
 
-        #expect(quests.count == 3)
+        #expect(quests.count == 1)
         let quest = try #require(quests.first)
         #expect(quest.orderedCheckpoints.count == 5)
         #expect(quest.orderedCheckpoints.map(\.orderIndex) == [0, 1, 2, 3, 4])
@@ -59,7 +59,7 @@ struct BundledContentRepositoryTests {
         // AD-4: a Run pins this at start. Nothing in M5 starts a Run, but the value a Run would
         // pin must already be readable, or the pin has nothing to attach to.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.08.2")
+        #expect(try repository.contentBundleVersion() == "2026.08.3")
     }
 
     @Test func questsAreReturnedInManifestOrder() throws {
@@ -78,7 +78,11 @@ struct BundledContentRepositoryTests {
         let remaining = try repository.quests(suppressingQuestIDs: [victim], suppressingPlaceIDs: [])
         #expect(!remaining.contains { $0.id == victim })
         #expect(remaining.count == all.count - 1)
-        #expect(all.count > 1, "The suppression test is only meaningful with more than one quest.")
+        // TODO(content): the bundle ships one quest, so suppressing it leaves an empty list and the
+        // "some quests remain" branch of FR-DISC-08 is no longer exercised by shipped content. It
+        // regains coverage when a second region is authored; until then this only proves the
+        // suppressed quest leaves.
+        #expect(remaining.isEmpty)
     }
 
     @Test func aQuestIsSuppressedWhenAnyOfItsPlacesIsSuppressed() throws {
@@ -144,13 +148,19 @@ struct BundledContentRepositoryTests {
 
     // MARK: - Fixture shape the UI depends on
 
-    @Test func theFixtureCostsMoneySoTheCostPathIsExercised() throws {
-        // FR-DISC-05 needs a quest that actually costs something, or the card's cost line is
-        // never rendered by any test or any screenshot.
+    @Test func theCostBreakdownAgreesWithTheTotalItIsBrokenDownFrom() throws {
+        // FR-DISC-05: whatever the total says, the breakdown must add up to it — a card showing
+        // Rp 50.000 over a breakdown of Rp 35.000 is worse than no breakdown.
+        //
+        // TODO(content): no priced quest ships. Museum Bali sells an entry ticket, but its price
+        // has not been verified and inventing one would put a fabricated number on the card
+        // (`c1-badung-single-quest-content.plan.md` §11). Until that fee is confirmed, the paid
+        // card state is unexercised by shipped content and the assertion below is the free case.
         let quest = try #require(try repository().quests().first)
-        #expect(quest.estimatedCost.amount > 0)
-        #expect(!quest.estimatedCost.breakdown.isEmpty)
         #expect(quest.estimatedCost.breakdown.reduce(0) { $0 + $1.amount } == quest.estimatedCost.amount)
+        if quest.estimatedCost.amount > 0 {
+            #expect(!quest.estimatedCost.breakdown.isEmpty)
+        }
     }
 
     @Test func everyQuestHasAHeroImagePresentInTheBundle() throws {
@@ -179,26 +189,45 @@ struct BundledContentRepositoryTests {
         }
     }
 
-    @Test func theFixtureHasAFreeQuestAndAPaidOneSoBothCardStatesRender() throws {
+    @Test func everyQuestDeclaresACostEvenWhenItIsZero() throws {
+        // TODO(content): the bundle ships one free quest, so only the free card state renders.
+        // The paid state returns when Museum Bali's verified ticket price lands in
+        // `estimatedCost.breakdown`, or when a second, priced quest is authored.
         let quests = try repository().quests()
+        #expect(!quests.isEmpty)
+        #expect(quests.allSatisfy { $0.estimatedCost.amount >= 0 })
         #expect(quests.contains { $0.estimatedCost.isFree })
-        #expect(quests.contains { !$0.estimatedCost.isFree })
     }
 
-    @Test func theFixtureCarriesBothAccuracyLabelsSoTheLabelConventionIsExercised() throws {
-        // FR-CP-05 / NFR-A11Y-05: both labels must be distinguishable. Content that only ever
-        // says "documented" would let a broken oral label ship unnoticed.
+    @Test func everyLoreBlockCarriesAnAccuracyLabel() throws {
+        // FR-CP-05 / NFR-A11Y-05: every claim ships with its epistemic status attached.
+        //
+        // TODO(content): the shipped quest carries only `documented` blocks. `oral` requires an
+        // interview — a named person, with the consent trail D2 demands — and none has been
+        // conducted, so a broken `oral` label would currently ship unnoticed by this suite. The
+        // rendering of both labels is covered in DesignSystem, not here.
         let quest = try #require(try repository().quests().first)
         let labels = Set(quest.orderedCheckpoints.flatMap { $0.loreSegment.map(\.accuracy) })
-        #expect(labels == Set(AccuracyLabel.allCases))
+        #expect(!labels.isEmpty)
+        #expect(labels.isSubset(of: Set(AccuracyLabel.allCases)))
     }
 
-    @Test func theFixtureIncludesAPlaceWherePhotographyIsProhibited() throws {
-        // So FR-TASK-06 and the preview's photo-policy disclosure have something to disclose.
+    @Test func everyVisitedPlaceDisclosesItsPhotoPolicyInBothLanguages() throws {
+        // The preview's photo-policy disclosure must have something to disclose at every stop.
+        //
+        // TODO(content): no `prohibited` Place ships. None of the five sites' photography rules
+        // has been confirmed with its management, and all four unconfirmed ones are authored as
+        // `restricted` rather than guessed as `prohibited`. FR-TASK-06's prohibited branch is
+        // therefore exercised only by ContentValidatorTests, not by shipped content.
         let repository = try repository()
         let quest = try #require(try repository.quests().first)
-        let policies = try quest.orderedCheckpoints.map { try #require(try repository.place(id: $0.placeId)).photoPolicy.level }
-        #expect(policies.contains(.prohibited))
+        for checkpoint in quest.orderedCheckpoints {
+            let place = try #require(try repository.place(id: checkpoint.placeId))
+            for language in ContentLanguage.allCases {
+                #expect(!place.photoPolicy.notes.value(for: language).isEmpty,
+                        "\(place.id) states no photo policy in \(language.rawValue)")
+            }
+        }
     }
 
     @Test func noPhotoTaskIsOfferedWherePhotographyIsProhibited() throws {

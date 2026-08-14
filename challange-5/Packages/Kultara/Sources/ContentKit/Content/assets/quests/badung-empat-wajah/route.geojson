@@ -1,0 +1,86 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "role": "route"
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [115.2077, -8.6595],
+          [115.2081, -8.6583],
+          [115.2085, -8.657],
+          [115.2093, -8.6558],
+          [115.2105, -8.6547],
+          [115.2115, -8.654],
+          [115.2135, -8.6537],
+          [115.216, -8.6535],
+          [115.2168, -8.6545],
+          [115.2172, -8.656]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "badung-empat-wajah-cp1",
+        "orderIndex": 0,
+        "placeId": "badung-puri-agung-pemecutan"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [115.2077, -8.6595]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "badung-empat-wajah-cp2",
+        "orderIndex": 1,
+        "placeId": "badung-pura-maospahit"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [115.2085, -8.657]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "badung-empat-wajah-cp3",
+        "orderIndex": 2,
+        "placeId": "badung-pasar-kumbasari"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [115.2115, -8.654]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "badung-empat-wajah-cp4",
+        "orderIndex": 3,
+        "placeId": "badung-catur-muka"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [115.216, -8.6535]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "checkpointId": "badung-empat-wajah-cp5",
+        "orderIndex": 4,
+        "placeId": "badung-museum-bali"
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [115.2172, -8.656]
+      }
+    }
+  ]
+}

@@ -201,9 +201,11 @@ time the cutscene screens had been seen at all. The run reaches them from a desk
 simulator's location to the first checkpoint rather than by the debug toggle:
 
 ```bash
-xcrun simctl location <udid> set -8.657,115.2085
+xcrun simctl location <udid> set -8.6595,115.2077
 ```
 
-That is `contoh-puri-gerbang-utara`, the start checkpoint of `contoh-jejak-kota-lama`. The arrival
+That is `badung-puri-agung-pemecutan`, the start checkpoint of `badung-empat-wajah` — an
+unverified seed coordinate (`c1-badung-single-quest-content.plan.md` §11.0), so re-check it before
+trusting a failed arrival. The arrival
 rule is unmodified — the radius and accuracy gate in `ArrivalEvaluator` runs on the reported fix, so
 what is exercised is the walker's own code path.

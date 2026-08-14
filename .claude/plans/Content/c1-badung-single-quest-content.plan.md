@@ -1,6 +1,33 @@
 # C1 — Badung: one region, one quest, five real places
 
-**Status:** planned, not executed
+## E0 — Decisions taken (recorded 2026-08-14, before any JSON was written)
+
+**D1 — Consent: D1-b (self-grant, academic prototype).**
+Every `consent/badung-*.json` carries:
+
+- `grantingBody`: `"Tim [NAMA TIM] — prototipe akademik, bukan izin dari pengelola"`
+- `grantedByName`: `"[NAMA ANGGOTA 1]"` · `grantedByRole`: `"[PERAN ANGGOTA 1]"`
+- `regionOwner`: `"[NAMA ANGGOTA 2]"`
+- `status`: `"granted"` · `expiresAt`: `2028-12-31`
+- `documentRef`: `docs/consent/<placeId>-prototype-note.md`
+
+The square-bracket placeholders are literal in the shipped JSON: the team's names were not supplied
+when this ran. They are not fabricated names, and they are tracked as TODO in `docs/consent-log.md`
+and in §11 below. **This is a self-grant, not a grant from any of the five sites, and it must not
+survive into anything public.**
+
+**D2 — Citations: only openable sources are cited as such.** Anything not verified ships as a
+`sources` entry whose `citation` begins `"BELUM DIVERIFIKASI — "`, and is listed in §11. No page
+numbers, publication years, or URLs were invented.
+
+**D3 — Quest identity.** `id: badung-empat-wajah` · `title.id: "Empat Wajah Kota Badung"` ·
+`title.en: "The Four Faces of Badung"` · `region: "Badung"` · `city: "Denpasar"`.
+
+**Status:** E0–E10 executed 2026-08-14. Field verification (§11) still open.
+
+---
+
+**Status (original):** planned, not executed
 **Created:** 2026-08-14
 **Branch it belongs on:** `checkflow` (or a `content/badung` branch off it)
 **Supersedes for the content tree:** the five `contoh-*` placeholder places and the three `contoh-*` quests
@@ -409,6 +436,75 @@ cd challange-5 && xcodebuild test -project challange-5.xcodeproj -scheme challan
 ---
 
 ## 11. Risks and open questions
+
+### 11.0 What shipped unverified (recorded at execution, 2026-08-14)
+
+Everything in this block is authored content that is **not backed by a source anybody has opened**.
+The validator passes over it because the validator checks structure, not truth.
+
+**Unverified coordinates — all five.** No coordinate was verified from any openable source. The
+seed values from §6 shipped as authored, and `route.geojson` is drawn between them with
+approximated street vertices. `route.totalDistanceM` (2000 m), `walkingTimeMin` (30) and
+`totalDurationMin` (105) are estimated from those seed points, **not** taken from walking
+directions — but V11 forces `distanceSource: "walking-directions"`, so the JSON claims a provenance
+the number does not have. Fix by walking the route and re-measuring; a coordinate 40 m off inside a
+60 m radius is a checkpoint that never unlocks.
+
+Sanity-check that failed: the Jaya Sabha anchor (8.65549°S 115.21775°E) sits **north-east** of the
+catus patha, so Catur Muka must be south-west of it. The §6 seed for Catur Muka
+(−8.6535, 115.2160) is roughly 220 m north and 190 m west of the anchor — north-*west*, ~293 m
+away. The seed is in the right neighbourhood and the wrong quadrant. It shipped unchanged rather
+than being silently "corrected" to an invented value.
+
+**`sources` entries marked BELUM DIVERIFIKASI** (D2). Three shipped, and every lore block citing
+one is a claim without an openable source behind it:
+
+| Place | Index | Citation |
+|---|---|---|
+| `badung-puri-agung-pemecutan` | 0 | Sejarah dan kedudukan Puri Agung Pemecutan |
+| `badung-puri-agung-pemecutan` | 1 | Konsep catus patha dan tata ruang inti kota lama Badung |
+| `badung-catur-muka` | 1 | Ikonografi dan sejarah pendirian patung Catur Muka |
+
+Checkpoint 1's lore therefore says almost nothing about the puri — it says the walk starts there and
+that the history is missing, which is honest but is not content. It is the weakest stop on the
+route until a real source lands. Quest-level `hookLore` resolves against checkpoint 1's Place, so
+all three hook blocks cite these two unverified entries too.
+
+**Also unverified, authored conservatively rather than guessed:**
+
+- Opening hours for Puri Agung Pemecutan, Pura Maospahit, Pasar Kumbasari and Catur Muka. Museum
+  Bali's hours are the only verified ones, and they are what V16 binds to.
+- Dress code and photo policy at all five. The four unconfirmed ones are authored `restricted`,
+  never `prohibited` — a guessed prohibition would be as wrong as a guessed permission.
+- Entry cost at all five is `0`. **Museum Bali is known to sell a ticket**; its price is not
+  verified, so `0` is a placeholder that will misinform a walker. `estimatedCost.breakdown` is
+  empty for the same reason.
+- Accessibility: step counts at four of five stops. Only Pasar Kumbasari's four-storey structure is
+  verified. The four unsurveyed ones are authored `hasSteps: true` with `stepCount: null` — wrong in
+  the direction that warns rather than the direction that strands somebody.
+
+### 11.0b Test coverage the content deletion removed
+
+The placeholder bundle exercised UI states the authored bundle does not. Four assertions in
+`BundledContentRepositoryTests` were rewritten rather than deleted, each carrying a `TODO(content)`
+naming what stopped being covered:
+
+1. **No priced quest ships**, so the paid discovery-card state (`FR-DISC-05`) renders in no test.
+   Returns when Museum Bali's fee is verified.
+2. **No `oral` lore block ships**, so a broken `oral` accuracy label would not be caught here
+   (`FR-CP-05`). Returns with the first interview — which needs its own consent trail per D2.
+3. **No `prohibited` photo Place ships**, so `FR-TASK-06`'s prohibited branch is exercised only by
+   `ContentValidatorTests`, not by shipped content.
+4. **One quest means one pin**, so `FR-DISC-08`'s "some quests remain after suppression" branch and
+   `RegionMapViewModel.closestPinSeparation` are unexercised by the bundle (this is §11.6 below,
+   now realised rather than predicted).
+
+### 11.0c Left alone deliberately
+
+`Support/UIStrings.swift:338` still tells the user the content is "data contoh dengan tempat
+fiktif". That is now false — the places are real, the *facts about them* are partly unverified. The
+string was left unchanged because §8 scopes the Swift edits, and rewriting user-facing copy is a
+product decision, not a content one. It needs rewriting before anyone sees this build.
 
 1. **Consent is the real blocker, not the JSON.** Five institutions, one of them a working temple and
    one a functioning market authority. D1-b keeps the build green but is explicitly a self-grant and

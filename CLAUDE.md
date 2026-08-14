@@ -183,6 +183,28 @@ auto-advancing and the login carrying a "Skip for now".
 - The app target builds with `SWIFT_VERSION = 5.0` while the package is `swift-tools-version: 6.0`. The package targets are in Swift 6 language mode; the app shell is not.
 - `.claude/plans/cultural-heritage-quest.plan.md` (Milestone 1, content model) is superseded by `docs/schema.md`.
 - The app has no name. "Kultara" appears throughout the code as a working title, but Kultara is a community storyteller organization in Sanur that the team interviewed — a research partner, not a brand. "Hisplora" is the Figma file's name and is used for the visual direction only, not as a product name. This needs resolving before any release.
-- **The shipped content is placeholder.** Five fictional `contoh-*` places in Denpasar. The Figma frames name a real quest (I Gusti Ngurah Made Agung, Puri Agung Pemecutan, the Puputan) that does not exist in the content tree and cannot be authored without consent records and citations. Screens render from `ContentKit` by ID; never bake those names in (`AD-4`, `FR-RUN-06`).
+- **The shipped content is one authored quest over five real places, and it is partly unverified.**
+  `badung-empat-wajah` ("Empat Wajah Kota Badung" / "The Four Faces of Badung") walks Puri Agung
+  Pemecutan → Pura Maospahit → Pasar Kumbasari → Catur Muka → Museum Bali. The `contoh-*`
+  placeholders are gone. What is real: Museum Bali's address and hours, Pura Maospahit's address and
+  architecture, Pasar Kumbasari's address, four-storey layout, 1977 founding and market rules, and
+  Catur Muka's position relative to the catus patha — each with an openable citation. What is **not**
+  verified and must not be read as fact: **every coordinate** (seed values, unwalked), the route
+  distance and duration (estimated, though V11 forces the JSON to claim `walking-directions`),
+  opening hours at four of five places, all dress codes and photo policies, all entry costs
+  (Museum Bali sells a ticket and ships as `0`), and step counts at four of five places. Unverified
+  claims carry a `sources` entry whose citation begins `BELUM DIVERIFIKASI`. The full ledger is
+  `.claude/plans/Content/c1-badung-single-quest-content.plan.md` §11.0.
+- **Consent for those five places is a self-grant, not a grant.** D1-b: every `consent/badung-*.json`
+  names the project team as `grantingBody`, scoped to inclusion and naming, for a non-public academic
+  prototype. None of the five sites has been approached. The signatory fields are still literal
+  placeholders (`[NAMA TIM]`, `[NAMA ANGGOTA 1]`, …). Tracking lives in `docs/consent-log.md` and
+  `docs/consent/*-prototype-note.md`. This must not survive into anything public.
+- The Figma frames name a real quest (I Gusti Ngurah Made Agung, Puri Agung Pemecutan, the Puputan)
+  that still does not exist in the content tree and still cannot be authored without consent records
+  and citations. Screens render from `ContentKit` by ID; never bake those names in (`AD-4`,
+  `FR-RUN-06`).
+- `Support/UIStrings.swift:338` still describes the content as "data contoh dengan tempat fiktif".
+  That string is now wrong and needs a product decision, not a content edit.
 - **`FR-CP-05` has an undocumented exception.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**. It needs an amendment or a signed exception with an owner.
-- The story flow has been seen rendering on iPhone 17 / iOS 26.5 (story preview, both cutscenes, story reveal). The "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP; drive arrival with `xcrun simctl location <udid> set -8.657,115.2085` instead — the start checkpoint of `contoh-jejak-kota-lama`, with `ArrivalEvaluator` unmodified. The transition screen is still unseen.
+- The story flow has been seen rendering on iPhone 17 / iOS 26.5 (story preview, both cutscenes, story reveal). The "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP; drive arrival with `xcrun simctl location <udid> set -8.6595,115.2077` instead — the start checkpoint of `badung-empat-wajah` (Puri Agung Pemecutan — an unverified seed coordinate), with `ArrivalEvaluator` unmodified. The transition screen is still unseen.

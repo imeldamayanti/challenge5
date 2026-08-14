@@ -8,6 +8,10 @@ import XCTest
 /// a label whose frame is clipped by its container is detectable rather than a matter of opinion.
 final class DiscoveryFlowUITests: XCTestCase {
 
+    /// The shipped quest's `title.en` (`quests/badung-empat-wajah.json`). Hoisted so a content
+    /// change touches one line rather than eleven.
+    private let questTitleEN = "The Four Faces of Badung"
+
     override func setUp() {
         continueAfterFailure = false
     }
@@ -87,7 +91,7 @@ final class DiscoveryFlowUITests: XCTestCase {
         let app = launch()
 
         // Quest list
-        let questTitle = app.staticTexts["Example Old-Town Trail"]
+        let questTitle = app.staticTexts[questTitleEN]
         XCTAssertTrue(questTitle.waitForExistence(timeout: 10), "Quest list did not show the quest")
         // FR-DISC-05 and FR-DISC-02: the Home design's card shows neither cost nor distance. Both
         // survived the restyle, and this is what keeps them there.
@@ -96,7 +100,7 @@ final class DiscoveryFlowUITests: XCTestCase {
         // it as one thing rather than as eight fragments — so the fields are asserted against its
         // combined label rather than as separate static texts.
         let cardLabel = app.descendants(matching: .any)
-            .matching(NSPredicate(format: "label CONTAINS %@", "Example Old-Town Trail"))
+            .matching(NSPredicate(format: "label CONTAINS %@", questTitleEN))
             .allElementsBoundByIndex
             .map(\.label)
             .joined(separator: " | ")
@@ -108,7 +112,7 @@ final class DiscoveryFlowUITests: XCTestCase {
         attach(app, named: "quest-list")
 
         // Preview, one tap away (FR-DISC-07)
-        tapQuestCard(app, titled: "Example Old-Town Trail")
+        tapQuestCard(app, titled: questTitleEN)
         XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 10),
                       "Preview did not open")
         XCTAssertTrue(app.staticTexts["Safety"].exists, "FR-DISC-03: safety notice missing")
@@ -125,11 +129,11 @@ final class DiscoveryFlowUITests: XCTestCase {
 
     func testTheMapSurfaceShowsAMarkerPerQuestAndOpensPreview() {
         let app = launch()
-        XCTAssertTrue(app.staticTexts["Example Old-Town Trail"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.staticTexts[questTitleEN].waitForExistence(timeout: 10))
 
         app.buttons["Map"].firstMatch.tap()
         let marker = app.buttons.containing(
-            NSPredicate(format: "label CONTAINS %@", "Example Old-Town Trail")).firstMatch
+            NSPredicate(format: "label CONTAINS %@", questTitleEN)).firstMatch
         XCTAssertTrue(marker.waitForExistence(timeout: 10), "No map marker for the quest")
         // `exists` is not enough: XCUITest finds and taps elements scrolled out of view, so a map
         // that opens on empty ocean passes an existence check. The first thing a user sees has to
@@ -142,9 +146,11 @@ final class DiscoveryFlowUITests: XCTestCase {
         // apart, so their markers and labels can land on top of each other regardless of type size.
         // Each marker is one accessibility element, so the frames are comparable.
         let markers = app.buttons.allElementsBoundByIndex.filter {
-            $0.exists && $0.label.contains("Example") && $0.frame.width > 0
+            $0.exists && $0.label.contains(questTitleEN) && $0.frame.width > 0
         }
-        XCTAssertEqual(markers.count, 3, "Expected one marker per quest, got \(markers.map(\.label))")
+        // The bundle ships one quest, so one pin. The overlap loop below is vacuous at one marker
+        // — it stays because it is the assertion that matters the moment a second region lands.
+        XCTAssertEqual(markers.count, 1, "Expected one marker per quest, got \(markers.map(\.label))")
         for i in markers.indices {
             for j in markers.indices where j > i {
                 XCTAssertFalse(markers[i].frame.intersects(markers[j].frame),
@@ -160,21 +166,25 @@ final class DiscoveryFlowUITests: XCTestCase {
     func testPreviewWithholdsEveryCheckpointStoryAndClue() {
         // FR-DISC-04, verified against the rendered screen rather than a view model.
         let app = launch()
-        let questTitle = app.staticTexts["Example Old-Town Trail"]
+        let questTitle = app.staticTexts[questTitleEN]
         XCTAssertTrue(questTitle.waitForExistence(timeout: 10))
-        tapQuestCard(app, titled: "Example Old-Town Trail")
+        tapQuestCard(app, titled: questTitleEN)
         XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 10))
 
-        // Sentences that exist only in checkpoint lore or in clues, from the fixture.
+        // Phrases that exist only in checkpoint lore or in clues, from the shipped quest. Matched
+        // with a CONTAINS predicate rather than by exact identifier: XCUITest caps a string
+        // identifier at 128 characters, and lore blocks are longer than that.
         let forbidden = [
-            "An example claim labelled documented, to exercise the label rendering.",
-            "An example claim labelled oral tradition, to exercise the label distinction.",
-            "Follow the street north until you reach the forked stone gate.",
-            "Walk east past the row of warungs and look for the open square.",
+            "The first face is power.",
+            "The second face is faith.",
+            "Look for red brick walls and a red brick gateway",
+            "The market building is four storeys tall.",
         ]
-        for sentence in forbidden {
-            XCTAssertFalse(app.staticTexts[sentence].exists,
-                           "Preview leaked checkpoint content: \(sentence)")
+        for phrase in forbidden {
+            let leaked = app.descendants(matching: .any)
+                .matching(NSPredicate(format: "label CONTAINS %@", phrase))
+                .firstMatch
+            XCTAssertFalse(leaked.exists, "Preview leaked checkpoint content: \(phrase)")
         }
     }
 
@@ -183,13 +193,13 @@ final class DiscoveryFlowUITests: XCTestCase {
     func testTheWholeFlowSurvivesTheLargestDynamicTypeSize() {
         let app = launch(contentSize: "UICTContentSizeCategoryAccessibilityXXXL")
 
-        let questTitle = app.staticTexts["Example Old-Town Trail"]
+        let questTitle = app.staticTexts[questTitleEN]
         XCTAssertTrue(questTitle.waitForExistence(timeout: 15),
                       "Quest list unusable at the largest accessibility size")
         attach(app, named: "a11y-quest-list")
         reportTruncation(in: app, screen: "quest list")
 
-        tapQuestCard(app, titled: "Example Old-Town Trail")
+        tapQuestCard(app, titled: questTitleEN)
         XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 15),
                       "Preview unreachable at the largest accessibility size")
         attach(app, named: "a11y-quest-preview")

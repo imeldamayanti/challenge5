@@ -38,10 +38,10 @@ struct ContentValidationRunTests {
 
     @Test func aTranslationGapFailsTheRunAsV1() throws {
         let root = try corruptedCopy { directory in
-            let quest = directory.appendingPathComponent("quests/contoh-jejak-kota-lama.json")
+            let quest = directory.appendingPathComponent("quests/badung-empat-wajah.json")
             var json = try String(contentsOf: quest, encoding: .utf8)
             json = json.replacingOccurrences(
-                of: #""en": "Example Old-Town Trail""#, with: #""en": """#)
+                of: #""en": "The Four Faces of Badung""#, with: #""en": """#)
             try json.write(to: quest, atomically: true, encoding: .utf8)
         }
         let report = ContentValidationRun.run(contentRoot: root)
@@ -51,7 +51,7 @@ struct ContentValidationRunTests {
 
     @Test func aWithdrawnConsentRecordFailsTheRunAsV4() throws {
         let root = try corruptedCopy { directory in
-            let consent = directory.appendingPathComponent("consent/contoh-pura-tirta-sari.json")
+            let consent = directory.appendingPathComponent("consent/badung-pura-maospahit.json")
             var json = try String(contentsOf: consent, encoding: .utf8)
             json = json.replacingOccurrences(of: #""status": "granted""#, with: #""status": "withdrawn""#)
             try json.write(to: consent, atomically: true, encoding: .utf8)
@@ -64,7 +64,7 @@ struct ContentValidationRunTests {
     @Test func aMissingConsentFileFailsTheRunAsV4() throws {
         let root = try corruptedCopy { directory in
             try FileManager.default.removeItem(
-                at: directory.appendingPathComponent("consent/contoh-pasar-pagi-timur.json"))
+                at: directory.appendingPathComponent("consent/badung-pasar-kumbasari.json"))
         }
         let report = ContentValidationRun.run(contentRoot: root)
         #expect(report.exitCode == 1)
@@ -73,7 +73,7 @@ struct ContentValidationRunTests {
 
     @Test func aTaskThatGatesProgressionFailsTheRunAsV8() throws {
         let root = try corruptedCopy { directory in
-            let quest = directory.appendingPathComponent("quests/contoh-jejak-kota-lama.json")
+            let quest = directory.appendingPathComponent("quests/badung-empat-wajah.json")
             var json = try String(contentsOf: quest, encoding: .utf8)
             json = json.replacingOccurrences(
                 of: #""blocksProgression": false"#, with: #""blocksProgression": true"#)
@@ -86,7 +86,7 @@ struct ContentValidationRunTests {
 
     @Test func aPuzzleMechanicAtASacredPlaceFailsTheRunAsV7() throws {
         let root = try corruptedCopy { directory in
-            let quest = directory.appendingPathComponent("quests/contoh-jejak-kota-lama.json")
+            let quest = directory.appendingPathComponent("quests/badung-empat-wajah.json")
             var json = try String(contentsOf: quest, encoding: .utf8)
             // The first checkpoint sits at a sacred Place and carries a reflection task.
             json = json.replacingOccurrences(
@@ -101,7 +101,7 @@ struct ContentValidationRunTests {
     @Test func aMissingRoutePreviewAssetFailsTheRunAsV14() throws {
         let root = try corruptedCopy { directory in
             try FileManager.default.removeItem(at: directory.appendingPathComponent(
-                "assets/quests/contoh-jejak-kota-lama/route-preview.png"))
+                "assets/quests/badung-empat-wajah/route-preview.png"))
         }
         let report = ContentValidationRun.run(contentRoot: root)
         #expect(report.exitCode == 1)
@@ -110,7 +110,7 @@ struct ContentValidationRunTests {
 
     @Test func aHaversineDistanceFailsTheRunAsV11() throws {
         let root = try corruptedCopy { directory in
-            let quest = directory.appendingPathComponent("quests/contoh-jejak-kota-lama.json")
+            let quest = directory.appendingPathComponent("quests/badung-empat-wajah.json")
             var json = try String(contentsOf: quest, encoding: .utf8)
             json = json.replacingOccurrences(
                 of: #""distanceSource": "walking-directions""#, with: #""distanceSource": "haversine""#)
@@ -133,17 +133,17 @@ struct ContentValidationRunTests {
     @Test func syntacticallyBrokenJSONFailsTheRunAndSaysWhere() throws {
         let root = try corruptedCopy { directory in
             try "{ not json".write(
-                to: directory.appendingPathComponent("quests/contoh-jejak-kota-lama.json"),
+                to: directory.appendingPathComponent("quests/badung-empat-wajah.json"),
                 atomically: true, encoding: .utf8)
         }
         let report = ContentValidationRun.run(contentRoot: root)
         #expect(report.exitCode == 1)
-        #expect(report.text.contains("contoh-jejak-kota-lama"), "\(report.text)")
+        #expect(report.text.contains("badung-empat-wajah"), "\(report.text)")
     }
 
     @Test func theReportNamesTheRequirementBehindEachFinding() throws {
         let root = try corruptedCopy { directory in
-            let quest = directory.appendingPathComponent("quests/contoh-jejak-kota-lama.json")
+            let quest = directory.appendingPathComponent("quests/badung-empat-wajah.json")
             var json = try String(contentsOf: quest, encoding: .utf8)
             json = json.replacingOccurrences(
                 of: #""distanceSource": "walking-directions""#, with: #""distanceSource": "haversine""#)

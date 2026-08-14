@@ -1,0 +1,98 @@
+{
+  "id": "badung-museum-bali",
+  "nameOfficial": {
+    "id": "Museum Bali",
+    "en": "Museum Bali"
+  },
+  "nameVariants": [
+    "UPTD Museum Bali"
+  ],
+  "type": "museum",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.656,
+    "lon": 115.2172
+  },
+  "arrivalRadiusM": 80,
+  "address": {
+    "id": "Jl. Mayor Wisnu, Denpasar — di timur Lapangan Puputan Badung dan di selatan Pura Jagatnatha",
+    "en": "Jl. Mayor Wisnu, Denpasar — east of Lapangan Puputan Badung and south of Pura Jagatnatha"
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Minggu sampai Kamis 08.00–15.00 WITA, Jumat 08.00–12.30 WITA. Sabtu dan hari libur nasional tutup, sehingga hari Sabtu tidak dicatat sebagai hari buka. Jam Jumat yang pendek inilah yang menentukan batas mulai paling lambat untuk seluruh rute. Ada tiket masuk; tarifnya belum diverifikasi, siapkan uang tunai.",
+      "en": "Sunday to Thursday 08:00–15:00 WITA, Friday 08:00–12:30 WITA. Closed Saturdays and on national holidays, which is why Saturday is not recorded as an open day. That short Friday is what sets the latest possible start for the whole route. There is an entry ticket; its price has not been verified, so bring cash."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "08:00", "close": "15:00" },
+      { "weekday": 2, "open": "08:00", "close": "15:00" },
+      { "weekday": 3, "open": "08:00", "close": "15:00" },
+      { "weekday": 4, "open": "08:00", "close": "15:00" },
+      { "weekday": 5, "open": "08:00", "close": "12:30" },
+      { "weekday": 7, "open": "08:00", "close": "15:00" }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan busana khusus yang dikonfirmasi. Berpakaian sopan; museum berbatasan langsung dengan Pura Jagatnatha.",
+    "en": "No specific dress rule has been confirmed. Dress modestly; the museum sits directly beside Pura Jagatnatha."
+  },
+  "photoPolicy": {
+    "level": "restricted",
+    "notes": {
+      "id": "Kebijakan foto belum dikonfirmasi ke pengelola museum. Anggap terbatas: tanya di loket, dan ikuti rambu di tiap gedung pameran.",
+      "en": "The photography policy has not been confirmed with the museum. Treat it as restricted: ask at the ticket desk and follow the signs in each pavilion."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": true,
+    "stepCount": null,
+    "surface": "paving and stone",
+    "notes": {
+      "id": "Jumlah undakan dan ketersediaan jalur landai belum disurvei. Museum terdiri dari beberapa gedung pameran bergaya puri dan pura yang umumnya berdiri di atas undakan; periksa di lokasi.",
+      "en": "Step counts and the availability of ramps have not been surveyed. The museum is a set of pavilions built in puri and pura idiom, which usually stand on raised steps; check on site."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Museum Bali berada di Jl. Mayor Wisnu, di timur Lapangan Puputan Badung dan di selatan Pura Jagatnatha. Museum buka Minggu sampai Kamis pukul 08.00–15.00 WITA dan Jumat pukul 08.00–12.30 WITA, serta tutup pada hari Sabtu dan hari libur nasional.",
+        "en": "Museum Bali stands on Jl. Mayor Wisnu, east of Lapangan Puputan Badung and south of Pura Jagatnatha. It opens Sunday to Thursday 08:00–15:00 WITA and Friday 08:00–12:30 WITA, and closes on Saturdays and national holidays."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    },
+    {
+      "text": {
+        "id": "Museum ini berstatus UPTD di bawah Dinas Kebudayaan Provinsi Bali — sebuah lembaga pemerintah daerah, bukan koleksi pribadi.",
+        "en": "The museum is a UPTD under the Bali Provincial Culture Office — a provincial government institution, not a private collection."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        1
+      ]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Dinas Pariwisata Kota Denpasar — \"Museum Bali\"",
+      "url": "https://www.pariwisata.denpasarkota.go.id/artikel/museum-bali"
+    },
+    {
+      "kind": "documented",
+      "citation": "Dinas Kebudayaan Provinsi Bali — \"UPTD. Museum Bali\"",
+      "url": "https://disbud.baliprov.go.id/museum-bali/"
+    }
+  ],
+  "consentRecordId": "badung-museum-bali",
+  "mapPoint": {
+    "x": 0.405,
+    "y": 0.616
+  }
+}
