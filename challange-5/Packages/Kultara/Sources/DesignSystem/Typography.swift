@@ -208,9 +208,20 @@ public enum KultaraMetrics {
 
     public static let cardCornerRadius: CGFloat = 4
     /// The photo cards on Home are rounded far more than a sheet of paper is — they are
-    /// photographs, not documents, and the design draws them that way.
-    public static let photoCardCornerRadius: CGFloat = 16
+    /// photographs, not documents, and the design draws them that way. 12 is the Ngalcer Home
+    /// frame's own radius (`28:77`).
+    public static let photoCardCornerRadius: CGFloat = 12
     public static let hairline: CGFloat = 1
+
+    /// The round icon button the Home masthead carries beside the title (`28:173`). 48, not the
+    /// 44-point minimum: the frame draws it larger, and a tap target may exceed `NFR-A11Y-06`
+    /// but never fall under it.
+    public static let circleButtonSize: CGFloat = 48
+
+    /// The photograph's own height on a Home card at the default content size (`28:76`: 354×208).
+    /// A minimum rather than a height — the caption decides how tall the card actually ends up,
+    /// so the words are never clipped at an accessibility size (`NFR-A11Y-01`).
+    public static let photoCardMinimumHeight: CGFloat = 208
 }
 
 // MARK: - Accuracy chip appearance
