@@ -14,7 +14,6 @@ struct KultaraRootView: View {
     /// team has to clear app data to see them again. Both are one tap to get past.
     @State private var showsSplash = true
     @State private var showsAuth = true
-    @State private var selectedQuestID: String?
     @State private var runDestination: RunDestination?
     /// The same run screen, reached from the Journal tab. A second piece of state rather than a
     /// shared one, because each tab owns its own navigation stack and a destination pushed on one
@@ -135,14 +134,8 @@ struct KultaraRootView: View {
                 mapModel: RegionMapViewModel(repository: environment.repository, language: language),
                 surface: $questSurface,
                 journal: journal,
-                onSelect: { selectedQuestID = $0 },
+                onSelect: { startOrResumeRun(questID: $0) },
                 onOpenRun: openRun)
-                .navigationDestination(isPresented: Binding(
-                    get: { selectedQuestID != nil },
-                    set: { if !$0 { selectedQuestID = nil } })
-                ) {
-                    previewDestination
-                }
                 .navigationDestination(item: $runDestination) { destination in
                     runScreen(destination)
                 }
@@ -186,32 +179,15 @@ struct KultaraRootView: View {
             questID: run.questID, existingRunID: run.id, discardingExistingDraft: false)
     }
 
-    @ViewBuilder private var previewDestination: some View {
-        if let questID = selectedQuestID {
-            ScreenHost {
-                QuestPreviewViewModel(
-                    repository: environment.repository,
-                    questID: questID,
-                    language: language,
-                    runEngine: environment.runEngine)
-            } content: { model in
-                KultaraThemeProvider {
-                    QuestPreviewView(model: model)
-                        .onAppear {
-                            model.onBeginRun = { restart in
-                                let draft = (try? environment.runStore.activeRun(questID: questID)) ?? nil
-                                runDestination = RunDestination(
-                                    questID: questID,
-                                    existingRunID: restart ? nil : draft?.id,
-                                    discardingExistingDraft: restart)
-                            }
-                        }
-                }
-            }
-        } else {
-            // A quest that cannot be built is not a blank screen; the list stays reachable.
-            EmptyView()
-        }
+    /// A quest tapped from the catalogue (or a map marker — they share this closure) goes straight
+    /// into the run rather than through a browsing step first. An existing draft is picked up where
+    /// it stands, never silently restarted: restarting a Run discards its progress, and the only
+    /// place that discard was ever offered — the preview screen's resume/restart choice — no longer
+    /// sits in front of it.
+    private func startOrResumeRun(questID: String) {
+        let draft = (try? environment.runStore.activeRun(questID: questID)) ?? nil
+        runDestination = RunDestination(
+            questID: questID, existingRunID: draft?.id, discardingExistingDraft: false)
     }
 
     private func runScreen(_ destination: RunDestination) -> some View {

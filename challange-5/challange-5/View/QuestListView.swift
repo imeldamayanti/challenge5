@@ -64,45 +64,44 @@ struct QuestListView: View {
             // The screen's name is set on the page, not in the chrome — the design's masthead is
             // the first thing on the sheet, and a navigation bar cannot hold one.
             header
-                .padding(.horizontal, KultaraMetrics.lg)
-                .padding(.bottom, KultaraMetrics.md)
+                .padding(.horizontal, KultaraMetrics.xl)
+                .padding(.bottom, KultaraMetrics.xl)
             list
         }
         .background(palette.paper.color)
     }
 
-    /// Masthead and the search row beneath it, as the Home design opens: the title in the serif,
-    /// in seal red, then the field and the button that swaps in the map.
+    /// Masthead and the search field beneath it, as the Ngalcer Home frame opens (`28:171`,
+    /// `28:168`): the title in the serif, in seal red, with the round button that swaps in the map
+    /// on the same line, and the search pill running the full width below it.
+    ///
+    /// The frame sets the title in a warm brown (#6E3B26) rather than this theme's brick red
+    /// (#8C2F1E). The seal is what the palette measures and what every other accent on the screen
+    /// already is, so the theme's own token stands: two near-identical browns doing the same job
+    /// would be one unmeasured colour more than the page needs.
     private var header: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            Text(UIStrings.string(.questListTitle, language))
-                .kultaraFont(.questTitleLarge)
-                .foregroundStyle(palette.seal.color)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
+            HStack(alignment: .center, spacing: KultaraMetrics.md) {
+                Text(UIStrings.string(.homeMasthead, language))
+                    .kultaraFont(.questTitleLarge)
+                    .foregroundStyle(palette.seal.color)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
 
-            HStack(spacing: KultaraMetrics.md) {
-                KultaraSearchField(
-                    placeholder: UIStrings.string(.questListSearchPlaceholder, language),
-                    clearLabel: UIStrings.string(.questListSearchClear, language),
-                    text: Binding(get: { model.searchText },
-                                  set: { model.searchText = $0 }))
+                Spacer(minLength: 0)
 
-                if let mapModel {
-                    MapSurfaceButton(
-                        thumbnail: mapModel.mapImageURL.flatMap(BundledImage.load),
-                        label: UIStrings.string(.questListMapTab, language)) {
-                            surface = .map
-                        }
+                if mapModel != nil {
+                    MapSurfaceButton(label: UIStrings.string(.questListMapTab, language)) {
+                        surface = .map
+                    }
                 }
             }
 
-            // `AD-3` in one line, kept because it is the promise the whole architecture is built
-            // on and the reference sheet simply had nothing to say in its place.
-            Text(UIStrings.string(.questListSubtitle, language))
-                .kultaraFont(.caption)
-                .foregroundStyle(palette.inkMuted.color)
-                .fixedSize(horizontal: false, vertical: true)
+            KultaraSearchField(
+                placeholder: UIStrings.string(.questListSearchPlaceholder, language),
+                clearLabel: UIStrings.string(.questListSearchClear, language),
+                text: Binding(get: { model.searchText },
+                              set: { model.searchText = $0 }))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -137,6 +136,17 @@ struct QuestListView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    // The Ngalcer frame draws four cards; the content tree holds one quest. The
+                    // remaining three are filler so the screen can be seen as designed — see
+                    // `PlaceholderQuestCatalog` for what they are not. They are hidden while a
+                    // search is running, because a placeholder that survives a filter reads as a
+                    // result.
+                    if model.searchText.isEmpty {
+                        ForEach(PlaceholderQuestCatalog.all) { entry in
+                            PlaceholderQuestCard(entry: entry, language: language)
+                        }
+                    }
                 }
 
                 // `FR-DONE-06` — completed walks are listed and re-openable before the Journal
@@ -153,12 +163,23 @@ struct QuestListView: View {
                     }
                 }
 
-                Text(UIStrings.string(.settingsPlaceholderContentNotice, language))
-                    .kultaraFont(.caption)
-                    .foregroundStyle(palette.inkMuted.color)
-                    .padding(.top, KultaraMetrics.sm)
+                // The footer the header used to carry. The frame's masthead is a title and a search
+                // field and nothing else, so the two things the page still has to say — `AD-3`'s
+                // promise that this works with no network, and what the filler cards are — are said
+                // at the foot instead of being dropped.
+                VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
+                    Text(UIStrings.string(.questListSubtitle, language))
+                    if model.searchText.isEmpty {
+                        Text(UIStrings.string(.homePlaceholderCardsNotice, language))
+                    }
+                    Text(UIStrings.string(.settingsPlaceholderContentNotice, language))
+                }
+                .kultaraFont(.caption)
+                .foregroundStyle(palette.inkMuted.color)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, KultaraMetrics.sm)
             }
-            .padding(.horizontal, KultaraMetrics.lg)
+            .padding(.horizontal, KultaraMetrics.xl)
             .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
         }
     }

@@ -19,6 +19,23 @@ struct TypewriterTests {
         #expect(TypewriterMetrics.paperWidthFraction < 0.8)
     }
 
+    /// The crest stands *on* the page, so it has to be narrower than the page. Drawn wider it stops
+    /// reading as an object resting on paper and becomes a header the sheet hangs from, which is a
+    /// different picture from the one `35:431` draws.
+    @Test func theCrestIsNarrowerThanTheSheet() {
+        #expect(TypewriterMetrics.crestWidthFraction < TypewriterMetrics.paperWidthFraction)
+        #expect(TypewriterMetrics.crestWidthFraction > 0.4)
+    }
+
+    /// Part of the crest is behind the paper and part of it stands above — both parts, or the
+    /// overlap is not one. At 0 the frame sits on top of the page like a title; at 1 it vanishes
+    /// behind it entirely, and either way the negative padding that produces the effect would still
+    /// look like working code.
+    @Test func theCrestOverlapsThePaperWithoutDisappearingBehindIt() {
+        #expect(TypewriterMetrics.crestOverlapFraction > 0)
+        #expect(TypewriterMetrics.crestOverlapFraction < 1)
+    }
+
     /// Special Elite registers. The fallback is SF Pro's monospaced design, which is a legitimate
     /// state and also the state the app shipped in before the face was licensed — so without this
     /// test, dropping the resource is invisible.

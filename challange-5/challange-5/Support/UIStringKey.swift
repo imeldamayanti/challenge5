@@ -25,6 +25,9 @@ enum UIStringKey: String, Sendable, CaseIterable {
 
     // Discovery — FR-DISC-02/05
     case questListTitle
+    /// The Home masthead (`28:172`). Separate from `questListTitle`, which names the *tab* and the
+    /// navigation title: the page's own heading is a piece of copy, not a screen name.
+    case homeMasthead
     case questListSubtitle
     case questListEmpty
     case questListSearchPlaceholder
@@ -128,6 +131,10 @@ enum UIStringKey: String, Sendable, CaseIterable {
     case storyRevealSkip
     case transitionSteppingInto
     case transitionContinue
+    // The place notice — `50:137` ("Quest") — and the checkpoint's task menu — `51:201`
+    // ("Detail Quest").
+    case placeNoticeBeforeExplore
+    case checkpointDetailContinue
     case arrivalClueHeading
     case arrivalNoClue
     case arrivalOutOfSequence
@@ -149,6 +156,11 @@ enum UIStringKey: String, Sendable, CaseIterable {
     case taskSkippedNote
     case taskAnsweredNote
     case taskPhotoNotInThisBuild
+    // Short names for `TaskType`, used as a row's title on the checkpoint task menu (`51:201`) —
+    // the content has no title field of its own, only a `type` and a `prompt`.
+    case taskTypeReflection
+    case taskTypePhoto
+    case taskTypeQuestion
 
     // Completion and summary — FR-DONE-01..06
     case runCompletedHeading
@@ -169,6 +181,10 @@ enum UIStringKey: String, Sendable, CaseIterable {
     case homeActiveRunHeading
     case homeActiveRunAction
     case homeCompletedHeading
+    /// What the filler cards are, said on the page and again to VoiceOver on each one. See
+    /// `PlaceholderQuestCatalog`.
+    case homePlaceholderCardsNotice
+    case homePlaceholderCardHint
 
     // Developer build only
     case devHeading

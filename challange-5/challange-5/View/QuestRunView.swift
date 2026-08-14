@@ -26,7 +26,7 @@ struct QuestRunView: View {
     private var isOnStoryFlow: Bool {
         switch model.stage {
         case .storyPreview, .awaitingArrival, .cutsceneIntro, .cutscenePortrait,
-             .storyReveal, .transition:
+             .storyReveal, .placeNotice, .checkpointDetail, .transition:
             true
         case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
             false
@@ -85,6 +85,8 @@ struct QuestRunView: View {
         case .cutsceneIntro: cutsceneIntro
         case .cutscenePortrait: cutscenePortrait
         case .storyReveal: storyReveal
+        case .placeNotice: placeNotice
+        case .checkpointDetail: checkpointDetail
         case .transition: transition
         case .atCheckpoint: checkpointScreen
         case .finished: finishedScreen
@@ -133,10 +135,44 @@ struct QuestRunView: View {
     private var storyReveal: some View {
         StoryRevealScreen(
             language: language,
-            pages: model.storyRevealPages,
+            text: model.storyRevealText,
+            // The content tree ships no per-place illustration, so this stays nil — the screen
+            // falls back to its own packaged art (`StoryIllustrationMetrics`). See the note atop
+            // `StoryRevealScreen`.
             illustrationURL: nil,
             onFinish: { model.advanceFromStoryReveal() },
             onBack: { model.retreatFromStoryStage() })
+    }
+
+    @ViewBuilder private var placeNotice: some View {
+        if let checkpoint = model.checkpoint {
+            PlaceNoticeScreen(
+                language: language,
+                placeName: checkpoint.placeName,
+                description: checkpoint.placeDescription,
+                isSacred: checkpoint.isSacred,
+                dressCodeText: checkpoint.dressCodeText,
+                photoPolicyText: checkpoint.photoPolicyText,
+                portraitURL: model.cutsceneImageURL,
+                onAcknowledge: { model.advanceFromPlaceNotice() },
+                onBack: { model.retreatFromStoryStage() })
+        } else {
+            EmptyView()
+        }
+    }
+
+    @ViewBuilder private var checkpointDetail: some View {
+        if let checkpoint = model.checkpoint {
+            CheckpointDetailScreen(
+                language: language,
+                placeName: checkpoint.placeName,
+                tasks: checkpoint.tasks,
+                taskPrompts: checkpoint.taskPrompts,
+                onContinue: { model.advanceFromCheckpointDetail() },
+                onBack: { model.retreatFromStoryStage() })
+        } else {
+            EmptyView()
+        }
     }
 
     private var transition: some View {

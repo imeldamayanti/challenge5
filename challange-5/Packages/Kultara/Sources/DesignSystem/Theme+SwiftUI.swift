@@ -48,7 +48,22 @@ public struct KultaraThemeProvider<Content: View>: View {
         #endif
         return content
             .environment(\.kultaraPalette, palette)
-            .background(palette.paper.color.ignoresSafeArea())
+            // The grain sits over the token, never in place of it — `PaperTexture.swift` explains
+            // why that ordering is what keeps the measured contrast pairs honest. Screens that
+            // paint their own opaque ground (every `HisploraStage`) cover it, which is how the
+            // museum sheet stays out of the story flow without either side knowing about the other.
+            .background {
+                ZStack {
+                    palette.paper.color
+                    KultaraPaperTexture.paperGrain(for: colorScheme)?
+                        .resizable()
+                        .scaledToFill()
+                        .opacity(KultaraPaperTexture.grainOpacity)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                }
+                .ignoresSafeArea()
+            }
             .tint(palette.seal.color)
     }
 }
