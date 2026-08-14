@@ -157,6 +157,10 @@ enum UIStrings {
         .arrivalNoFix: LocalizedText(
             id: "Belum ada sinyal lokasi yang bisa dipakai.",
             en: "No usable location fix yet."),
+        .arrivalStatusHeading: LocalizedText(
+            id: "Status lokasi", en: "Location status"),
+        .arrivalSearchingElapsed: LocalizedText(
+            id: "Sudah mencari %@", en: "Searching for %@"),
         .arrivalManualAction: LocalizedText(
             id: "Saya sudah sampai di sini", en: "I have arrived here"),
         .arrivalManualNote: LocalizedText(
@@ -165,6 +169,59 @@ enum UIStrings {
         .arrivalManualPending: LocalizedText(
             id: "Kalau sinyal tidak juga datang, pilihan menandai sendiri muncul setelah satu menit.",
             en: "If no fix arrives, the option to mark it yourself appears after a minute."),
+        .arrivalManualCountdown: LocalizedText(
+            id: "Menandai sendiri tersedia dalam %@",
+            en: "Marking it yourself becomes available in %@"),
+        .arrivalManualSheetTitle: LocalizedText(
+            id: "Tandai kedatanganmu sendiri", en: "Mark your arrival yourself"),
+        // MARK: Hisplora story flow
+        //
+        // The Figma frames are written in English and name one real quest — I Gusti Ngurah Made
+        // Agung, Puri Agung Pemecutan, the Puputan. Those are *content*, and content lives in
+        // authored JSON keyed by ID (`AD-4`, `FR-RUN-06`). What is here is the frame around the
+        // content: the labels, the chrome, the instructions. The Indonesian is authored, not
+        // machine-translated, because `LocalizedText` has no fallback (`NFR-I18N-03`).
+        .storyPreviewReady: LocalizedText(id: "Siap menjelajah", en: "Ready to Explore"),
+        .locationCheckingTitle: LocalizedText(
+            id: "Memeriksa lokasi….", en: "Location Checking…."),
+        .locationCheckingBody: LocalizedText(
+            id: "Memastikan kamu berada di tempat yang tepat",
+            en: "Making sure you're at the right place"),
+        .locationVerifiedTitle: LocalizedText(
+            id: "Lokasi terverifikasi", en: "Location Verified"),
+        .locationVerifiedBody: LocalizedText(
+            id: "Kamu ada di tempat yang tepat. Ceritanya menunggu.",
+            en: "You're at the right place. The story awaits."),
+        .locationVerifiedContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .locationNotThereTitle: LocalizedText(
+            id: "Belum sampai", en: "Not Quite There"),
+        .locationNotThereBody: LocalizedText(
+            id: "Kamu belum berada di tempat yang tepat. Mendekatlah untuk memulai ceritanya.",
+            en: "You're not at the right place yet. Get closer to begin the story."),
+        .locationNotThereBack: LocalizedText(id: "Kembali ke beranda", en: "Back to Homepage"),
+        .cutsceneLegendTitle: LocalizedText(
+            id: "Sebuah legenda akan menuntun perjalananmu",
+            en: "A Legend Will Guide Your Journey"),
+        .cutsceneSwipeHint: LocalizedText(
+            id: "Geser bingkai foto untuk membuka legendanya",
+            en: "Swipe photo frame to reveal the legends"),
+        .cutsceneStartAction: LocalizedText(id: "Mulai perjalanan", en: "Start the Journey"),
+        .storyRevealPager: LocalizedText(
+            id: "Halaman %1$d dari %2$d", en: "Page %1$d of %2$d"),
+        .storyRevealNext: LocalizedText(id: "Berikutnya", en: "Next"),
+        .storyRevealBack: LocalizedText(id: "Sebelumnya", en: "Back"),
+        .storyRevealSkip: LocalizedText(id: "Lewati cerita", en: "Skip the story"),
+        .transitionSteppingInto: LocalizedText(
+            id: "Melangkah ke titik pertama %@", en: "Stepping into the first place of %@"),
+        .transitionContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+
+        .runMapHeading: LocalizedText(id: "Rute", en: "The route"),
+        .runMapAccessibility: LocalizedText(
+            id: "Peta rute. Titik %1$d dari %2$d, %3$@ menuju %4$@.",
+            en: "Route map. Checkpoint %1$d of %2$d, %3$@ to %4$@."),
+        .runMapNoPosition: LocalizedText(
+            id: "Peta rute. Titik %1$d dari %2$d, %3$@. Posisimu belum diketahui.",
+            en: "Route map. Checkpoint %1$d of %2$d, %3$@. Your position is not known yet."),
         .arrivalClueHeading: LocalizedText(id: "Petunjuk", en: "The clue"),
         .arrivalNoClue: LocalizedText(
             id: "Titik pertama. Alamatnya ada di pratinjau rute.",

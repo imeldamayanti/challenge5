@@ -10,7 +10,7 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
     case v5 = "V5", v6 = "V6", v7 = "V7", v8 = "V8"
     case v9 = "V9", v10 = "V10", v11 = "V11", v12 = "V12"
     case v13 = "V13", v14 = "V14", v15 = "V15", v16 = "V16"
-    case v17 = "V17"
+    case v17 = "V17", v18 = "V18"
 
     public var title: String {
         switch self {
@@ -31,6 +31,7 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
         case .v15: "Total content payload is at most 200 MB"
         case .v16: "hardLatestStart matches recomputation from visiting hours"
         case .v17: "Every Place a quest visits has a map pin inside the region map"
+        case .v18: "Every route geometry parses as a LineString of at least two points"
         }
     }
 
@@ -55,6 +56,7 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
         case .v15: "NFR-PERF-07"
         case .v16: "FR-DISC-06"
         case .v17: "FR-DISC-02, FR-DISC-03"
+        case .v18: "FR-MAP-02"
         }
     }
 }
@@ -326,6 +328,22 @@ public enum ContentValidator {
             if !assets.exists(asset) {
                 findings.append(ValidationFinding(
                     rule: .v14, path: path, message: "Referenced asset \"\(asset)\" does not exist."))
+            }
+        }
+
+        // V18 — FR-MAP-02. V14 proves the geometry file is there; it does not prove it is a route.
+        // The run map draws from this file, and a geometry that does not parse degrades to a blank
+        // canvas at the one moment the walker is standing in a street looking for a gate.
+        if assets.exists(quest.route.geometryAsset), let bytes = assets.data(quest.route.geometryAsset) {
+            do {
+                _ = try RouteGeometryDecoder.decode(bytes)
+            } catch let error as RouteGeometryError {
+                findings.append(ValidationFinding(
+                    rule: .v18, path: quest.route.geometryAsset, message: error.description))
+            } catch {
+                findings.append(ValidationFinding(
+                    rule: .v18, path: quest.route.geometryAsset,
+                    message: String(describing: error)))
             }
         }
 

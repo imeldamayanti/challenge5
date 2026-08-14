@@ -37,6 +37,56 @@ public enum Geo {
     }
 }
 
+/// When the manual override becomes offerable, and how long is left until then (`FR-ARR-03`).
+///
+/// The wait is bounded, and that is the whole point: `FR-ARR-05` forbids an indefinite spinner, so
+/// the honest progress indicator is the one counting down to something that genuinely happens. A
+/// walker who can see that the wait ends in 47 seconds is not being asked to trust a spinner.
+///
+/// It is a value with an injected clock rather than a timer, so the rule is testable without
+/// waiting a minute for it.
+public struct ManualOverrideSchedule: Sendable, Equatable {
+
+    public let startedAt: Date
+    public let delay: Duration
+    /// `FR-ERR-02` — a refused permission makes the override available at once. Waiting a minute
+    /// for a fix that cannot arrive is a minute of pretending to look, and there is nothing to
+    /// count down to.
+    public let isImmediate: Bool
+
+    public init(startedAt: Date, delay: Duration, isImmediate: Bool = false) {
+        self.startedAt = startedAt
+        self.delay = delay
+        self.isImmediate = isImmediate
+    }
+
+    private var delaySeconds: Double {
+        Double(delay.components.seconds) + Double(delay.components.attoseconds) / 1e18
+    }
+
+    public func elapsedSeconds(at now: Date) -> Double {
+        max(0, now.timeIntervalSince(startedAt))
+    }
+
+    /// Whole seconds left before the override appears, or `nil` when there is nothing to wait for.
+    /// Rounded up, so the last second reads `0:01` rather than `0:00` while still unavailable.
+    public func remainingSeconds(at now: Date) -> Int? {
+        guard !isImmediate else { return nil }
+        return max(0, Int((delaySeconds - elapsedSeconds(at: now)).rounded(.up)))
+    }
+
+    public func isAvailable(at now: Date) -> Bool {
+        isImmediate || elapsedSeconds(at: now) >= delaySeconds
+    }
+
+    /// `0…1`, for a determinate progress indicator. Determinate is the requirement: the bar has an
+    /// end because the wait has one.
+    public func progress(at now: Date) -> Double {
+        guard !isImmediate, delaySeconds > 0 else { return 1 }
+        return min(1, max(0, elapsedSeconds(at: now) / delaySeconds))
+    }
+}
+
 public enum ArrivalDecision: Sendable, Equatable {
     case arrived(distanceM: Double, accuracyM: Double)
     case outsideRadius(distanceM: Double, accuracyM: Double)

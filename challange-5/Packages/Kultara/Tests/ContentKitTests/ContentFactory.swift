@@ -160,18 +160,34 @@ enum ContentFactory {
     /// Every asset the default bundle references, at a size well under the payload budget.
     static func assets(
         present: Set<String>? = nil,
-        totalBytes: Int = 12 * 1024 * 1024
+        totalBytes: Int = 12 * 1024 * 1024,
+        contents: [String: Data] = [:]
     ) -> StubAssetInventory {
         StubAssetInventory(
             present: present ?? ["quests/quest-a/route.geojson", "quests/quest-a/route-preview.png"],
-            totalBytes: totalBytes)
+            totalBytes: totalBytes,
+            contents: contents)
+    }
+
+    /// A minimal two-point route, for the rules that read the geometry rather than only its
+    /// presence (V18).
+    static func routeGeometryJSON(
+        coordinates: String = "[[115.2085, -8.6570], [115.2101, -8.6552]]"
+    ) -> Data {
+        Data("""
+        { "type": "FeatureCollection", "features": [
+          { "type": "Feature", "properties": { "role": "route" },
+            "geometry": { "type": "LineString", "coordinates": \(coordinates) } } ] }
+        """.utf8)
     }
 }
 
 struct StubAssetInventory: AssetInventory {
     let present: Set<String>
     let totalBytes: Int
+    var contents: [String: Data] = [:]
 
     func exists(_ relativePath: String) -> Bool { present.contains(relativePath) }
     func totalPayloadBytes() -> Int { totalBytes }
+    func data(_ relativePath: String) -> Data? { contents[relativePath] }
 }

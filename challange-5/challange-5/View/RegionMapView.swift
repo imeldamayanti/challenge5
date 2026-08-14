@@ -19,6 +19,14 @@ struct RegionMapView: View {
     @GestureState private var drag: CGSize = .zero
     @State private var hasOpened = false
 
+    /// Set while a pan or a pinch is settling. A pinch's two fingers do not lift together, and the
+    /// second lift lands as a tap on whatever marker it happens to be over — which is the reported
+    /// "kepencet pas zoom" case. `MapMarkerGesture.settleDelay` is how long markers stay deaf.
+    @State private var isSettling = false
+    /// Identifies the settle in flight, so a second gesture ending mid-window does not have its
+    /// window cut short by the first one's timer firing.
+    @State private var settleToken = UUID()
+
     /// The viewport and the drawn artwork, recorded so the gesture handlers can clamp the pan they
     /// store. A gesture callback has no `GeometryProxy`.
     @State private var viewport: CGSize = .zero
@@ -94,6 +102,28 @@ struct RegionMapView: View {
 
     private var clampedZoom: CGFloat {
         min(max(zoom * pinch, 1), Self.maximumZoom)
+    }
+
+    /// True while the map is being moved, and for a moment afterwards. Markers do not hit-test in
+    /// this state, so a touch that is part of a pan or a pinch cannot become a navigation.
+    ///
+    /// A finger that has landed but not yet moved leaves both gesture states at rest, so a plain
+    /// tap on a pin still reaches it.
+    private var isManipulating: Bool {
+        isSettling || drag != .zero || pinch != 1
+    }
+
+    /// Holds markers deaf for `MapMarkerGesture.settleDelay` after a gesture ends.
+    private func settleAfterGesture() {
+        let token = UUID()
+        settleToken = token
+        isSettling = true
+        Task { @MainActor in
+            try? await Task.sleep(for: MapMarkerGesture.settleDelay)
+            // A later gesture has taken over; its own timer owns the flag now.
+            guard settleToken == token else { return }
+            isSettling = false
+        }
     }
 
     /// The minimum gap between two markers the screen will open with — wider than a marker,
@@ -178,6 +208,7 @@ struct RegionMapView: View {
                 commitPan(CGSize(width: pan.width + value.translation.width,
                                  height: pan.height + value.translation.height),
                           at: zoom)
+                settleAfterGesture()
             }
     }
 
@@ -193,6 +224,7 @@ struct RegionMapView: View {
                 } else {
                     commitPan(CGSize(width: pan.width * ratio, height: pan.height * ratio), at: target)
                 }
+                settleAfterGesture()
             }
     }
 
@@ -240,23 +272,47 @@ struct RegionMapView: View {
     /// A marker as the design draws one: the place itself, and its name written on the map in the
     /// display serif with a hard outline. `labelBelow` alternates down the cluster, so two adjacent
     /// markers put their names on opposite sides of the pin instead of into the same strip of map.
+    ///
+    /// Only the pin is pressable. The label is up to `labelWidth` points wide and several lines
+    /// tall, so a `Button` wrapped around the whole stack made a target mostly of transparent map —
+    /// wide enough that two adjacent markers' rectangles overlapped and a touch on empty coastline
+    /// navigated. `NFR-A11Y-06` is satisfied by the pin's own 44-point square, and the label is
+    /// already `accessibilityHidden` inside `MapPlaceLabel`, so VoiceOver loses nothing.
     private func marker(_ pin: RegionMapPin, labelBelow: Bool) -> some View {
-        Button { onSelect(pin.questID) } label: {
-            VStack(spacing: KultaraMetrics.xs) {
-                if !labelBelow { MapPlaceLabel(pin.title, width: Self.labelWidth) }
-                Image(systemName: "mappin.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(palette.sealFill.color)
-                    .background(Circle().fill(palette.inkOnSeal.color).padding(3))
-                    .shadow(color: palette.photoScrim.color.opacity(0.45), radius: 3, y: 1)
-                if labelBelow { MapPlaceLabel(pin.title, width: Self.labelWidth) }
-            }
-            .frame(minWidth: KultaraMetrics.minimumTapTarget, minHeight: KultaraMetrics.minimumTapTarget)
-            .contentShape(Rectangle())
+        VStack(spacing: KultaraMetrics.xs) {
+            if !labelBelow { MapPlaceLabel(pin.title, width: Self.labelWidth) }
+            pinSymbol(pin)
+            if labelBelow { MapPlaceLabel(pin.title, width: Self.labelWidth) }
         }
-        .buttonStyle(.plain)
+        // One element for VoiceOver, named and activatable. The rotor cannot activate a bare
+        // `DragGesture`, so the action is declared explicitly rather than inherited from a button.
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel(pin.accessibilityLabel)
         .accessibilityAddTraits(.isButton)
+        .accessibilityAction { onSelect(pin.questID) }
+    }
+
+    /// The pressable part. A `DragGesture(minimumDistance: 0)` rather than a `Button`, because a
+    /// button fires on release regardless of how far the finger travelled first — so a drag that
+    /// began on a pin navigated on lift. Selection needs the touch to have stayed put
+    /// (`MapMarkerGesture.isTap`).
+    private func pinSymbol(_ pin: RegionMapPin) -> some View {
+        Image(systemName: "mappin.circle.fill")
+            .font(.system(size: 28))
+            .foregroundStyle(palette.sealFill.color)
+            .background(Circle().fill(palette.inkOnSeal.color).padding(3))
+            .shadow(color: palette.photoScrim.color.opacity(0.45), radius: 3, y: 1)
+            .frame(width: KultaraMetrics.minimumTapTarget,
+                   height: KultaraMetrics.minimumTapTarget)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
+                    .onEnded { value in
+                        guard MapMarkerGesture.isTap(translation: value.translation) else { return }
+                        onSelect(pin.questID)
+                    }
+            )
+            .allowsHitTesting(!isManipulating)
     }
 
     /// The way back to the list. The map is full-bleed, so there is no navigation bar to hold it —

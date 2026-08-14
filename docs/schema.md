@@ -273,6 +273,13 @@ CI fails on any of these. This is the enforcement mechanism for requirements tha
 | V15 | Total content payload ≤ 200 MB (leaves headroom under the 250 MB app budget) | NFR-PERF-07 |
 | V16 | `hardLatestStart` matches recomputation from visiting hours | FR-DISC-06 |
 | V17 | When `manifest.regionMap` is present, every Place a quest visits has a `mapPoint` within 0…1 | FR-DISC-02/03 |
+| V18 | `route.geometryAsset` parses as a GeoJSON FeatureCollection carrying a LineString of ≥ 2 points | FR-MAP-02 |
+
+**V18 exists because V14 stops at the filename.** The run map draws the route from
+`route.geometryAsset`, so a file that is present but is not a route — a placeholder, a bare geometry
+object, a line of one vertex — degrades to a blank canvas at the one moment the walker is standing in
+a street looking for a gate. The rule reads the bytes, which is why `AssetInventory` has `data(_:)`
+alongside `exists(_:)`; an inventory that cannot supply bytes simply does not run the rule.
 
 **Two rules cannot run against decoded content**, because the type system makes their violations
 unrepresentable: `LocalizedText` refuses to decode with a gap (V1) and `TaskType` has only the three

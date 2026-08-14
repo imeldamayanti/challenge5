@@ -82,6 +82,56 @@ struct KultaraThemeTests {
     }
 }
 
+/// `KultaraDialog` replaced four `confirmationDialog`s, which rendered in the system's own fill and
+/// type. The theme now owns those surfaces, so the theme has to measure them — named here rather
+/// than left to the generic sweep, so removing one of these colours from the component is a test
+/// failure and not a quiet regression.
+struct KultaraDialogContrastTests {
+
+    /// The dialog is printed on the raised sheet, and everything on it — title, body, cancel — is
+    /// body ink.
+    @Test(arguments: KultaraTheme.allAppearances)
+    func theDialogSurfaceCarriesItsInk(_ appearance: KultaraTheme.Appearance) {
+        let palette = KultaraTheme.palette(for: appearance)
+        let pair = palette.contrastPairs.first {
+            $0.foreground == palette.ink && $0.background == palette.paperRaised
+        }
+        #expect(pair?.passes == true, "\(appearance): dialog body ink · \(pair?.measurementLine ?? "absent")")
+    }
+
+    /// The destructive action is drawn in warning ink on that same sheet, ruled rather than filled.
+    /// Colour is not the only signal — there is a glyph and a weight change too (`NFR-A11Y-05`) —
+    /// but the ink still has to be readable, and the rule around it is essential non-text.
+    @Test(arguments: KultaraTheme.allAppearances)
+    func theDestructiveActionIsMeasuredOnTheDialogSurface(_ appearance: KultaraTheme.Appearance) {
+        let palette = KultaraTheme.palette(for: appearance)
+        let pair = palette.contrastPairs.first {
+            $0.foreground == palette.warning && $0.background == palette.paperRaised
+        }
+        #expect(pair?.passes == true,
+                "\(appearance): destructive ink · \(pair?.measurementLine ?? "absent")")
+    }
+
+    /// The confirm action is the one filled control, so its label is measured against the fill.
+    @Test(arguments: KultaraTheme.allAppearances)
+    func theConfirmActionIsMeasuredAgainstItsFill(_ appearance: KultaraTheme.Appearance) {
+        let palette = KultaraTheme.palette(for: appearance)
+        let pair = palette.contrastPairs.first {
+            $0.foreground == palette.inkOnSeal && $0.background == palette.sealFill
+        }
+        #expect(pair?.passes == true,
+                "\(appearance): confirm label · \(pair?.measurementLine ?? "absent")")
+    }
+
+    /// A destructive action drawn in the same ink as the affirmative one would leave the glyph
+    /// doing all the work.
+    @Test(arguments: KultaraTheme.allAppearances)
+    func destructiveAndConfirmDoNotShareAnInk(_ appearance: KultaraTheme.Appearance) {
+        let palette = KultaraTheme.palette(for: appearance)
+        #expect(palette.warning != palette.seal, "\(appearance)")
+    }
+}
+
 /// Text over a photograph is where a measured theme usually stops being measured: the background is
 /// whatever the photo happens to be, so no ratio can be claimed. `NFR-A11Y-03` still applies.
 ///

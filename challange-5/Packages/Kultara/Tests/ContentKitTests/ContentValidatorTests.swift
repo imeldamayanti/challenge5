@@ -314,6 +314,52 @@ struct ContentValidatorTests {
         #expect(found.contains { $0.rule == .v14 })
     }
 
+    // MARK: - V18 · the route geometry is a route (FR-MAP-02)
+
+    private func assetsCarryingGeometry(_ bytes: Data) -> StubAssetInventory {
+        ContentFactory.assets(contents: ["quests/quest-a/route.geojson": bytes])
+    }
+
+    @Test func v18RejectsAGeometryThatIsNotJSON() {
+        let found = ContentValidator.validate(
+            ContentFactory.bundle(),
+            assets: assetsCarryingGeometry(Data("<svg/>".utf8)),
+            today: ContentFactory.today)
+        #expect(found.contains { $0.rule == .v18 })
+    }
+
+    /// The file exists, parses as JSON, and still cannot be drawn — which is exactly the gap V14
+    /// leaves open.
+    @Test func v18RejectsAGeometryWithNoLine() {
+        let pointsOnly = Data("""
+        { "type": "FeatureCollection", "features": [
+          { "type": "Feature", "properties": {},
+            "geometry": { "type": "Point", "coordinates": [115.2, -8.6] } } ] }
+        """.utf8)
+        let found = ContentValidator.validate(
+            ContentFactory.bundle(),
+            assets: assetsCarryingGeometry(pointsOnly),
+            today: ContentFactory.today)
+        #expect(found.contains { $0.rule == .v18 })
+    }
+
+    @Test func v18RejectsASinglePointRoute() {
+        let found = ContentValidator.validate(
+            ContentFactory.bundle(),
+            assets: assetsCarryingGeometry(
+                ContentFactory.routeGeometryJSON(coordinates: "[[115.2085, -8.6570]]")),
+            today: ContentFactory.today)
+        #expect(found.contains { $0.rule == .v18 })
+    }
+
+    @Test func v18AcceptsARealRoute() {
+        let found = ContentValidator.validate(
+            ContentFactory.bundle(),
+            assets: assetsCarryingGeometry(ContentFactory.routeGeometryJSON()),
+            today: ContentFactory.today)
+        #expect(!found.contains { $0.rule == .v18 })
+    }
+
     // MARK: - V15 · content payload budget (NFR-PERF-07)
 
     @Test func v15RejectsAPayloadOverTwoHundredMegabytes() {
@@ -364,9 +410,10 @@ struct ContentValidatorTests {
     @Test func everyRuleInTheSchemaIsRepresented() {
         // If a rule is added to the enum without a test, this fails and names it.
         let tested: Set<ValidationRule> = [.v1, .v2, .v3, .v4, .v5, .v6, .v7, .v8,
-                                           .v9, .v10, .v11, .v12, .v13, .v14, .v15, .v16, .v17]
+                                           .v9, .v10, .v11, .v12, .v13, .v14, .v15, .v16, .v17,
+                                           .v18]
         #expect(Set(ValidationRule.allCases) == tested)
-        #expect(ValidationRule.allCases.count == 17)
+        #expect(ValidationRule.allCases.count == 18)
     }
 
     @Test func everyRuleNamesTheRequirementItEnforces() {

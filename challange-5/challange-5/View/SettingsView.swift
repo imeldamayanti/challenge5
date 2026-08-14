@@ -42,17 +42,19 @@ struct SettingsView: View {
         // is lost to VoiceOver.
         .navigationTitle("")
         .kultaraInlineNavigationTitle()
-        .confirmationDialog(
-            model.deleteConfirmTitle,
+        .kultaraDialog(
             isPresented: Binding(get: { model.isConfirmingDelete },
                                  set: { if !$0 { model.cancelDelete() } }),
-            titleVisibility: .visible
-        ) {
-            Button(model.deleteConfirmAction, role: .destructive) { model.confirmDelete() }
-            Button(model.deleteCancelAction, role: .cancel) { model.cancelDelete() }
-        } message: {
-            Text(model.deleteConfirmBody)
-        }
+            title: model.deleteConfirmTitle,
+            message: model.deleteConfirmBody,
+            actions: [
+                KultaraDialogAction(
+                    title: model.deleteConfirmAction,
+                    kind: .destructive) { model.confirmDelete() },
+                KultaraDialogAction(
+                    title: model.deleteCancelAction,
+                    kind: .cancel) { model.cancelDelete() },
+            ])
     }
 
     private var languageSection: some View {

@@ -79,3 +79,60 @@ struct ArrivalEvaluatorTests {
         #expect(metres > 105 && metres < 120)
     }
 }
+
+/// `FR-ARR-03`. QA reported that starting the first checkpoint gives no visible waiting state; the
+/// answer is a bounded countdown rather than a spinner (`FR-ARR-05`), so the boundary between
+/// "counting down" and "available" is the thing worth holding.
+struct ManualOverrideScheduleTests {
+
+    private let start = Date(timeIntervalSince1970: 1_000_000)
+
+    private func schedule(immediate: Bool = false) -> ManualOverrideSchedule {
+        ManualOverrideSchedule(startedAt: start, delay: .seconds(60), isImmediate: immediate)
+    }
+
+    @Test func theCountdownDecreases() {
+        let s = schedule()
+        #expect(s.remainingSeconds(at: start) == 60)
+        #expect(s.remainingSeconds(at: start.addingTimeInterval(13)) == 47)
+        #expect(s.remainingSeconds(at: start.addingTimeInterval(59.5)) == 1)
+    }
+
+    /// The two have to agree exactly. A countdown that hits zero while the control is still hidden
+    /// is a screen that says "available now" beside nothing to press.
+    @Test func itReachesZeroExactlyWhenTheOverrideBecomesAvailable() {
+        let s = schedule()
+        #expect(s.remainingSeconds(at: start.addingTimeInterval(59.9)) == 1)
+        #expect(!s.isAvailable(at: start.addingTimeInterval(59.9)))
+
+        #expect(s.remainingSeconds(at: start.addingTimeInterval(60)) == 0)
+        #expect(s.isAvailable(at: start.addingTimeInterval(60)))
+    }
+
+    @Test func theCountdownNeverGoesNegative() {
+        let s = schedule()
+        #expect(s.remainingSeconds(at: start.addingTimeInterval(600)) == 0)
+        #expect(s.progress(at: start.addingTimeInterval(600)) == 1)
+    }
+
+    /// `FR-ERR-02` — a refused permission produces the override immediately, and there is no
+    /// countdown to draw because there is nothing to wait for.
+    @Test func arefusedPermissionOffersTheOverrideAtOnceWithNoCountdown() {
+        let s = schedule(immediate: true)
+        #expect(s.isAvailable(at: start))
+        #expect(s.remainingSeconds(at: start) == nil)
+        #expect(s.progress(at: start) == 1)
+    }
+
+    /// A clock that jumps backwards must not produce a countdown longer than the wait itself.
+    @Test func aBackwardsClockDoesNotExtendTheWait() {
+        let s = schedule()
+        #expect(s.remainingSeconds(at: start.addingTimeInterval(-30)) == 60)
+        #expect(s.progress(at: start.addingTimeInterval(-30)) == 0)
+    }
+
+    @Test func progressIsDeterminateAcrossTheWait() {
+        let s = schedule()
+        #expect(abs(s.progress(at: start.addingTimeInterval(30)) - 0.5) < 0.0001)
+    }
+}

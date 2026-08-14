@@ -72,13 +72,28 @@ struct KultaraRootView: View {
             // buttons under the fingers doing the panning, so on that surface there is no bar and
             // the inset reserves nothing.
             if !hidesTabBar {
+                // The bar opts out of keyboard avoidance; the content above it does not. SwiftUI
+                // raises the bottom safe area when a field takes focus, and inset content laid out
+                // against it rides up and sits on the keyboard. The modifier belongs here, on the
+                // bar alone — putting it on the container would also stop the screen beneath from
+                // moving, which would leave the task-answer fields in `TaskCard` under the keyboard.
                 KultaraTabBar(tabs: tabs, selection: $tab)
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         }
     }
 
     private var hidesTabBar: Bool {
-        tab == Tab.quests.rawValue && questSurface == .map
+        // The full-bleed map carries its own way back, and a floating bar over it both covers
+        // artwork and puts buttons under the panning fingers.
+        if tab == Tab.quests.rawValue && questSurface == .map { return true }
+        // A walk in progress is a full-screen flow with its own controls at the foot — the story
+        // preview's "Ready to Explore", the arrival screen's override, the cutscene's "Start the
+        // Journey". The bar sits on top of every one of them, which is the same defect QA reported
+        // against the keyboard: a floating bar covering the control the screen is asking for.
+        // Switching tabs mid-walk is not an interaction the run flow offers anyway.
+        if runDestination != nil { return true }
+        return false
     }
 
     private var tabs: [KultaraTab] {

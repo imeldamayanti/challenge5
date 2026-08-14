@@ -8,11 +8,23 @@ import RunEngine
 final class QuestRunViewModel {
 
     enum Stage: Equatable {
+        /// `81:588` — the hook, typed out, with the walk's distance and duration under it. The
+        /// board opens the flow here, before the notices.
+        case storyPreview
         /// `FR-START-04` — acknowledged before the first Run of this quest.
         case safetyNotice
         /// `FR-START-02` — the plain-language explanation that precedes the system prompt.
         case locationNotice
         case awaitingArrival
+        /// The Hisplora cutscene — the quest's hook and a framed image, shown once at the first
+        /// arrival of a walk. A presentation of `hookLore`, not a new content type: see
+        /// `CutsceneScreens.swift`.
+        case cutsceneIntro
+        case cutscenePortrait
+        /// The paged lore reader, one page per `LoreBlock`.
+        case storyReveal
+        /// The place name, before the checkpoint proper.
+        case transition
         case atCheckpoint
         case finished
     }
@@ -49,6 +61,19 @@ final class QuestRunViewModel {
     /// `FR-ARR-03` — revealed after 60 s of unsuccessful detection, or immediately when permission
     /// is refused, since waiting a minute for a fix that cannot arrive is a minute of nothing.
     private(set) var manualOverrideAvailable = false
+    /// Whole seconds until the override appears, or `nil` when there is nothing to count down to —
+    /// a refused permission, or an override already offered. Drives the arrival screen's bounded
+    /// wait (`FR-ARR-05`: a number that moves, never an indefinite spinner).
+    private(set) var manualOverrideRemainingSeconds: Int?
+    /// `0…1` for a determinate progress indicator over that same wait.
+    private(set) var manualOverrideProgress: Double = 0
+    /// How long the screen has been looking, so the wait is legible from the moment it opens.
+    private(set) var searchingElapsedSeconds: Int = 0
+    /// `FR-START-10`, `FR-ARR-04` — the override lives in a sheet, because a control the walker
+    /// needs when GPS has failed cannot be the quietest line on a scrolling screen.
+    private(set) var isPresentingManualOverride = false
+    /// The cutscene is shown once per walk, not once per checkpoint.
+    private var hasShownCutscene = false
     /// `FR-START-09` — the named presence confirmation, shown only at the start checkpoint.
     private(set) var isConfirmingPresence = false
     private(set) var isConfirmingAbandon = false
@@ -59,9 +84,17 @@ final class QuestRunViewModel {
     var taskDrafts: [String: String] = [:]
 
     private var overrideTimer: Task<Void, Never>?
+    private var overrideSchedule: ManualOverrideSchedule?
+    /// The authored walking line (`FR-MAP-02`). Read once at construction: it is content, so it
+    /// cannot change under a walk in progress, and a nil here means the quest ships no geometry
+    /// rather than that the map failed to load.
+    private let routeGeometry: RouteGeometry?
     /// `FR-ARR-03` — a manual arrival records the last known accuracy, because that number is what
     /// later explains *why* the override was needed at this particular gate.
     private var lastKnownAccuracyM: Double?
+    /// Kept alongside the accuracy, because `FR-MAP-02` asks for the walker's position *relative
+    /// to* the next checkpoint — a direction, which a scalar distance cannot express.
+    private(set) var lastKnownCoordinate: Coordinate?
 
     // MARK: Init
 
@@ -86,6 +119,9 @@ final class QuestRunViewModel {
         self.run = existingRun
         self.discardingExistingDraft = discardingExistingDraft
         self.manualOverrideDelay = manualOverrideDelay
+        // A quest whose geometry is missing or unreadable still walks; it walks without a drawn
+        // route. V18 is what stops that reaching a release.
+        self.routeGeometry = (try? repository.routeGeometry(questID: questID)) ?? nil
 
         stage = Self.initialStage(
             run: existingRun,
@@ -116,9 +152,22 @@ final class QuestRunViewModel {
             default: return run.hasArrivedAtCurrentCheckpoint ? .atCheckpoint : .awaitingArrival
             }
         }
-        if !preferences.safetyNoticeAckedQuestIDs.contains(quest.id) { return .safetyNotice }
-        if authorization == .notRequested { return .locationNotice }
-        return .awaitingArrival
+        // A fresh walk opens on the hook, as the board does. A resumed one never sees it again —
+        // it is an opening, not a gate.
+        return .storyPreview
+    }
+
+    /// Leaving the hook for the notices. The order after it is unchanged: `FR-START-04` before
+    /// `FR-START-02` before any sampling.
+    func advanceFromStoryPreview() {
+        if !preferences.safetyNoticeAckedQuestIDs.contains(quest.id) {
+            stage = .safetyNotice
+        } else if locationProvider.authorization == .notRequested {
+            stage = .locationNotice
+        } else {
+            stage = .awaitingArrival
+            beginSampling()
+        }
     }
 
     // MARK: Derived
@@ -159,6 +208,45 @@ final class QuestRunViewModel {
     }
 
     var isAtStartCheckpoint: Bool { currentIndex == 0 && run == nil }
+
+    /// `FR-MAP-02` — the ordered sequence, the walker's position relative to the next stop, and the
+    /// straight-line distance remaining. Nil when the quest ships no readable geometry, in which
+    /// case the arrival screen simply has no map rather than an empty frame where one should be.
+    var routeMap: RunRoutePresentation? {
+        guard let geometry = routeGeometry else { return nil }
+
+        let stops = orderedCheckpoints.compactMap { checkpoint -> RunRouteStop? in
+            guard let place = place(for: checkpoint) else { return nil }
+            return RunRouteStop(
+                orderIndex: checkpoint.orderIndex,
+                coordinate: place.coordinate,
+                isReached: run?.result(forOrderIndex: checkpoint.orderIndex) != nil,
+                isTarget: checkpoint.orderIndex == currentIndex)
+        }
+
+        let targetPlace = place(for: currentCheckpoint)
+        let distanceText = zip2(lastKnownCoordinate, targetPlace?.coordinate).map { user, target in
+            ContentFormatter(language: language)
+                .distance(metres: Int(Geo.distanceM(user, target).rounded()))
+        }
+
+        return RunRoutePresentation(
+            // The stops are taken from the Places, not from the geometry file's own Point
+            // features: the Place coordinate is what the arrival rule measures against, and a map
+            // that disagrees with the gate is a map that sends someone to the wrong side of a wall.
+            line: geometry.line,
+            stops: stops,
+            target: targetPlace?.coordinate,
+            targetRadiusM: Double(targetPlace?.arrivalRadiusM ?? 0),
+            userPosition: lastKnownCoordinate,
+            distanceRemainingText: distanceText,
+            targetName: placeName(for: currentCheckpoint))
+    }
+
+    private func zip2<A, B>(_ a: A?, _ b: B?) -> (A, B)? {
+        guard let a, let b else { return nil }
+        return (a, b)
+    }
 
     var safetyNotes: String { quest.safetyNotes.value(for: language) }
 
@@ -213,14 +301,41 @@ final class QuestRunViewModel {
         startOverrideTimer()
     }
 
+    /// One timer for both jobs. It publishes the countdown *and* flips availability from the same
+    /// schedule, so the number on screen and the control appearing cannot disagree — a countdown
+    /// that reaches zero beside a control that is still hidden is worse than no countdown.
     private func startOverrideTimer() {
         overrideTimer?.cancel()
+        overrideSchedule = ManualOverrideSchedule(
+            startedAt: Date(),
+            delay: manualOverrideDelay,
+            isImmediate: manualOverrideAvailable)
+        refreshOverrideCountdown()
         guard !manualOverrideAvailable else { return }
-        let delay = manualOverrideDelay
         overrideTimer = Task { [weak self] in
-            try? await Task.sleep(for: delay)
-            guard !Task.isCancelled else { return }
-            self?.manualOverrideAvailable = true
+            // Twice a second: the display is in whole seconds, and this is a foreground screen the
+            // walker is looking at, not the location sampler `NFR-BAT-04` governs.
+            while !Task.isCancelled {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled, let self else { return }
+                self.refreshOverrideCountdown()
+                if self.manualOverrideAvailable { return }
+            }
+        }
+    }
+
+    private func refreshOverrideCountdown() {
+        guard let schedule = overrideSchedule else {
+            manualOverrideRemainingSeconds = nil
+            return
+        }
+        let now = Date()
+        manualOverrideRemainingSeconds = schedule.remainingSeconds(at: now)
+        manualOverrideProgress = schedule.progress(at: now)
+        searchingElapsedSeconds = Int(schedule.elapsedSeconds(at: now))
+        if schedule.isAvailable(at: now) {
+            manualOverrideAvailable = true
+            manualOverrideRemainingSeconds = nil
         }
     }
 
@@ -229,6 +344,12 @@ final class QuestRunViewModel {
         if status == .denied || status == .restricted {
             arrival = .permissionDenied
             manualOverrideAvailable = true
+            // `FR-ERR-02` — nothing left to wait for, so nothing left to count down.
+            overrideTimer?.cancel()
+            overrideTimer = nil
+            overrideSchedule = nil
+            manualOverrideRemainingSeconds = nil
+            manualOverrideProgress = 1
         } else if arrival == .permissionDenied {
             arrival = .searching
             beginSampling()
@@ -245,6 +366,7 @@ final class QuestRunViewModel {
         let decision = ArrivalEvaluator.decide(
             fix: fix, target: place.coordinate, radiusM: place.arrivalRadiusM)
         lastKnownAccuracyM = fix.horizontalAccuracyM
+        lastKnownCoordinate = fix.coordinate
         let formatter = ContentFormatter(language: language)
         let distanceText = formatter.distance(metres: Int(decision.distanceM.rounded()))
         let accuracyText = formatter.distance(metres: Int(decision.accuracyM.rounded()))
@@ -269,6 +391,41 @@ final class QuestRunViewModel {
             return
         }
         record(method: .manual, accuracyM: lastKnownAccuracyM)
+    }
+
+    // MARK: The override sheet — FR-START-10, FR-ARR-04
+
+    func presentManualOverride() { isPresentingManualOverride = true }
+
+    func dismissManualOverride() { isPresentingManualOverride = false }
+
+    /// Confirming from inside the sheet. At the start checkpoint the named presence confirmation is
+    /// still a separate step (`FR-START-09`) — the two are not collapsed into one, and the sheet
+    /// does not become a second way to start a Run from outside the radius (`FR-START-08`), because
+    /// it routes through exactly the same `useManualOverride` path everything else does.
+    func confirmManualOverrideFromSheet() {
+        isPresentingManualOverride = false
+        guard isAtStartCheckpoint else {
+            record(method: .manual, accuracyM: lastKnownAccuracyM)
+            return
+        }
+        // Presenting the confirmation in the same run loop as the sheet's dismissal loses it, so it
+        // waits for the sheet to finish leaving.
+        Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(350))
+            self?.isConfirmingPresence = true
+        }
+    }
+
+    /// `0:47`. Digits and a colon, so it is not a translated string — but it is only ever shown
+    /// inside one that is.
+    var manualOverrideCountdownText: String? {
+        guard let remaining = manualOverrideRemainingSeconds else { return nil }
+        return String(format: "%d:%02d", remaining / 60, remaining % 60)
+    }
+
+    var searchingElapsedText: String {
+        String(format: "%d:%02d", searchingElapsedSeconds / 60, searchingElapsedSeconds % 60)
     }
 
     func confirmPresence() {
@@ -309,14 +466,86 @@ final class QuestRunViewModel {
         locationProvider.stop()
         overrideTimer?.cancel()
         overrideTimer = nil
+        overrideSchedule = nil
         manualOverrideAvailable = false
+        manualOverrideRemainingSeconds = nil
+        isPresentingManualOverride = false
         arrival = .idle
         checkpoint = presentation(forOrderIndex: currentIndex)
-        stage = .atCheckpoint
+
+        // The cutscene runs once per walk, at the first arrival — a repeat walker, and anyone
+        // resuming a draft, goes straight to the story. After it comes the paged reveal, then the
+        // transition, then the checkpoint itself.
+        if !hasShownCutscene && currentIndex == 0 {
+            hasShownCutscene = true
+            stage = .cutsceneIntro
+        } else {
+            stage = .storyReveal
+        }
 
         if let run, let checkpoint {
             self.run = (try? engine.markLoreOpened(
                 runID: run.id, checkpointID: checkpoint.id)) ?? run
+        }
+    }
+
+    // MARK: The Hisplora story stages
+
+    func advanceFromCutsceneIntro() { stage = .cutscenePortrait }
+
+    func advanceFromCutscenePortrait() { stage = .storyReveal }
+
+    func advanceFromStoryReveal() { stage = .transition }
+
+    func advanceFromTransition() { stage = .atCheckpoint }
+
+    /// Backing out of a story stage returns to the one before it rather than leaving the walk.
+    func retreatFromStoryStage() {
+        switch stage {
+        case .cutscenePortrait: stage = .cutsceneIntro
+        case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .cutscenePortrait : .storyReveal
+        default: break
+        }
+    }
+
+    /// One page per `LoreBlock`, already resolved to the run's language. The `n/3` pager is this
+    /// count, so a checkpoint with two blocks pages `1/2` rather than padding to three.
+    var storyRevealPages: [String] {
+        checkpoint?.claims.map(\.block.text) ?? []
+    }
+
+    /// The quest's hook, joined into one passage for the typewriter. Content, not a literal.
+    var hookText: String {
+        quest.hookLore.map { $0.text.value(for: language) }.joined(separator: "\n\n")
+    }
+
+    var questTitle: String { quest.title.value(for: language) }
+
+    var routeDistanceText: String {
+        ContentFormatter(language: language).distance(metres: quest.route.totalDistanceM)
+    }
+
+    var routeDurationText: String {
+        ContentFormatter(language: language).duration(minutes: quest.route.totalDurationMin)
+    }
+
+    /// The image the cutscene frames. The quest's hero image when it ships one — content with
+    /// provenance behind it — never a generated likeness introduced here.
+    var cutsceneImageURL: URL? {
+        guard let asset = quest.heroImageAsset else { return nil }
+        return (try? repository.assetURL(asset)) ?? nil
+    }
+
+    var currentPlaceName: String { placeName(for: currentCheckpoint) }
+
+    /// Which of the Hisplora location frames the arrival screen is showing. The mapping is the
+    /// arrival rule's own: `FR-ARR-01` is two conditions, and "close but the fix is too coarse" is
+    /// *not* arrival — so it draws "Not Quite There" rather than "Verified".
+    var locationState: LocationState {
+        switch arrival {
+        case .idle, .searching: .checking
+        case .approaching, .accuracyInsufficient: .notThere
+        case .permissionDenied: .denied
         }
     }
 

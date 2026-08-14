@@ -46,4 +46,12 @@ public protocol AssetInventory: Sendable {
     func exists(_ relativePath: String) -> Bool
     /// Total bytes of the content payload — JSON plus assets (V15).
     func totalPayloadBytes() -> Int
+    /// The bytes of one asset, for the rules that have to look inside a file rather than only
+    /// check that it is there (V18). Nil when the inventory cannot read it, which is why the
+    /// default is nil rather than a crash: a rule that needs bytes does not run without them.
+    func data(_ relativePath: String) -> Data?
+}
+
+public extension AssetInventory {
+    func data(_ relativePath: String) -> Data? { nil }
 }

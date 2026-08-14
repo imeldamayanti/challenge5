@@ -97,9 +97,37 @@ enum UIStringKey: String, Sendable, CaseIterable {
     case arrivalAccuracy
     case arrivalAccuracyInsufficient
     case arrivalNoFix
+    case arrivalStatusHeading
+    case arrivalSearchingElapsed
     case arrivalManualAction
     case arrivalManualNote
     case arrivalManualPending
+    case arrivalManualCountdown
+    case arrivalManualSheetTitle
+    case runMapHeading
+    case runMapAccessibility
+    case runMapNoPosition
+
+    // Hisplora story flow — the Figma board `13:128`. The copy on those frames is English-only
+    // and hardcodes one quest; these are the localised, content-agnostic versions.
+    case storyPreviewReady
+    case locationCheckingTitle
+    case locationCheckingBody
+    case locationVerifiedTitle
+    case locationVerifiedBody
+    case locationVerifiedContinue
+    case locationNotThereTitle
+    case locationNotThereBody
+    case locationNotThereBack
+    case cutsceneLegendTitle
+    case cutsceneSwipeHint
+    case cutsceneStartAction
+    case storyRevealPager
+    case storyRevealNext
+    case storyRevealBack
+    case storyRevealSkip
+    case transitionSteppingInto
+    case transitionContinue
     case arrivalClueHeading
     case arrivalNoClue
     case arrivalOutOfSequence

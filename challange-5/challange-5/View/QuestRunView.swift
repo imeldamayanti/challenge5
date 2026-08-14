@@ -20,53 +20,132 @@ struct QuestRunView: View {
 
     private var language: ContentLanguage { model.language }
 
+    /// The story-flow stages carry their own heading and their own back control, on their own
+    /// ground. The museum navigation bar over them is cream on brown and it clips the eyebrow
+    /// underneath it, so on those stages it goes away entirely.
+    private var isOnStoryFlow: Bool {
+        switch model.stage {
+        case .storyPreview, .awaitingArrival, .cutsceneIntro, .cutscenePortrait,
+             .storyReveal, .transition:
+            true
+        case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
+            false
+        }
+    }
+
     var body: some View {
         content
             .background(palette.paper.color)
-            .navigationTitle(model.quest.title.value(for: language))
+            .navigationTitle(isOnStoryFlow ? "" : model.quest.title.value(for: language))
             .kultaraInlineNavigationTitle()
+            .toolbar(isOnStoryFlow ? .hidden : .visible, for: .navigationBar)
             .onAppear { model.screenAppeared() }
             .onDisappear { model.screenDisappeared() }
-            .confirmationDialog(
-                model.presenceConfirmationTitle,
+            // `FR-START-09` — the named presence confirmation.
+            .kultaraDialog(
                 isPresented: Binding(get: { model.isConfirmingPresence },
                                      set: { if !$0 { model.cancelPresenceConfirmation() } }),
-                titleVisibility: .visible
-            ) {
-                Button(UIStrings.string(.runStartConfirmYes, language)) {
-                    model.confirmPresence()
-                }
-                Button(UIStrings.string(.runCancel, language), role: .cancel) {
-                    model.cancelPresenceConfirmation()
-                }
-            } message: {
-                Text(UIStrings.string(.runStartConfirmBody, language))
-            }
-            .confirmationDialog(
-                UIStrings.string(.runAbandonConfirmTitle, language),
+                title: model.presenceConfirmationTitle,
+                message: UIStrings.string(.runStartConfirmBody, language),
+                actions: [
+                    KultaraDialogAction(
+                        title: UIStrings.string(.runStartConfirmYes, language),
+                        kind: .confirm) { model.confirmPresence() },
+                    KultaraDialogAction(
+                        title: UIStrings.string(.runCancel, language),
+                        kind: .cancel) { model.cancelPresenceConfirmation() },
+                ])
+            // `FR-RUN-04` — the confirmation names what is kept and what is lost.
+            .kultaraDialog(
                 isPresented: Binding(get: { model.isConfirmingAbandon },
                                      set: { if !$0 { model.cancelAbandon() } }),
-                titleVisibility: .visible
-            ) {
-                Button(UIStrings.string(.runAbandonConfirmAction, language), role: .destructive) {
-                    model.confirmAbandon()
-                }
-                Button(UIStrings.string(.runCancel, language), role: .cancel) {
-                    model.cancelAbandon()
-                }
-            } message: {
-                Text(UIStrings.string(.runAbandonConfirmBody, language))
+                title: UIStrings.string(.runAbandonConfirmTitle, language),
+                message: UIStrings.string(.runAbandonConfirmBody, language),
+                actions: [
+                    KultaraDialogAction(
+                        title: UIStrings.string(.runAbandonConfirmAction, language),
+                        kind: .destructive) { model.confirmAbandon() },
+                    KultaraDialogAction(
+                        title: UIStrings.string(.runCancel, language),
+                        kind: .cancel) { model.cancelAbandon() },
+                ])
+            .sheet(isPresented: Binding(get: { model.isPresentingManualOverride },
+                                        set: { if !$0 { model.dismissManualOverride() } })) {
+                KultaraThemeProvider { manualOverrideSheet }
+                    .kultaraManualOverrideSheetPresentation()
             }
     }
 
     @ViewBuilder private var content: some View {
         switch model.stage {
+        case .storyPreview: storyPreview
         case .safetyNotice: safetyNotice
         case .locationNotice: locationNotice
         case .awaitingArrival: arrivalScreen
+        case .cutsceneIntro: cutsceneIntro
+        case .cutscenePortrait: cutscenePortrait
+        case .storyReveal: storyReveal
+        case .transition: transition
         case .atCheckpoint: checkpointScreen
         case .finished: finishedScreen
         }
+    }
+
+    // MARK: The Hisplora story stages
+    //
+    // Each is a `HisploraStage` of its own, so the story flow carries the new visual direction
+    // while the quest list, settings and summary stay on the museum theme until frames exist for
+    // them. A seam at a screen boundary is survivable; a half-restyled screen is not.
+
+    private var storyPreview: some View {
+        StoryPreviewScreen(
+            language: language,
+            title: model.questTitle,
+            hook: model.hookText,
+            distanceText: model.routeDistanceText,
+            durationText: model.routeDurationText,
+            onReady: { model.advanceFromStoryPreview() },
+            onBack: { model.advanceFromStoryPreview() })
+    }
+
+    private var cutsceneIntro: some View {
+        CutsceneIntroScreen(
+            language: language,
+            portraitURL: model.cutsceneImageURL,
+            portraitLabel: model.questTitle,
+            onAdvance: { model.advanceFromCutsceneIntro() },
+            onBack: { model.retreatFromStoryStage() })
+    }
+
+    private var cutscenePortrait: some View {
+        CutscenePortraitScreen(
+            language: language,
+            portraitURL: model.cutsceneImageURL,
+            portraitLabel: model.questTitle,
+            title: model.questTitle,
+            subtitle: model.currentPlaceName,
+            hook: model.hookText,
+            onStart: { model.advanceFromCutscenePortrait() },
+            onBack: { model.retreatFromStoryStage() })
+    }
+
+    private var storyReveal: some View {
+        StoryRevealScreen(
+            language: language,
+            pages: model.storyRevealPages,
+            illustrationURL: nil,
+            onFinish: { model.advanceFromStoryReveal() },
+            onBack: { model.retreatFromStoryStage() })
+    }
+
+    private var transition: some View {
+        StoryTransitionScreen(
+            language: language,
+            questName: model.questTitle,
+            placeName: model.currentPlaceName,
+            route: model.routeMap,
+            totalCheckpoints: model.totalCheckpoints,
+            onContinue: { model.advanceFromTransition() })
     }
 
     // MARK: Preflight
@@ -124,25 +203,88 @@ struct QuestRunView: View {
 
     // MARK: Arrival
 
+    /// The arrival screen, on the Hisplora direction — frames `81:617`, `89:1402` and `223:2004`,
+    /// which are the three states this screen already had.
+    ///
+    /// The frames' heading and ground are the design's; the clue, the manual override and the
+    /// abandon control are not on any of them and are here anyway, because `FR-CP-03`,
+    /// `FR-START-10` and `FR-RUN-04` require them. Order follows Phase 1: the status first, because
+    /// QA landed on this screen without noticing it was doing anything at all.
     private var arrivalScreen: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: KultaraMetrics.xl) {
-                VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-                    KultaraEyebrow(model.stepText)
-                    Text(model.headingText)
-                        .kultaraFont(.questTitleLarge)
-                        .foregroundStyle(palette.ink.color)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .accessibilityAddTraits(.isHeader)
-                    KultaraRule()
+        HisploraStage(ground: \.brownMid) {
+            ScrollView {
+                VStack(spacing: KultaraMetrics.xl) {
+                    // `FR-CP-08` — checkpoints reached out of total, never a distance.
+                    Text(model.stepText)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(hisplora.inkDusty.color)
+                        .textCase(.uppercase)
+                        .tracking(1.5)
+                    LocationStateHeading(state: model.locationState, language: language)
+                    if model.locationState == .checking {
+                        LocationWaitingDetail(
+                            language: language,
+                            elapsedText: model.searchingElapsedText,
+                            countdownText: model.manualOverrideCountdownText,
+                            progress: model.manualOverrideProgress)
+                    }
+                    arrivalNumbers
+                    routeMap
+                    LocationClueCard(
+                        language: language,
+                        clue: model.clueToCurrentCheckpoint
+                            ?? UIStrings.string(.arrivalNoClue, language))
+                    if model.arrival == .permissionDenied {
+                        SystemSettingsLink(language: language)
+                    }
+                    manualOverride
+                    abandonButton
                 }
-                clueCard
-                arrivalStatusCard
-                manualOverride
-                abandonButton
+                .padding(.vertical, KultaraMetrics.xl)
+                .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
             }
-            .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .scrollBounceBehavior(.basedOnSize)
+            .padding(.horizontal, KultaraMetrics.lg)
+        }
+    }
+
+    /// `FR-ARR-05` — the distance and the fix quality, as numbers that move. Present in every state
+    /// that has a fix; the frames show neither, and a walk without them is a walk with no idea how
+    /// far is left.
+    @ViewBuilder private var arrivalNumbers: some View {
+        switch model.arrival {
+        case .approaching(let distance, let accuracy),
+             .accuracyInsufficient(let distance, let accuracy):
+            VStack(spacing: KultaraMetrics.xs) {
+                Text(distance)
+                    .font(KultaraTypography.font(.questTitle))
+                    .foregroundStyle(hisplora.inkCream.color)
+                    .monospacedDigit()
+                Text("\(UIStrings.string(.arrivalAccuracy, language)) · \(accuracy)")
+                    .font(.system(size: 13))
+                    .foregroundStyle(hisplora.inkDusty.color)
+                    .monospacedDigit()
+            }
+            .accessibilityElement(children: .combine)
+        case .idle, .searching, .permissionDenied:
+            EmptyView()
+        }
+    }
+
+    private var hisplora: HisploraPalette { .standard }
+
+    /// `FR-MAP-02`. Shown whether or not there is a fix: with one it carries the walker's position
+    /// and the straight-line distance, without one it is still the route and the stops, which is
+    /// the location preview the walk between checkpoints otherwise lacks.
+    @ViewBuilder private var routeMap: some View {
+        if let route = model.routeMap {
+            // No chrome: this screen is on the story flow's brown ground, and the map's own heading
+            // and distance row are inked for paper. The heading above and `arrivalNumbers` below
+            // carry both, in inks the Hisplora palette measures.
+            RunRouteMapView(route: route,
+                            language: language,
+                            totalCheckpoints: model.totalCheckpoints,
+                            showsChrome: false)
         }
     }
 
@@ -163,18 +305,26 @@ struct QuestRunView: View {
 
     /// `FR-ARR-05`, `FR-ERR-01` — a distance and a fix quality that move, never an indefinite
     /// spinner.
+    ///
+    /// The searching state is where "no spinner" used to read as "no feedback". What it gets
+    /// instead is a bounded wait: the elapsed time, and a determinate bar counting down to the
+    /// moment the manual override appears — which genuinely happens, at 60 s, because `FR-ARR-03`
+    /// says so. That is the difference between a progress indicator and a pretence of one.
     private var arrivalStatusCard: some View {
         KultaraCard {
             VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
+                KultaraSectionHeading(UIStrings.string(.arrivalStatusHeading, language))
                 switch model.arrival {
                 case .idle, .searching:
                     Text(UIStrings.string(.arrivalSearching, language))
+                        .kultaraFont(.sectionHeading)
+                        .foregroundStyle(palette.ink.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(UIStrings.string(.arrivalNoFix, language))
                         .kultaraFont(.body)
                         .foregroundStyle(palette.ink.color)
-                    Text(UIStrings.string(.arrivalNoFix, language))
-                        .kultaraFont(.metadata)
-                        .foregroundStyle(palette.inkMuted.color)
                         .fixedSize(horizontal: false, vertical: true)
+                    searchingCountdown
                 case .approaching(let distance, let accuracy):
                     LabelledValue(label: UIStrings.string(.arrivalDistanceRemaining, language),
                                   value: distance, emphasised: true)
@@ -205,26 +355,108 @@ struct QuestRunView: View {
         }
     }
 
-    @ViewBuilder private var manualOverride: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-            if model.manualOverrideAvailable {
-                Button(UIStrings.string(.arrivalManualAction, language)) {
-                    model.useManualOverride()
-                }
-                .buttonStyle(.ruled)
-                // `FR-ARR-04` — stated plainly, because an override that feels like cheating is an
-                // override people will not use where they need it most.
-                Text(UIStrings.string(.arrivalManualNote, language))
+    /// The bounded part of the wait, written out. Elapsed time so the screen is visibly doing
+    /// something, and a determinate bar for the countdown — determinate because the wait ends.
+    @ViewBuilder private var searchingCountdown: some View {
+        VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
+            Text(String(format: UIStrings.string(.arrivalSearchingElapsed, language),
+                        model.searchingElapsedText))
+                .kultaraFont(.metadata)
+                .foregroundStyle(palette.inkMuted.color)
+                .monospacedDigit()
+            if let countdown = model.manualOverrideCountdownText {
+                ProgressView(value: model.manualOverrideProgress, total: 1)
+                    .tint(palette.seal.color)
+                    .accessibilityHidden(true)
+                Text(String(format: UIStrings.string(.arrivalManualCountdown, language), countdown))
                     .kultaraFont(.metadata)
                     .foregroundStyle(palette.inkMuted.color)
-                    .fixedSize(horizontal: false, vertical: true)
-            } else {
-                Text(UIStrings.string(.arrivalManualPending, language))
-                    .kultaraFont(.metadata)
-                    .foregroundStyle(palette.inkMuted.color)
+                    .monospacedDigit()
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// `FR-START-10` — always visible, always at readable weight, and always a real control.
+    ///
+    /// It used to be a line of muted caption text until 60 s had passed, which is the least
+    /// prominent styling the design system has, applied to the one thing that keeps the product
+    /// usable when GPS fails. Now it is a button from the start: before availability it carries the
+    /// countdown, after it reads `arrivalManualAction`, and either way it opens the sheet where the
+    /// explanation and the confirm live.
+    private var manualOverride: some View {
+        Button {
+            model.presentManualOverride()
+        } label: {
+            Text(manualOverrideLabel)
+                .fixedSize(horizontal: false, vertical: true)
+                .monospacedDigit()
+        }
+        .buttonStyle(.hisploraPill)
+    }
+
+    private var manualOverrideLabel: String {
+        if model.manualOverrideAvailable {
+            return UIStrings.string(.arrivalManualAction, language)
+        }
+        if let countdown = model.manualOverrideCountdownText {
+            return String(format: UIStrings.string(.arrivalManualCountdown, language), countdown)
+        }
+        return UIStrings.string(.arrivalManualPending, language)
+    }
+
+    /// `FR-ARR-04`, `FR-ERR-02` — the explanation at body size, the confirm, and, when permission
+    /// was refused, the way to Settings. A sheet rather than more rows on the arrival screen: the
+    /// clue has to stay readable behind it (`FR-CP-03`, `NFR-SAFE-02`), which is why the *status*
+    /// is not a modal and this is.
+    private var manualOverrideSheet: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
+                VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
+                    Text(UIStrings.string(.arrivalManualSheetTitle, language))
+                        .kultaraFont(.questTitle)
+                        .foregroundStyle(palette.ink.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    KultaraRule()
+                }
+                Text(UIStrings.string(.arrivalManualNote, language))
+                    .kultaraFont(.body)
+                    .foregroundStyle(palette.ink.color)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if model.arrival == .permissionDenied {
+                    Text(UIStrings.string(.runStartLocationDeniedBody, language))
+                        .kultaraFont(.body)
+                        .foregroundStyle(palette.ink.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                    SystemSettingsLink(language: language)
+                }
+
+                if model.manualOverrideAvailable {
+                    Button(UIStrings.string(.arrivalManualAction, language)) {
+                        model.confirmManualOverrideFromSheet()
+                    }
+                    .buttonStyle(.seal)
+                } else {
+                    // Not yet offerable (`FR-ARR-03`). The sheet still explains what it is and when
+                    // it arrives, rather than being a control that does nothing.
+                    Text(UIStrings.string(.arrivalManualPending, language))
+                        .kultaraFont(.body)
+                        .foregroundStyle(palette.inkMuted.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                Button(UIStrings.string(.runCancel, language)) {
+                    model.dismissManualOverride()
+                }
+                .buttonStyle(.ruled)
+            }
+            .padding(KultaraMetrics.xl)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .background(palette.paperRaised.color)
     }
 
     // MARK: Checkpoint
@@ -366,10 +598,27 @@ struct QuestRunView: View {
 
     // MARK: Shared
 
+    /// Drawn in whichever direction the screen around it is on: the arrival screen is on the story
+    /// flow's palette, the checkpoint screen is still on the museum theme.
     @ViewBuilder private var abandonButton: some View {
         if model.run?.state == .active {
-            Button(UIStrings.string(.runAbandonAction, language)) { model.requestAbandon() }
-                .buttonStyle(.ruled)
+            if model.stage == .awaitingArrival {
+                Button(UIStrings.string(.runAbandonAction, language)) { model.requestAbandon() }
+                    .buttonStyle(.hisploraPlain)
+            } else {
+                Button(UIStrings.string(.runAbandonAction, language)) { model.requestAbandon() }
+                    .buttonStyle(.ruled)
+            }
         }
+    }
+}
+
+private extension View {
+    /// A medium detent, so the arrival screen — and the clue on it — stays visible behind the
+    /// sheet. `.large` is offered as well because at the largest accessibility text sizes the
+    /// explanation does not fit in half a screen.
+    func kultaraManualOverrideSheetPresentation() -> some View {
+        presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
     }
 }

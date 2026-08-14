@@ -39,6 +39,26 @@ public protocol ContentRepository: Sendable {
     func assetURL(_ relativePath: String) throws -> URL?
 }
 
+public extension ContentRepository {
+
+    /// The authored walking route for a quest (`FR-MAP-02`), decoded from the asset
+    /// `RouteInfo.geometryAsset` already names.
+    ///
+    /// Derived from `quest(id:)` and `assetURL(_:)` rather than added to the protocol, so v3's
+    /// remote implementation gets it without implementing anything, and so there is no second seam
+    /// to keep in step with the first.
+    ///
+    /// Returns nil when the quest or its asset is absent. Throws only when the file is present and
+    /// cannot be read as a route — a malformed geometry is a content defect (V18), not a map that
+    /// quietly draws nothing.
+    func routeGeometry(questID: String) throws -> RouteGeometry? {
+        guard let quest = try quest(id: questID),
+              let url = try assetURL(quest.route.geometryAsset),
+              let data = FileManager.default.contents(atPath: url.path) else { return nil }
+        return try RouteGeometryDecoder.decode(data)
+    }
+}
+
 /// v1: content ships inside the app bundle, so no download is required to start a quest
 /// (`FR-OFF-01`).
 ///
@@ -177,8 +197,15 @@ struct DirectoryAssetInventory: AssetInventory {
     let root: URL
 
     func exists(_ relativePath: String) -> Bool {
-        FileManager.default.fileExists(
-            atPath: root.appendingPathComponent("assets").appendingPathComponent(relativePath).path)
+        FileManager.default.fileExists(atPath: url(relativePath).path)
+    }
+
+    func data(_ relativePath: String) -> Data? {
+        FileManager.default.contents(atPath: url(relativePath).path)
+    }
+
+    private func url(_ relativePath: String) -> URL {
+        root.appendingPathComponent("assets").appendingPathComponent(relativePath)
     }
 
     /// Every byte the content release costs the app: JSON documents and assets together

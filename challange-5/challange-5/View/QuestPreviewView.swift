@@ -37,22 +37,22 @@ struct QuestPreviewView: View {
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
         #endif
-        .confirmationDialog(
-            UIStrings.string(.runResumeHeading, language),
+        .kultaraDialog(
             isPresented: Binding(get: { model.isChoosingResumeOrRestart },
                                  set: { if !$0 { model.cancelResumeChoice() } }),
-            titleVisibility: .visible
-        ) {
-            Button(UIStrings.string(.runResumeAction, language)) { model.chooseResume() }
-            Button(UIStrings.string(.runRestartAction, language), role: .destructive) {
-                model.chooseRestart()
-            }
-            Button(UIStrings.string(.runCancel, language), role: .cancel) {
-                model.cancelResumeChoice()
-            }
-        } message: {
-            Text(UIStrings.string(.runRestartWarning, language))
-        }
+            title: UIStrings.string(.runResumeHeading, language),
+            message: UIStrings.string(.runRestartWarning, language),
+            actions: [
+                KultaraDialogAction(
+                    title: UIStrings.string(.runResumeAction, language),
+                    kind: .confirm) { model.chooseResume() },
+                KultaraDialogAction(
+                    title: UIStrings.string(.runRestartAction, language),
+                    kind: .destructive) { model.chooseRestart() },
+                KultaraDialogAction(
+                    title: UIStrings.string(.runCancel, language),
+                    kind: .cancel) { model.cancelResumeChoice() },
+            ])
     }
 
     private func lateWarning(_ warning: String) -> some View {

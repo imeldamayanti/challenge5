@@ -49,6 +49,11 @@ let package = Package(
                 // package carries its own typeface instead of depending on the host target
                 // remembering to list it.
                 .copy("Resources/Fonts"),
+                // Chrome the theme draws with, never content. The distinction matters: content
+                // assets live in `ContentKit` and are replaced wholesale by an update, while these
+                // are part of the design and travel with it. See `PortraitFrame.swift` for the
+                // provenance of the one image in here.
+                .copy("Resources/Images"),
             ]
         ),
         .executableTarget(
