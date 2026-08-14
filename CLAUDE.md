@@ -28,7 +28,8 @@ The repo root and the Xcode project directory share a name, which is confusing:
     ├── challange-5.xcodeproj
     ├── challange-5/           app target — Model/ ViewModel/ View/ Service/ Support/
     ├── challange-5UITests/    XCUITest, the only tests needing a simulator
-    └── Packages/Kultara/      local SPM package — ContentKit, RunEngine, DesignSystem
+    └── Packages/Kultara/      local SPM package — ContentKit, RunEngine,
+                               DesignSystem, content-validator
 ```
 
 **The app target has no unit-test target** — `challange-5UITests` is XCUITest only. So a guard for
@@ -58,20 +59,42 @@ swift run content-validator Sources/ContentKit/Content
 
 Exits 0 when rules V1–V18 pass, 1 on any finding, 2 on bad arguments. Point it at an authored content tree (the directory holding `manifest.json`, `places/`, `quests/`, `assets/`, `consent/`).
 
-UI tests and app build — run from `challange-5/`:
+App build and UI tests — run from `challange-5/`:
 
 ```bash
 xcodebuild test -project challange-5.xcodeproj -scheme challange-5 \
   -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'
 ```
 
-Pin `OS=` — several runtimes are installed (26.3, 26.4, 26.5) and only some of them have an
-iPhone 17. Check `xcrun simctl list devices available` before assuming a device name; under 26.5 the
-set is iPhone 17 / 17 Pro / 17 Pro Max / 17e / Air, with no iPhone 16.
+Pin `OS=`. Four runtimes are installed — 26.3, 26.4 twice (26.4 and 26.4.1, and one of the two
+carries no devices at all), and 26.5 — so an unpinned destination can resolve onto the empty one and
+fail for a reason that has nothing to do with the code. iPhone 17 / 17 Pro / 17 Pro Max / 17e / Air
+exist under 26.3, 26.4 and 26.5; **iPhone 16e exists only under 26.3**, and there is no iPhone 16 at
+all. Run `xcrun simctl list devices available` before assuming any device name.
 
 Schemes: `challange-5` (app + UI tests), plus `ContentKit`, `RunEngine`, `DesignSystem` and
-`content-validator` from the package. Xcode also lists an **`AppFeatures` scheme that is stale** —
-commit `b597b5b` removed that target and the scheme file survived it.
+`content-validator` from the package. No `.xcscheme` is tracked in Git — schemes are generated
+per-machine — so an `AppFeatures` scheme left over from before `b597b5b` may still be listed locally.
+It is stale; that target no longer exists.
+
+### This machine's toolchain is misconfigured
+
+`xcode-select` points at `/Library/Developer/CommandLineTools`, not Xcode. Every command above fails without a fix — `xcodebuild` refuses to run at all, and `swift test` dies with `no such module 'Testing'` because the CommandLineTools toolchain has no swift-testing. Prefix commands rather than guessing at the error:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test
+```
+
+`xcodebuild test` additionally spawns `simctl`, which re-resolves through `xcode-select` and fails even with `DEVELOPER_DIR` exported. Invoke Xcode's copy by full path and put it on `PATH`:
+
+```bash
+export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
+export PATH="$DEVELOPER_DIR/usr/bin:$PATH"
+"$DEVELOPER_DIR/usr/bin/xcodebuild" test -project challange-5.xcodeproj -scheme challange-5 \
+  -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'
+```
+
+The permanent fix needs the user's password, so it is theirs to run, not yours: `sudo xcode-select -s /Applications/Xcode.app/Contents/Developer`.
 
 ### Walking a quest without walking
 
@@ -79,8 +102,10 @@ A quest starts only inside its first checkpoint's radius (`FR-START-08`), which 
 untestable from a desk. Debug builds carry a switch — **Settings → Developer tools → Simulate arrival
 anywhere** — that reports a position at the next checkpoint. The arrival rule still runs on it: the
 radius and accuracy gate in `ArrivalEvaluator` is unmodified, so what gets exercised is the walker's
-code path with a different input. The switch, its provider, and the Settings section are all inside
-`#if DEBUG`; a release build does not contain them.
+code path with a different input. The switch (`Service/LocationService.swift`), its provider, and the
+Settings section (`View/Component/DeveloperToolsSection.swift`) are all inside `#if DEBUG`; a release
+build does not contain them, which is verifiable by grepping the Release binary for
+`SimulatedLocationProvider`.
 
 ## The specs are authoritative
 
@@ -123,6 +148,23 @@ The app target is not a shell — since `b597b5b` it holds every screen and view
 
 `RunEngine` owns the Run lifecycle and the rules that write user data: ordering, arrival acceptance, awards, snapshot-on-complete. Arrival reaches it as a decided fact — a method and an accuracy, never a `CLLocation` — which is what keeps those rules testable without a simulator. `RunStore` fronts persistence; `FileRunStore` writes one JSON document per Run today, and SwiftData or a Supabase-backed sync layer is a swap behind the protocol, never a call in front of it.
 
+## The presentation layer lives in the app target
+
+The SwiftUI layer used to be an `AppFeatures` package target. Since `b597b5b` it sits in the app target as conventional MVVM:
+
+| Folder | Holds | Rule |
+|---|---|---|
+| `Model/` | view-facing presentation types | `Sendable` value types only |
+| `ViewModel/` | one `@MainActor @Observable` class per screen | no SwiftUI import |
+| `View/` | one screen per file | |
+| `View/Component/` | shared and extracted subviews | |
+| `Service/` | platform edges — location, preferences, erasure, storage reporting | |
+| `Support/` | environment assembly, formatting, UI strings | |
+
+**`Model/` is not the domain model.** Domain types live in `ContentKit` and `RunEngine`; these are resolved snapshots ready to render — strings already localized, distances already formatted. Do not mirror a `Quest` or a `Run` here.
+
+The `Sendable` conformance on every `Model/` type is a deliberate constraint, not concurrency plumbing — most never cross an isolation boundary. It makes it structurally impossible to store a repository, a palette, or a location provider in a presentation type. `LoreBlockPresentation.Ink` is the visible consequence: it is a two-case enum rather than the obvious `KeyPath<KultaraPalette, SRGBColor>` so the model stays ignorant of the palette, and the view does the lookup.
+
 ## Invariants held by tests, not by review
 
 These are the places where a reasonable-looking change silently breaks a guarantee:
@@ -134,9 +176,19 @@ These are the places where a reasonable-looking change silently breaks a guarant
 - **Tasks never gate progression.** `blocksProgression` must be `false` for all content (`AD-2`, rule V8). Photos are keepsakes; the GPS radius is the gate.
 - **Arrival needs the accuracy check, not just the distance check.** `FR-ARR-01` is two conditions, and the second is the load-bearing one: without `horizontalAccuracy <= radius`, a 500 m cell-tower fix unlocks a 75 m checkpoint from the next neighbourhood. It is also why the manual override is mandatory rather than a nicety (`FR-START-10`) — inside a covered market the accuracy test fails legitimately and often.
 - **A completed Run stays writable for reading and answering.** The final checkpoint completes the walk the instant it is reached (`FR-DONE-01`), while the walker is still standing there with the closing reflection unanswered. `markLoreOpened` and `recordTaskResult` therefore accept `completed` as well as `active`; gating them on `active` makes completion swallow the ending that `FR-TASK-07` requires.
-- **The summary model takes no `ContentRepository`.** `RunSummaryViewModel` renders from snapshots alone, which is how `FR-DONE-04/05` and `FR-RUN-06` are guaranteed rather than intended. Handing it a repository would make a withdrawn Place able to blank a walk somebody finished.
-- **A screen's view model belongs in `@State`.** Building one inside a `body` rebuilds it on every redraw, which orphans anything in flight — see `ScreenHost` in `KultaraRootView.swift`. This presented as an arrival screen that never found a fix.
 - **The run map is drawn, never tiled.** `FR-MAP-01`/`FR-OFF-03` rule out live map tiles, so there is no `MKMapView` and there must never be one. `RunRouteMapView` projects the authored `route.geojson` onto a `Canvas` via `RunEngine.RouteProjection`, which shares `Geo.earthRadiusM` with `Geo.distanceM` so the drawn length and the printed distance cannot disagree. `Place.mapPoint` is *not* usable here — it is authored against the stylised island illustration and means nothing at street scale.
+
+## Invariants no longer held by anything
+
+The presentation layer has **zero automated tests**. `AppFeaturesTests` (~1,400 lines, 112 tests) was deleted by `b597b5b` when `AppFeatures` stopped being a package target, and the app target has no unit-test bundle to receive it. The suites are recoverable from git history at `b597b5b^`, and restoring them is what `.claude/plans/m7-restore-test-guards.plan.md` is for — that plan is **not** done.
+
+Treat these as review-only until a unit-test target exists — they read as guaranteed but are not:
+
+- **UI string ID/EN parity** (`NFR-I18N-01/02`). `everyKeyHasAnEntry`, `everyEntryIsTranslatedInBothLanguages` and `indonesianAndEnglishAreActuallyDifferentText` are gone. Adding a `UIStringKey` case without a `UIStrings.table` entry now fails silently at runtime — `UIStrings.string` returns the raw key name, and its own comment still cites the test that would have caught it. The `LocalizedText` no-fallback rule still protects *content*, not the interface.
+- **`FR-START-08` at the view-model level.** `aFixOutsideTheStartRadiusStartsNothing` and `aVagueFixOnTopOfTheGateStartsNothingEither` are gone. `RunEngineTests` still covers `ArrivalEvaluator` itself, so the rule is tested — the wiring through `QuestRunViewModel` is not.
+- **`FR-ONB-02/04`** — skip available from the first screen, and the Settings authorization reporter being structurally unable to request permission.
+- **The summary model takes no `ContentRepository`.** `RunSummaryViewModel` renders from snapshots alone, which is how `FR-DONE-04/05` and `FR-RUN-06` are guaranteed rather than intended. Handing it a repository would make a withdrawn Place able to blank a walk somebody finished. Now enforced only by the initializer's signature.
+- **A screen's view model belongs in `@State`.** Building one inside a `body` rebuilds it on every redraw, which orphans anything in flight — see `View/Component/ScreenHost.swift`. This presented as an arrival screen that never found a fix.
 
 ## Two visual directions, split at a screen boundary
 
@@ -179,9 +231,11 @@ auto-advancing and the login carrying a "Skip for now".
 
 ## Known state
 
-- Deployment target is iOS 18.0, but the only simulator runtime on this machine is iOS 26.5. Layout is verified on 26.5; the 18.0 floor itself has never been run. Do not claim otherwise.
-- The app target builds with `SWIFT_VERSION = 5.0` while the package is `swift-tools-version: 6.0`. The package targets are in Swift 6 language mode; the app shell is not.
+- Deployment target is iOS 18.0. Installed simulator runtimes are iOS 26.3 / 26.4 / 26.5; layout is verified on 26.5, and the 18.0 floor itself has never been run. Do not claim otherwise.
+- The app target and the package are both Swift 6 language mode. The app target was Swift 5.0 until the presentation layer moved in — `DeveloperSwitchableLocationProvider`'s `#if DEBUG` default argument depends on SE-0411 isolated default value expressions and does not compile under Swift 5. `challange-5UITests` is still `SWIFT_VERSION = 5.0`.
+- `SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY` is on for the app target, so a type used from `RunEngine` or `DesignSystem` needs that module imported in the file that uses it — a transitive import will not do.
 - `.claude/plans/cultural-heritage-quest.plan.md` (Milestone 1, content model) is superseded by `docs/schema.md`.
+- `.claude/launch.json` is stale scaffolding pointing at another user's Downloads folder. It has nothing to do with this project.
 - The app has no name. "Kultara" appears throughout the code as a working title, but Kultara is a community storyteller organization in Sanur that the team interviewed — a research partner, not a brand. "Hisplora" is the Figma file's name and is used for the visual direction only, not as a product name. This needs resolving before any release.
 - **The shipped content is one authored quest over five real places, and it is partly unverified.**
   `badung-empat-wajah` ("Empat Wajah Kota Badung" / "The Four Faces of Badung") walks Puri Agung
