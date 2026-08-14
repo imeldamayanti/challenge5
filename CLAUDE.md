@@ -8,13 +8,15 @@ A native iOS app (SwiftUI, iOS 18.0) for story-led cultural heritage walking que
 
 Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. Photo tasks, the share card, the recall survey, telemetry, proximity alerts, and the kill-switch are not built. See `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
 
+Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — is planned and **not** done.
+
 ## Directory layout
 
 The repo root and the Xcode project directory share a name, which is confusing:
 
 ```
 /                              repo root — CLAUDE.md and .gitignore only
-├── docs/                      system-design.md, schema.md
+├── docs/                      system-design.md, schema.md, hisplora-tokens.md
 │   ├── screenshots/           captured UI verification screenshots
 │   └── research/              field research artifacts — interview summary,
 │                              affinity diagram, tourist-findings and
@@ -23,10 +25,18 @@ The repo root and the Xcode project directory share a name, which is confusing:
 ├── .claude/plans/             implementation plans, including executed verification results
 └── challange-5/               Xcode project directory
     ├── challange-5.xcodeproj
-    ├── challange-5/           app target — a shell, ~30 lines
+    ├── challange-5/           app target — Model/ ViewModel/ View/ Service/ Support/
     ├── challange-5UITests/    XCUITest, the only tests needing a simulator
-    └── Packages/Kultara/      local SPM package — all real code lives here
+    └── Packages/Kultara/      local SPM package — ContentKit, RunEngine, DesignSystem
 ```
+
+**The app target has no unit-test target** — `challange-5UITests` is XCUITest only. So a guard for
+anything in `ViewModel/` or `View/` has nowhere to live as written. The way through is to push the
+rule being guarded down into a package target as a pure value and test it there: the arrival
+countdown became `RunEngine.ManualOverrideSchedule`, the map-marker tap threshold became
+`DesignSystem.MapMarkerGesture`, the route maths became `RunEngine.RouteProjection`. That is a better
+shape anyway, but it is a constraint rather than a preference — do not assume you can write a
+view-model test.
 
 ## Commands
 
@@ -45,18 +55,22 @@ Content validation — the build-time gate:
 swift run content-validator Sources/ContentKit/Content
 ```
 
-Exits 0 when rules V1–V17 pass, 1 on any finding, 2 on bad arguments. Point it at an authored content tree (the directory holding `manifest.json`, `places/`, `quests/`, `assets/`, `consent/`).
+Exits 0 when rules V1–V18 pass, 1 on any finding, 2 on bad arguments. Point it at an authored content tree (the directory holding `manifest.json`, `places/`, `quests/`, `assets/`, `consent/`).
 
 UI tests and app build — run from `challange-5/`:
 
 ```bash
 xcodebuild test -project challange-5.xcodeproj -scheme challange-5 \
-  -destination 'platform=iOS Simulator,name=iPhone 17'
+  -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'
 ```
 
-Check `xcrun simctl list devices available` before assuming a device name — the installed set here is iPhone 17 / 17 Pro / 17 Pro Max / 17e / 16e, with no iPhone 16.
+Pin `OS=` — several runtimes are installed (26.3, 26.4, 26.5) and only some of them have an
+iPhone 17. Check `xcrun simctl list devices available` before assuming a device name; under 26.5 the
+set is iPhone 17 / 17 Pro / 17 Pro Max / 17e / Air, with no iPhone 16.
 
-Schemes: `challange-5` (app + UI tests), plus `ContentKit`, `RunEngine`, `DesignSystem`, `AppFeatures`, `content-validator` from the package.
+Schemes: `challange-5` (app + UI tests), plus `ContentKit`, `RunEngine`, `DesignSystem` and
+`content-validator` from the package. Xcode also lists an **`AppFeatures` scheme that is stale** —
+commit `b597b5b` removed that target and the scheme file survived it.
 
 ### Walking a quest without walking
 
@@ -78,7 +92,7 @@ Requirement IDs are the working vocabulary and are cited in code comments and te
 | `FR-*` | functional requirement |
 | `NFR-*` | non-functional requirement |
 | `AD-1…5` | architectural decisions |
-| `V1…V17` | content validation rules (`schema.md` §A.9) |
+| `V1…V18` | content validation rules (`schema.md` §A.9) |
 
 When adding code that satisfies a requirement, cite its ID. When you find yourself wanting to violate one, say so explicitly rather than working around it.
 
@@ -100,7 +114,9 @@ The protocol deliberately has no notion of loading, refreshing, connectivity, or
 
 ### Layering
 
-`ContentKit` (Foundation only) → `RunEngine` (Foundation + ContentKit) → `DesignSystem` → `AppFeatures` (SwiftUI) → app target shell.
+`ContentKit` (Foundation only) → `RunEngine` (Foundation + ContentKit) → `DesignSystem` → the app target's `Model`/`ViewModel`/`View` (SwiftUI).
+
+The app target is not a shell — since `b597b5b` it holds every screen and view model. `DesignSystem` is the last package layer, and it knows nothing about `ContentKit`: every string is passed in by the caller (`NFR-I18N-01`), which is why components take `String` rather than `LocalizedText`.
 
 `ContentKit` and `RunEngine` must not import SwiftUI, UIKit, CoreLocation, MapKit, or AppKit. Target linkage enforces this in the app build, but on macOS all those modules exist in the SDK and an import would compile fine — so `ImportBoundaryTests` scans the source tree and is what actually holds the boundary.
 
@@ -112,13 +128,25 @@ These are the places where a reasonable-looking change silently breaks a guarant
 
 - **`LocalizedText` has no language fallback.** A missing `id` or `en` translation is a decode failure, never a runtime degradation into a mixed-language lore passage (`NFR-I18N-03`).
 - **Validator rules live in `ContentKit`**, shared by the CLI and the runtime loader, so the two cannot disagree about what valid content is. Adding a rule means adding it in one place and adding a test that proves violating content is *rejected* — a test that only confirms valid content passes proves nothing.
-- **Contrast is measured, not reviewed.** `DesignSystem/Contrast.swift` plus `KultaraThemeTests` assert every theme pair against WCAG ratios (`NFR-A11Y-03`). The aged-paper visual direction fails contrast easily; the theme yields, not the threshold.
+- **Contrast is measured, not reviewed.** `DesignSystem/Contrast.swift` plus `KultaraThemeTests` and `HisploraThemeTests` assert every pair of **both** palettes against WCAG ratios (`NFR-A11Y-03`). A palette exposes `contrastPairs`, and a second test asserts that every token appears in at least one pair — so adding a colour without measuring it fails the suite rather than shipping. Where a sampled design value fails, *the theme yields and the deviation is recorded* (`docs/hisplora-tokens.md` lists the two that moved and why).
 - **`mapPoint` is authored, not derived from `coordinate`.** The region map is a hand-drawn illustration with a stylised coastline; projecting real coordinates onto it puts every pin somewhere wrong while looking precise. The validator checks range, not geography.
 - **Tasks never gate progression.** `blocksProgression` must be `false` for all content (`AD-2`, rule V8). Photos are keepsakes; the GPS radius is the gate.
 - **Arrival needs the accuracy check, not just the distance check.** `FR-ARR-01` is two conditions, and the second is the load-bearing one: without `horizontalAccuracy <= radius`, a 500 m cell-tower fix unlocks a 75 m checkpoint from the next neighbourhood. It is also why the manual override is mandatory rather than a nicety (`FR-START-10`) — inside a covered market the accuracy test fails legitimately and often.
 - **A completed Run stays writable for reading and answering.** The final checkpoint completes the walk the instant it is reached (`FR-DONE-01`), while the walker is still standing there with the closing reflection unanswered. `markLoreOpened` and `recordTaskResult` therefore accept `completed` as well as `active`; gating them on `active` makes completion swallow the ending that `FR-TASK-07` requires.
 - **The summary model takes no `ContentRepository`.** `RunSummaryViewModel` renders from snapshots alone, which is how `FR-DONE-04/05` and `FR-RUN-06` are guaranteed rather than intended. Handing it a repository would make a withdrawn Place able to blank a walk somebody finished.
 - **A screen's view model belongs in `@State`.** Building one inside a `body` rebuilds it on every redraw, which orphans anything in flight — see `ScreenHost` in `KultaraRootView.swift`. This presented as an arrival screen that never found a fix.
+- **The run map is drawn, never tiled.** `FR-MAP-01`/`FR-OFF-03` rule out live map tiles, so there is no `MKMapView` and there must never be one. `RunRouteMapView` projects the authored `route.geojson` onto a `Canvas` via `RunEngine.RouteProjection`, which shares `Geo.earthRadiusM` with `Geo.distanceM` so the drawn length and the printed distance cannot disagree. `Place.mapPoint` is *not* usable here — it is authored against the stylised island illustration and means nothing at street scale.
+
+## Two visual directions, split at a screen boundary
+
+The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → transition.
+
+Two rules keep that from rotting:
+
+- **The seam falls between screens, never inside one.** A half-restyled screen is not survivable; a boundary between two whole screens is. `QuestRunView.isOnStoryFlow` is the switch, and it also hides the museum navigation bar on those stages.
+- **Museum-inked components must not be dropped onto a Hisplora ground.** They are measured against paper. `RunRouteMapView` takes `showsChrome:` for exactly this reason — its heading is `palette.seal`, which falls to about 2:1 on brown. This shipped as a real contrast bug before it was caught on device.
+
+`docs/hisplora-tokens.md` records where each token was sampled, every measured ratio, and — importantly — the frames' content that was deliberately **not** built: the AI-generated portrait of a named historical figure (a `FR-CP-05` claim with no source or consent record), the external-maps handoff (`AD-3`), and the map screenshot (`FR-MAP-01`).
 
 ## Content
 
@@ -133,4 +161,7 @@ Any change to any content file must bump `contentBundleVersion` in `manifest.jso
 - Deployment target is iOS 18.0, but the only simulator runtime on this machine is iOS 26.5. Layout is verified on 26.5; the 18.0 floor itself has never been run. Do not claim otherwise.
 - The app target builds with `SWIFT_VERSION = 5.0` while the package is `swift-tools-version: 6.0`. The package targets are in Swift 6 language mode; the app shell is not.
 - `.claude/plans/cultural-heritage-quest.plan.md` (Milestone 1, content model) is superseded by `docs/schema.md`.
-- The app has no name. "Kultara" appears throughout the code as a working title, but Kultara is a community storyteller organization in Sanur that the team interviewed — a research partner, not a brand. This needs resolving before any release.
+- The app has no name. "Kultara" appears throughout the code as a working title, but Kultara is a community storyteller organization in Sanur that the team interviewed — a research partner, not a brand. "Hisplora" is the Figma file's name and is used for the visual direction only, not as a product name. This needs resolving before any release.
+- **The shipped content is placeholder.** Five fictional `contoh-*` places in Denpasar. The Figma frames name a real quest (I Gusti Ngurah Made Agung, Puri Agung Pemecutan, the Puputan) that does not exist in the content tree and cannot be authored without consent records and citations. Screens render from `ContentKit` by ID; never bake those names in (`AD-4`, `FR-RUN-06`).
+- **`FR-CP-05` has an undocumented exception.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**. It needs an amendment or a signed exception with an owner.
+- The cutscene, story reveal and transition screens compile and are wired into `QuestRunViewModel.Stage`, but have never been seen rendering: they are gated behind arrival, and the "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP. Verify them from Xcode before trusting them.
