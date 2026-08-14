@@ -9,8 +9,17 @@ struct KultaraRootView: View {
 
     @State private var language: ContentLanguage
     @State private var showsOnboarding: Bool
+    /// The two entry screens the app-flow chart opens with, neither of which is built. Held in
+    /// `@State` rather than persisted: they are wireframes, and a persisted flag would mean the
+    /// team has to clear app data to see them again. Both are one tap to get past.
+    @State private var showsSplash = true
+    @State private var showsAuth = true
     @State private var selectedQuestID: String?
     @State private var runDestination: RunDestination?
+    /// The same run screen, reached from the Journal tab. A second piece of state rather than a
+    /// shared one, because each tab owns its own navigation stack and a destination pushed on one
+    /// cannot be popped by the other.
+    @State private var journalRunDestination: RunDestination?
     /// Bumped whenever a walk changes, so the home screen's journal is rebuilt. The store is not
     /// observable — it is a protocol with a file behind it — and a counter is a smaller thing to
     /// own than an observation layer this milestone would use in exactly one place.
@@ -31,7 +40,10 @@ struct KultaraRootView: View {
     /// bar below is drawn by this view and the map is the one screen that wants it gone.
     @State private var questSurface = QuestListView.Surface.list
 
-    private enum Tab: String { case quests, settings }
+    /// The three branches the flow chart draws out of Home. Settings is no longer a tab of its
+    /// own: the chart reaches it as Profile → Account settings → App preferences, and it is still
+    /// two taps away.
+    private enum Tab: String { case quests, journal, profile }
 
     init(environment: KultaraEnvironment) {
         self.environment = environment
@@ -43,11 +55,17 @@ struct KultaraRootView: View {
 
     var body: some View {
         KultaraThemeProvider {
-            if showsOnboarding {
+            // Splash → Onboarding → Login/Register → Home, as the flow chart opens. The first and
+            // third of those are wireframes; only onboarding is a built screen.
+            if showsSplash {
+                SplashWireframeView(language: language, onFinish: { showsSplash = false })
+            } else if showsOnboarding {
                 OnboardingView(
                     store: environment.preferences,
                     language: language,
                     onFinish: { showsOnboarding = false })
+            } else if showsAuth {
+                AuthWireframeView(language: language, onSkip: { showsAuth = false })
             } else {
                 browser
             }
@@ -60,10 +78,10 @@ struct KultaraRootView: View {
         // has, so a bar whose labels have grown at an accessibility size cannot end up sitting on
         // the last card. The full-bleed map ignores the safe area and still runs underneath it.
         Group {
-            if tab == Tab.settings.rawValue {
-                NavigationStack { settingsDestination }
-            } else {
-                questsStack
+            switch Tab(rawValue: tab) ?? .quests {
+            case .quests: questsStack
+            case .journal: journalStack
+            case .profile: profileStack
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -92,7 +110,7 @@ struct KultaraRootView: View {
         // Journey". The bar sits on top of every one of them, which is the same defect QA reported
         // against the keyboard: a floating bar covering the control the screen is asking for.
         // Switching tabs mid-walk is not an interaction the run flow offers anyway.
-        if runDestination != nil { return true }
+        if runDestination != nil || journalRunDestination != nil { return true }
         return false
     }
 
@@ -100,9 +118,12 @@ struct KultaraRootView: View {
         [KultaraTab(id: Tab.quests.rawValue,
                     title: UIStrings.string(.questListTitle, language),
                     symbolName: "map"),
-         KultaraTab(id: Tab.settings.rawValue,
-                    title: UIStrings.string(.settingsTitle, language),
-                    symbolName: "gearshape")]
+         KultaraTab(id: Tab.journal.rawValue,
+                    title: WireframeCatalog.journal.title.value(for: language),
+                    symbolName: "book"),
+         KultaraTab(id: Tab.profile.rawValue,
+                    title: WireframeCatalog.profile.title.value(for: language),
+                    symbolName: "person.crop.circle")]
     }
 
     private var questsStack: some View {
@@ -125,6 +146,31 @@ struct KultaraRootView: View {
                 .navigationDestination(item: $runDestination) { destination in
                     runScreen(destination)
                 }
+        }
+    }
+
+    /// Home → Journal → visited places → trip summary. The visited places are real; the screens
+    /// hung off them are wireframes.
+    private var journalStack: some View {
+        NavigationStack {
+            JournalWireframeView(
+                language: language,
+                journal: journal,
+                onOpenRun: { runID in
+                    guard let run = (try? environment.runStore.run(id: runID)) ?? nil else { return }
+                    journalRunDestination = RunDestination(
+                        questID: run.questID, existingRunID: run.id, discardingExistingDraft: false)
+                })
+                .navigationDestination(item: $journalRunDestination) { destination in
+                    runScreen(destination)
+                }
+        }
+    }
+
+    /// Home → Profile → Account settings → App preferences.
+    private var profileStack: some View {
+        NavigationStack {
+            ProfileWireframeView(language: language) { settingsDestination }
         }
     }
 

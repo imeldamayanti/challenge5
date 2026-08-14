@@ -29,12 +29,35 @@ final class DiscoveryFlowUITests: XCTestCase {
         app.launchArguments = arguments
         app.launch()
 
+        // The splash wireframe auto-advances, but tapping through it keeps the test's timings its
+        // own rather than the animation's.
+        let splashContinue = app.buttons["Continue"]
+        if splashContinue.waitForExistence(timeout: 10) {
+            splashContinue.tap()
+        }
+
         // FR-ONB-02: skippable from the first screen. Every test below depends on that being true.
         let skip = app.buttons["Skip"]
         if skip.waitForExistence(timeout: 10) {
             skip.tap()
         }
+
+        // The login wireframe stands where the flow chart puts it. There is no account backend, so
+        // its skip is the only control on it that does anything.
+        let skipAuth = app.buttons["Skip for now"]
+        if skipAuth.waitForExistence(timeout: 10) {
+            skipAuth.tap()
+        }
         return app
+    }
+
+    /// Settings is no longer a tab: the flow reaches it as Profile → App preferences.
+    private func openSettings(_ app: XCUIApplication, timeout: TimeInterval = 10) {
+        app.buttons["Profile"].firstMatch.tap()
+        let preferences = app.buttons["Settings"].firstMatch
+        XCTAssertTrue(preferences.waitForExistence(timeout: timeout),
+                      "Profile did not offer a way into the app preferences")
+        preferences.tap()
     }
 
     /// Taps the quest's card. The card is one accessibility element — a single button that reads as
@@ -91,11 +114,10 @@ final class DiscoveryFlowUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Safety"].exists, "FR-DISC-03: safety notice missing")
         attach(app, named: "quest-preview")
 
-        // Back, then Settings. Settings is a tab now rather than a gear in the bar: the Home
-        // design has no navigation bar to hold one.
+        // Back, then the app preferences, reached through Profile.
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(questTitle.waitForExistence(timeout: 10))
-        app.buttons["Settings"].firstMatch.tap()
+        openSettings(app)
         XCTAssertTrue(app.staticTexts["Language"].waitForExistence(timeout: 10),
                       "Settings did not open")
         attach(app, named: "settings")
@@ -175,7 +197,7 @@ final class DiscoveryFlowUITests: XCTestCase {
 
         app.navigationBars.buttons.element(boundBy: 0).tap()
         XCTAssertTrue(questTitle.waitForExistence(timeout: 15))
-        app.buttons["Settings"].firstMatch.tap()
+        openSettings(app, timeout: 15)
         XCTAssertTrue(app.staticTexts["Language"].waitForExistence(timeout: 15),
                       "Settings unreachable at the largest accessibility size")
         attach(app, named: "a11y-settings")

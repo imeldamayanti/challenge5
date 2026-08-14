@@ -27,6 +27,20 @@ public enum KultaraTypography {
         case chipLabel
         case buttonLabel
 
+        // MARK: The Hisplora story flow
+        //
+        // Three roles that exist only on the story screens, in the faces those frames are drawn
+        // with. They live in the same table as everything else so there is still exactly one place
+        // that decides what a piece of type is.
+
+        /// The heading on a story-flow screen — "The Last Traces of Badung", "A Legend Will Guide
+        /// Your Journey". Set in the system serif, as the frames set it.
+        case storyDisplay
+        /// The hook typed onto the sheet in the typewriter (`81:588`).
+        case typedSheet
+        /// The two figures ruled beneath it: the distance and the duration.
+        case typedFigure
+
         public var textStyle: Font.TextStyle {
             switch self {
             case .questTitleLarge: .largeTitle
@@ -39,6 +53,9 @@ public enum KultaraTypography {
             case .caption: .footnote
             case .chipLabel: .footnote
             case .buttonLabel: .body
+            case .storyDisplay: .largeTitle
+            case .typedSheet: .footnote
+            case .typedFigure: .title3
             }
         }
 
@@ -50,6 +67,9 @@ public enum KultaraTypography {
             case .eyebrow, .buttonLabel: .semibold
             case .chipLabel: .medium
             case .body, .lore, .metadata, .caption: .regular
+            // Special Elite ships in one weight, and New York's display cut is drawn light on
+            // purpose — the frames set both regular.
+            case .storyDisplay, .typedSheet, .typedFigure: .regular
             }
         }
 
@@ -63,6 +83,8 @@ public enum KultaraTypography {
         public var face: KultaraFace {
             switch self {
             case .questTitleLarge, .questTitle, .sectionHeading: .serif
+            case .storyDisplay: .displaySerif
+            case .typedSheet, .typedFigure: .typewriter
             default: .sans
             }
         }
@@ -85,6 +107,13 @@ public enum KultaraTypography {
             case .questTitleLarge: 40
             case .questTitle: 24
             case .sectionHeading: 22
+            case .storyDisplay: 38
+            // The frame types the sheet at 8.5 pt, because on the frame the sheet is a small
+            // object inside a photograph. Reproduced literally it is unreadable, so the sheet is
+            // set at a size a person can read and scales from there (`NFR-A11Y-01`). Deviation
+            // recorded in `docs/hisplora-tokens.md`.
+            case .typedSheet: 14
+            case .typedFigure: 20
             default: 17
             }
         }
@@ -97,6 +126,9 @@ public enum KultaraTypography {
             case .chipLabel, .caption: 0.5
             case .buttonLabel, .metadata: 0.3
             case .questTitleLarge, .questTitle, .sectionHeading, .body, .lore: 0
+            // The frames track the display down (-0.76 at 38 pt) and the typed sheet in slightly.
+            case .storyDisplay: -0.76
+            case .typedSheet, .typedFigure: -0.34
             }
         }
 
@@ -115,7 +147,10 @@ public enum KultaraTypography {
         /// at the default content size. Only the two title roles qualify.
         public var isLargeText: Bool {
             switch self {
-            case .questTitleLarge, .questTitle: true
+            // `typedFigure` is deliberately absent. It is `.title3` — 20 pt regular — which is
+            // under WCAG's 24 pt, so claiming the allowance here would quietly lower the bar the
+            // palette is measured against. It is inkDark on paper anyway, at 13.64:1.
+            case .questTitleLarge, .questTitle, .storyDisplay: true
             default: false
             }
         }
@@ -133,6 +168,9 @@ public enum KultaraTypography {
             case .lore, .body: 4
             case .questTitleLarge: -4
             case .questTitle, .sectionHeading: -2
+            case .storyDisplay: -3
+            // 1.4 line height on the frame's sheet, which at this size is a few points of air.
+            case .typedSheet: 5
             default: 0
             }
         }

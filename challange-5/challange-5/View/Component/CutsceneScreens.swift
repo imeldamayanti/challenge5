@@ -29,7 +29,7 @@ struct CutsceneIntroScreen: View {
     let onBack: () -> Void
 
     var body: some View {
-        HisploraStage(ground: \.brownMid) {
+        HisploraStage(ground: \.brownStone) {
             VStack(spacing: 0) {
                 HStack {
                     HisploraBackButton(
@@ -40,7 +40,7 @@ struct CutsceneIntroScreen: View {
                 ScrollView {
                     VStack(spacing: KultaraMetrics.xl) {
                         Text(UIStrings.string(.cutsceneLegendTitle, language))
-                            .font(KultaraTypography.font(.questTitleLarge))
+                            .kultaraFont(.storyDisplay)
                             .foregroundStyle(palette.inkCream.color)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
@@ -90,7 +90,7 @@ struct CutscenePortraitScreen: View {
     let onBack: () -> Void
 
     var body: some View {
-        HisploraStage(ground: \.brownMid) {
+        HisploraStage(ground: \.brownStone) {
             VStack(spacing: 0) {
                 HStack {
                     HisploraBackButton(
@@ -104,7 +104,7 @@ struct CutscenePortraitScreen: View {
                             .padding(.horizontal, KultaraMetrics.xxl)
                         VStack(spacing: KultaraMetrics.sm) {
                             Text(title)
-                                .font(KultaraTypography.font(.questTitleLarge))
+                                .kultaraFont(.storyDisplay)
                                 .foregroundStyle(palette.inkCream.color)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)

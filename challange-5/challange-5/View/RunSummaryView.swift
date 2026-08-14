@@ -21,6 +21,7 @@ struct RunSummaryView: View {
                     stopSection(stop)
                 }
                 awardsSection
+                nextInFlowSection
                 Text(model.snapshotNote)
                     .kultaraFont(.metadata)
                     .foregroundStyle(palette.inkMuted.color)
@@ -101,6 +102,29 @@ struct RunSummaryView: View {
                                   award.snapshotName),
                     emphasised: true)
             }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// What the flow chart draws after this screen: the journal question, and — through it — the
+    /// trip summary, the share card and the recommendation. All four are wireframes; this section
+    /// is the way into them, and it says which side of the line it is on.
+    private var nextInFlowSection: some View {
+        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
+            KultaraSectionHeading(WireframeCatalog.stamp.value(for: language))
+            NavigationLink {
+                CreateJournalWireframeView(language: language)
+            } label: {
+                Text(WireframeCatalog.createJournal.title.value(for: language))
+            }
+            .buttonStyle(.ruled)
+
+            NavigationLink {
+                TripSummaryWireframeView(language: language)
+            } label: {
+                Text(WireframeCatalog.tripSummary.title.value(for: language))
+            }
+            .buttonStyle(.ruled)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }

@@ -16,7 +16,8 @@ The repo root and the Xcode project directory share a name, which is confusing:
 
 ```
 /                              repo root — CLAUDE.md and .gitignore only
-├── docs/                      system-design.md, schema.md, hisplora-tokens.md
+├── docs/                      system-design.md, schema.md, hisplora-tokens.md,
+│                              backend-supabase.md (design only — nothing built)
 │   ├── screenshots/           captured UI verification screenshots
 │   └── research/              field research artifacts — interview summary,
 │                              affinity diagram, tourist-findings and
@@ -156,6 +157,26 @@ Lore is an array of labelled `LoreBlock`s, not prose. Each block carries `accura
 
 Any change to any content file must bump `contentBundleVersion` in `manifest.json`.
 
+## The app-flow chart, and the wireframes standing in for it
+
+The team's flow chart draws nodes the app does not have: splash, login/register, a Journal branch
+(visited places → trip summary → share → template preview), a Profile branch (account settings →
+app preferences), the create/save-journal loop, the next-adventure recommendation, and the
+passing-by notification branch. Each is reachable in the running app as a **wireframe** —
+`View/WireframeScreens.swift` around `View/Component/WireframeScreen.swift`, with all copy in
+`Support/WireframeCatalog.swift`.
+
+They are drawings, not features: dashed empty boxes, a `WIREFRAME // NOT BUILT` stamp, and a note
+on each saying what has to be decided before it can be built. Nothing behind them works, and
+nothing in them is persisted. Deleting one means deleting its `WireframeCatalog` entry with it.
+Wireframe copy is deliberately kept out of `UIStrings` so the real string table never carries
+strings for screens that do not exist.
+
+Two structural consequences: the tab bar is Quests / Journal / Profile (settings is no longer a
+tab — the chart reaches it as Profile → App preferences, and `DiscoveryFlowUITests.openSettings`
+follows that path), and launch goes splash → onboarding → login before Home, with the splash
+auto-advancing and the login carrying a "Skip for now".
+
 ## Known state
 
 - Deployment target is iOS 18.0, but the only simulator runtime on this machine is iOS 26.5. Layout is verified on 26.5; the 18.0 floor itself has never been run. Do not claim otherwise.
@@ -164,4 +185,4 @@ Any change to any content file must bump `contentBundleVersion` in `manifest.jso
 - The app has no name. "Kultara" appears throughout the code as a working title, but Kultara is a community storyteller organization in Sanur that the team interviewed — a research partner, not a brand. "Hisplora" is the Figma file's name and is used for the visual direction only, not as a product name. This needs resolving before any release.
 - **The shipped content is placeholder.** Five fictional `contoh-*` places in Denpasar. The Figma frames name a real quest (I Gusti Ngurah Made Agung, Puri Agung Pemecutan, the Puputan) that does not exist in the content tree and cannot be authored without consent records and citations. Screens render from `ContentKit` by ID; never bake those names in (`AD-4`, `FR-RUN-06`).
 - **`FR-CP-05` has an undocumented exception.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**. It needs an amendment or a signed exception with an owner.
-- The cutscene, story reveal and transition screens compile and are wired into `QuestRunViewModel.Stage`, but have never been seen rendering: they are gated behind arrival, and the "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP. Verify them from Xcode before trusting them.
+- The story flow has been seen rendering on iPhone 17 / iOS 26.5 (story preview, both cutscenes, story reveal). The "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP; drive arrival with `xcrun simctl location <udid> set -8.657,115.2085` instead — the start checkpoint of `contoh-jejak-kota-lama`, with `ArrivalEvaluator` unmodified. The transition screen is still unseen.

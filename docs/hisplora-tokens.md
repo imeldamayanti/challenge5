@@ -1,7 +1,7 @@
 # Hisplora tokens
 
-Sampled 2026-08-13 from Figma file `Ok5TmLeDGTbIDuxGbDQFeM`, board `13:128`, per-frame nodes listed
-below. Recorded here so the next person does not need Figma access to know what the numbers were, or
+Sampled 2026-08-13 and re-read 2026-08-14 from Figma file `Ok5TmLeDGTbIDuxGbDQFeM`, board `13:128`,
+per-frame nodes listed below. Recorded here so the next person does not need Figma access to know what the numbers were, or
 which of them had to be adjusted.
 
 The values live in `DesignSystem/HisploraTheme.swift`; the measurements are asserted by
@@ -15,11 +15,16 @@ Green `#A3CD3E`, plus 0–900 ramps for four of them. None of it appears on any 
 drawn in browns, cream and sepia as raw fills, so every token below was read off the frames.
 
 **Not Plus Jakarta Sans either.** The Typography frame (`1:92`) specifies Plus Jakarta Sans at five
-sizes. No frame on the board uses it. The screens are set in Instrument Serif (already shipped, SIL
-OFL) for display, SF Pro for everything read or operated, and Special Elite for the typewriter sheet
-on `81:588`. The type direction therefore did **not** change, and no new face had to be licensed —
-the typewriter sheet uses SF Pro's monospaced design rather than embedding Special Elite, which is
-noted as a deviation below.
+sizes. No frame on the board uses it. The story frames are set in **New York Extra Large** for
+display (`81:588`, `98:1588`, `187:866` all name it), SF Pro for everything read or operated, and
+**Special Elite** for the typewriter sheet on `81:588`.
+
+Both are now implemented as drawn. New York is the system's own serif, reached through the
+`storyDisplay` role — the museum catalogue keeps Instrument Serif, so the app carries two display
+faces separated at the same screen boundary the palette is. Special Elite is shipped with the
+package (Apache 2.0, licence beside the face) and is registered by `KultaraFonts` like Instrument
+Serif; `typedSheet` and `typedFigure` are the only two roles that use it, which
+`TypewriterTests.onlyTheSheetRolesAreSetInTheTypewriterFace` holds.
 
 Both pages read as untouched template material. Worth asking the designer to publish real variables
 so the next import is not another archaeology exercise.
@@ -29,12 +34,13 @@ so the next import is not another archaeology exercise.
 | Token | Hex | Where it is drawn |
 |---|---|---|
 | `brownDeep` | `#6E2717` | ground: story reveal, location screens, transition |
-| `brownMid` | `#6E3B26` | ground: cutscene frames; fill of the circular next control |
+| `brownMid` | `#6E3B26` | frame fill behind the cutscene; fill of the circular next control |
+| `brownStone` | `#58453E` | ground: story preview and both cutscene frames — the full-bleed rect each of them lays over itself |
 | `paperCream` | `#EEE7D2` | the typewriter sheet on `81:588`; the clue card |
 | `paperWarm` | `#EADBC7` | the sketch pages of Story Reveal |
 | `paperLight` | `#F4EADD` | Location Checking |
 | `inkCream` | `#FDF2DE` | headings on the brown grounds |
-| `inkDusty` | `#CDB1AA` | muted leads on the brown grounds — **moved, see below** |
+| `inkDusty` | `#D0B5AE` | muted leads on the brown grounds — **moved, see below** |
 | `inkDark` | `#1D1D1D` | headings on paper |
 | `inkBody` | `#444444` | body copy on paper |
 | `inkMuted` | `#5E5A5A` | secondary copy on paper |
@@ -51,8 +57,10 @@ Produced by `HisploraThemeTests.reportMeasuredContrastRatios`.
 |---|---|---|---|
 | inkCream on brownDeep | 9.63:1 | 3.0 | PASS |
 | inkCream on brownMid | 8.17:1 | 3.0 | PASS |
-| inkDusty on brownDeep | 5.32:1 | 4.5 | PASS |
-| inkDusty on brownMid | 4.52:1 | 4.5 | PASS |
+| inkCream on brownStone | 8.11:1 | 3.0 | PASS |
+| inkDusty on brownDeep | 5.55:1 | 4.5 | PASS |
+| inkDusty on brownMid | 4.71:1 | 4.5 | PASS |
+| inkDusty on brownStone | 4.67:1 | 4.5 | PASS |
 | inkDark on paperCream | 13.64:1 | 4.5 | PASS |
 | inkBody on paperCream | 7.88:1 | 4.5 | PASS |
 | inkMuted on paperCream | 5.51:1 | 4.5 | PASS |
@@ -65,6 +73,7 @@ Produced by `HisploraThemeTests.reportMeasuredContrastRatios`.
 | inkOnButton on buttonFill | 18.53:1 | 4.5 | PASS |
 | buttonRing on brownMid | 3.31:1 | 3.0 | PASS |
 | buttonRing on brownDeep | 3.90:1 | 3.0 | PASS |
+| buttonRing on brownStone | 3.29:1 | 3.0 | PASS |
 
 `highlight` is deliberately not in this table. It is a hand-drawn annotation over text that is
 already measured, it fails against the paper by a wide margin (1.45:1), and it therefore never
@@ -74,25 +83,56 @@ it cannot quietly start carrying text.
 
 ## Deviations from the frames
 
-Four, all recorded rather than argued.
+Five, all recorded rather than argued.
 
-1. **`inkDusty` was lightened.** As drawn it is `#CBAFA8`, which measures 4.42:1 on `brownMid` —
-   0.08 under the threshold. `NFR-A11Y-03` says the theme yields, not the threshold, so it moved to
-   the nearest passing value, `#CDB1AA` (4.52:1). The difference is invisible; the failure was not.
+1. **`inkDusty` was lightened.** As drawn it is `#AA9B8E`, which measures 3.34:1 on `brownStone` —
+   it carries the lead paragraph under the cutscene's title, so it is held to body text.
+   `NFR-A11Y-03` says the theme yields, not the threshold, so it moved to the nearest passing
+   value, `#D0B5AE` (4.67:1). The difference is a shade; the failure was not.
 
-2. **The pill gained a hairline.** The frames draw a near-black pill directly on mid-brown, which is
-   2.04:1 — below the 3:1 WCAG 1.4.11 asks of a control's visual boundary. Rather than lighten the
-   ground or the fill, the control gained a `buttonRing` outline. `HisploraThemeTests` asserts both
-   halves, so restoring the frame's borderless pill fails the suite and says why.
+2. **The pill gained a hairline.** The frames draw a near-black pill directly on brown, which is
+   about 2:1 — below the 3:1 WCAG 1.4.11 asks of a control's visual boundary. Rather than lighten
+   the ground or the fill, the control gained a `buttonRing` outline. `HisploraThemeTests` asserts
+   both halves, so restoring the frame's borderless pill fails the suite and says why.
 
-3. **Special Elite is not embedded.** The typewriter sheet on `81:588` is set in Special Elite. The
-   licence was not checked and the face is not in the repo, so the sheet uses SF Pro's monospaced
-   design instead — same role (a typed page), different face. If the team wants the real face, it
-   needs the licence check the plan asked for and a `Package.swift` resource entry.
+3. ~~Special Elite is not embedded.~~ **Closed 2026-08-14.** The face is Apache 2.0, it ships in
+   `DesignSystem/Resources/Fonts` with its licence beside it, and the sheet on `81:588` is set in
+   it. `TypewriterTests.theTypewriterFaceRegisters` fails if the resource is ever dropped, rather
+   than the sheet quietly reverting to SF Pro monospaced.
 
 4. **The 402 × 874 absolute layouts are gone.** Every frame places its children by x/y. Rebuilt as
    stacks with the theme's spacing, because a layout that only works at one size fails
    `NFR-A11Y-04` at AX5 on a small device.
+
+5. **The typed sheet is set at a readable size.** The frame types the hook at 8.5 pt, because on
+   the frame the sheet is a small object inside a photograph. Reproduced literally it is
+   unreadable at the default text size and off the paper at the first size above it. `typedSheet`
+   is 14 pt scaling from `.footnote`, and the composition changed with it: the photograph is
+   cropped to the *machine*, the paper is drawn in code above it, and the two are stacked, so the
+   sheet grows with the reader's text size while the machine stays the size it is
+   (`KultaraTypewriter`).
+
+## Assets shipped from the file
+
+| Asset | Where | Note |
+|---|---|---|
+| `portrait-frame.png` | `DesignSystem/Resources/Images` | the gilded oval, laid over the picture |
+| `typewriter.png` | `DesignSystem/Resources/Images` | the machine, cropped from the photograph at 47% height so the drawn sheet joins it |
+| `SpecialElite-Regular.ttf` | `DesignSystem/Resources/Fonts` | Apache 2.0, licence shipped beside it |
+
+Both images are generated art exported from the design file (`ChatGPT Image Aug 10 …` and
+`ChatGPT Image Aug 13 …`). They depict objects and claim nothing, so they are a licence question to
+answer rather than an editorial one — recorded here and in the component headers so it stays
+answerable.
+
+**Three assets in the file were deliberately not shipped.** They are not oversights:
+
+- **The Google Maps screenshots** on `89:1402` and `223:2004`, and the traced street map derived
+  from them. They are a third party's map imagery under that party's terms, and `FR-MAP-01`
+  already rules out live tiles; `RunRouteMapView` draws the authored route instead. A shipped
+  static route image per quest (`route.previewImageAsset`) is the supported way to show a map here.
+- **The Apple system icons** in the permission-dialog mock. iOS draws that dialog itself.
+- **The AI-generated portrait** of I Gusti Ngurah Made Agung — see below.
 
 ## What the frames draw that the code does not, and why
 
@@ -106,9 +146,13 @@ These are requirement conflicts, not omissions.
   `RunRouteMapView`, the drawn canvas from `FR-MAP-02`. `FR-MAP-01` forbids live tiles.
 - **The AI-generated portrait** of I Gusti Ngurah Made Agung is not shipped. A likeness of a named
   historical person is a claim; `FR-CP-05` requires every claim to carry its accuracy label and its
-  source; the sample content ships no such person, no consent record and no citation.
-  `KultaraPortraitFrame` takes the picture as a parameter, so a licensed or labelled image drops in
-  without the component changing.
+  source; the sample content ships no such person, no consent record and no citation. The gilded
+  frame around it *is* shipped, and both cutscene screens and the story preview render it with
+  whatever picture the quest supplies — today the quest's own hero image, which has provenance
+  behind it. Dropping the portrait in is a content change, not a code change: give a quest a hero
+  image, a `LoreBlock` naming the sitter with its `accuracy` and `sourceRefs`, and a consent record
+  the validator can resolve (`V4`). Until those exist, shipping the likeness would put an unsourced
+  claim about a real person on the screen the whole flow opens with.
 - **The sketch illustrations** behind the Story Reveal pages are per-quest content art. The screen
   renders them when content supplies them and lays out correctly without them.
 - **The clue and the manual override** appear on none of the three location frames and are on the
@@ -143,5 +187,23 @@ the checkpoint screen still displays both; what changed is that the reveal scree
 | `1:92` | Typography (template) |
 | `1:632` | Colors (template) |
 
-The SSE serialization fault that blocked four of these on 2026-08-13 has cleared; all eleven
-returned `get_design_context` cleanly.
+The SSE serialization fault that blocked four of these on 2026-08-13 has cleared for individual
+frames; all eleven return `get_design_context` cleanly. It still breaks on the **board** — both
+`get_design_context` and `get_metadata` on `13:128` fail with a truncated SSE frame, and
+`get_metadata` on the page (`0:1`) omits the section entirely, listing only the two template
+frames. So the board cannot be enumerated from the tool: query frames by the node ids in this
+table, which is the reason the table exists.
+
+## Seen rendering
+
+`81:588`, `98:1588` and `187:866` were verified on iPhone 17 / iOS 26.5 on 2026-08-14 — the first
+time the cutscene screens had been seen at all. The run reaches them from a desk by setting the
+simulator's location to the first checkpoint rather than by the debug toggle:
+
+```bash
+xcrun simctl location <udid> set -8.657,115.2085
+```
+
+That is `contoh-puri-gerbang-utara`, the start checkpoint of `contoh-jejak-kota-lama`. The arrival
+rule is unmodified — the radius and accuracy gate in `ArrivalEvaluator` runs on the reported fix, so
+what is exercised is the walker's own code path.

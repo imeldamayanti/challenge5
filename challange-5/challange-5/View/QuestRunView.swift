@@ -104,6 +104,7 @@ struct QuestRunView: View {
             hook: model.hookText,
             distanceText: model.routeDistanceText,
             durationText: model.routeDurationText,
+            portraitURL: model.cutsceneImageURL,
             onReady: { model.advanceFromStoryPreview() },
             onBack: { model.advanceFromStoryPreview() })
     }

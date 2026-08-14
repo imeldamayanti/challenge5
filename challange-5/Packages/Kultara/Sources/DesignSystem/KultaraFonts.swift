@@ -15,6 +15,15 @@ public enum KultaraFace: String, Sendable, CaseIterable {
     /// SF Pro — the system face, so it stays in step with the platform's own metrics and with
     /// whatever the reader has done to their text size.
     case sans
+    /// Special Elite, shipped with the package. The typebar face of the story preview's sheet
+    /// (`81:588`), where the hook is a page coming out of a typewriter. It is a costume face and
+    /// belongs to that one object — used anywhere else it is a novelty.
+    case typewriter
+    /// New York, the system's own serif, which is what the Hisplora frames set their headings in
+    /// (`New York Extra Large` on `81:588`, `98:1588`, `187:866`). Kept distinct from `.serif`:
+    /// the museum catalogue is set in Instrument Serif and stays that way, and the story flow gets
+    /// the face its frames were drawn with. The seam is the same screen boundary the palette uses.
+    case displaySerif
 }
 
 /// Loads and resolves the packaged typeface.
@@ -27,10 +36,17 @@ public enum KultaraFonts {
 
     public static let regularName = "InstrumentSerif-Regular"
     public static let italicName = "InstrumentSerif-Italic"
+    /// Special Elite, Apache 2.0 (licence shipped beside the face).
+    public static let typewriterName = "SpecialElite-Regular"
 
     /// Registration is done once, on first use, and its result is remembered. `static let` gives
     /// the once-only semantics and the thread safety without a lock.
     public static let isAvailable: Bool = register()
+
+    /// The typewriter face separately, because it is a different failure: the serif missing
+    /// reflows every heading, while this one missing only costs the sheet its costume. Each falls
+    /// back on its own rather than one absence disabling the other.
+    public static let typewriterIsAvailable: Bool = registerFace(typewriterName)
 
     private static func register() -> Bool {
         [regularName, italicName].allSatisfy(registerFace)
@@ -66,6 +82,19 @@ public enum KultaraFonts {
         switch role.face {
         case .sans:
             return .system(role.textStyle, design: .default, weight: role.weight)
+
+        case .displaySerif:
+            return .system(role.textStyle, design: .serif, weight: role.weight)
+
+        case .typewriter:
+            guard typewriterIsAvailable else {
+                // SF Pro's monospaced design: still a typed page, still the same metrics through
+                // Dynamic Type. This was the shipped state before the face was licensed.
+                return .system(role.textStyle, design: .monospaced, weight: role.weight)
+            }
+            return .custom(typewriterName,
+                           size: role.basePointSize,
+                           relativeTo: role.textStyle)
 
         case .serif:
             guard isAvailable else {
