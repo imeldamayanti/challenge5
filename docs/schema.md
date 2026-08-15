@@ -427,12 +427,17 @@ RunRecord ──1:N──► CheckpointResultRecord ──1:N──► TaskResul
     ├──1:N──► AwardRecord
     └──0:1──► SurveyResponseRecord
 
+SideQuestRecord ──0:1──► SideQuestChallengeResult   (PRD §5.15)
+    └──1:N──► AwardRecord
+
 TelemetryEventRecord      (standalone)
 ProximityAlertRecord      (standalone)
 AppStateRecord            (singleton)
 ```
 
 No relationships cross into content. Content is referenced by `String` id plus `contentVersion`.
+
+`SideQuestRecord` has **no** edge to `RunRecord`, and that absence is the whole of `FR-SIDE-01`: a sidequest that could reach a Run is a sidequest that can change one. It is a separate aggregate with a separate store, for the reasons in `.claude/plans/sidequest/s0-scope-and-decisions.plan.md` D1.
 
 ### B.2 `RunRecord`
 
@@ -535,14 +540,18 @@ final class TaskResultRecord {
 final class AwardRecord {
     @Attribute(.unique) var id: UUID
     var run: RunRecord?
-    var typeRaw: String                // stamp | badge
-    var sourceID: String               // stampId or badgeId from content
+    var typeRaw: String                // stamp | badge | letter
+    var sourceID: String               // stampId, badgeId, or a slot's sideQuestId
     var snapshotName: String           // survives content changes
     var awardedAt: Date
 }
 ```
 
 Cross-quest badges (v2, e.g. the Lempad link) are awarded with `run == nil` and a `sourceID` naming the achievement.
+
+`letter` arrived with PRD §5.15 (`FR-SIDE-05`) and is held by a `SideQuestRecord`, never by a Run. Adding a case to a raw-`String` enum is safe for stored data; adding one to a raw-`Int` enum is not, which is why the Appendix requires string raws in the first place.
+
+A **collection badge** (`FR-SIDE-09`) is the exception that proves the rule: it is not stored at all. It is derived from the records that fill the collection's slots, with a deterministic id, so "awarded once" is true by construction rather than by a guard — see `RunEngine.LetterCollectionProgress`.
 
 ### B.6 `SurveyResponseRecord`
 
@@ -608,6 +617,8 @@ final class ProximityAlertRecord {
 
 The **only** record of a region entry. No coordinates, no dwell, no trajectory — a movement history is exactly what NFR-PRIV-09 forbids. Rows older than 7 days are pruned; they exist solely to enforce the rate limits in FR-PROX-09.
 
+Reused as authored for sidequests (PRD §5.15, `FR-SIDE-11`). `questID` becomes a target id in one namespace shared with sidequests — the daily cap in `FR-PROX-09` is a cap on *interruptions*, and the walker does not care which feature produced one. `RunEngine.ProximityAlert` is the value form of this row, and `RunEngine.ProximityGate` is the rule that reads it; both are pure so quiet hours and rate limits are testable without a device (`s0` D10).
+
 ### B.9 `AppStateRecord`
 
 ```swift
@@ -633,6 +644,8 @@ final class AppStateRecord {
 | Summary | one `RunRecord` by id + cascaded children; **no content access** — snapshots only |
 | Telemetry flush | `TelemetryEventRecord` where `syncStateRaw == "pending"`, sort `createdAt`, limit 200 |
 | Proximity rate check | `ProximityAlertRecord` where `questID == X` and `shownAt > now-24h`; plus count where `shownAt > startOfDay` |
+| Sidequest notice / story | one `SideQuestRecord` by `sideQuestID`; **no content access** for anything already snapshotted |
+| Collection screen | `SideQuestRecord` where `collectionID == X`, sorted `slotIndex`, joined to the content collection's slots |
 
 Indexes on `RunRecord.questID`, `RunRecord.stateRaw`, `RunRecord.updatedAt`, `TelemetryEventRecord.createdAt`, `TelemetryEventRecord.syncStateRaw`. At v1 volumes — tens of runs, thousands of events — these are precautionary rather than necessary, and cost nothing to add now.
 
@@ -642,11 +655,78 @@ Indexes on `RunRecord.questID`, `RunRecord.stateRaw`, `RunRecord.updatedAt`, `Te
 |---|---|
 | Active drafts | never expire (FR-RUN-05) |
 | Completed runs, photos, awards | never deleted except by the user (FR-SET-02) |
+| Sidequest records and earned letters | never expire; deleted only by the user (FR-SET-02) or, in part, by content withdrawal never touching them at all (FR-SIDE-14) |
 | Telemetry events | 30 days or 10,000 rows |
 | Proximity alert log | 7 days |
 | Suppression cache | replaced on successful fetch; otherwise kept indefinitely |
 
-`FR-SET-02` deletion must remove SwiftData rows **and** the photo directory. Deleting the store alone leaves orphaned image files on disk — a privacy failure that passes every database test.
+`FR-SET-02` deletion must remove SwiftData rows **and** the photo directory. Deleting the store alone leaves orphaned image files on disk — a privacy failure that passes every database test. From PRD §5.15 it must also remove `SideQuestRecord`s: erasure that leaves the letters behind is a lie told by a confirmation dialog.
+
+### B.12 `SideQuestRecord` — PRD §5.15
+
+```swift
+@Model
+final class SideQuestRecord {
+    #Index<SideQuestRecord>([\.sideQuestID], [\.collectionID], [\.updatedAt])
+
+    @Attribute(.unique) var id: UUID
+    @Attribute(.unique) var sideQuestID: String   // at most one record per sidequest
+    var placeID: String
+    var collectionID: String
+    var slotIndex: Int
+    var letter: String                 // the letter, copied (FR-SIDE-10)
+
+    var languageRaw: String
+    var contentVersion: String         // manifest.contentBundleVersion, pinned at discovery
+
+    var discoveredAt: Date
+    var arrivalMethodRaw: String       // gps | manual
+    var gpsAccuracyM: Double?
+
+    // Content snapshot, captured at discovery
+    var snapshotPlaceName: String
+    var snapshotTitle: String
+    var snapshotSynopsis: String
+    var snapshotLoreJSON: Data         // [LoreBlockSnapshot]
+
+    var stateRaw: String               // discovered | completed
+    var loreFirstOpenedAt: Date?
+    var completedAt: Date?
+    var updatedAt: Date
+
+    @Relationship(deleteRule: .cascade) var challenge: SideQuestChallengeResult?
+    @Relationship(deleteRule: .cascade) var awards: [AwardRecord]
+}
+```
+
+**`sideQuestID` is unique, and that is `FR-SIDE-05` expressed in the schema rather than in a guard somebody can forget to write.** A walker who passes a place twice on the same afternoon must not get two rows, and re-entering a completed sidequest must find the existing record rather than mint a second letter.
+
+The snapshot is the same denormalization `CheckpointResultRecord` makes and for the same reason (§4.1, `AD-4`): the letter especially has to survive the content that described the place, because a collection is a record of where somebody has been (`FR-SIDE-10`, `FR-SIDE-14`).
+
+Collection progress (`FR-SIDE-08`) is **not** a model. It is computed from the content collection plus these records on every read; storing it would create a second source of truth for "how far am I", and the two would drift the first time a record was deleted by erasure.
+
+v1 ships this as one JSON document per record under `Application Support/Kultara/sidequests` (`RunEngine.FileSideQuestStore`), mirroring `FileRunStore` — SwiftData is a swap behind `SideQuestStore`, never a call in front of it.
+
+### B.13 `SideQuestChallengeResult` — PRD §5.15
+
+```swift
+@Model
+final class SideQuestChallengeResult {
+    @Attribute(.unique) var id: UUID
+    var kindRaw: String                // quiz | photo
+    var promptSnapshot: String         // the question as it was asked
+    var attempts: Int                  // every attempt, right or wrong
+    var chosenOptionSnapshot: String?
+    var isCorrect: Bool?
+    var wasRevealed: Bool              // shown after three attempts (FR-SIDE-06)
+    var photoRelativePath: String?     // relative to the app container (NFR-REL-05, FR-SIDE-13)
+    var answeredAt: Date
+}
+```
+
+`attempts` is kept deliberately: a question everyone gets wrong three times is a badly written question, and this row is the only place that would show it. It is never read to reduce a reward — `FR-SIDE-06` awards the letter on a revealed answer exactly as on a found one.
+
+`TaskResultRecord` is **not** reused. It belongs to checkpoint tasks, whose `blocksProgression` rule (`AD-2`, V8) must keep meaning exactly what it means today; hanging a second concept off it would make V8 ambiguous.
 
 ---
 

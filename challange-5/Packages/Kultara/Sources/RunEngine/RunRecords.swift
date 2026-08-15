@@ -24,8 +24,11 @@ public enum ArrivalMethod: String, Codable, Sendable, CaseIterable {
     case gps, manual
 }
 
+/// Adding a case to a raw-`String` enum is safe for stored data; adding one to a raw-`Int` enum is
+/// not, which is why `schema.md`'s Appendix requires string raws in the first place. `letter` is
+/// the sidequest award (`FR-SIDE-05`) and arrived with PRD §5.15.
 public enum AwardType: String, Codable, Sendable, CaseIterable {
-    case stamp, badge
+    case stamp, badge, letter
 }
 
 // MARK: - Snapshots
@@ -45,6 +48,28 @@ public struct LoreBlockSnapshot: Codable, Sendable, Equatable {
         self.text = text
         self.accuracy = accuracy
         self.sourceCitations = sourceCitations
+    }
+
+    /// Copies a story out of content and into a user record, citations resolved to text.
+    ///
+    /// Lives on the snapshot rather than on either engine because both aggregates need it and
+    /// neither may reach into the other: `FR-SIDE-01` is held by `SideQuestEngine` having no call
+    /// into `RunEngine`, and a shared helper on the shared value type is how that stays true.
+    public static func snapshot(
+        _ blocks: [LoreBlock],
+        place: Place?,
+        language: ContentLanguage
+    ) -> [LoreBlockSnapshot] {
+        blocks.map { block in
+            let citations = block.sourceRefs.compactMap { index -> String? in
+                guard let place, place.sources.indices.contains(index) else { return nil }
+                return place.sources[index].citation
+            }
+            return LoreBlockSnapshot(
+                text: block.text.value(for: language),
+                accuracy: block.accuracy,
+                sourceCitations: citations)
+        }
     }
 }
 
@@ -153,7 +178,8 @@ public struct CheckpointResult: Codable, Sendable, Equatable, Identifiable {
 public struct Award: Codable, Sendable, Equatable, Identifiable {
     public let id: UUID
     public let type: AwardType
-    /// `stampId` or `badgeId` from content.
+    /// `stampId` or `badgeId` from content — and, for a `letter`, the slot's `sideQuestId`
+    /// (`FR-SIDE-05`); for a collection badge, the collection's `badgeId` (`FR-SIDE-09`).
     public let sourceID: String
     /// Carried so an award still has a name after the content that defined it is gone.
     public let snapshotName: String

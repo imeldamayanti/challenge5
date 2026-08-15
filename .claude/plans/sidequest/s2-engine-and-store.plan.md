@@ -326,3 +326,127 @@ costing one record, `deleteAll` returning a count.
 | `Tests/RunEngineTests/SideQuest*Tests.swift`, `ProximityTests.swift` | new |
 | `Tests/RunEngineTests/RunFixtures.swift` | sidequest and collection fixtures |
 | `docs/schema.md` | Part B: `SideQuestRecord`, `SideQuestChallengeResult`; §B.8 reused as authored |
+
+---
+
+## Execution — 2026-08-15
+
+**Status: built and green.** Phase A, engine-and-store half. Nothing from `s3`–`s7` was started.
+
+### A blocker cleared first, which was not this plan's
+
+Commit `fc5cb8e` on `Sidequest` **had committed, unresolved merge-conflict markers** in three files —
+`Sources/ContentKit/Content/manifest.json`, `Sources/ContentKit/Content/quests/badung-empat-wajah.json`
+and `Tests/ContentKitTests/BundledContentRepositoryTests.swift`. The package did not compile as
+committed, so neither gate below could run at all. Both sides of all three hunks were the same pair of
+lines — `s1`'s `schemaVersion: 2` / `contentBundleVersion: "2026.09.0"` against the merged master's
+`1` / `"2026.08.4"` — and the `s1` side was kept, which is the only resolution that does not delete
+shipped work. The content version is therefore still `2026.09.0` and no further bump was needed: no
+content file changed in this plan.
+
+### What was built
+
+- `Sources/RunEngine/SideQuestRecords.swift` — `SideQuestState`, `SideQuestChallengeResult`,
+  `SideQuestRecord` as §1 writes them, plus `awards: [Award]` and `letterAward` (§1's prose requires
+  the letter to be an `Award` held on the record; the struct listing omitted the field).
+- `Sources/RunEngine/SideQuestStore.swift` — the protocol as §2 writes it, `InMemorySideQuestStore`,
+  `FileSideQuestStore` under `Application Support/Kultara/sidequests`, atomic writes, corrupt document
+  skipped at load (`NFR-REL-04`). Documents are named by UUID and the cache is keyed by
+  `sideQuestID`, so a content id is never required to be a legal filename. Protocol extension adds
+  `records(collectionID:)` and `completedSideQuestIDs()`.
+- `Sources/RunEngine/SideQuestEngine.swift` — `SideQuestEngineError`, `QuizOutcome`, and the engine.
+  `discover` idempotent, `answerQuiz` awarding at most one letter ever and returning the stored
+  outcome on a completed record, `completePhoto` the same, `markLoreOpened` accepting a completed
+  record. Plus `monitoringCandidates(...)`, which is where `s0` D9's "a completed sidequest is
+  deregistered" actually lives — `RegionBudget.select` takes candidates, so something has to build
+  them, and record state is this engine's to know.
+- `Sources/RunEngine/SideQuestQuiz.swift` — `revealAfterAttempts = 3` and `grade`.
+- `Sources/RunEngine/LetterCollectionProgress.swift` — the value, `make(collection:records:…)`,
+  `maskedPhrase(placeholder:)` and `spelledOutPhrase(blankWord:separator:)` for `NFR-A11Y-01`.
+- `Sources/RunEngine/Proximity.swift` — `ProximityAlert`, `ProximityGate` (+`Limits`, `Decision`,
+  `isQuiet`), `RegionBudget` (+`Candidate`, `select`, `questStartPriority`/`sideQuestPriority`).
+- `Sources/RunEngine/RunRecords.swift` — `AwardType.letter`; `Award.sourceID`'s comment widened; and
+  `RunEngine.snapshot` moved to `LoreBlockSnapshot.snapshot(_:place:language:)` so both aggregates
+  share it **without `SideQuestEngine` calling into `RunEngine`**. §3's "nothing here touches `Run`,
+  `RunStore` or `RunEngine`" is literally true only because of that move.
+- `docs/schema.md` — §B.1 entity map, §B.5 `letter` case and the derived-collection-badge note, §B.8
+  reused as authored with the shared target-id namespace spelled out, §B.10 two query paths, §B.11
+  retention row, and new §B.12 `SideQuestRecord` / §B.13 `SideQuestChallengeResult`. Numbered after
+  B.11 rather than inserted at B.9 so nothing renumbers.
+
+### Deviations from the plan text, and why
+
+1. **`progress(collectionID:)` → `progress(collectionID:language:)`.** `FR-SIDE-08` and PRD §5.15
+   decision 3 require an unearned slot to *name its place*, and a place name is a `LocalizedText`.
+   Earned slots ignore the parameter and use their own snapshot (`NFR-I18N-04`), which one test
+   asserts directly.
+2. **`LetterCollectionProgress` gained `badge: Award?`.** §8's test table demands
+   `theCollectionBadgeIsAwardedOnTheLastLetterAndNotBefore` and §1's prose says the collection badge
+   is an `Award` held on the progress, but the §5 struct listing had no field for it. It is derived,
+   not stored, with an id derived deterministically from `badgeId` — so "awarded once" holds by
+   construction and two computations of the same progress compare equal instead of churning the view.
+3. **`RegionBudget.select(near: nil)` sorts by priority before taking the first `limit`,** rather
+   than taking authored order flat as §6's sentence reads. Authored order is preserved *within* a
+   priority. Dropping quest starts because whichever sidequests were authored first filled the budget
+   is a different silent failure from the one §6 is guarding against.
+
+### Verification
+
+```
+$ cd challange-5/Packages/Kultara && DEVELOPER_DIR=… swift test
+􁁛  Test run with 334 tests in 37 suites passed after 0.057 seconds.
+
+$ cd challange-5/Packages/Kultara && DEVELOPER_DIR=… swift run content-validator Sources/ContentKit/Content
+OK  1 quest(s), 5 place(s), 3451352 bytes — all 28 rules pass.
+```
+
+334 tests, up from `s1`'s 281 — 44 of the increase is this plan (`SideQuestEngineTests` 20 +
+`SideQuestQuizTests` 3 = 23, `FileSideQuestStoreTests` 7, `ProximityGateTests` 9 +
+`RegionBudgetTests` 5 = 14); the rest arrived with the master merge in `fc5cb8e`. Every row of §8's
+table is present under its stated name. Validator rule count is unchanged at 28 — this plan adds no
+content rule, and touches no content file.
+
+`ImportBoundaryTests.runEngineImportsNoUIOrLocationFramework` passes: nothing new imports SwiftUI,
+UIKit, CoreLocation, MapKit or AppKit, and there is no reachability check anywhere (`AD-3`).
+
+`xcodebuild` was **not** run. This plan touches no app-target file and adds no public API the app
+target consumes yet.
+
+### Left out, deliberately
+
+- **The app target's `DataEraser` does not yet clear the sidequest directory,** despite §2 saying it
+  should. `RunAndPreferencesDataEraser` takes a `RunStore`; giving it a `SideQuestStore` means
+  `KultaraEnvironment` has to hold one, and that assembly is `s4`'s. §9's files-touched table lists no
+  app-target file, and nothing writes a `SideQuestRecord` until `s4` exists, so today the directory is
+  never created. **This is a required step in `s4` and is listed as a gap below.**
+  `StorageReporter` needs no change — `ContainerStorageReporter` already walks all of Application
+  Support, so it counts `Kultara/sidequests` as authored.
+- **No proximity service, no notification, no region registration.** `ProximityGate` and
+  `RegionBudget` are the values `s3`'s adapter sits on; `UNUserNotificationCenter`, `CLLocationManager`
+  and the alert-row store are `s3`.
+- **No photo capture.** `completePhoto` records a relative path and awards the letter; writing the
+  file, the camera, and `FR-TASK-06`'s runtime check are Phase D (`s4` §7).
+- **No pruning of `ProximityAlert` rows.** `schema.md` §B.11 keeps them 7 days; the store that would
+  prune them is `s3`'s, and a pruning rule with no store to prune is a rule with nowhere to live.
+- **No authored sidequest or collection content.** Every test runs on fixtures. `s5`/Phase E needs
+  consent records and openable citations that do not exist.
+- **No UI, no view models, no strings.** `s4`.
+
+### New known gaps
+
+1. **`FR-SET-02` is incomplete until `s4` wires `FileSideQuestStore` into `LocalDataEraser`.** Nothing
+   catches this — the app target has no unit-test bundle, and `SideQuestStoreTests.deletingAllLocalDataLeavesNoLettersBehind`
+   proves only that the *store* erases. Do it in the same commit that first constructs a
+   `FileSideQuestStore` in `KultaraEnvironment`.
+2. **`monitoringCandidates` is not in `s3`'s plan text.** `s3` should adapt it rather than rebuild the
+   completed/suppressed filter, or the "a completed sidequest is deregistered" rule will exist twice.
+3. **The quest-start half of `RegionBudget` has no producer.** `RegionBudget.questStartPriority`
+   exists and is tested, but nothing builds quest-start candidates yet; until `s3` does, the 20-region
+   budget is only enforced over sidequests. `FR-SIDE-16` is not met by this plan alone.
+4. **The `FR-SIDE` block is still `PROPOSED — NOT ACCEPTED`.** Every requirement cited above is
+   reserved and stable but unsigned (`s0` §4, `s7`). If it is rejected, all six new source files go
+   with it.
+5. **The merge in `fc5cb8e` should be checked by whoever made it.** The conflict resolution above was
+   mechanical and is the only one that compiles, but nobody has confirmed that `2026.08.4`'s content
+   changes are fully present in the `2026.09.0` tree — the validator passing says the tree is
+   internally consistent, not that nothing was lost.

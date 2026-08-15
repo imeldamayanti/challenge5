@@ -296,7 +296,7 @@ public struct RunEngine {
             // `FR-CP-07` — the stamp lands here, on arrival, before any task exists to complete.
             stampAwardedAt: timestamp,
             snapshotPlaceName: place?.nameOfficial.value(for: run.language) ?? checkpoint.placeId,
-            snapshotLore: Self.snapshot(
+            snapshotLore: LoreBlockSnapshot.snapshot(
                 checkpoint.loreSegment, place: place, language: run.language),
             snapshotClueToNext: checkpoint.clueToNext?.value(for: run.language),
             snapshotContentVersion: quest.contentVersion)
@@ -321,24 +321,6 @@ public struct RunEngine {
                 sourceID: quest.badgeId,
                 snapshotName: run.snapshotQuestTitle,
                 awardedAt: timestamp))
-        }
-    }
-
-    /// Copies the story out of content and into the user's record, citations resolved to text.
-    static func snapshot(
-        _ blocks: [LoreBlock],
-        place: Place?,
-        language: ContentLanguage
-    ) -> [LoreBlockSnapshot] {
-        blocks.map { block in
-            let citations = block.sourceRefs.compactMap { index -> String? in
-                guard let place, place.sources.indices.contains(index) else { return nil }
-                return place.sources[index].citation
-            }
-            return LoreBlockSnapshot(
-                text: block.text.value(for: language),
-                accuracy: block.accuracy,
-                sourceCitations: citations)
         }
     }
 
