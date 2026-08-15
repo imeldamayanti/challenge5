@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// The three location states from the Hisplora board — `81:617` (Location Checking), `89:1402`
 /// (Location Verified) and `223:2004` (Not Quite There) — as pieces the arrival screen composes.

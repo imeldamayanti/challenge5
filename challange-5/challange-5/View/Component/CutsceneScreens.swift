@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// The cutscene — `98:1588` and `187:866`.
 ///

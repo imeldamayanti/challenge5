@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 struct SettingsSection<Content: View>: View {
     @Environment(\.kultaraPalette) private var palette

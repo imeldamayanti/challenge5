@@ -10,6 +10,7 @@
 		A0A0A0A0000000000000A005 /* ContentKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A003 /* ContentKit */; };
 		A0A0A0A0000000000000A008 /* RunEngine in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A006 /* RunEngine */; };
 		A0A0A0A0000000000000A009 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A007 /* DesignSystem */; };
+		A0A0A0A0000000000000A00C /* UIStringsKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A00B /* UIStringsKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -47,6 +48,7 @@
 			files = (
 				A0A0A0A0000000000000A008 /* RunEngine in Frameworks */,
 				A0A0A0A0000000000000A009 /* DesignSystem in Frameworks */,
+				A0A0A0A0000000000000A00C /* UIStringsKit in Frameworks */,
 				A0A0A0A0000000000000A005 /* ContentKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -101,6 +103,7 @@
 			packageProductDependencies = (
 				A0A0A0A0000000000000A006 /* RunEngine */,
 				A0A0A0A0000000000000A007 /* DesignSystem */,
+				A0A0A0A0000000000000A00B /* UIStringsKit */,
 				A0A0A0A0000000000000A003 /* ContentKit */,
 			);
 			productName = "challange-5";
@@ -483,6 +486,10 @@
 		A0A0A0A0000000000000A007 /* DesignSystem */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = DesignSystem;
+		};
+		A0A0A0A0000000000000A00B /* UIStringsKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = UIStringsKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

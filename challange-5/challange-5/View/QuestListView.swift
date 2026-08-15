@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 struct QuestListView: View {
     @Environment(\.kultaraPalette) private var palette
@@ -12,8 +13,12 @@ struct QuestListView: View {
     private let model: QuestListViewModel
     private let mapModel: RegionMapViewModel?
     private let journal: RunJournalSummary
+    /// `FR-SIDE-07` — "Places nearby", the way into a sidequest that does not wait for a
+    /// notification. Empty until `s5` authors any.
+    private let nearby: [NearbySideQuestRow]
     private let onSelect: (String) -> Void
     private let onOpenRun: (UUID) -> Void
+    private let onOpenSideQuest: (String) -> Void
 
     /// Owned by whatever presents this screen rather than held here, because the map is full-bleed
     /// and the floating tab bar belongs to the root: the root cannot hide a bar for a surface it
@@ -25,15 +30,19 @@ struct QuestListView: View {
         mapModel: RegionMapViewModel? = nil,
         surface: Binding<Surface>,
         journal: RunJournalSummary = .empty,
+        nearby: [NearbySideQuestRow] = [],
         onSelect: @escaping (String) -> Void,
-        onOpenRun: @escaping (UUID) -> Void = { _ in }
+        onOpenRun: @escaping (UUID) -> Void = { _ in },
+        onOpenSideQuest: @escaping (String) -> Void = { _ in }
     ) {
         self.model = model
         self.mapModel = mapModel
         _surface = surface
         self.journal = journal
+        self.nearby = nearby
         self.onSelect = onSelect
         self.onOpenRun = onOpenRun
+        self.onOpenSideQuest = onOpenSideQuest
     }
 
     private var language: ContentLanguage { model.language }
@@ -147,6 +156,14 @@ struct QuestListView: View {
                             PlaceholderQuestCard(entry: entry, language: language)
                         }
                     }
+                }
+
+                // `FR-SIDE-07` — sidequests are reachable without waiting for a notification.
+                // Below the catalogue and above the finished walks: a place you happen to be near
+                // is not a planned walk, and it does not outrank one.
+                if !nearby.isEmpty || model.searchText.isEmpty {
+                    NearbySideQuestList(
+                        rows: nearby, language: language, onSelect: onOpenSideQuest)
                 }
 
                 // `FR-DONE-06` — completed walks are listed and re-openable before the Journal

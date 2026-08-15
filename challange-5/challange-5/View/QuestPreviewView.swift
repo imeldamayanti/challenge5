@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 struct QuestPreviewView: View {
     @Environment(\.kultaraPalette) private var palette

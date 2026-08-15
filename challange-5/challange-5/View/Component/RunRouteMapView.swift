@@ -2,6 +2,7 @@ import ContentKit
 import DesignSystem
 import RunEngine
 import SwiftUI
+import UIStringsKit
 
 /// `FR-MAP-02` — the map during an active Run: the ordered checkpoint sequence, where the walker is
 /// relative to the next stop, and the straight-line distance remaining.

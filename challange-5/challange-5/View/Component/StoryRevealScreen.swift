@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// The paged story reveal — `105:1699`, `187:954`, `187:1053`, restyled to the Ngalcer board's
 /// `46:120` ("Story - Puri Maospahit").
@@ -37,6 +38,17 @@ struct StoryRevealScreen: View {
     /// Every lore block at this checkpoint, already joined into one passage and resolved to the
     /// run's language.
     let text: String
+    /// The same passage split back into labelled claims, drawn only when `showsProvenance` is on.
+    /// Empty for the run flow, which passes `text` alone.
+    var claims: [LoreClaimPresentation] = []
+    /// `FR-CP-05` / `FR-SIDE-04` — the accuracy label and the citations.
+    ///
+    /// **Defaults to false, and that default is the whole point.** The run flow's unlabelled
+    /// treatment is a signed product decision (2026-08-13) that this parameter leaves untouched;
+    /// the sidequest story turns it on, because `s0` D6 says an exception taken for one surface
+    /// does not extend to a new one by inference. Flipping this default would silently re-open a
+    /// decision that has an owner.
+    var showsProvenance: Bool = false
     /// The illustration behind the page, when a specific one exists for this run. The content tree
     /// has no per-place illustration field, so this is `nil` in the shipped quest and the screen
     /// falls back to `StoryIllustrationMetrics.image` — the frame's own art (`46:120`), packaged
@@ -64,12 +76,17 @@ struct StoryRevealScreen: View {
                         // screen's own horizontal padding, so it spans edge to edge as the frame
                         // draws it rather than sitting in the same padded column as the words.
                         illustration
-                        // Types itself in, character by character, which — because `Text` wraps
-                        // and this reveals left to right — reads as line by line, per the
-                        // designer's note. `HisploraTypewriterText` already does this; nothing new
-                        // to build for it.
-                        HisploraTypewriterText(text, font: .system(size: 17))
-                            .padding(.horizontal, KultaraMetrics.lg)
+                        if showsProvenance {
+                            provenanceClaims
+                                .padding(.horizontal, KultaraMetrics.lg)
+                        } else {
+                            // Types itself in, character by character, which — because `Text` wraps
+                            // and this reveals left to right — reads as line by line, per the
+                            // designer's note. `HisploraTypewriterText` already does this; nothing
+                            // new to build for it.
+                            HisploraTypewriterText(text, font: .system(size: 17))
+                                .padding(.horizontal, KultaraMetrics.lg)
+                        }
                     }
                     .padding(.bottom, KultaraMetrics.lg)
                 }
@@ -112,6 +129,60 @@ struct StoryRevealScreen: View {
         .frame(maxWidth: .infinity, minHeight: Self.illustrationHeight, maxHeight: Self.illustrationHeight)
         .clipped()
         .accessibilityHidden(true)
+    }
+
+    /// The labelled version of the same passage: each claim under its accuracy label, with its
+    /// citations one tap away (`FR-CP-05`, `FR-CP-06`, `FR-SIDE-04`).
+    ///
+    /// Two deliberate differences from the unlabelled treatment above. There is no typewriter — a
+    /// provenance label that arrives letter by letter is a label behind a delay, which is exactly
+    /// what `FR-CP-05` forbids. And the inks are Hisplora's own (`inkMuted`, `inkDark`, `inkBody`
+    /// on `paperWarm`), not `LoreClaimList`'s: that component is measured against museum paper and
+    /// its `palette.seal` heading falls to about 2:1 on this ground.
+    private var provenanceClaims: some View {
+        VStack(alignment: .leading, spacing: KultaraMetrics.xl) {
+            ForEach(claims) { claim in
+                VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
+                    // Text, not a tint — the label carries the meaning on its own
+                    // (`NFR-A11Y-05`).
+                    Text(claim.block.accuracyLabel)
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(palette.inkMuted.color)
+                        .textCase(.uppercase)
+                        .tracking(1.5)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Text(claim.block.text)
+                        .font(.system(size: 17))
+                        .foregroundStyle(palette.inkDark.color)
+                        .lineSpacing(4)
+                        .fixedSize(horizontal: false, vertical: true)
+                    DisclosureGroup {
+                        VStack(alignment: .leading, spacing: 2) {
+                            if claim.citations.isEmpty {
+                                Text(UIStrings.string(.checkpointSourcesEmpty, language))
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(palette.inkMuted.color)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                            ForEach(claim.citations, id: \.self) { citation in
+                                Text("· \(citation)")
+                                    .font(.system(size: 13))
+                                    .foregroundStyle(palette.inkMuted.color)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+                        }
+                    } label: {
+                        Text(UIStrings.string(.checkpointSourcesHeading, language))
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(palette.inkBody.color)
+                            .frame(minHeight: KultaraMetrics.minimumTapTarget, alignment: .leading)
+                    }
+                    .tint(palette.inkBody.color)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
     }
 
     private var footer: some View {

@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// One of the Ngalcer frame's filler cards, drawn with the same chrome as a real one so the Home
 /// screen reads as it was designed — and with none of the behaviour, because there is nothing

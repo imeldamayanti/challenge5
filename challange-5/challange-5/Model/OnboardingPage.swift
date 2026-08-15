@@ -1,4 +1,5 @@
 import Foundation
+import UIStringsKit
 
 struct OnboardingPage: Sendable, Identifiable {
     let id: Int

@@ -278,10 +278,16 @@ public struct SideQuestEngine {
     /// letter rule has exactly one implementation rather than two.
     ///
     /// Idempotent for the same reason `answerQuiz` is: a completed record is returned untouched.
+    ///
+    /// `relativePath` is optional because the capture pipeline is Phase D and the flow ships before
+    /// it (`s4` §7): until then a photo challenge states its prompt, says photographs are not in
+    /// this build, and awards the letter on acknowledgement. A `nil` path records a completed
+    /// challenge with no photograph, which is exactly what happened — rather than an empty string,
+    /// which would later read as a file at the container root.
     @discardableResult
     public func completePhoto(
         sideQuestID: String,
-        relativePath: String
+        relativePath: String?
     ) throws -> SideQuestRecord {
         let record = try recordOrThrow(sideQuestID)
         guard let sideQuest = try repository.sideQuest(id: sideQuestID) else {

@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// Shared by the checkpoint screen and the summary, so a claim cannot be styled one way while it is
 /// being read and another way when it is remembered.

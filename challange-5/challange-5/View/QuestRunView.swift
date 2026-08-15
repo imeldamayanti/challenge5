@@ -2,6 +2,7 @@ import ContentKit
 import DesignSystem
 import RunEngine
 import SwiftUI
+import UIStringsKit
 
 /// The whole walking loop on one screen, changing what it shows as the Run moves through its
 /// stages: the two notices that precede the first step, the arrival screen, the checkpoint, and the

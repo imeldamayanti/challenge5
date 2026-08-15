@@ -9,6 +9,10 @@ struct KultaraEnvironment {
     let repository: any ContentRepository
     let preferences: any AppPreferencesStore
     let runStore: any RunStore
+    /// Sidequest user data, stored separately from Runs and never referenced by one — modelling a
+    /// sidequest as a one-checkpoint Run would put it into the home screen's resume entry and make
+    /// `FR-PROX-08` suppress the very alerts the feature exists to send (`FR-SIDE-01`, `s0` D1).
+    let sideQuestStore: any SideQuestStore
     let locationAuthorization: any LocationAuthorizationReporting
     let storage: any StorageUsageReporting
     /// A factory rather than a single instance: each arrival screen owns its own sampling and its
@@ -20,6 +24,7 @@ struct KultaraEnvironment {
         repository: any ContentRepository,
         preferences: any AppPreferencesStore,
         runStore: any RunStore,
+        sideQuestStore: any SideQuestStore,
         locationAuthorization: any LocationAuthorizationReporting = SystemLocationAuthorizationReporter(),
         storage: any StorageUsageReporting = ContainerStorageReporter(),
         makeLocationProvider: (@MainActor () -> any LocationProviding)? = nil
@@ -27,6 +32,7 @@ struct KultaraEnvironment {
         self.repository = repository
         self.preferences = preferences
         self.runStore = runStore
+        self.sideQuestStore = sideQuestStore
         self.locationAuthorization = locationAuthorization
         self.storage = storage
         self.makeLocationProvider = makeLocationProvider ?? Self.defaultLocationProvider
@@ -34,6 +40,12 @@ struct KultaraEnvironment {
 
     var runEngine: RunEngine {
         RunEngine(repository: repository, store: runStore)
+    }
+
+    /// The only thing that writes sidequest user data. Nothing here touches `runEngine` or
+    /// `runStore`, which is `FR-SIDE-01` held by there being no call that could.
+    var sideQuestEngine: SideQuestEngine {
+        SideQuestEngine(repository: repository, store: sideQuestStore)
     }
 
     /// In a debug build the provider can be switched to a simulator from Settings, so the loop can
@@ -54,6 +66,7 @@ struct KultaraEnvironment {
         KultaraEnvironment(
             repository: try BundledContentRepository(),
             preferences: UserDefaultsAppPreferencesStore(defaults: defaults),
-            runStore: try FileRunStore())
+            runStore: try FileRunStore(),
+            sideQuestStore: try FileSideQuestStore())
     }
 }

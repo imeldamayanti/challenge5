@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// The story preview, the typewriter screen — `81:588` on the Hisplora board, restyled to
 /// `35:431` ("Cutscene quest - Lore") on the Ngalcer board.

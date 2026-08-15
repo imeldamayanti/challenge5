@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// A real, walkable quest drawn on the Ngalcer Home card (`PhotoQuestCard`).
 ///

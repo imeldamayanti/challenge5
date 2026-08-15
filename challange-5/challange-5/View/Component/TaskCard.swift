@@ -2,6 +2,7 @@ import ContentKit
 import DesignSystem
 import RunEngine
 import SwiftUI
+import UIStringsKit
 
 /// One task, in the only two shapes this build offers: a written answer, or a note that photo
 /// activities are not here yet. Both carry a skip, and neither gates anything (`AD-2`).

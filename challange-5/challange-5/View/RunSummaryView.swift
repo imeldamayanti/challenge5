@@ -2,6 +2,7 @@ import ContentKit
 import DesignSystem
 import RunEngine
 import SwiftUI
+import UIStringsKit
 
 struct RunSummaryView: View {
     @Environment(\.kultaraPalette) private var palette

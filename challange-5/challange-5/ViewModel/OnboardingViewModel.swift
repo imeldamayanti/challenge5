@@ -1,5 +1,6 @@
 import ContentKit
 import Foundation
+import UIStringsKit
 
 enum OnboardingGate {
     @MainActor

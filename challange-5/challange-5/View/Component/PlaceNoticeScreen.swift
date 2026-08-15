@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// The place notice — `50:137` ("Quest") — and the checkpoint's task menu — `51:201` ("Detail
 /// Quest"). Two new stops between the story reveal and the walk itself, both reached only when

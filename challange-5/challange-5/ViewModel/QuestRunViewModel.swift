@@ -2,6 +2,7 @@ import ContentKit
 import DesignSystem
 import Foundation
 import RunEngine
+import UIStringsKit
 
 @MainActor
 @Observable
@@ -34,22 +35,18 @@ final class QuestRunViewModel {
         case finished
     }
 
-    enum ArrivalStatus: Equatable {
-        case idle
-        case searching
-        case approaching(distanceText: String, accuracyText: String)
-        /// Inside the radius, but by a fix too vague to prove it (`FR-ARR-01`).
-        case accuracyInsufficient(distanceText: String, accuracyText: String)
-        case permissionDenied
-    }
+    /// The gate's own states, which now live on `ArrivalSampling` — the sidequest flow waits at the
+    /// same gate (`FR-SIDE-02`), and one rule with two implementations is two rules.
+    typealias ArrivalStatus = ArrivalSampling.Status
 
     // MARK: Inputs
 
     private let engine: RunEngine
     private let repository: any ContentRepository
     private let preferences: any AppPreferencesStore
-    private let locationProvider: any LocationProviding
-    private let manualOverrideDelay: Duration
+    /// `FR-ARR-01`…`FR-ARR-05`, `FR-START-10`, `NFR-BAT-04`, extracted so this view model and
+    /// `SideQuestFlowViewModel` cannot drift apart about what arrival means.
+    let sampling: ArrivalSampling
     /// Set when the user chose "start over" in preview. The draft is not deleted then and there —
     /// it is deleted when the replacement walk actually begins, so backing out of the arrival
     /// screen leaves the old walk exactly where it was.
@@ -62,21 +59,14 @@ final class QuestRunViewModel {
 
     private(set) var run: Run?
     private(set) var stage: Stage = .awaitingArrival
-    private(set) var arrival: ArrivalStatus = .idle
-    /// `FR-ARR-03` — revealed after 60 s of unsuccessful detection, or immediately when permission
-    /// is refused, since waiting a minute for a fix that cannot arrive is a minute of nothing.
-    private(set) var manualOverrideAvailable = false
-    /// Whole seconds until the override appears, or `nil` when there is nothing to count down to —
-    /// a refused permission, or an override already offered. Drives the arrival screen's bounded
-    /// wait (`FR-ARR-05`: a number that moves, never an indefinite spinner).
-    private(set) var manualOverrideRemainingSeconds: Int?
-    /// `0…1` for a determinate progress indicator over that same wait.
-    private(set) var manualOverrideProgress: Double = 0
-    /// How long the screen has been looking, so the wait is legible from the moment it opens.
-    private(set) var searchingElapsedSeconds: Int = 0
-    /// `FR-START-10`, `FR-ARR-04` — the override lives in a sheet, because a control the walker
-    /// needs when GPS has failed cannot be the quietest line on a scrolling screen.
-    private(set) var isPresentingManualOverride = false
+    /// The gate's state, forwarded. `@Observable` reads through the nested object, so a view
+    /// watching `model.arrival` still redraws when the sampler moves.
+    var arrival: ArrivalStatus { sampling.status }
+    var manualOverrideAvailable: Bool { sampling.manualOverrideAvailable }
+    var manualOverrideRemainingSeconds: Int? { sampling.manualOverrideRemainingSeconds }
+    var manualOverrideProgress: Double { sampling.manualOverrideProgress }
+    var searchingElapsedSeconds: Int { sampling.searchingElapsedSeconds }
+    var isPresentingManualOverride: Bool { sampling.isPresentingManualOverride }
     /// The cutscene is shown once per walk, not once per checkpoint.
     private var hasShownCutscene = false
     /// `FR-START-09` — the named presence confirmation, shown only at the start checkpoint.
@@ -88,18 +78,13 @@ final class QuestRunViewModel {
     /// completed actions, and a half-typed sentence is not one.
     var taskDrafts: [String: String] = [:]
 
-    private var overrideTimer: Task<Void, Never>?
-    private var overrideSchedule: ManualOverrideSchedule?
     /// The authored walking line (`FR-MAP-02`). Read once at construction: it is content, so it
     /// cannot change under a walk in progress, and a nil here means the quest ships no geometry
     /// rather than that the map failed to load.
     private let routeGeometry: RouteGeometry?
-    /// `FR-ARR-03` — a manual arrival records the last known accuracy, because that number is what
-    /// later explains *why* the override was needed at this particular gate.
-    private var lastKnownAccuracyM: Double?
-    /// Kept alongside the accuracy, because `FR-MAP-02` asks for the walker's position *relative
-    /// to* the next checkpoint — a direction, which a scalar distance cannot express.
-    private(set) var lastKnownCoordinate: Coordinate?
+    /// `FR-MAP-02` asks for the walker's position *relative to* the next checkpoint — a direction,
+    /// which a scalar distance cannot express.
+    var lastKnownCoordinate: Coordinate? { sampling.lastKnownCoordinate }
 
     // MARK: Init
 
@@ -118,12 +103,14 @@ final class QuestRunViewModel {
         self.engine = engine
         self.repository = repository
         self.preferences = preferences
-        self.locationProvider = locationProvider
+        self.sampling = ArrivalSampling(
+            locationProvider: locationProvider,
+            language: language,
+            manualOverrideDelay: manualOverrideDelay)
         self.quest = quest
         self.language = language
         self.run = existingRun
         self.discardingExistingDraft = discardingExistingDraft
-        self.manualOverrideDelay = manualOverrideDelay
         // A quest whose geometry is missing or unreadable still walks; it walks without a drawn
         // route. V18 is what stops that reaching a release.
         self.routeGeometry = (try? repository.routeGeometry(questID: questID)) ?? nil
@@ -132,14 +119,13 @@ final class QuestRunViewModel {
             run: existingRun,
             quest: quest,
             preferences: preferences,
-            authorization: locationProvider.authorization)
+            authorization: sampling.authorization)
         if stage == .atCheckpoint || stage == .finished {
             checkpoint = presentation(forOrderIndex: currentIndex)
         }
 
-        self.locationProvider.onFix = { [weak self] fix in self?.handle(fix: fix) }
-        self.locationProvider.onAuthorizationChange = { [weak self] status in
-            self?.handleAuthorizationChange(status)
+        sampling.onArrival = { [weak self] method, accuracyM in
+            self?.record(method: method, accuracyM: accuracyM)
         }
     }
 
@@ -167,7 +153,7 @@ final class QuestRunViewModel {
     func advanceFromStoryPreview() {
         if !preferences.safetyNoticeAckedQuestIDs.contains(quest.id) {
             stage = .safetyNotice
-        } else if locationProvider.authorization == .notRequested {
+        } else if sampling.authorization == .notRequested {
             stage = .locationNotice
         } else {
             stage = .awaitingArrival
@@ -264,13 +250,13 @@ final class QuestRunViewModel {
 
     func acknowledgeSafetyNotice() {
         preferences.safetyNoticeAckedQuestIDs.insert(quest.id)
-        stage = locationProvider.authorization == .notRequested ? .locationNotice : .awaitingArrival
+        stage = sampling.authorization == .notRequested ? .locationNotice : .awaitingArrival
         if stage == .awaitingArrival { beginSampling() }
     }
 
     func acknowledgeLocationNoticeAndRequestPermission() {
         stage = .awaitingArrival
-        locationProvider.requestWhenInUseAuthorization()
+        sampling.requestWhenInUseAuthorization()
         beginSampling()
     }
 
@@ -282,111 +268,19 @@ final class QuestRunViewModel {
     }
 
     /// Sampling stops when the arrival screen goes away — not when the app backgrounds, not when a
-    /// timer decides. `NFR-BAT-04` is a hard requirement and this is the only place it is met.
+    /// timer decides. `NFR-BAT-04` is a hard requirement and `ArrivalSampling.stop` is the only
+    /// place it is met.
     func screenDisappeared() {
-        locationProvider.stop()
-        overrideTimer?.cancel()
-        overrideTimer = nil
+        sampling.stop()
     }
 
     private func beginSampling() {
         guard let checkpoint = currentCheckpoint,
               let place = place(for: checkpoint) else { return }
-
-        arrival = locationProvider.authorization == .denied
-            || locationProvider.authorization == .restricted
-            ? .permissionDenied
-            : .searching
-
-        // `FR-ERR-02` — a refused permission must not destroy the Run, so the override that keeps
-        // it walkable appears at once rather than after a minute of pretending to look.
-        manualOverrideAvailable = arrival == .permissionDenied
-
-        locationProvider.start(target: place.coordinate)
-        startOverrideTimer()
-    }
-
-    /// One timer for both jobs. It publishes the countdown *and* flips availability from the same
-    /// schedule, so the number on screen and the control appearing cannot disagree — a countdown
-    /// that reaches zero beside a control that is still hidden is worse than no countdown.
-    private func startOverrideTimer() {
-        overrideTimer?.cancel()
-        overrideSchedule = ManualOverrideSchedule(
-            startedAt: Date(),
-            delay: manualOverrideDelay,
-            isImmediate: manualOverrideAvailable)
-        refreshOverrideCountdown()
-        guard !manualOverrideAvailable else { return }
-        overrideTimer = Task { [weak self] in
-            // Twice a second: the display is in whole seconds, and this is a foreground screen the
-            // walker is looking at, not the location sampler `NFR-BAT-04` governs.
-            while !Task.isCancelled {
-                try? await Task.sleep(for: .milliseconds(500))
-                guard !Task.isCancelled, let self else { return }
-                self.refreshOverrideCountdown()
-                if self.manualOverrideAvailable { return }
-            }
-        }
-    }
-
-    private func refreshOverrideCountdown() {
-        guard let schedule = overrideSchedule else {
-            manualOverrideRemainingSeconds = nil
-            return
-        }
-        let now = Date()
-        manualOverrideRemainingSeconds = schedule.remainingSeconds(at: now)
-        manualOverrideProgress = schedule.progress(at: now)
-        searchingElapsedSeconds = Int(schedule.elapsedSeconds(at: now))
-        if schedule.isAvailable(at: now) {
-            manualOverrideAvailable = true
-            manualOverrideRemainingSeconds = nil
-        }
-    }
-
-    private func handleAuthorizationChange(_ status: LocationAuthorizationSnapshot) {
-        guard stage == .awaitingArrival else { return }
-        if status == .denied || status == .restricted {
-            arrival = .permissionDenied
-            manualOverrideAvailable = true
-            // `FR-ERR-02` — nothing left to wait for, so nothing left to count down.
-            overrideTimer?.cancel()
-            overrideTimer = nil
-            overrideSchedule = nil
-            manualOverrideRemainingSeconds = nil
-            manualOverrideProgress = 1
-        } else if arrival == .permissionDenied {
-            arrival = .searching
-            beginSampling()
-        }
+        sampling.start(target: place.coordinate, radiusM: place.arrivalRadiusM)
     }
 
     // MARK: Arrival — FR-ARR-01
-
-    private func handle(fix: LocationFix) {
-        guard stage == .awaitingArrival,
-              let checkpoint = currentCheckpoint,
-              let place = place(for: checkpoint) else { return }
-
-        let decision = ArrivalEvaluator.decide(
-            fix: fix, target: place.coordinate, radiusM: place.arrivalRadiusM)
-        lastKnownAccuracyM = fix.horizontalAccuracyM
-        lastKnownCoordinate = fix.coordinate
-        let formatter = ContentFormatter(language: language)
-        let distanceText = formatter.distance(metres: Int(decision.distanceM.rounded()))
-        let accuracyText = formatter.distance(metres: Int(decision.accuracyM.rounded()))
-
-        switch decision {
-        case .arrived(_, let accuracy):
-            record(method: .gps, accuracyM: accuracy)
-        case .outsideRadius:
-            // `FR-ARR-05` — a number that moves, never an indefinite spinner.
-            arrival = .approaching(distanceText: distanceText, accuracyText: accuracyText)
-        case .accuracyInsufficient:
-            arrival = .accuracyInsufficient(
-                distanceText: distanceText, accuracyText: accuracyText)
-        }
-    }
 
     /// `FR-ARR-03/04`, `FR-START-09/10`. At the start checkpoint this routes through the named
     /// confirmation first; everywhere else it is one tap and costs nothing.
@@ -395,23 +289,23 @@ final class QuestRunViewModel {
             isConfirmingPresence = true
             return
         }
-        record(method: .manual, accuracyM: lastKnownAccuracyM)
+        sampling.arriveManually()
     }
 
     // MARK: The override sheet — FR-START-10, FR-ARR-04
 
-    func presentManualOverride() { isPresentingManualOverride = true }
+    func presentManualOverride() { sampling.presentManualOverride() }
 
-    func dismissManualOverride() { isPresentingManualOverride = false }
+    func dismissManualOverride() { sampling.dismissManualOverride() }
 
     /// Confirming from inside the sheet. At the start checkpoint the named presence confirmation is
     /// still a separate step (`FR-START-09`) — the two are not collapsed into one, and the sheet
     /// does not become a second way to start a Run from outside the radius (`FR-START-08`), because
     /// it routes through exactly the same `useManualOverride` path everything else does.
     func confirmManualOverrideFromSheet() {
-        isPresentingManualOverride = false
+        sampling.dismissManualOverride()
         guard isAtStartCheckpoint else {
-            record(method: .manual, accuracyM: lastKnownAccuracyM)
+            sampling.arriveManually()
             return
         }
         // Presenting the confirmation in the same run loop as the sheet's dismissal loses it, so it
@@ -422,20 +316,13 @@ final class QuestRunViewModel {
         }
     }
 
-    /// `0:47`. Digits and a colon, so it is not a translated string — but it is only ever shown
-    /// inside one that is.
-    var manualOverrideCountdownText: String? {
-        guard let remaining = manualOverrideRemainingSeconds else { return nil }
-        return String(format: "%d:%02d", remaining / 60, remaining % 60)
-    }
+    var manualOverrideCountdownText: String? { sampling.manualOverrideCountdownText }
 
-    var searchingElapsedText: String {
-        String(format: "%d:%02d", searchingElapsedSeconds / 60, searchingElapsedSeconds % 60)
-    }
+    var searchingElapsedText: String { sampling.searchingElapsedText }
 
     func confirmPresence() {
         isConfirmingPresence = false
-        record(method: .manual, accuracyM: lastKnownAccuracyM)
+        sampling.arriveManually()
     }
 
     func cancelPresenceConfirmation() {
@@ -468,14 +355,7 @@ final class QuestRunViewModel {
     }
 
     private func arriveAtCurrentCheckpoint() {
-        locationProvider.stop()
-        overrideTimer?.cancel()
-        overrideTimer = nil
-        overrideSchedule = nil
-        manualOverrideAvailable = false
-        manualOverrideRemainingSeconds = nil
-        isPresentingManualOverride = false
-        arrival = .idle
+        sampling.finish()
         checkpoint = presentation(forOrderIndex: currentIndex)
 
         // The cutscene runs once per walk, at the first arrival — a repeat walker, and anyone
@@ -555,15 +435,9 @@ final class QuestRunViewModel {
     var currentPlaceName: String { placeName(for: currentCheckpoint) }
 
     /// Which of the Hisplora location frames the arrival screen is showing. The mapping is the
-    /// arrival rule's own: `FR-ARR-01` is two conditions, and "close but the fix is too coarse" is
-    /// *not* arrival — so it draws "Not Quite There" rather than "Verified".
-    var locationState: LocationState {
-        switch arrival {
-        case .idle, .searching: .checking
-        case .approaching, .accuracyInsufficient: .notThere
-        case .permissionDenied: .denied
-        }
-    }
+    /// arrival rule's own and lives on `ArrivalSampling`, so the sidequest gate draws the same
+    /// three states from the same decision.
+    var locationState: LocationState { sampling.locationState }
 
     // MARK: Progression — FR-CP-01
 

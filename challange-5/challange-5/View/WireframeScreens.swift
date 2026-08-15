@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// The screens the app-flow chart draws that the app does not have yet, as wireframes.
 ///
@@ -82,11 +83,21 @@ struct AuthWireframeView: View {
 struct JournalWireframeView: View {
     let language: ContentLanguage
     let journal: RunJournalSummary
+    /// The letter collections, which are a real screen rather than a box (`FR-SIDE-08`). Empty
+    /// until `s5` authors one.
+    var collections: [(id: String, title: String)] = []
     let onOpenRun: (UUID) -> Void
+    var onOpenCollection: (String) -> Void = { _ in }
 
     var body: some View {
         WireframeScreen(WireframeCatalog.journal, language: language) {
             VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
+                // Not a wireframe block: the collection screen exists, so the Journal links
+                // straight into it rather than drawing a box for it.
+                ForEach(collections, id: \.id) { collection in
+                    Button(collection.title) { onOpenCollection(collection.id) }
+                        .buttonStyle(.ruled)
+                }
                 if let active = journal.activeRun {
                     JournalEntryCard(
                         heading: UIStrings.string(.homeActiveRunHeading, language),
@@ -181,13 +192,6 @@ struct ProfileWireframeView<Preferences: View>: View {
                     Text(UIStrings.string(.settingsTitle, language))
                 }
                 .buttonStyle(.seal)
-
-                NavigationLink {
-                    NearbyNoticeWireframeView(language: language)
-                } label: {
-                    Text(WireframeCatalog.nearbyNotice.title.value(for: language))
-                }
-                .buttonStyle(.ruled)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
@@ -211,21 +215,8 @@ struct AccountSettingsWireframeView<Preferences: View>: View {
 }
 
 // MARK: - Passing-by notification branch
-
-/// "User passes the place" → notification → synopsis → want the story?
-struct NearbyNoticeWireframeView: View {
-    let language: ContentLanguage
-
-    var body: some View {
-        WireframeScreen(WireframeCatalog.nearbyNotice, language: language) {
-            NavigationLink {
-                WireframeScreen(WireframeCatalog.nearbyStory, language: language) {
-                    EmptyView()
-                }
-            } label: {
-                Text(WireframeCatalog.yesAction.value(for: language))
-            }
-            .buttonStyle(.seal)
-        }
-    }
-}
+//
+// `NearbyNoticeWireframeView` and its story screen are **gone**, deleted with their catalogue
+// entries in the commit that shipped the real ones (`s0` D12, `WireframeCatalog`'s own rule).
+// What replaced them: `SideQuestNoticeView`, `SideQuestStoryView` and the rest of the flow, reached
+// from "Places nearby" in the Quests tab today and from a notification once `s3` lands.

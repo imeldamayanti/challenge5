@@ -1,5 +1,6 @@
 import ContentKit
 import Foundation
+import UIStringsKit
 
 /// `NFR-I18N-05` — distances in metric, times in the device's 12/24-hour convention.
 ///

@@ -1,6 +1,7 @@
 import ContentKit
 import Foundation
 import RunEngine
+import UIStringsKit
 
 /// What the home screen knows about the walker's own history: the walk still under way, and the
 /// walks already finished.

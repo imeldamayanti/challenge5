@@ -1,19 +1,19 @@
 import ContentKit
 import Foundation
 
-enum UIStrings {
+public enum UIStrings {
 
-    static func string(_ key: UIStringKey, _ language: ContentLanguage) -> String {
+    public static func string(_ key: UIStringKey, _ language: ContentLanguage) -> String {
         // A missing entry is a programming error caught by `UIStringsTests.everyKeyHasAnEntry`,
         // not something to paper over with the key name at runtime.
         table[key]?.value(for: language) ?? key.rawValue
     }
 
-    static func text(_ key: UIStringKey) -> LocalizedText {
+    public static func text(_ key: UIStringKey) -> LocalizedText {
         table[key] ?? LocalizedText(id: key.rawValue, en: key.rawValue)
     }
 
-    static let table: [UIStringKey: LocalizedText] = [
+    public static let table: [UIStringKey: LocalizedText] = [
         .appName: LocalizedText(id: "Kultara", en: "Kultara"),
 
         // MARK: Onboarding
@@ -298,6 +298,78 @@ enum UIStrings {
             id: "Contoh tampilan. Belum bisa dibuka.",
             en: "Sample card. Not openable."),
 
+        // MARK: Sidequests
+        //
+        // The Indonesian is authored rather than machine-translated, for the same reason every
+        // other block here is: `LocalizedText` has no fallback (`NFR-I18N-03`), so a lazy
+        // translation is a lazy translation forever rather than a gap that shows up as English.
+        .sideQuestNoticeTitle: LocalizedText(
+            id: "Ada tempat bersejarah di dekatmu", en: "A historical place is near you"),
+        .sideQuestNoticeQuestion: LocalizedText(
+            id: "Mau baca ceritanya?", en: "Want to read its story?"),
+        .sideQuestNoticeYes: LocalizedText(id: "Ya, ceritakan", en: "Yes, tell me"),
+        .sideQuestNoticeNo: LocalizedText(id: "Lain kali", en: "Not now"),
+        .sideQuestNearbyHeading: LocalizedText(id: "Tempat di sekitarmu", en: "Places near you"),
+        .sideQuestNearbyEmpty: LocalizedText(
+            id: "Belum ada tempat sampingan di versi konten ini.",
+            en: "This content version ships no side places yet."),
+        .sideQuestDistanceAway: LocalizedText(id: "%@ dari sini", en: "%@ from here"),
+        .sideQuestStoryHeading: LocalizedText(id: "Cerita tempat ini", en: "The story of this place"),
+        .sideQuestChallengeHeading: LocalizedText(id: "Satu pertanyaan", en: "One question"),
+        .sideQuestQuizSubmit: LocalizedText(id: "Jawab", en: "Answer"),
+        // `FR-SIDE-06`, `s0` D5 — a wrong answer costs nothing, and the copy has to say so plainly.
+        // Someone standing in front of a temple gate who feels examined closes the app.
+        .sideQuestQuizWrong: LocalizedText(
+            id: "Belum tepat. Coba lagi — tidak ada yang berkurang.",
+            en: "Not quite. Try again — nothing is lost."),
+        .sideQuestQuizCorrect: LocalizedText(id: "Tepat.", en: "That's it."),
+        .sideQuestQuizRevealed: LocalizedText(
+            id: "Ini jawabannya. Hurufnya tetap kamu dapat.",
+            en: "Here is the answer. The letter is yours anyway."),
+        .sideQuestQuizExplanation: LocalizedText(id: "Kenapa", en: "Why"),
+        .sideQuestPhotoPrompt: LocalizedText(id: "Ambil satu foto", en: "Take one photograph"),
+        .sideQuestPhotoTake: LocalizedText(id: "Buka kamera", en: "Open the camera"),
+        .sideQuestPhotoChoose: LocalizedText(id: "Pilih dari galeri", en: "Choose from the library"),
+        .sideQuestPhotoNotInThisBuild: LocalizedText(
+            id: "Tantangan foto belum ada di versi ini. Hurufnya tetap kamu dapat tanpa foto.",
+            en: "Photo challenges are not in this build yet. The letter is yours without one."),
+        .sideQuestLetterAwarded: LocalizedText(id: "Huruf didapat", en: "Letter earned"),
+        .sideQuestLetterProgress: LocalizedText(id: "%1$d dari %2$d huruf", en: "%1$d of %2$d letters"),
+        .sideQuestCollectionOpen: LocalizedText(id: "Lihat koleksinya", en: "See the collection"),
+        .sideQuestKeepExploring: LocalizedText(id: "Lanjut menjelajah", en: "Keep exploring"),
+
+        // MARK: Letter collections
+        .collectionHeading: LocalizedText(id: "Koleksi huruf", en: "Letter collection"),
+        .collectionProgress: LocalizedText(id: "%1$d / %2$d", en: "%1$d / %2$d"),
+        // `FR-SIDE-08` — an unearned slot says only this. It still names its place, because the
+        // requirement says a traveller must be able to plan a visit; what it never shows is the
+        // letter.
+        .collectionSlotLocked: LocalizedText(id: "Belum ditemukan", en: "Not yet found"),
+        .collectionComplete: LocalizedText(
+            id: "Kalimatnya lengkap.", en: "The phrase is complete."),
+        .collectionBadgeAwarded: LocalizedText(id: "Lencana didapat: %@", en: "Badge earned: %@"),
+        .collectionBlankLetter: LocalizedText(id: "kosong", en: "blank"),
+        .collectionPhraseAccessibility: LocalizedText(
+            id: "Kalimat yang dikumpulkan: %@", en: "The collected phrase: %@"),
+
+        // MARK: Nearby alerts in Settings
+        .settingsNearbyAlertsHeading: LocalizedText(
+            id: "Pemberitahuan tempat terdekat", en: "Nearby place alerts"),
+        .settingsNearbyAlertsToggle: LocalizedText(
+            id: "Beri tahu saat saya melewati sebuah tempat",
+            en: "Tell me when I pass a place"),
+        // `FR-PROX-03`, `NFR-PRIV-10` — opt-in, default off, and the cost stated before the system
+        // prompt rather than after it.
+        .settingsNearbyAlertsExplanation: LocalizedText(
+            id: "Mati secara bawaan. Kalau dinyalakan, aplikasi memantau wilayah di sekitar tempat yang sudah ditulis — bukan melacak perjalananmu — dan mengirim pemberitahuan lokal dari perangkat ini saja. Paling banyak tiga sehari, dan tidak antara pukul 22.00 dan 07.00.",
+            en: "Off by default. When on, the app watches the regions around authored places — it does not track your journey — and sends a local notification from this device alone. At most three a day, and never between 22:00 and 07:00."),
+        .settingsNearbyAlertsNeedsAlways: LocalizedText(
+            id: "Fitur ini memerlukan izin lokasi \"Selalu\". Tanpa itu fitur ini mematikan dirinya sendiri, dan tidak ada bagian lain aplikasi yang terpengaruh.",
+            en: "This needs \"Always\" location permission. Without it the feature disables itself, and nothing else in the app is affected."),
+        .settingsNearbyAlertsNeedsNotifications: LocalizedText(
+            id: "Izin notifikasi juga diperlukan. Kamu bisa memberikannya di Pengaturan iOS.",
+            en: "Notification permission is needed too. You can grant it in iOS Settings."),
+
         // MARK: Developer build only
         .devHeading: LocalizedText(id: "Alat pengembang", en: "Developer tools"),
         .devSimulateArrivalTitle: LocalizedText(
@@ -305,6 +377,11 @@ enum UIStrings {
         .devSimulateArrivalNote: LocalizedText(
             id: "Menempatkan posisimu tepat di titik berikutnya supaya rute bisa dites dari meja. Hanya ada di build debug; aturan FR-START-08 tetap berlaku di build rilis, yang bahkan tidak memuat kode ini.",
             en: "Places you exactly at the next checkpoint so the route can be walked from a desk. Debug builds only; FR-START-08 still holds in a release build, which does not contain this code at all."),
+        .devSimulatePassingTitle: LocalizedText(
+            id: "Simulasikan melewati sebuah tempat", en: "Simulate passing a place"),
+        .devSimulatePassingNote: LocalizedText(
+            id: "Memicu jalur pemberitahuan tempat terdekat tanpa berjalan ke sana. Hanya di build debug, dan aturan kedatangan FR-SIDE-02 tetap dijalankan apa adanya.",
+            en: "Fires the nearby-place path without walking to it. Debug builds only, and FR-SIDE-02's arrival rule still runs unmodified."),
 
         // MARK: Accuracy labels
         .accuracyDocumented: LocalizedText(id: "Tercatat", en: "Documented"),

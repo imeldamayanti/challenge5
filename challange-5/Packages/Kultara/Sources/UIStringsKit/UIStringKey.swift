@@ -7,7 +7,11 @@ import Foundation
 /// (`FR-ONB-05`), so string resolution has to follow the app's own language, not the bundle's.
 /// It also inherits the no-fallback rule, so an untranslated label cannot appear mid-screen in
 /// the other language (`NFR-I18N-03`).
-enum UIStringKey: String, Sendable, CaseIterable {
+///
+/// This lives in a package target rather than in the app target because the app target has no
+/// unit-test bundle, and `NFR-I18N-01/02` need one: see `UIStringsTests` and the note on the
+/// `UIStringsKit` target in `Package.swift`.
+public enum UIStringKey: String, Sendable, CaseIterable {
     case appName
 
     // Onboarding — FR-ONB-02/03
@@ -186,10 +190,58 @@ enum UIStringKey: String, Sendable, CaseIterable {
     case homePlaceholderCardsNotice
     case homePlaceholderCardHint
 
+    // Sidequests — PRD §5.15 `FR-SIDE-01`…`FR-SIDE-16`. The story flow outside a Run: a notice, an
+    // arrival gate, the place's history, one challenge, one letter.
+    case sideQuestNoticeTitle
+    case sideQuestNoticeQuestion
+    case sideQuestNoticeYes
+    case sideQuestNoticeNo
+    case sideQuestNearbyHeading
+    case sideQuestNearbyEmpty
+    case sideQuestDistanceAway
+    case sideQuestStoryHeading
+    case sideQuestChallengeHeading
+    case sideQuestQuizSubmit
+    case sideQuestQuizWrong
+    case sideQuestQuizCorrect
+    case sideQuestQuizRevealed
+    case sideQuestQuizExplanation
+    case sideQuestPhotoPrompt
+    case sideQuestPhotoTake
+    case sideQuestPhotoChoose
+    case sideQuestPhotoNotInThisBuild
+    case sideQuestLetterAwarded
+    case sideQuestLetterProgress
+    case sideQuestCollectionOpen
+    /// `FR-SIDE-07` — the way back into an unfinished sidequest, from its own screens.
+    case sideQuestKeepExploring
+
+    // Letter collections — FR-SIDE-08/09
+    case collectionHeading
+    case collectionProgress
+    case collectionSlotLocked
+    case collectionComplete
+    case collectionBadgeAwarded
+    /// `NFR-A11Y-01` — VoiceOver reading a row of underscores says nothing useful, so an unearned
+    /// slot is named rather than spelled.
+    case collectionBlankLetter
+    case collectionPhraseAccessibility
+
+    // Nearby alerts in Settings — the opt-in half of `FR-SIDE-11`. The toggle and its authorization
+    // reporting are `s3`'s screens; the copy is here so the string table is complete in one pass.
+    case settingsNearbyAlertsHeading
+    case settingsNearbyAlertsToggle
+    case settingsNearbyAlertsExplanation
+    case settingsNearbyAlertsNeedsAlways
+    case settingsNearbyAlertsNeedsNotifications
+
     // Developer build only
     case devHeading
     case devSimulateArrivalTitle
     case devSimulateArrivalNote
+    /// `s3`'s debug trigger — walking past a sidequest place from a desk. Copy only for now.
+    case devSimulatePassingTitle
+    case devSimulatePassingNote
 
     // Accuracy labels — FR-CP-05
     case accuracyDocumented

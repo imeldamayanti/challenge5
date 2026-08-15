@@ -187,32 +187,12 @@ enum WireframeCatalog {
             en: "Deleting the data on this device already works today, in App preferences. Deleting an account needs an account first."))
 
     // MARK: Passing-by notification branch
-
-    static let nearbyNotice = WireframeSpec(
-        title: LocalizedText(id: "Tempat bersejarah di dekatmu", en: "Historical place nearby"),
-        purpose: LocalizedText(
-            id: "Pemberitahuan saat pengguna kebetulan melewati sebuah tempat, di luar quest.",
-            en: "The notification when someone happens to pass a place, outside any quest."),
-        blocks: [
-            LocalizedText(id: "Notifikasi: kamu sedang melewati sebuah tempat", en: "Notification: you are passing a place"),
-            LocalizedText(id: "Sinopsis singkat tempat itu", en: "A short synopsis of the place"),
-            LocalizedText(id: "Pertanyaan: mau baca ceritanya?", en: "The question: want to see the story?"),
-        ],
-        flowNote: LocalizedText(
-            id: "Pemantauan lokasi di latar belakang dan notifikasi kedekatan belum dibangun sama sekali. Ini keputusan besar: izin lokasi \"selalu\", pemakaian baterai, dan batas seberapa sering orang boleh diganggu.",
-            en: "Background location monitoring and proximity notifications are not built at all. It is a large decision: \"always\" location permission, battery cost, and a limit on how often someone may be interrupted."))
-
-    static let nearbyStory = WireframeSpec(
-        title: LocalizedText(id: "Cerita tempat ini", en: "The story of this place"),
-        purpose: LocalizedText(
-            id: "Membaca cerita satu tempat tanpa menjalankan quest.",
-            en: "Reading one place's story without running a quest."),
-        blocks: [
-            LocalizedText(id: "Cerita tempat, per klaim dengan sumbernya", en: "The place's story, claim by claim with its sources"),
-            LocalizedText(id: "Tombol selesai", en: "Finish button"),
-            LocalizedText(id: "Tawaran quest yang memuat tempat ini", en: "Offer of a quest that includes this place"),
-        ],
-        flowNote: LocalizedText(
-            id: "Isi ceritanya sudah ada di konten dan sudah membawa label akurasi serta sumber (FR-CP-05). Yang belum ada adalah jalan masuk ke sana di luar quest.",
-            en: "The story itself already exists in the content and already carries its accuracy labels and sources (FR-CP-05). What is missing is a way into it outside a quest."))
+    //
+    // `nearbyNotice` and `nearbyStory` were drawings of the sidequest flow. Both are **deleted**,
+    // in the same commit that shipped their real screens — `SideQuestNoticeView` and
+    // `SideQuestStoryView` (`s0` D12, and this file's own rule at the top). Their copy moved into
+    // `UIStrings` with the rest of the interface.
+    //
+    // The notification itself is still unbuilt (`s3`), but a wireframe of a notification is not a
+    // screen — the entry point that exists today is "Places nearby" in the Quests tab.
 }

@@ -13,6 +13,7 @@ let package = Package(
     products: [
         .library(name: "ContentKit", targets: ["ContentKit"]),
         .library(name: "RunEngine", targets: ["RunEngine"]),
+        .library(name: "UIStringsKit", targets: ["UIStringsKit"]),
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
         .executable(name: "content-validator", targets: ["ContentValidatorCLI"]),
     ],
@@ -41,6 +42,22 @@ let package = Package(
             name: "RunEngine",
             dependencies: ["ContentKit"]
         ),
+        // The interface string table. It lived in the app target until `s4`, where it had no
+        // unit-test bundle to hold it: `everyKeyHasAnEntry`,
+        // `everyEntryIsTranslatedInBothLanguages` and `indonesianAndEnglishAreActuallyDifferentText`
+        // were deleted with `AppFeaturesTests` at `b597b5b`, and a `UIStringKey` case added without
+        // a table entry rendered its own raw name at runtime with nothing failing
+        // (`NFR-I18N-01/02`). Moving the table into a package is what puts those three guards back
+        // under `swift test` (`s4` §8, option 2).
+        //
+        // It depends on `ContentKit` for `LocalizedText` alone — the same no-fallback type content
+        // uses, so an untranslated label cannot appear mid-screen in the other language
+        // (`NFR-I18N-03`). `DesignSystem` deliberately does **not** depend on it: components take
+        // `String` and the caller localises (`NFR-I18N-01`).
+        .target(
+            name: "UIStringsKit",
+            dependencies: ["ContentKit"]
+        ),
         .target(
             name: "DesignSystem",
             resources: [
@@ -67,6 +84,10 @@ let package = Package(
         .testTarget(
             name: "RunEngineTests",
             dependencies: ["RunEngine", "ContentKit"]
+        ),
+        .testTarget(
+            name: "UIStringsKitTests",
+            dependencies: ["UIStringsKit", "ContentKit"]
         ),
         .testTarget(
             name: "DesignSystemTests",

@@ -28,27 +28,41 @@ final class PreferencesOnlyDataEraser: LocalDataEraser {
 
 /// `FR-SET-02` — the real eraser, now that there is something to erase.
 ///
-/// Preferences *and* Runs, in one call, because a language override that survives "delete all local
-/// data" is a surprise and a completed walk that survives it is a privacy failure. Photos are not
-/// listed because this build writes none; when photo tasks ship, the photo directory has to be
-/// removed here too — deleting rows alone leaves image files on disk, which passes every database
-/// test and fails the requirement.
+/// Preferences, Runs *and* sidequest records, in one call, because a language override that
+/// survives "delete all local data" is a surprise and a completed walk that survives it is a
+/// privacy failure. Photos are not listed because this build writes none; when photo challenges
+/// ship (`s4` §7, `FR-SIDE-13`), the photo directory has to be removed here too — deleting rows
+/// alone leaves image files on disk, which passes every database test and fails the requirement.
+///
+/// The sidequest store is a *separate* store rather than more rows in the Run store (`FR-SIDE-01`,
+/// `s0` D1), which is exactly why it has to be named here: `FR-SET-02` is about everything on the
+/// device, and a second aggregate is a second thing to forget.
 @MainActor
 final class RunAndPreferencesDataEraser: LocalDataEraser {
 
     private let store: any RunStore
+    private let sideQuestStore: (any SideQuestStore)?
     private let preferences: any AppPreferencesStore
 
-    init(store: any RunStore, preferences: any AppPreferencesStore) {
+    init(
+        store: any RunStore,
+        sideQuestStore: (any SideQuestStore)? = nil,
+        preferences: any AppPreferencesStore
+    ) {
         self.store = store
+        self.sideQuestStore = sideQuestStore
         self.preferences = preferences
     }
 
     func eraseAllLocalData() throws -> ErasureSummary {
         let deletedRuns = try store.deleteAll()
+        // Letters go with them. A collection is a record of where somebody has been, and
+        // "delete all local data" that left it standing would be the plainest possible lie.
+        let deletedSideQuests = try sideQuestStore?.deleteAll() ?? 0
         preferences.removeAll()
         return ErasureSummary(
             deletedRuns: deletedRuns,
+            deletedSideQuests: deletedSideQuests,
             deletedPhotos: 0,
             deletedTelemetryEvents: 0,
             clearedPreferences: true)

@@ -2,6 +2,7 @@ import ContentKit
 import DesignSystem
 import RunEngine
 import SwiftUI
+import UIStringsKit
 
 struct KultaraRootView: View {
 
@@ -23,6 +24,17 @@ struct KultaraRootView: View {
     /// observable — it is a protocol with a file behind it — and a counter is a smaller thing to
     /// own than an observation layer this milestone would use in exactly one place.
     @State private var journalRevision = 0
+    /// Which sidequest to present, set by the nearby list today and by the notification delegate
+    /// once `s3` exists, and cleared when the flow closes.
+    ///
+    /// A full-screen cover over whatever tab is showing, because a sidequest arrives from *outside*
+    /// the navigation stacks — a notification tap has no stack to push onto (PRD §5.15).
+    @State private var pendingSideQuestID: String?
+    /// The collection reached from the Journal tab, or from the letter screen.
+    @State private var collectionDestination: String?
+    /// Bumped when a sidequest record changes, so the collection and the nearby list are rebuilt
+    /// for the same reason `journalRevision` exists.
+    @State private var sideQuestRevision = 0
 
     /// Which walk the run screen should open, and whether an existing draft is being replaced.
     private struct RunDestination: Identifiable, Hashable {
@@ -98,6 +110,28 @@ struct KultaraRootView: View {
                     .ignoresSafeArea(.keyboard, edges: .bottom)
             }
         }
+        // `FR-SIDE-01`, `FR-PROX-08` — belt to `ProximityGate`'s braces. A walker mid-quest is
+        // engaged, and interrupting them is the exact thing the requirement forbids; the gate that
+        // decides whether an alert is *sent* is `s3`'s, and this is the one that decides whether a
+        // flow is ever *presented*.
+        .fullScreenCover(item: sideQuestCover) { destination in
+            sideQuestFlow(destination.id)
+        }
+    }
+
+    /// `nil` while a walk is in progress, which suppresses both entry paths at once — the nearby
+    /// list's tap and, once `s3` lands, the notification's.
+    private var sideQuestCover: Binding<SideQuestDestination?> {
+        Binding(
+            get: {
+                guard runDestination == nil, journalRunDestination == nil else { return nil }
+                return pendingSideQuestID.map(SideQuestDestination.init)
+            },
+            set: { if $0 == nil { pendingSideQuestID = nil } })
+    }
+
+    private struct SideQuestDestination: Identifiable, Hashable {
+        let id: String
     }
 
     private var hidesTabBar: Bool {
@@ -134,11 +168,46 @@ struct KultaraRootView: View {
                 mapModel: RegionMapViewModel(repository: environment.repository, language: language),
                 surface: $questSurface,
                 journal: journal,
+                // `FR-SIDE-07` — a way into a sidequest that does not wait for a notification.
+                nearby: nearbySideQuests,
                 onSelect: { startOrResumeRun(questID: $0) },
-                onOpenRun: openRun)
+                onOpenRun: openRun,
+                onOpenSideQuest: { pendingSideQuestID = $0 })
                 .navigationDestination(item: $runDestination) { destination in
                     runScreen(destination)
                 }
+        }
+    }
+
+    private var nearbySideQuests: [NearbySideQuestRow] {
+        // Read so the list is recomputed when a sidequest record changes.
+        _ = sideQuestRevision
+        return NearbySideQuestListViewModel(
+            repository: environment.repository,
+            engine: environment.sideQuestEngine,
+            language: language).rows
+    }
+
+    private func sideQuestFlow(_ sideQuestID: String) -> some View {
+        ScreenHost {
+            SideQuestFlowViewModel(
+                engine: environment.sideQuestEngine,
+                repository: environment.repository,
+                locationProvider: environment.makeLocationProvider(),
+                sideQuestID: sideQuestID,
+                language: language)
+        } content: { model in
+            KultaraThemeProvider {
+                SideQuestFlowView(
+                    model: model,
+                    onFinish: { pendingSideQuestID = nil },
+                    onOpenCollection: { collectionID in
+                        pendingSideQuestID = nil
+                        tab = Tab.journal.rawValue
+                        collectionDestination = collectionID
+                    })
+            }
+            .onDisappear { sideQuestRevision += 1 }
         }
     }
 
@@ -149,14 +218,47 @@ struct KultaraRootView: View {
             JournalWireframeView(
                 language: language,
                 journal: journal,
+                collections: collectionIDs,
                 onOpenRun: { runID in
                     guard let run = (try? environment.runStore.run(id: runID)) ?? nil else { return }
                     journalRunDestination = RunDestination(
                         questID: run.questID, existingRunID: run.id, discardingExistingDraft: false)
-                })
+                },
+                onOpenCollection: { collectionDestination = $0 })
                 .navigationDestination(item: $journalRunDestination) { destination in
                     runScreen(destination)
                 }
+                // `FR-SIDE-08` — the collection lives in the Journal tab, which is a catalogue
+                // surface and therefore museum rather than Hisplora.
+                .navigationDestination(item: $collectionDestination) { collectionID in
+                    collectionScreen(collectionID)
+                }
+        }
+    }
+
+    private var collectionIDs: [(id: String, title: String)] {
+        _ = sideQuestRevision
+        return ((try? environment.repository.collections()) ?? []).map {
+            (id: $0.id, title: $0.title.value(for: language))
+        }
+    }
+
+    private func collectionScreen(_ collectionID: String) -> some View {
+        ScreenHost {
+            LetterCollectionViewModel(
+                engine: environment.sideQuestEngine,
+                repository: environment.repository,
+                language: language,
+                collectionID: collectionID)
+        } content: { model in
+            KultaraThemeProvider {
+                LetterCollectionView(
+                    model: model,
+                    language: language,
+                    // `FR-SIDE-07` — an unearned slot opens its sidequest from here, without
+                    // waiting for a notification.
+                    onOpenSideQuest: { pendingSideQuestID = $0 })
+            }
         }
     }
 
@@ -215,8 +317,13 @@ struct KultaraRootView: View {
             store: environment.preferences,
             language: language,
             locationAuthorization: environment.locationAuthorization,
+            // `FR-SET-02` — Runs *and* sidequest records. The two are separate aggregates
+            // (`FR-SIDE-01`), so the eraser has to name both or a collection survives "delete all
+            // local data".
             eraser: RunAndPreferencesDataEraser(
-                store: environment.runStore, preferences: environment.preferences),
+                store: environment.runStore,
+                sideQuestStore: environment.sideQuestStore,
+                preferences: environment.preferences),
             storage: environment.storage)
         model.onLanguageChange = { language = $0 }
         return KultaraThemeProvider { SettingsView(model: model) }

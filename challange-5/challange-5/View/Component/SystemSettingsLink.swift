@@ -1,6 +1,7 @@
 import ContentKit
 import DesignSystem
 import SwiftUI
+import UIStringsKit
 
 /// `FR-START-03` — a path to Settings wherever a refused permission is explained.
 struct SystemSettingsLink: View {

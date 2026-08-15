@@ -2,6 +2,7 @@ import ContentKit
 import DesignSystem
 import Foundation
 import RunEngine
+import UIStringsKit
 
 /// The trip summary, built from the Run's own snapshots and nothing else.
 ///
