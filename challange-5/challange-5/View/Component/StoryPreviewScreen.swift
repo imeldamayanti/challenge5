@@ -2,11 +2,18 @@ import ContentKit
 import DesignSystem
 import SwiftUI
 
-/// `81:588` — the story preview, the typewriter screen.
+/// The story preview, the typewriter screen — `81:588` on the Hisplora board, restyled to
+/// `35:431` ("Cutscene quest - Lore") on the Ngalcer board.
 ///
 /// The frame: the quest's title in the display serif on a greyed brown ground, a photographed
 /// typewriter with a sheet standing out of it, the hook typed onto that sheet in Special Elite, the
 /// walking distance and duration ruled off beneath it, and the one filled action at the foot.
+///
+/// **What `35:431` changed.** Two things, both layout. The gilded frame moved *out* of the sheet
+/// and now stands over the top of it, its lower half behind the paper — carried by
+/// `KultaraTypewriter`'s `crest`. And the two figures gained their names, "Distance" and
+/// "Estimated Time", which is `KultaraTypedFigures` taking a label it previously had no room for.
+/// Nothing about which data is shown, or where it comes from, moved.
 ///
 /// All four of the frame's own materials are here now — the ground `#58453E`, the machine, the
 /// typebar face, and the gilded frame the design sets a portrait in. What the frame's portrait
@@ -50,7 +57,7 @@ struct StoryPreviewScreen: View {
                         // The machine sits three-quarters of the way across the frame, not edge to
                         // edge — it is an object photographed on a ground, and a full-bleed one
                         // stops reading as one.
-                        KultaraTypewriter { sheet }
+                        KultaraTypewriter { crest } sheet: { sheet }
                             .padding(.horizontal, KultaraMetrics.xl)
                     }
                     .padding(.vertical, KultaraMetrics.lg)
@@ -63,20 +70,25 @@ struct StoryPreviewScreen: View {
         }
     }
 
-    /// What is typed on the page: the framed picture the design sets at the head of it, the hook,
-    /// and the two figures ruled off beneath.
+    /// The framed picture, standing over the top of the page — `35:431` moved it out of the sheet
+    /// and onto the machine, where its lower half falls behind the paper.
+    ///
+    /// The frame is empty in the shipped content, and that is a decision rather than a gap: see the
+    /// note at the head of `CutsceneScreens.swift`. It is still the design's object, so it is still
+    /// drawn.
+    private var crest: some View {
+        KultaraPortraitFrame(accessibilityLabel: title) {
+            if let portraitURL, let image = BundledImage.load(portraitURL) {
+                image.resizable().aspectRatio(contentMode: .fill)
+            } else {
+                Rectangle().fill(palette.brownStone.color.opacity(0.12))
+            }
+        }
+    }
+
+    /// What is typed on the page: the hook, and the two named figures ruled off beneath it.
     private var sheet: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
-            KultaraPortraitFrame(accessibilityLabel: title) {
-                if let portraitURL, let image = BundledImage.load(portraitURL) {
-                    image.resizable().aspectRatio(contentMode: .fill)
-                } else {
-                    Rectangle().fill(palette.brownStone.color.opacity(0.12))
-                }
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.horizontal, KultaraMetrics.xxl)
-
             // Typed in, because the screen's whole conceit is a page coming out of a machine. The
             // reveal stops itself under Reduce Motion and VoiceOver, and a tap finishes it.
             HisploraTypewriterText(
@@ -85,43 +97,16 @@ struct StoryPreviewScreen: View {
                 ink: \.inkDark,
                 lineSpacing: KultaraTypography.Role.typedSheet.lineSpacing)
 
-            figures
+            // `.labelDistance` and `.labelTotalDuration` are the same two strings the preview
+            // screen puts over the same two numbers. The board writes "Estimated Time" where the
+            // table says "Total time"; one number with two names in two places is how a string
+            // table starts drifting, so the existing pair is reused rather than duplicated.
+            KultaraTypedFigures([
+                KultaraTypedFigure(
+                    label: UIStrings.string(.labelDistance, language), value: distanceText),
+                KultaraTypedFigure(
+                    label: UIStrings.string(.labelTotalDuration, language), value: durationText),
+            ])
         }
-    }
-
-    /// The rule across the page, then the distance and the duration with a rule standing between
-    /// them — as `177:801` draws it.
-    private var figures: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-            rule.frame(height: KultaraMetrics.hairline)
-            // A row at the default size, a column once the figures no longer fit beside each
-            // other. `ViewThatFits` rather than a fixed `HStack`, for the reason every other row
-            // in this app uses it: at AX5 two figures side by side become two columns of letters.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: KultaraMetrics.lg) {
-                    figure(distanceText)
-                    rule.frame(width: KultaraMetrics.hairline, height: 24)
-                    figure(durationText)
-                    Spacer(minLength: 0)
-                }
-                VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
-                    figure(distanceText)
-                    figure(durationText)
-                }
-            }
-        }
-    }
-
-    private var rule: some View {
-        Rectangle()
-            .fill(palette.inkDark.color.opacity(0.35))
-            .accessibilityHidden(true)
-    }
-
-    private func figure(_ text: String) -> some View {
-        Text(text)
-            .kultaraFont(.typedFigure)
-            .foregroundStyle(palette.inkDark.color)
-            .fixedSize(horizontal: false, vertical: true)
     }
 }

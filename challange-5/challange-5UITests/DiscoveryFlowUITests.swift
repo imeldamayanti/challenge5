@@ -10,7 +10,10 @@ final class DiscoveryFlowUITests: XCTestCase {
 
     /// The shipped quest's `title.en` (`quests/badung-empat-wajah.json`). Hoisted so a content
     /// change touches one line rather than eleven.
-    private let questTitleEN = "The Four Faces of Badung"
+    private let questTitleEN = "The Last Traces of Badung"
+    /// `StoryPreviewScreen`'s action label — what a tapped quest card now opens straight into
+    /// (`KultaraRootView.startOrResumeRun`), with no browsing screen in front of it any more.
+    private let readyToExploreEN = "Ready to Explore"
 
     override func setUp() {
         continueAfterFailure = false
@@ -87,7 +90,12 @@ final class DiscoveryFlowUITests: XCTestCase {
 
     // MARK: - The flow at default size
 
-    func testQuestListPreviewAndSettingsAreReachable() {
+    /// The catalogue card and the app preferences. Settings is checked from here, before any quest
+    /// card is tapped: a tapped card now goes straight into its run (`startOrResumeRun`), and the
+    /// run hides the tab bar for its whole length (`KultaraRootView.hidesTabBar`) — so once inside
+    /// there is no way back to Profile without relaunching. Reachability of the run itself is
+    /// `testTappingAQuestCardOpensTheStoryFlow`.
+    func testQuestListAndSettingsAreReachable() {
         let app = launch()
 
         // Quest list
@@ -111,23 +119,28 @@ final class DiscoveryFlowUITests: XCTestCase {
                       "NFR-CONT-06: walking time and total time must be separate figures — \(cardLabel)")
         attach(app, named: "quest-list")
 
-        // Preview, one tap away (FR-DISC-07)
-        tapQuestCard(app, titled: questTitleEN)
-        XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 10),
-                      "Preview did not open")
-        XCTAssertTrue(app.staticTexts["Safety"].exists, "FR-DISC-03: safety notice missing")
-        attach(app, named: "quest-preview")
-
-        // Back, then the app preferences, reached through Profile.
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        XCTAssertTrue(questTitle.waitForExistence(timeout: 10))
+        // The app preferences, reached through Profile.
         openSettings(app)
         XCTAssertTrue(app.staticTexts["Language"].waitForExistence(timeout: 10),
                       "Settings did not open")
         attach(app, named: "settings")
     }
 
-    func testTheMapSurfaceShowsAMarkerPerQuestAndOpensPreview() {
+    /// A quest tapped from the catalogue goes straight into its run — there is no browsing screen
+    /// in front of it any more (`KultaraRootView.startOrResumeRun`). What the story flow opens on is
+    /// the Hisplora Story Preview: the quest's hook, its distance and duration, and the "Ready to
+    /// Explore" action.
+    func testTappingAQuestCardOpensTheStoryFlow() {
+        let app = launch()
+        XCTAssertTrue(app.staticTexts[questTitleEN].waitForExistence(timeout: 10))
+
+        tapQuestCard(app, titled: questTitleEN)
+        XCTAssertTrue(app.buttons[readyToExploreEN].waitForExistence(timeout: 10),
+                      "Tapping the quest card did not open the story flow")
+        attach(app, named: "story-preview")
+    }
+
+    func testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow() {
         let app = launch()
         XCTAssertTrue(app.staticTexts[questTitleEN].waitForExistence(timeout: 10))
 
@@ -159,17 +172,20 @@ final class DiscoveryFlowUITests: XCTestCase {
         }
 
         marker.tap()
-        XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 10),
-                      "A map marker did not open the quest preview")
+        XCTAssertTrue(app.buttons[readyToExploreEN].waitForExistence(timeout: 10),
+                      "A map marker did not open the story flow")
     }
 
-    func testPreviewWithholdsEveryCheckpointStoryAndClue() {
-        // FR-DISC-04, verified against the rendered screen rather than a view model.
+    /// `FR-DISC-04`, verified against the rendered screen rather than a view model. The screen this
+    /// guarantee is checked against moved from the standalone preview to the Story Preview: the
+    /// quest's own hook is shown there, but nothing that belongs to a checkpoint the walker has not
+    /// reached yet.
+    func testStoryPreviewWithholdsEveryCheckpointStoryAndClue() {
         let app = launch()
         let questTitle = app.staticTexts[questTitleEN]
         XCTAssertTrue(questTitle.waitForExistence(timeout: 10))
         tapQuestCard(app, titled: questTitleEN)
-        XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 10))
+        XCTAssertTrue(app.buttons[readyToExploreEN].waitForExistence(timeout: 10))
 
         // Phrases that exist only in checkpoint lore or in clues, from the shipped quest. Matched
         // with a CONTAINS predicate rather than by exact identifier: XCUITest caps a string
@@ -184,7 +200,7 @@ final class DiscoveryFlowUITests: XCTestCase {
             let leaked = app.descendants(matching: .any)
                 .matching(NSPredicate(format: "label CONTAINS %@", phrase))
                 .firstMatch
-            XCTAssertFalse(leaked.exists, "Preview leaked checkpoint content: \(phrase)")
+            XCTAssertFalse(leaked.exists, "The story flow leaked checkpoint content: \(phrase)")
         }
     }
 
@@ -199,19 +215,21 @@ final class DiscoveryFlowUITests: XCTestCase {
         attach(app, named: "a11y-quest-list")
         reportTruncation(in: app, screen: "quest list")
 
-        tapQuestCard(app, titled: questTitleEN)
-        XCTAssertTrue(app.staticTexts["Checkpoints"].waitForExistence(timeout: 15),
-                      "Preview unreachable at the largest accessibility size")
-        attach(app, named: "a11y-quest-preview")
-        reportTruncation(in: app, screen: "quest preview")
-
-        app.navigationBars.buttons.element(boundBy: 0).tap()
-        XCTAssertTrue(questTitle.waitForExistence(timeout: 15))
+        // Settings, before any quest card is tapped — the run flow hides the tab bar for its whole
+        // length, so Profile is unreachable once the story flow has opened.
         openSettings(app, timeout: 15)
         XCTAssertTrue(app.staticTexts["Language"].waitForExistence(timeout: 15),
                       "Settings unreachable at the largest accessibility size")
         attach(app, named: "a11y-settings")
         reportTruncation(in: app, screen: "settings")
+
+        app.buttons["Quests"].firstMatch.tap()
+        XCTAssertTrue(questTitle.waitForExistence(timeout: 15))
+        tapQuestCard(app, titled: questTitleEN)
+        XCTAssertTrue(app.buttons[readyToExploreEN].waitForExistence(timeout: 15),
+                      "The story flow unreachable at the largest accessibility size")
+        attach(app, named: "a11y-story-preview")
+        reportTruncation(in: app, screen: "story preview")
     }
 
     /// Reports labels that run past the window's edges, which is what horizontal truncation and

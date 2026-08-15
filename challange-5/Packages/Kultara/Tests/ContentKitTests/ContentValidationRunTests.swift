@@ -41,7 +41,7 @@ struct ContentValidationRunTests {
             let quest = directory.appendingPathComponent("quests/badung-empat-wajah.json")
             var json = try String(contentsOf: quest, encoding: .utf8)
             json = json.replacingOccurrences(
-                of: #""en": "The Four Faces of Badung""#, with: #""en": """#)
+                of: #""en": "The Last Traces of Badung""#, with: #""en": """#)
             try json.write(to: quest, atomically: true, encoding: .utf8)
         }
         let report = ContentValidationRun.run(contentRoot: root)

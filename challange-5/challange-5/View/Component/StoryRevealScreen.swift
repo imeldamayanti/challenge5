@@ -2,10 +2,26 @@ import ContentKit
 import DesignSystem
 import SwiftUI
 
-/// The paged story reveal — `105:1699`, `187:954`, `187:1053`.
+/// The paged story reveal — `105:1699`, `187:954`, `187:1053`, restyled to the Ngalcer board's
+/// `46:120` ("Story - Puri Maospahit").
 ///
-/// One page per `LoreBlock`, so the `3/3` pager is `loreSegment.count` and the pages come from
-/// content rather than from a fixed set of three.
+/// **One page, not `loreSegment.count`.** The paged reveal (one screen per `LoreBlock`, a `1/3`
+/// pager) is gone: `46:120` draws a single passage, so every claim at this checkpoint is joined into
+/// one page the same way `QuestRunViewModel.hookText` joins the quest's hook — `\n\n` between blocks
+/// — rather than one screen per block. Nothing is dropped, only un-paginated.
+///
+/// **What `46:120` changed.** The illustration moved from a small, inset, letterboxed picture to a
+/// full-bleed hero across the top of the page — so `illustration` now fills and crops
+/// (`contentMode: .fill`) instead of letterboxing (`.fit`), and only the text and chrome carry the
+/// screen's horizontal padding, not the picture. The frame draws its back arrow floating directly on
+/// the illustration; `topBar` stays on the page's own paper ground just above it instead, kept as its
+/// own change rather than folded into this one. The frame's rich text — a bold name set inline
+/// mid-sentence — is not reproduced: `LoreBlock.text` is a plain `LocalizedText`, with no span markup
+/// to bold a piece of it, and inventing a name to bold would bake a quest-specific claim into a
+/// generic screen (`AD-4`). The frame's own words (a specific, unverified claim about a named
+/// historical figure and the Puputan) are not reproduced at all, for the same reason — see
+/// `docs/consent-log.md` and the note in `CutsceneScreens.swift`. This screen still renders whatever
+/// `text` the run's own content provides.
 ///
 /// **The `FR-CP-05` deviation.** The frames render historical claims as unlabelled prose: no
 /// accuracy chip, no citation. That is a knowing departure from `FR-CP-05`, taken by the product
@@ -16,43 +32,53 @@ import SwiftUI
 /// PRD needs the amendment or the signed exception; until it has one, this comment is the record.
 struct StoryRevealScreen: View {
     @Environment(\.hisploraPalette) private var palette
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let language: ContentLanguage
-    /// One entry per lore block, already resolved to the run's language.
-    let pages: [String]
-    /// The illustration behind each page, when the content ships one.
+    /// Every lore block at this checkpoint, already joined into one passage and resolved to the
+    /// run's language.
+    let text: String
+    /// The illustration behind the page, when a specific one exists for this run. The content tree
+    /// has no per-place illustration field, so this is `nil` in the shipped quest and the screen
+    /// falls back to `StoryIllustrationMetrics.image` — the frame's own art (`46:120`), packaged
+    /// with the design system as chrome rather than authored as content, the same way the
+    /// typewriter's machine photograph is one picture for every quest rather than one per place.
     let illustrationURL: URL?
     let onFinish: () -> Void
     let onBack: () -> Void
 
-    @State private var index = 0
-
-    private var isLastPage: Bool { index >= pages.count - 1 }
+    /// `46:120` draws the illustration at roughly 71% of the frame's height (623 of 874). Held here
+    /// as a point value rather than that fraction: the picture is decoration, not text, so it does
+    /// not participate in Dynamic Type, and a fixed height is what keeps it from fighting the
+    /// `ScrollView` it sits in for space.
+    private static let illustrationHeight: CGFloat = 380
 
     var body: some View {
         HisploraStage(ground: \.paperWarm) {
             VStack(spacing: 0) {
                 topBar
+                    .padding(.horizontal, KultaraMetrics.lg)
+                    .padding(.top, KultaraMetrics.lg)
                 ScrollView {
                     VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
+                        // Full-bleed: the one element in this screen that does not carry the
+                        // screen's own horizontal padding, so it spans edge to edge as the frame
+                        // draws it rather than sitting in the same padded column as the words.
                         illustration
-                        // Keyed by index so the reveal restarts per page rather than continuing
-                        // from the previous page's character count.
-                        HisploraTypewriterText(currentPage, font: .system(size: 17))
-                            .id(index)
+                        // Types itself in, character by character, which — because `Text` wraps
+                        // and this reveals left to right — reads as line by line, per the
+                        // designer's note. `HisploraTypewriterText` already does this; nothing new
+                        // to build for it.
+                        HisploraTypewriterText(text, font: .system(size: 17))
+                            .padding(.horizontal, KultaraMetrics.lg)
                     }
-                    .padding(.vertical, KultaraMetrics.lg)
+                    .padding(.bottom, KultaraMetrics.lg)
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 footer
+                    .padding(.horizontal, KultaraMetrics.lg)
+                    .padding(.bottom, KultaraMetrics.lg)
             }
-            .padding(KultaraMetrics.lg)
         }
-    }
-
-    private var currentPage: String {
-        pages.indices.contains(index) ? pages[index] : ""
     }
 
     private var topBar: some View {
@@ -60,52 +86,45 @@ struct StoryRevealScreen: View {
             HisploraBackButton(
                 accessibilityLabel: UIStrings.string(.storyRevealBack, language),
                 ink: \.inkDark,
-                action: back)
+                action: onBack)
             Spacer()
-            HisploraPager(
-                current: index + 1,
-                total: max(pages.count, 1),
-                accessibilityLabel: String(
-                    format: UIStrings.string(.storyRevealPager, language),
-                    index + 1, max(pages.count, 1)))
         }
     }
 
     @ViewBuilder private var illustration: some View {
-        if let illustrationURL, let image = BundledImage.load(illustrationURL) {
-            image
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(maxWidth: .infinity)
-                .accessibilityHidden(true)
+        Group {
+            if let illustrationURL, let image = BundledImage.load(illustrationURL) {
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else if let image = StoryIllustrationMetrics.image {
+                // The frame's own art (`46:120`), packaged with the design system rather than
+                // shipped as content — see the note on `illustrationURL` above.
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                // No illustration is a legitimate state, not an error — the same rule the portrait
+                // frame and the typewriter follow.
+                palette.paperCream.color
+            }
         }
+        .frame(maxWidth: .infinity, minHeight: Self.illustrationHeight, maxHeight: Self.illustrationHeight)
+        .clipped()
+        .accessibilityHidden(true)
     }
 
     private var footer: some View {
         HStack {
-            // The auto-advance the transition screen has is deliberately absent here: a reader
-            // moves through their own story at their own pace. A skip exists so a repeat walker is
-            // not made to page through it again.
-            Button(UIStrings.string(.storyRevealSkip, language), action: onFinish)
-                .font(.system(size: 15))
-                .foregroundStyle(palette.inkMuted.color)
+            // `46:120` carries only the next control — no skip. `storyRevealSkip` stays in the
+            // string table rather than being deleted along with its one call site: it names a real
+            // affordance (finish the page early) that the frame simply does not draw, not a piece
+            // of dead copy. With one page it would also have nothing left to skip past.
             Spacer()
             HisploraNextButton(
-                accessibilityLabel: isLastPage
-                    ? UIStrings.string(.transitionContinue, language)
-                    : UIStrings.string(.storyRevealNext, language),
-                action: advance)
+                accessibilityLabel: UIStrings.string(.transitionContinue, language),
+                action: onFinish)
         }
-    }
-
-    private func advance() {
-        guard !isLastPage else { return onFinish() }
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { index += 1 }
-    }
-
-    private func back() {
-        guard index > 0 else { return onBack() }
-        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.25)) { index -= 1 }
     }
 }
 

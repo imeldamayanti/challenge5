@@ -59,7 +59,7 @@ struct BundledContentRepositoryTests {
         // AD-4: a Run pins this at start. Nothing in M5 starts a Run, but the value a Run would
         // pin must already be readable, or the pin has nothing to attach to.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.08.3")
+        #expect(try repository.contentBundleVersion() == "2026.08.4")
     }
 
     @Test func questsAreReturnedInManifestOrder() throws {
