@@ -56,31 +56,65 @@ struct BundledContentRepositoryTests {
     }
 
     @Test func exposesTheContentBundleVersionAQuestRunWouldPin() throws {
-        // AD-4: a Run pins this at start. Nothing in M5 starts a Run, but the value a Run would
-        // pin must already be readable, or the pin has nothing to attach to.
+        // AD-4: a Run pins this at start. `s5` shipped the `badung-jejak` collection alongside
+        // this version bump — any content change bumps it, per `manifest.json`'s own rule.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.0")
+        #expect(try repository.contentBundleVersion() == "2026.09.1")
     }
 
-    // MARK: - PRD §5.15 — the sidequest seam, with nothing behind it yet
+    // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)
 
-    @Test func theBundleShipsNoSideQuestsOrCollectionsYet() throws {
-        // Schema 2 is in the manifest; the documents are not authored. Every new place needs its
-        // own consent record and its own citations (`s5`, Phase E), so the arrays ship empty
-        // rather than shipping a place nobody has been granted.
+    @Test func theBundleShipsFiveSidequestsFillingOneCollection() throws {
+        // `s5` shipped on the five already-consented places only — `docs/consent-log.md` still
+        // names none of them approached, so this stays a D1-b self-grant, not a public claim.
         let repository = try repository()
         #expect(try repository.manifest().schemaVersion == 2)
-        #expect(try repository.sideQuests().isEmpty)
-        #expect(try repository.collections().isEmpty)
-        #expect(try repository.sideQuest(id: "sq-badung-catur-muka") == nil)
-        #expect(try repository.sideQuests(atPlaceID: "badung-catur-muka").isEmpty)
+
+        let sideQuests = try repository.sideQuests()
+        #expect(sideQuests.count == 5)
+        #expect(try repository.sideQuest(id: "sq-badung-catur-muka") != nil)
+        #expect(try repository.sideQuests(atPlaceID: "badung-catur-muka").map(\.id)
+                == ["sq-badung-catur-muka"])
+
+        // Every sidequest resolves to a Place, with lore and sources reachable — the same shape
+        // `assemblesTheWholeQuestGraphFromTheBundleAlone` asserts for checkpoints.
+        for sideQuest in sideQuests {
+            let place = try #require(try repository.place(id: sideQuest.placeId),
+                                     "Sidequest \(sideQuest.id) has no Place")
+            #expect(!place.sources.isEmpty)
+            #expect(!sideQuest.lore.isEmpty)
+            for block in sideQuest.lore {
+                #expect(!block.sourceRefs.isEmpty)
+                for ref in block.sourceRefs {
+                    #expect(ref < place.sources.count)
+                }
+            }
+        }
+
+        let collections = try repository.collections()
+        #expect(collections.count == 1)
+        let collection = try #require(collections.first)
+        #expect(collection.phrase == "JEJAK")
+        // `V25` — one slot per letter, in order.
+        #expect(collection.orderedSlots.map(\.letter) == ["J", "E", "J", "A", "K"])
+        // Every slot names a real sidequest, and every sidequest fills exactly one slot (`V24`).
+        let slotSideQuestIDs = collection.orderedSlots.map(\.sideQuestId)
+        #expect(Set(slotSideQuestIDs) == Set(sideQuests.map(\.id)))
+        #expect(Set(slotSideQuestIDs).count == slotSideQuestIDs.count)
     }
 
-    @Test func suppressionOverAnEmptySideQuestSetIsStillAnswerable() throws {
-        // `AD-5`/`FR-SIDE-14`: the suppressed sets are passed in, never fetched here.
+    @Test func suppressingAPlaceRemovesOnlyItsOwnSidequest() throws {
+        // `AD-5`/`FR-SIDE-14`: the suppressed sets are passed in, never fetched here. Suppressing
+        // one place's sidequest must not touch the other four, and an id that resolves to nothing
+        // is a harmless no-op rather than a crash.
         let repository = try repository()
-        #expect(try repository.sideQuests(
-            suppressingSideQuestIDs: ["sq-a"], suppressingPlaceIDs: ["badung-catur-muka"]).isEmpty)
+        let suppressed = try repository.sideQuests(
+            suppressingSideQuestIDs: ["sq-does-not-exist"],
+            suppressingPlaceIDs: ["badung-catur-muka"])
+        #expect(suppressed.map(\.id).sorted() == [
+            "sq-badung-museum-bali", "sq-badung-pasar-kumbasari",
+            "sq-badung-pura-maospahit", "sq-badung-puri-agung-pemecutan",
+        ])
     }
 
     @Test func questsAreReturnedInManifestOrder() throws {

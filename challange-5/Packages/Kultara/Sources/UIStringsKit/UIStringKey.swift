@@ -209,7 +209,6 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case sideQuestPhotoPrompt
     case sideQuestPhotoTake
     case sideQuestPhotoChoose
-    case sideQuestPhotoNotInThisBuild
     case sideQuestLetterAwarded
     case sideQuestLetterProgress
     case sideQuestCollectionOpen

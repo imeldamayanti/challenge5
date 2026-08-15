@@ -32,6 +32,8 @@ let package = Package(
                 .copy("Content/manifest.json"),
                 .copy("Content/places"),
                 .copy("Content/quests"),
+                .copy("Content/sidequests"),
+                .copy("Content/collections"),
                 .copy("Content/assets"),
             ]
         ),

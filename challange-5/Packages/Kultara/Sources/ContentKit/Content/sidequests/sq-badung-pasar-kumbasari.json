@@ -1,0 +1,58 @@
+{
+  "id": "sq-badung-pasar-kumbasari",
+  "placeId": "badung-pasar-kumbasari",
+  "title": {
+    "id": "Alas Kaki yang Tepat",
+    "en": "The Right Shoes"
+  },
+  "synopsis": {
+    "id": "Lantai Pasar Kumbasari sering basah, dan lantai atas hanya bisa dicapai lewat tangga. Sepatumu penting di sini.",
+    "en": "Pasar Kumbasari's floor is often wet, and the upper floors are reached only by stairs. What you wear on your feet matters here."
+  },
+  "lore": [
+    {
+      "text": {
+        "id": "Lantai pasar sering basah, dan sepatu tertutup yang tidak licin lebih penting di sini dibanding di titik lain sepanjang rute ini.",
+        "en": "The market floor is often wet, and closed, gripping shoes matter more here than anywhere else on this walk."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    },
+    {
+      "text": {
+        "id": "Mencapai lantai seni dan kerajinan berarti naik tangga — jumlah anak tangga belum disurvei, dan keberadaan lift pun belum dikonfirmasi.",
+        "en": "Reaching the art and craft floors means climbing — the building's step count has not been surveyed, and a lift has not been confirmed either."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "challenge": {
+    "type": "quiz",
+    "question": {
+      "id": "Apa yang sebaiknya kamu pakai untuk berkeliling Pasar Kumbasari dengan nyaman?",
+      "en": "What should you wear to get around Pasar Kumbasari comfortably?"
+    },
+    "options": [
+      {
+        "id": "Sandal jepit",
+        "en": "Flip-flops"
+      },
+      {
+        "id": "Sepatu tertutup yang tidak licin",
+        "en": "Closed, gripping shoes"
+      },
+      {
+        "id": "Tidak masalah, sepatu apa saja",
+        "en": "It doesn't matter what you wear"
+      }
+    ],
+    "correctIndex": 1,
+    "explanation": {
+      "id": "Lantai pasar sering basah dan lantai atas hanya dicapai lewat tangga — sandal terbuka adalah pilihan yang salah untuk keduanya.",
+      "en": "The market floor is frequently wet and the upper floors are reached only by stairs — open sandals are the wrong choice for either."
+    }
+  },
+  "triggerRadiusM": 100,
+  "noticeRadiusM": 200
+}

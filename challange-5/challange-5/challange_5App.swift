@@ -1,7 +1,13 @@
 import SwiftUI
+import UserNotifications
 
 @main
 struct challange_5App: App {
+    @State private var router = SideQuestRouter()
+    /// Held here rather than constructed inline: `UNUserNotificationCenter.current().delegate` is
+    /// `weak`, and a delegate nothing retains is a delegate iOS silently drops.
+    @State private var notificationDelegate = SideQuestNotificationDelegate()
+
     var body: some Scene {
         WindowGroup {
             // The app target is a shell. Everything it shows lives in the Kultara package, which
@@ -9,11 +15,25 @@ struct challange_5App: App {
             // than by convention (system-design.md §3).
             switch Self.environment {
             case .success(let environment):
-                KultaraRootView(environment: environment)
+                KultaraRootView(environment: environment, router: router)
+                    .onAppear { configureProximity(environment) }
             case .failure(let error):
                 ContentUnavailableScreen(message: String(describing: error))
             }
         }
+    }
+
+    /// `system-design.md` §6.2 — `registerRegions()` runs on launch, and the notification delegate
+    /// has to be in place before any tap can arrive. Both are idempotent, so re-running this on a
+    /// later `onAppear` (a scene reactivation) costs nothing.
+    @MainActor
+    private func configureProximity(_ environment: KultaraEnvironment) {
+        notificationDelegate.onTap = { sideQuestID in router.pendingSideQuestID = sideQuestID }
+        UNUserNotificationCenter.current().delegate = notificationDelegate
+        environment.proximityMonitor.onSideQuestNearby = { sideQuestID in
+            router.pendingSideQuestID = sideQuestID
+        }
+        environment.proximityMonitor.refreshRegions()
     }
 
     /// Resolved once. A missing content bundle is a build problem, so it is surfaced as a screen

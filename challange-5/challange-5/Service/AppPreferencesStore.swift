@@ -42,6 +42,9 @@ protocol AppPreferencesStore: AnyObject {
     /// Per quest rather than once globally: the notice names that route's traffic, pavements and
     /// terrain, so a blanket acknowledgement would be an acknowledgement of nothing.
     var safetyNoticeAckedQuestIDs: Set<String> { get set }
+    /// `FR-PROX-03`, `NFR-PRIV-10` — off by default, and only ever turned on from the Settings row
+    /// that explains it. Nothing else in the app reads or writes this.
+    var nearbyAlertsEnabled: Bool { get set }
     func removeAll()
 }
 
@@ -51,6 +54,7 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
     static let preferredLanguageKey = "kultara.preferredLanguage"
     static let onboardingCompletedAtKey = "kultara.onboardingCompletedAt"
     static let safetyNoticeAckedQuestIDsKey = "kultara.safetyNoticeAckedQuestIDs"
+    static let nearbyAlertsEnabledKey = "kultara.nearbyAlertsEnabled"
 
     private let defaults: UserDefaults
 
@@ -90,10 +94,16 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
         set { defaults.set(Array(newValue).sorted(), forKey: Self.safetyNoticeAckedQuestIDsKey) }
     }
 
+    var nearbyAlertsEnabled: Bool {
+        get { defaults.bool(forKey: Self.nearbyAlertsEnabledKey) }
+        set { defaults.set(newValue, forKey: Self.nearbyAlertsEnabledKey) }
+    }
+
     func removeAll() {
         defaults.removeObject(forKey: Self.preferredLanguageKey)
         defaults.removeObject(forKey: Self.onboardingCompletedAtKey)
         defaults.removeObject(forKey: Self.safetyNoticeAckedQuestIDsKey)
+        defaults.removeObject(forKey: Self.nearbyAlertsEnabledKey)
     }
 }
 
@@ -102,20 +112,24 @@ final class InMemoryAppPreferencesStore: AppPreferencesStore {
     var preferredLanguage: ContentLanguage?
     var onboardingCompletedAt: Date?
     var safetyNoticeAckedQuestIDs: Set<String>
+    var nearbyAlertsEnabled: Bool
 
     init(
         preferredLanguage: ContentLanguage? = nil,
         onboardingCompletedAt: Date? = nil,
-        safetyNoticeAckedQuestIDs: Set<String> = []
+        safetyNoticeAckedQuestIDs: Set<String> = [],
+        nearbyAlertsEnabled: Bool = false
     ) {
         self.preferredLanguage = preferredLanguage
         self.onboardingCompletedAt = onboardingCompletedAt
         self.safetyNoticeAckedQuestIDs = safetyNoticeAckedQuestIDs
+        self.nearbyAlertsEnabled = nearbyAlertsEnabled
     }
 
     func removeAll() {
         preferredLanguage = nil
         onboardingCompletedAt = nil
         safetyNoticeAckedQuestIDs = []
+        nearbyAlertsEnabled = false
     }
 }

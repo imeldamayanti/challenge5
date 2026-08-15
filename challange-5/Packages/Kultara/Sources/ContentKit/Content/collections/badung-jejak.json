@@ -1,0 +1,21 @@
+{
+  "id": "badung-jejak",
+  "region": "Denpasar",
+  "phrase": "JEJAK",
+  "title": {
+    "id": "Jejak Badung",
+    "en": "Traces of Badung"
+  },
+  "caption": {
+    "id": "Kumpulkan satu huruf di tiap tempat untuk merangkai kata ini. Setiap tempat sudah pernah kamu lewati di jalan cerita utama — ini sudut pandang lain darinya.",
+    "en": "Collect one letter at each place to spell this word. Every place already sits on the main story's route — this is a different angle on each one."
+  },
+  "badgeId": "badge-badung-jejak",
+  "slots": [
+    { "index": 0, "letter": "J", "sideQuestId": "sq-badung-catur-muka" },
+    { "index": 1, "letter": "E", "sideQuestId": "sq-badung-puri-agung-pemecutan" },
+    { "index": 2, "letter": "J", "sideQuestId": "sq-badung-pura-maospahit" },
+    { "index": 3, "letter": "A", "sideQuestId": "sq-badung-pasar-kumbasari" },
+    { "index": 4, "letter": "K", "sideQuestId": "sq-badung-museum-bali" }
+  ]
+}

@@ -55,7 +55,47 @@ final class DiscoveryFlowUITests: XCTestCase {
         if skipAuth.waitForExistence(timeout: 10) {
             skipAuth.tap()
         }
+
+        // `app.launch()` starts a fresh process but not a fresh sandbox: a Run started by an
+        // earlier test method in this run is still on disk, and `startOrResumeRun` resumes a draft
+        // rather than opening the Story Preview a test expects (`FR-START-06`, working as
+        // intended — it is this suite's isolation that assumed otherwise). Deleting local data on
+        // every launch is what makes each test method's result independent of run order, and it
+        // doubles as `FR-SET-02`'s own reachability check.
+        //
+        // At the largest accessibility size every row in Settings is taller and the tab bar's
+        // labels wrap, so this walk genuinely takes longer — the same reason `openSettings` below
+        // takes an explicit `timeout:` rather than a fixed one.
+        resetAppData(app, timeout: contentSize == nil ? 10 : 20)
         return app
+    }
+
+    private func resetAppData(_ app: XCUIApplication, timeout: TimeInterval = 10) {
+        let profile = app.buttons["Profile"].firstMatch
+        // Right after the auth wireframe's own dismissal, the tab bar can still be settling into
+        // place — waiting for the button to exist before tapping it (rather than tapping on faith)
+        // is what makes this reliable at the largest accessibility size, where the bar's layout
+        // pass takes longer.
+        _ = profile.waitForExistence(timeout: timeout)
+        profile.tap()
+        var settings = app.buttons["Settings"].firstMatch
+        if !settings.waitForExistence(timeout: timeout) {
+            // One retry: a mistimed first tap at the largest content size can land short of the
+            // bar before its layout settles, in which case nothing happened and Profile is still
+            // reachable to try again — cheaper than chasing the exact settle time.
+            profile.tap()
+            settings = app.buttons["Settings"].firstMatch
+        }
+        guard settings.waitForExistence(timeout: timeout) else { return }
+        settings.tap()
+
+        let deleteAction = app.buttons["Delete all local data"]
+        guard deleteAction.waitForExistence(timeout: timeout) else { return }
+        deleteAction.tap()
+        let confirm = app.buttons["Delete"]
+        if confirm.waitForExistence(timeout: timeout) { confirm.tap() }
+
+        app.buttons["Quests"].firstMatch.tap()
     }
 
     /// Settings is no longer a tab: the flow reaches it as Profile → App preferences.

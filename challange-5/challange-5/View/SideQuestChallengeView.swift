@@ -1,6 +1,8 @@
 import ContentKit
 import DesignSystem
+import PhotosUI
 import SwiftUI
+import UIKit
 import UIStringsKit
 
 /// The challenge — one quiz, or one photograph (`FR-SIDE-05`, `FR-SIDE-06`).
@@ -15,6 +17,9 @@ import UIStringsKit
 /// app (`s0` D5).
 struct SideQuestChallengeView: View {
     @Environment(\.hisploraPalette) private var palette
+    @State private var selectedPhotoItem: PhotosPickerItem?
+    @State private var showsCamera = false
+    @State private var isLoadingPhoto = false
 
     let language: ContentLanguage
     let challenge: ChallengePresentation
@@ -23,7 +28,9 @@ struct SideQuestChallengeView: View {
     let isSettled: Bool
     let onSelect: (Int) -> Void
     let onSubmit: () -> Void
-    let onAcknowledgePhoto: () -> Void
+    /// `s4` §7 — the picked or captured image, still full-size; downscaling and writing happen
+    /// behind `SideQuestFlowViewModel.capturedPhoto(_:)`, which is the engine call's one caller.
+    let onCapturePhoto: (UIImage) -> Void
     let onContinue: () -> Void
     let onBack: () -> Void
 
@@ -186,30 +193,65 @@ struct SideQuestChallengeView: View {
 
     // MARK: Photo — Phase D
 
-    /// Until the capture pipeline ships (`s4` §7) a photo challenge states its prompt, says
-    /// photographs are not in this build, and awards the letter on acknowledgement — the same shape
-    /// M6 used for photo tasks. The camera and library controls are not drawn as disabled buttons:
-    /// a control that cannot work is worse than a sentence saying so.
+    /// `s4` §7. Camera and library, side by side rather than one gating the other: the Simulator
+    /// this project is developed on has no camera at all (`UIImagePickerController.isSourceTypeAvailable`
+    /// says so honestly, and the button is absent rather than disabled — a control that cannot work
+    /// is worse than one that is not there), while a physical device may prefer either.
     @ViewBuilder private func photoBody(_ prompt: String) -> some View {
         Text(UIStrings.string(.sideQuestPhotoPrompt, language))
             .font(KultaraTypography.font(.questTitle))
             .foregroundStyle(palette.inkCream.color)
             .fixedSize(horizontal: false, vertical: true)
-        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            Text(prompt)
-                .font(.system(size: 17))
-                .foregroundStyle(palette.inkDark.color)
-                .lineSpacing(4)
-                .fixedSize(horizontal: false, vertical: true)
-            Text(UIStrings.string(.sideQuestPhotoNotInThisBuild, language))
-                .font(.system(size: 15))
-                .foregroundStyle(palette.inkMuted.color)
-                .fixedSize(horizontal: false, vertical: true)
+
+        Text(prompt)
+            .font(.system(size: 17))
+            .foregroundStyle(palette.inkDark.color)
+            .lineSpacing(4)
+            .fixedSize(horizontal: false, vertical: true)
+            .padding(KultaraMetrics.lg)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(palette.paperCream.color,
+                        in: RoundedRectangle(cornerRadius: KultaraMetrics.sm))
+
+        VStack(spacing: KultaraMetrics.sm) {
+            if UIImagePickerController.isSourceTypeAvailable(.camera) {
+                Button {
+                    showsCamera = true
+                } label: {
+                    Text(UIStrings.string(.sideQuestPhotoTake, language))
+                }
+                .buttonStyle(.hisploraPill)
+            }
+
+            PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                Text(UIStrings.string(.sideQuestPhotoChoose, language))
+            }
+            .buttonStyle(.hisploraPlain)
         }
-        .padding(KultaraMetrics.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.paperCream.color,
-                    in: RoundedRectangle(cornerRadius: KultaraMetrics.sm))
+        .disabled(isLoadingPhoto)
+        .fullScreenCover(isPresented: $showsCamera) {
+            CameraCaptureView(
+                onCapture: { image in
+                    showsCamera = false
+                    onCapturePhoto(image)
+                },
+                onCancel: { showsCamera = false })
+            .ignoresSafeArea()
+        }
+        .onChange(of: selectedPhotoItem) { _, item in
+            guard let item else { return }
+            isLoadingPhoto = true
+            Task {
+                defer {
+                    isLoadingPhoto = false
+                    selectedPhotoItem = nil
+                }
+                if let data = try? await item.loadTransferable(type: Data.self),
+                   let image = UIImage(data: data) {
+                    onCapturePhoto(image)
+                }
+            }
+        }
     }
 
     // MARK: Actions
@@ -226,12 +268,12 @@ struct SideQuestChallengeView: View {
                     .disabled(selection == nil)
             }
         case .photo:
+            // Settled means "attached" — `SideQuestFlowViewModel.capturedPhoto` moves straight to
+            // `.letter` on success, so this screen is not on stage to render the settled case in
+            // practice. Kept for the same reason the quiz's `Continue` case is: a decision this
+            // view should not have to know is unreachable.
             if isSettled {
                 Button(UIStrings.string(.transitionContinue, language), action: onContinue)
-                    .buttonStyle(.hisploraPill)
-            } else {
-                Button(UIStrings.string(.runStartSafetyAck, language),
-                       action: onAcknowledgePhoto)
                     .buttonStyle(.hisploraPill)
             }
         }

@@ -1,0 +1,58 @@
+{
+  "id": "sq-badung-museum-bali",
+  "placeId": "badung-museum-bali",
+  "title": {
+    "id": "Arsitektur yang Dipinjam",
+    "en": "Borrowed Architecture"
+  },
+  "synopsis": {
+    "id": "Museum Bali bukan satu gedung, melainkan sekumpulan paviliun berlanggam puri dan pura.",
+    "en": "Museum Bali is not one building — it is a set of pavilions built in puri and pura style."
+  },
+  "lore": [
+    {
+      "text": {
+        "id": "Museum Bali bukan satu gedung, melainkan sekumpulan paviliun, masing-masing dibangun dengan langgam puri atau pura, bukan galeri konvensional.",
+        "en": "Museum Bali is not one building but a set of pavilions, each built in the idiom of a puri or a pura rather than a conventional gallery."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    },
+    {
+      "text": {
+        "id": "Artinya, gedungnya sendiri memakai bahasa arsitektur yang sama dengan tempat-tempat yang sudah kamu kunjungi dalam koleksi ini.",
+        "en": "That means the building itself keeps the same architectural language as the sites this collection has already taken you to."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [1]
+    }
+  ],
+  "challenge": {
+    "type": "quiz",
+    "question": {
+      "id": "Apa yang tidak biasa dari gedung Museum Bali sendiri?",
+      "en": "What makes Museum Bali's own buildings unusual for a museum?"
+    },
+    "options": [
+      {
+        "id": "Gedungnya ada di bawah tanah",
+        "en": "They are underground"
+      },
+      {
+        "id": "Gedungnya berlanggam puri dan pura, bukan galeri",
+        "en": "They are built in puri and pura style, not gallery style"
+      },
+      {
+        "id": "Gedungnya tidak beratap",
+        "en": "They have no roof"
+      }
+    ],
+    "correctIndex": 1,
+    "explanation": {
+      "id": "Paviliun museum ini meminjam arsitektur puri dan pura, bukan bentuk galeri konvensional — cocok, karena banyak koleksinya berasal dari tempat yang dibangun dengan cara yang sama.",
+      "en": "The museum's pavilions borrow palace and temple architecture rather than a conventional gallery form — fitting, since many of its objects came from places built the same way."
+    }
+  },
+  "triggerRadiusM": 80,
+  "noticeRadiusM": 200
+}
