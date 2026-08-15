@@ -147,5 +147,19 @@ struct StubContentRepository: ContentRepository {
         suppressingQuestIDs.contains(quest.id) ? [] : [quest]
     }
 
+    // PRD §5.15. `RunEngine` knows nothing about sidequests and must keep knowing nothing —
+    // `FR-SIDE-01` makes them a separate aggregate, so these stay empty here on purpose.
+    func sideQuests() throws -> [SideQuest] { [] }
+    func sideQuest(id: String) throws -> SideQuest? { nil }
+    func sideQuests(atPlaceID placeID: String) throws -> [SideQuest] { [] }
+    func collections() throws -> [LetterCollection] { [] }
+    func collection(id: String) throws -> LetterCollection? { nil }
+
+    func sideQuests(
+        suppressingSideQuestIDs: Set<String>, suppressingPlaceIDs: Set<String>
+    ) throws -> [SideQuest] {
+        []
+    }
+
     func assetURL(_ relativePath: String) throws -> URL? { nil }
 }

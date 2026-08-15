@@ -11,6 +11,10 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
     case v9 = "V9", v10 = "V10", v11 = "V11", v12 = "V12"
     case v13 = "V13", v14 = "V14", v15 = "V15", v16 = "V16"
     case v17 = "V17", v18 = "V18"
+    // Sidequests and letter collections (PRD §5.15, `schema.md` §A.10–A.11).
+    case v19 = "V19", v20 = "V20", v21 = "V21", v22 = "V22"
+    case v23 = "V23", v24 = "V24", v25 = "V25", v26 = "V26"
+    case v27 = "V27", v28 = "V28"
 
     public var title: String {
         switch self {
@@ -32,6 +36,16 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
         case .v16: "hardLatestStart matches recomputation from visiting hours"
         case .v17: "Every Place a quest visits has a map pin inside the region map"
         case .v18: "Every route geometry parses as a LineString of at least two points"
+        case .v19: "Every sidequest's placeId resolves and that Place is listed in the manifest"
+        case .v20: "triggerRadiusM is 30–250 m, and noticeRadiusM exceeds it"
+        case .v21: "Every sidequest lore block has an accuracy label and resolvable source refs"
+        case .v22: "A quiz has 2–4 distinct options and a correctIndex inside that range"
+        case .v23: "No photo challenge at a Place where photography is prohibited"
+        case .v24: "Every sidequest fills exactly one slot, in exactly one collection"
+        case .v25: "slots.count equals the phrase's letters, and each slot's letter matches its position"
+        case .v26: "Slot indices are contiguous from 0 and each sideQuestId resolves and appears once"
+        case .v27: "A collection has at most 20 sidequests"
+        case .v28: "Every sidequest asset path exists"
         }
     }
 
@@ -57,6 +71,16 @@ public enum ValidationRule: String, Codable, Sendable, CaseIterable {
         case .v16: "FR-DISC-06"
         case .v17: "FR-DISC-02, FR-DISC-03"
         case .v18: "FR-MAP-02"
+        case .v19: "FR-SIDE-02, NFR-GOV-01"
+        case .v20: "FR-ARR-07, FR-PROX-11"
+        case .v21: "NFR-CONT-01, FR-SIDE-04"
+        case .v22: "FR-SIDE-06"
+        case .v23: "FR-TASK-06, FR-SIDE-13"
+        case .v24: "FR-SIDE-05"
+        case .v25: "FR-SIDE-08"
+        case .v26: "FR-SIDE-08"
+        case .v27: "FR-PROX-14, FR-SIDE-16"
+        case .v28: "—"
         }
     }
 }
@@ -85,6 +109,14 @@ public enum ContentValidator {
     public static let payloadBudgetBytes = 200 * 1024 * 1024
 
     public static let permittedTaskTypesAtSacredPlaces: Set<String> = ["photo", "reflection", "question"]
+
+    /// iOS monitors at most 20 regions per app, and quest start regions share the same budget with
+    /// sidequest notice regions. V27 is therefore a backstop rather than a guarantee: the real
+    /// ceiling is lower than 20, and the runtime half of the problem is nearest-N selection
+    /// (`FR-SIDE-16`, superseding `FR-PROX-14`'s v3 timing). What this catches at build time is the
+    /// authoring mistake whose field symptom — some places simply never notify — is
+    /// indistinguishable from a GPS problem.
+    public static let monitoredRegionBudget = 20
 
     // MARK: - Raw-document rules: V1 and V7
 
@@ -270,6 +302,14 @@ public enum ContentValidator {
             findings.append(contentsOf: questFindings(quest, bundle: bundle, assets: assets))
         }
 
+        // V19–V23, V28
+        for sideQuest in bundle.sideQuests {
+            findings.append(contentsOf: sideQuestFindings(sideQuest, bundle: bundle, assets: assets))
+        }
+
+        // V24–V27
+        findings.append(contentsOf: collectionFindings(bundle: bundle))
+
         // V17 — every Place a quest visits must be findable on the map, or the map screen
         // silently drops a stop the list shows.
         if let regionMap = bundle.manifest.regionMap {
@@ -438,22 +478,173 @@ public enum ContentValidator {
         return findings
     }
 
+    // MARK: - Sidequest rules: V19–V28
+
+    private static func sideQuestFindings(
+        _ sideQuest: SideQuest,
+        bundle: ContentBundle,
+        assets: any AssetInventory
+    ) -> [ValidationFinding] {
+        var findings: [ValidationFinding] = []
+        let path = "sidequests/\(sideQuest.id).json"
+
+        // V20 — FR-ARR-07 for the trigger, the FR-PROX-11 argument for the notice. The alert warns
+        // on approach; it does not confirm arrival at the gate.
+        if !(30...250).contains(sideQuest.triggerRadiusM) {
+            findings.append(ValidationFinding(
+                rule: .v20, path: path,
+                message: "triggerRadiusM is \(sideQuest.triggerRadiusM) m; must be within 30–250 m."))
+        }
+        if sideQuest.noticeRadiusM <= sideQuest.triggerRadiusM {
+            findings.append(ValidationFinding(
+                rule: .v20, path: path,
+                message: "noticeRadiusM \(sideQuest.noticeRadiusM) m must exceed triggerRadiusM \(sideQuest.triggerRadiusM) m."))
+        }
+
+        // V28 — a hero the notice card is built around, missing, is a card that silently falls back
+        // to type on paper.
+        if let asset = sideQuest.heroImageAsset, !assets.exists(asset) {
+            findings.append(ValidationFinding(
+                rule: .v28, path: path, message: "Referenced asset \"\(asset)\" does not exist."))
+        }
+
+        // V19 — FR-SIDE-02, NFR-GOV-01. A sidequest whose Place is not in the manifest resolves to
+        // nothing: no coordinate to gate arrival on, and no consent record for V4 to judge.
+        guard let place = bundle.place(id: sideQuest.placeId) else {
+            findings.append(ValidationFinding(
+                rule: .v19, path: path,
+                message: "placeId \"\(sideQuest.placeId)\" resolves to no Place."))
+            return findings
+        }
+        if !bundle.manifest.places.contains(place.id) {
+            findings.append(ValidationFinding(
+                rule: .v19, path: path,
+                message: "Place \(place.id) is not listed in manifest.places, so it does not ship."))
+        }
+
+        // V21 — NFR-CONT-01, FR-SIDE-04. The accuracy label is structural; the citations are not.
+        findings.append(contentsOf: loreFindings(
+            sideQuest.lore, sourceCount: place.sources.count, path: path, label: "lore", rule: .v21))
+
+        switch sideQuest.challenge {
+        case .quiz(let quiz):
+            // V22 — FR-SIDE-06. Read one-handed, in daylight, standing in a street.
+            if !(2...4).contains(quiz.options.count) {
+                findings.append(ValidationFinding(
+                    rule: .v22, path: path,
+                    message: "Quiz has \(quiz.options.count) option(s); must have 2–4."))
+            }
+            if Set(quiz.options).count != quiz.options.count {
+                findings.append(ValidationFinding(
+                    rule: .v22, path: path,
+                    message: "Quiz options are not distinct; two identical options make one of them unmarkable."))
+            }
+            if !quiz.options.indices.contains(quiz.correctIndex) {
+                findings.append(ValidationFinding(
+                    rule: .v22, path: path,
+                    message: "correctIndex \(quiz.correctIndex) is outside the \(quiz.options.count) authored option(s)."))
+            }
+        case .photo:
+            // V23 — FR-TASK-06 applied to the sidequest surface. Enforced again at runtime, but a
+            // build failure is the version that cannot be shipped by accident.
+            if place.photoPolicy.level == .prohibited {
+                findings.append(ValidationFinding(
+                    rule: .v23, path: path,
+                    message: "Photo challenge is offered at \(place.id), where photography is prohibited."))
+            }
+        }
+
+        return findings
+    }
+
+    private static func collectionFindings(bundle: ContentBundle) -> [ValidationFinding] {
+        var findings: [ValidationFinding] = []
+
+        // V24 — FR-SIDE-05, and it is bidirectional on purpose. A sidequest with no slot is a place
+        // the walker can complete for no letter; a slot with no sidequest is a letter nobody can
+        // earn. Both are silent in the app and loud here.
+        for sideQuest in bundle.sideQuests {
+            let filled = bundle.collections.reduce(0) { total, collection in
+                total + collection.slots.filter { $0.sideQuestId == sideQuest.id }.count
+            }
+            if filled != 1 {
+                findings.append(ValidationFinding(
+                    rule: .v24, path: "sidequests/\(sideQuest.id).json",
+                    message: filled == 0
+                        ? "Sidequest fills no collection slot, so completing it awards no letter."
+                        : "Sidequest fills \(filled) collection slots; it must fill exactly one."))
+            }
+        }
+
+        for collection in bundle.collections {
+            let path = "collections/\(collection.id).json"
+            let ordered = collection.orderedSlots
+            let letters = collection.phraseLetters
+
+            // V27 — the iOS 20-region cap, as an authoring rule.
+            if ordered.count > monitoredRegionBudget {
+                findings.append(ValidationFinding(
+                    rule: .v27, path: path,
+                    message: "Collection has \(ordered.count) sidequests; iOS monitors at most \(monitoredRegionBudget) regions per app, shared with quest start regions."))
+            }
+
+            // V26 — FR-SIDE-08. Indices are what the collection screen lays out in; a gap draws a
+            // blank slot no place can ever fill.
+            let indices = ordered.map(\.index)
+            if indices != Array(0..<ordered.count) {
+                findings.append(ValidationFinding(
+                    rule: .v26, path: path,
+                    message: "Slot indices are \(indices); must be contiguous from 0."))
+            }
+            var seen: Set<String> = []
+            for slot in ordered {
+                if bundle.sideQuest(id: slot.sideQuestId) == nil {
+                    findings.append(ValidationFinding(
+                        rule: .v26, path: path,
+                        message: "Slot \(slot.index) names sideQuestId \"\(slot.sideQuestId)\", which does not exist."))
+                }
+                if !seen.insert(slot.sideQuestId).inserted {
+                    findings.append(ValidationFinding(
+                        rule: .v26, path: path,
+                        message: "sideQuestId \"\(slot.sideQuestId)\" fills more than one slot in this collection."))
+                }
+            }
+
+            // V25 — FR-SIDE-08. The phrase *is* the place count: spaces are display only and get no
+            // slot, so `BALI THE EXPLORER` is 15 letters and therefore 15 places.
+            if ordered.count != letters.count {
+                findings.append(ValidationFinding(
+                    rule: .v25, path: path,
+                    message: "Collection has \(ordered.count) slot(s) for a phrase of \(letters.count) letter(s) (\"\(collection.phrase)\", spaces excluded)."))
+                continue
+            }
+            for (position, slot) in ordered.enumerated() where slot.letter != letters[position] {
+                findings.append(ValidationFinding(
+                    rule: .v25, path: path,
+                    message: "Slot \(slot.index) carries letter \"\(slot.letter)\"; the phrase has \"\(letters[position])\" at that position."))
+            }
+        }
+
+        return findings
+    }
+
     private static func loreFindings(
         _ blocks: [LoreBlock],
         sourceCount: Int,
         path: String,
-        label: String
+        label: String,
+        rule: ValidationRule = .v3
     ) -> [ValidationFinding] {
         var findings: [ValidationFinding] = []
         for (index, block) in blocks.enumerated() {
             if block.sourceRefs.isEmpty {
                 findings.append(ValidationFinding(
-                    rule: .v3, path: path,
+                    rule: rule, path: path,
                     message: "\(label)[\(index)] cites no source."))
             }
             for ref in block.sourceRefs where ref < 0 || ref >= sourceCount {
                 findings.append(ValidationFinding(
-                    rule: .v3, path: path,
+                    rule: rule, path: path,
                     message: "\(label)[\(index)] cites source index \(ref); the Place has \(sourceCount) source(s)."))
             }
         }

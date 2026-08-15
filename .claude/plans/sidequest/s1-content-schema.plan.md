@@ -244,3 +244,91 @@ Nothing in `ViewModel/` or `View/` references the field today, so there is no pr
 | `Tests/ContentKitTests/ContentFactory.swift` | fixtures for sidequests and collections |
 | `Tests/ContentKitTests/ContentModelTests.swift` | decode round-trips, unknown-challenge-type failure |
 | `docs/schema.md` | new §A.10 sidequest, §A.11 collection; §A.9 rules table |
+
+---
+
+## Execution — 2026-08-15
+
+**Status: built and green.** Phase A, content-schema half. Nothing from `s2`–`s7` was started.
+
+### What was built
+
+- `Sources/ContentKit/SideQuestEntities.swift` — `SideQuest`, `SideQuestChallenge` (closed enum,
+  `type` discriminator, `Kind` raw-string), `QuizChallenge`, `PhotoChallenge`, `LetterCollection`
+  (with `phraseLetters` / `orderedSlots`), `LetterSlot`. Foundation only; `ImportBoundaryTests`
+  still green.
+- `ContentEntities.swift` — D2 rename `SideQuest` → `BonusPrompt`, `Checkpoint.sideQuests` →
+  `bonusPrompts` with the coding key; `Manifest` gains `sideQuests` / `collections`, both
+  `decodeIfPresent … ?? []` so a schema-1 bundle still loads.
+- `ContentBundle.swift` — holds both arrays; `sideQuest(id:)`, `sideQuests(atPlaceID:)`,
+  `collection(id:)`, and `slot(forSideQuestID:)` for the V24/V26 pair.
+- `ContentRepository.swift` — the six protocol methods as written in §6, `BundledContentRepository`
+  implementations in manifest order, and `ContentDirectoryLoader` decoding `sidequests/<id>.json`
+  and `collections/<id>.json`. No loading, refreshing, connectivity or freshness anywhere (`AD-3`).
+- `ContentValidator.swift` — V19–V28 exactly as §7 lists them, each naming its requirement.
+  `loreFindings` gained a `rule:` parameter so V21 reports as V21 rather than borrowing V3's name.
+  `ContentValidator.monitoredRegionBudget = 20` carries V27's reasoning in a comment.
+- Content tree — `manifest.json` to `schemaVersion: 2` with **empty** `sideQuests[]` /
+  `collections[]`, `contentBundleVersion` `2026.08.3` → `2026.09.0`;
+  `quests/badung-empat-wajah.json` key rename at five checkpoints and its own `contentVersion`
+  bumped to match.
+- Docs — `schema.md` §A.1 layout, §A.3 manifest, §A.6 `BonusPrompt` note, §A.9 rules table plus the
+  V24/V27 notes, and new §A.10 / §A.11. `c1-badung-single-quest-content.plan.md`'s `sideQuests`
+  line now reads `bonusPrompts` and says why.
+
+### Verification
+
+```
+$ swift test
+Test run with 281 tests in 29 suites passed after 0.044 seconds.
+
+$ swift run content-validator Sources/ContentKit/Content
+OK  1 quest(s), 5 place(s), 2788586 bytes — all 28 rules pass.
+
+$ xcodebuild build -scheme challange-5 -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'
+** BUILD SUCCEEDED **
+```
+
+281 tests across the package; 28 validator rules, up from 18. New: `SideQuestValidationTests`, 25
+test functions — 22 of them content that **violates** a rule (V19–V28, each rule rejected at least
+once), two acceptance tests (valid sidequest content is silent; content shipping no sidequests fires
+none of the ten), and one proving a sidequest Place is judged by V4 like any other.
+`SideQuestModelTests`, 8 decode tests, including five unknown challenge mechanics rejected and a
+lore block with no accuracy label rejected. `ContentModelTests` gained two manifest tests (schema-1
+default, schema-2 lists) and `BundledContentRepositoryTests` two.
+
+The app target was built, not because the plan touches it but because the rename is a public API
+change; nothing in `ViewModel/` or `View/` referenced the field, as §8 predicted.
+
+### Left out, deliberately
+
+- **No authored sidequest or collection documents, and no new places.** `sidequests/` and
+  `collections/` do not exist on disk; the manifest ships both arrays empty. Authoring them is `s5`
+  / Phase E and needs consent records and openable citations that do not exist — every one of the
+  five shipped places is still a self-grant (`docs/consent-log.md`), and inventing a sixteenth would
+  be worse. The rules are proved on fixtures instead, which is what §7 asks for.
+- **The phrase is not chosen.** `BALI THE EXPLORER` appears only in `schema.md`'s example and in
+  test fixtures (`AB`, `BALI THE`). It is a product decision that fixes the place count (`s0` D7,
+  PRD §5.15 decision 2 and §10).
+- **Nothing from `s2` onward**: no `SideQuestRecord`, no store, no nearest-N region selection, no
+  quiz grading, no proximity, no UI, no strings. `RunEngineTests.StubContentRepository` conforms to
+  the widened protocol by returning empty — `FR-SIDE-01` makes sidequests a separate aggregate, so
+  `RunEngine` knowing nothing about them is the intended end state, not a stub to fill in.
+
+### New known gaps
+
+1. **`Package.swift` has no resource entry for `Content/sidequests` or `Content/collections`.**
+   SPM `.copy` fails on a directory that does not exist, and none does yet. Nothing breaks today —
+   the manifest lists no ids, so the loader reads nothing — but **the first authored sidequest must
+   add both `.copy` entries in the same commit**, or it will validate from the authored tree and
+   then be missing at runtime. There is no test that would catch this; the CLI reads the authored
+   directory, not the resource bundle.
+2. **V25 cannot express a digraph.** It compares `slots.count` and then position by position
+   against the despaced phrase. `LetterSlot.letter` is a `String` so a digraph is *representable*;
+   V25 would reject it. Revisit the rule, not the type, if a phrase ever needs one.
+3. **V27 is a backstop, not a guarantee.** Quest start regions share the 20-region budget, so a
+   20-slot collection can still exhaust it at runtime. `FR-SIDE-16`'s nearest-N selection is the
+   half that actually holds the limit, and it is `s2` §6.
+4. **The `FR-SIDE` block is still `PROPOSED — NOT ACCEPTED`** in the PRD. Everything above cites
+   requirement IDs that are reserved and stable but unsigned; if the block is rejected, V19–V28 and
+   both new content types go with it.

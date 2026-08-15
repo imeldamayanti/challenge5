@@ -69,7 +69,7 @@ enum ContentFactory {
             loreSegment: [lore()],
             clueToNext: clueToNext,
             tasks: tasks,
-            sideQuests: [],
+            bonusPrompts: [],
             stampId: "stamp-\(id)")
     }
 
@@ -133,10 +133,70 @@ enum ContentFactory {
             regionOwner: regionOwner)
     }
 
+    // MARK: - Sidequests and letter collections (PRD §5.15)
+
+    static func quiz(
+        options: [LocalizedText]? = nil,
+        correctIndex: Int = 1
+    ) -> SideQuestChallenge {
+        .quiz(QuizChallenge(
+            question: text("Siapa yang membangun gerbang ini?"),
+            options: options ?? [text("Opsi A"), text("Opsi B"), text("Opsi C")],
+            correctIndex: correctIndex,
+            explanation: text("Penjelasan")))
+    }
+
+    static func sideQuest(
+        id: String = "sq-a",
+        placeId: String = "place-a",
+        lore: [LoreBlock]? = nil,
+        challenge: SideQuestChallenge? = nil,
+        triggerRadiusM: Int = 75,
+        noticeRadiusM: Int = 200,
+        heroImageAsset: String? = nil
+    ) -> SideQuest {
+        SideQuest(
+            id: id,
+            placeId: placeId,
+            title: text("Sidequest"),
+            synopsis: text("Sinopsis pendek"),
+            lore: lore ?? [self.lore()],
+            challenge: challenge ?? quiz(),
+            triggerRadiusM: triggerRadiusM,
+            noticeRadiusM: noticeRadiusM,
+            heroImageAsset: heroImageAsset)
+    }
+
+    /// A collection whose phrase is exactly as long as its slot list, so a test can break one
+    /// thing at a time. `AB` is two letters and therefore two sidequests.
+    static func collection(
+        id: String = "collection-a",
+        phrase: String = "AB",
+        slots: [LetterSlot]? = nil,
+        badgeId: String = "badge-collection-a"
+    ) -> LetterCollection {
+        LetterCollection(
+            id: id,
+            region: "Denpasar",
+            phrase: phrase,
+            title: text("Koleksi"),
+            caption: text("Kumpulkan satu huruf di setiap tempat."),
+            badgeId: badgeId,
+            slots: slots ?? [
+                LetterSlot(index: 0, letter: "A", sideQuestId: "sq-a"),
+                LetterSlot(index: 1, letter: "B", sideQuestId: "sq-b"),
+            ])
+    }
+
     /// A bundle with two places and one two-checkpoint quest, valid against every rule.
+    ///
+    /// Sidequests and collections default to empty, which is a schema-1 bundle: the rules that
+    /// judge them must stay silent on content that ships none.
     static func bundle(
         places: [Place]? = nil,
         quests: [Quest]? = nil,
+        sideQuests: [SideQuest] = [],
+        collections: [LetterCollection] = [],
         consentRecords: [ConsentRecord]? = nil
     ) -> ContentBundle {
         let resolvedPlaces = places ?? [place(id: "place-a", consentRecordId: "place-a"),
@@ -144,15 +204,35 @@ enum ContentFactory {
         let resolvedQuests = quests ?? [quest()]
         return ContentBundle(
             manifest: Manifest(
-                schemaVersion: 1,
+                schemaVersion: 2,
                 contentBundleVersion: "2026.08.1",
                 languages: [.id, .en],
                 places: resolvedPlaces.map(\.id),
                 quests: resolvedQuests.map(\.id),
+                sideQuests: sideQuests.map(\.id),
+                collections: collections.map(\.id),
                 regionMap: nil),
             places: resolvedPlaces,
             quests: resolvedQuests,
+            sideQuests: sideQuests,
+            collections: collections,
             consentRecords: consentRecords ?? [consent(placeId: "place-a"), consent(placeId: "place-b")])
+    }
+
+    /// Two sidequests filling the two slots of one collection — valid against V19–V28, so each
+    /// test can break exactly one rule.
+    static func sideQuestBundle(
+        sideQuests: [SideQuest]? = nil,
+        collections: [LetterCollection]? = nil,
+        places: [Place]? = nil
+    ) -> ContentBundle {
+        bundle(
+            places: places,
+            sideQuests: sideQuests ?? [
+                sideQuest(id: "sq-a", placeId: "place-a"),
+                sideQuest(id: "sq-b", placeId: "place-b"),
+            ],
+            collections: collections ?? [collection()])
     }
 
     static let today = CalendarDay(year: 2026, month: 8, day: 10)

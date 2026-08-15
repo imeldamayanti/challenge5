@@ -25,6 +25,10 @@ Content/
 ├── quests/
 │   ├── jejak-terakhir-badung.json
 │   └── …
+├── sidequests/
+│   └── sq-catur-muka.json                    # schema 2 (§A.10)
+├── collections/
+│   └── bali-the-explorer.json                # schema 2 (§A.11)
 ├── consent/
 │   └── puri-agung-pemecutan.json        # not shipped; validated at build
 └── assets/
@@ -32,9 +36,14 @@ Content/
     ├── quests/{quest_id}/route-preview.png
     ├── quests/{quest_id}/route.geojson
     ├── quests/{quest_id}/hero.png            # discovery card image
+    ├── sidequests/{side_quest_id}/hero.jpg   # optional notice-card image
     ├── maps/{region}.png                     # illustrated region map (manifest.regionMap)
     └── badges/{badge_id}.png
 ```
+
+A sidequest's place is an ordinary `Place` in `places/`, with an ordinary consent record in
+`consent/`. That is the main reason a sidequest points at a Place rather than carrying its own
+coordinate and hours: V2, V4, V5, V13 and V15 cover it with no new rule.
 
 `consent/` is a build input, not a runtime resource. It exists so the validator can refuse to build content whose consent is missing or expired (NFR-GOV-01). Shipping it would put named individuals' details in every user's app for no purpose.
 
@@ -60,16 +69,24 @@ There is deliberately **no fallback**. A missing translation fails the build; it
 
 ```json
 {
-  "schemaVersion": 1,
-  "contentBundleVersion": "2026.08.1",
+  "schemaVersion": 2,
+  "contentBundleVersion": "2026.09.0",
   "languages": ["id", "en"],
   "places": ["puri-agung-pemecutan", "pura-maospahit-gerenceng", "…"],
   "quests": ["jejak-terakhir-badung", "siklus-ubud"],
+  "sideQuests": ["sq-catur-muka", "…"],
+  "collections": ["bali-the-explorer"],
   "regionMap": { "asset": "maps/bali-illustrated.png", "aspectRatio": 0.4626 }
 }
 ```
 
 `contentBundleVersion` is what a Run pins (AD-4). Any change to any content file **must** bump it.
+
+`schemaVersion` is **2**. `sideQuests` and `collections` (§A.10, §A.11) both decode with a default of
+`[]`, so a bundle authored against schema 1 still loads and simply has no sidequests — which is what
+a content rollback has to be able to do. Manifest order decides list order here as it already does
+for quests: directory enumeration order is a filesystem detail and would reshuffle a collection
+between machines.
 
 `regionMap` is optional. When present, the discovery screen offers a map surface drawn from that
 shipped illustration — no live tiles, so it works offline by construction (FR-MAP-01, FR-OFF-03).
@@ -196,7 +213,7 @@ drawing decision, so the validator checks the range and not the geography.
       "prompt": { "id": "Foto gerbang utama.", "en": "Photograph the main gate." },
       "blocksProgression": false }
   ],
-  "sideQuests": [
+  "bonusPrompts": [
     { "id": "jtb-cp1-s1",
       "prompt": { "id": "Cari tahu siapa raja terakhir sebelum 1906.",
                   "en": "Find out who the last king was before 1906." } }
@@ -215,6 +232,12 @@ drawing decision, so the validator checks the range and not the geography.
 Both labels must be distinguishable without colour (NFR-A11Y-05).
 
 **Task** — `type` is `photo \| reflection \| question`. `blocksProgression` must be `false` for every task in v1; the field exists so AD-2 is auditable by a script rather than by memory.
+
+**BonusPrompt** — the `bonusPrompts[]` entries above. Optional suggestions, decoded and tracked by
+nothing (FR-TASK-08/09). The key read `sideQuests[]` and the type was `ContentKit.SideQuest` until
+the FR-SIDE amendment (PRD §5.15) claimed that word for the entity in §A.10; the concept and its
+requirement IDs are unchanged, only the name moved, so that *sidequest* names one thing. Renaming a
+content key bumps `contentBundleVersion`.
 
 ### A.7 ConsentRecord — build input only
 
@@ -274,6 +297,16 @@ CI fails on any of these. This is the enforcement mechanism for requirements tha
 | V16 | `hardLatestStart` matches recomputation from visiting hours | FR-DISC-06 |
 | V17 | When `manifest.regionMap` is present, every Place a quest visits has a `mapPoint` within 0…1 | FR-DISC-02/03 |
 | V18 | `route.geometryAsset` parses as a GeoJSON FeatureCollection carrying a LineString of ≥ 2 points | FR-MAP-02 |
+| V19 | Every `SideQuest.placeId` resolves, and that Place is listed in `manifest.places` | FR-SIDE-02, NFR-GOV-01 |
+| V20 | `triggerRadiusM` within 30–250; `noticeRadiusM > triggerRadiusM` | FR-ARR-07, FR-PROX-11 |
+| V21 | Every sidequest `LoreBlock` has `accuracy` and resolvable `sourceRefs` | NFR-CONT-01, FR-SIDE-04 |
+| V22 | A quiz has 2–4 distinct `options` and a `correctIndex` inside that range | FR-SIDE-06 |
+| V23 | No photo challenge at a Place with `photoPolicy.level == "prohibited"` | FR-TASK-06, FR-SIDE-13 |
+| V24 | Every sidequest fills exactly one slot, in exactly one collection | FR-SIDE-05 |
+| V25 | `slots.count` equals `phrase` with spaces removed, and each slot's `letter` matches the phrase at its position | FR-SIDE-08 |
+| V26 | Slot indices contiguous from 0; each `sideQuestId` resolves and appears once | FR-SIDE-08 |
+| V27 | A collection has at most 20 sidequests | FR-PROX-14, FR-SIDE-16 |
+| V28 | Every sidequest asset path referenced exists | — |
 
 **V18 exists because V14 stops at the filename.** The run map draws the route from
 `route.geometryAsset`, so a file that is present but is not a route — a placeholder, a bare geometry
@@ -288,6 +321,97 @@ instead — otherwise a translation gap surfaces as an opaque `keyNotFound` nami
 a puzzle task at a temple as an unreadable enum error. A consequence worth knowing: a V1 gap blocks
 the decode-dependent rules rather than merely adding a finding, so content with several faults may
 need fixing in two passes.
+
+**V24 is bidirectional and that is the point.** A sidequest with no slot is a place the walker can
+complete for no letter; a slot with no sidequest is a letter nobody can earn. Both are silent in the
+app and loud in the validator.
+
+**V27 is a hardware limit dressed as a content rule.** iOS monitors 20 regions per app, and quest
+start regions share that budget, so the real ceiling is lower than 20 and this rule is a backstop
+rather than a guarantee. Without it, the twenty-first place simply never notifies — indistinguishable,
+in the field, from a GPS problem. The runtime half is nearest-N selection (FR-SIDE-16).
+
+### A.10 SideQuest — schema 2
+
+A single-place activity outside any quest: one story, one challenge, one letter (PRD §5.15). It is
+never part of a Run and never blocks one (FR-SIDE-01).
+
+```json
+{
+  "id": "sq-catur-muka",
+  "placeId": "catur-muka",
+  "title": { "id": "Catur Muka", "en": "Catur Muka" },
+  "synopsis": { "id": "Arca berwajah empat di persimpangan kota.",
+                "en": "A four-faced statue at the city crossroads." },
+  "lore": [
+    { "text": { "id": "Arca ini berdiri di catus patha.", "en": "The statue stands on the catus patha." },
+      "accuracy": "documented", "sourceRefs": [0] }
+  ],
+  "challenge": {
+    "type": "quiz",
+    "question": { "id": "Berapa wajah yang dimiliki arca ini?", "en": "How many faces does this statue have?" },
+    "options": [ { "id": "Dua", "en": "Two" }, { "id": "Tiga", "en": "Three" }, { "id": "Empat", "en": "Four" } ],
+    "correctIndex": 2,
+    "explanation": { "id": "Empat wajah menghadap empat penjuru catus patha.",
+                     "en": "The four faces look out along the catus patha crossroads." }
+  },
+  "triggerRadiusM": 75,
+  "noticeRadiusM": 250
+}
+```
+
+The photo variant, for a Place where photography is not prohibited (V23):
+
+```json
+{ "type": "photo",
+  "prompt": { "id": "Foto gerbang bata merahnya.", "en": "Photograph the red brick gateway." } }
+```
+
+`challenge` is a closed enum with a `type` discriminator, so an unknown mechanic is a decode failure
+rather than a silently ignored challenge. `TaskType` is **not** reused: it belongs to checkpoint
+tasks, whose `blocksProgression` rule (AD-2, V8) must keep meaning exactly what it means today, and
+hanging a second concept off it would make V8 ambiguous. FR-TASK-05's limit at sacred places is met
+by construction — quiz is the single light question, photo is photo, and nothing else is
+representable.
+
+`triggerRadiusM` is the arrival gate, applied by the same `ArrivalEvaluator` and the same two
+conditions as a checkpoint (FR-ARR-01, FR-SIDE-02). `noticeRadiusM` is the monitored region and must
+be larger: the alert warns on approach, it does not confirm arrival.
+
+There is deliberately **no `contentVersion`**. A Quest carries one because a Run pins it at start; a
+sidequest record pins `manifest.contentBundleVersion` at discovery (FR-SIDE-10), which is the same
+fact without a second place to keep it. `heroImageAsset` is optional.
+
+### A.11 LetterCollection — schema 2
+
+```json
+{
+  "id": "bali-the-explorer",
+  "region": "Bali",
+  "phrase": "BALI THE EXPLORER",
+  "title":   { "id": "Bali the Explorer", "en": "Bali the Explorer" },
+  "caption": { "id": "Kumpulkan satu huruf di setiap tempat.",
+               "en": "Collect one letter at each place." },
+  "badgeId": "badge-bali-the-explorer",
+  "slots": [
+    { "index": 0, "letter": "B", "sideQuestId": "sq-puri-agung-pemecutan" },
+    { "index": 1, "letter": "A", "sideQuestId": "sq-pura-maospahit" }
+  ]
+}
+```
+
+`phrase` is a plain `String` and **not** a `LocalizedText`. That is a product constraint, accepted
+2026-08-15 (PRD §5.15, decision 2): translating it changes the letter count, which changes the number
+of places, which forks the content tree per language. `caption` beside it is localized, so
+NFR-I18N-01 still holds for every sentence the user reads.
+
+Spaces in `phrase` are display only and get no slot: `BALI THE EXPLORER` is 15 letters and therefore
+15 slots and 15 places — each with its own consent record and its own citations. `letter` is a
+`String` rather than a `Character` because `Character` has no stable JSON representation; V25 compares
+it against the phrase position by position, so a phrase needing a digraph would need V25 revisited.
+
+FR-SIDE-08 governs how a slot renders, not how it is authored: an unearned slot shows a blank and
+names the place that fills it, never the letter.
 
 ---
 

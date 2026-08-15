@@ -57,7 +57,7 @@ struct ContentValidatorTests {
         let cp = Checkpoint(
             id: "cp1", orderIndex: 0, placeId: "place-a", role: .start,
             loreSegment: [LoreBlock(text: ContentFactory.text(), accuracy: .oral, sourceRefs: [])],
-            clueToNext: ContentFactory.text(), tasks: [], sideQuests: [], stampId: "s1")
+            clueToNext: ContentFactory.text(), tasks: [], bonusPrompts: [], stampId: "s1")
         let bundle = ContentFactory.bundle(quests: [ContentFactory.quest(checkpoints: [
             cp, ContentFactory.checkpoint(id: "cp2", orderIndex: 1, placeId: "place-b", role: .finish, clueToNext: nil),
         ])])
@@ -71,7 +71,7 @@ struct ContentValidatorTests {
         let broken = Checkpoint(
             id: cp.id, orderIndex: cp.orderIndex, placeId: cp.placeId, role: cp.role,
             loreSegment: [ContentFactory.lore(sourceRefs: [4])],
-            clueToNext: cp.clueToNext, tasks: cp.tasks, sideQuests: [], stampId: cp.stampId)
+            clueToNext: cp.clueToNext, tasks: cp.tasks, bonusPrompts: [], stampId: cp.stampId)
         let bundle = ContentFactory.bundle(quests: [ContentFactory.quest(checkpoints: [
             broken, ContentFactory.checkpoint(id: "cp2", orderIndex: 1, placeId: "place-b", role: .finish, clueToNext: nil),
         ])])
@@ -411,9 +411,10 @@ struct ContentValidatorTests {
         // If a rule is added to the enum without a test, this fails and names it.
         let tested: Set<ValidationRule> = [.v1, .v2, .v3, .v4, .v5, .v6, .v7, .v8,
                                            .v9, .v10, .v11, .v12, .v13, .v14, .v15, .v16, .v17,
-                                           .v18]
+                                           .v18, .v19, .v20, .v21, .v22, .v23, .v24, .v25, .v26,
+                                           .v27, .v28]
         #expect(Set(ValidationRule.allCases) == tested)
-        #expect(ValidationRule.allCases.count == 18)
+        #expect(ValidationRule.allCases.count == 28)
     }
 
     @Test func everyRuleNamesTheRequirementItEnforces() {
@@ -503,5 +504,299 @@ struct RegionMapValidationTests {
         let base = ContentFactory.bundle(quests: [ContentFactory.quest(heroImageAsset: "quests/quest-a/hero.jpg")])
         let found = ContentValidator.validate(base, assets: ContentFactory.assets(), today: ContentFactory.today)
         #expect(found.contains { $0.rule == .v14 })
+    }
+}
+
+/// V19–V28 — sidequests and letter collections (PRD §5.15, `schema.md` §A.10–A.11). Same discipline
+/// as above: every rule is proved by content that **violates** it, and the two acceptance tests
+/// exist only to show the rules are not firing on everything.
+struct SideQuestValidationTests {
+
+    // MARK: - Control
+
+    @Test func validSideQuestContentProducesNoFindings() {
+        #expect(findings(ContentFactory.sideQuestBundle()).isEmpty,
+                "Valid sidequest content produced findings: \(findings(ContentFactory.sideQuestBundle()))")
+    }
+
+    @Test func contentShippingNoSideQuestsIsSilentOnAllOfTheseRules() {
+        // A schema 1 bundle, or a rollback to one. None of V19–V28 may fire on it.
+        let sidequestRules: Set<ValidationRule> = [.v19, .v20, .v21, .v22, .v23, .v24, .v25, .v26, .v27, .v28]
+        #expect(!findings(ContentFactory.bundle()).contains { sidequestRules.contains($0.rule) })
+    }
+
+    // MARK: - V19 · the Place resolves and ships (FR-SIDE-02, NFR-GOV-01)
+
+    @Test func v19RejectsASideQuestPointingAtAPlaceThatDoesNotExist() {
+        // No Place means no coordinate to gate arrival on and no consent record for V4 to judge.
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", placeId: "place-missing"),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v19 })
+    }
+
+    @Test func v19RejectsASideQuestAtAPlaceTheManifestDoesNotShip() {
+        let base = ContentFactory.sideQuestBundle()
+        let withoutPlaceA = ContentBundle(
+            manifest: Manifest(
+                schemaVersion: 2,
+                contentBundleVersion: base.manifest.contentBundleVersion,
+                languages: base.manifest.languages,
+                places: ["place-b"],
+                quests: base.manifest.quests,
+                sideQuests: base.manifest.sideQuests,
+                collections: base.manifest.collections),
+            places: base.places,
+            quests: base.quests,
+            sideQuests: base.sideQuests,
+            collections: base.collections,
+            consentRecords: base.consentRecords)
+        #expect(findings(withoutPlaceA).contains { $0.rule == .v19 })
+    }
+
+    // MARK: - V20 · radii (FR-ARR-07, FR-PROX-11)
+
+    @Test(arguments: [0, 29, 251, 1000])
+    func v20RejectsATriggerRadiusOutsideThirtyToTwoHundredFifty(_ radius: Int) {
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", triggerRadiusM: radius, noticeRadiusM: 2000),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v20 })
+    }
+
+    @Test(arguments: [75, 50, 0])
+    func v20RejectsANoticeRadiusNotLargerThanTheTriggerRadius(_ notice: Int) {
+        // The alert warns on approach; it does not confirm arrival at the gate.
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", triggerRadiusM: 75, noticeRadiusM: notice),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v20 })
+    }
+
+    // MARK: - V21 · sidequest lore cites its sources (NFR-CONT-01, FR-SIDE-04)
+
+    @Test func v21RejectsASideQuestLoreBlockWithNoSourceRefs() {
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", lore: [ContentFactory.lore(sourceRefs: [])]),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v21 })
+    }
+
+    @Test func v21RejectsASourceRefPointingPastTheEndOfThePlacesSources() {
+        // The Place has one source, so index 4 renders a claim with an empty citation — the
+        // failure FR-CP-06 exists to prevent, on a new surface.
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", lore: [ContentFactory.lore(sourceRefs: [4])]),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v21 })
+    }
+
+    // MARK: - V22 · quiz shape (FR-SIDE-06)
+
+    @Test(arguments: [1, 5, 6])
+    func v22RejectsAQuizWithTooFewOrTooManyOptions(_ count: Int) {
+        let options = (0..<count).map { ContentFactory.text("Opsi \($0)") }
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", challenge: ContentFactory.quiz(options: options, correctIndex: 0)),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v22 })
+    }
+
+    @Test func v22RejectsAQuizWithTwoIdenticalOptions() {
+        // Two identical options make one of them unmarkable: a walker who taps the other correct
+        // answer is told they are wrong.
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", challenge: ContentFactory.quiz(
+                options: [ContentFactory.text("Sama"), ContentFactory.text("Sama"), ContentFactory.text("Beda")],
+                correctIndex: 0)),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v22 })
+    }
+
+    @Test(arguments: [-1, 3, 99])
+    func v22RejectsACorrectIndexOutsideTheOptions(_ index: Int) {
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", challenge: ContentFactory.quiz(correctIndex: index)),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v22 })
+    }
+
+    // MARK: - V23 · no photo challenge where photography is prohibited (FR-TASK-06)
+
+    @Test func v23RejectsAPhotoChallengeAtAPlaceWherePhotographyIsProhibited() {
+        let bundle = ContentFactory.sideQuestBundle(
+            sideQuests: [
+                ContentFactory.sideQuest(
+                    id: "sq-a",
+                    challenge: .photo(PhotoChallenge(prompt: ContentFactory.text("Foto gerbangnya.")))),
+                ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+            ],
+            places: [
+                ContentFactory.place(id: "place-a", photoPolicy: .prohibited),
+                ContentFactory.place(id: "place-b"),
+            ])
+        #expect(findings(bundle).contains { $0.rule == .v23 })
+    }
+
+    @Test func v23AcceptsAPhotoChallengeWherePhotographyIsMerelyRestricted() {
+        let bundle = ContentFactory.sideQuestBundle(
+            sideQuests: [
+                ContentFactory.sideQuest(
+                    id: "sq-a",
+                    challenge: .photo(PhotoChallenge(prompt: ContentFactory.text("Foto gerbangnya.")))),
+                ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+            ],
+            places: [
+                ContentFactory.place(id: "place-a", photoPolicy: .restricted),
+                ContentFactory.place(id: "place-b"),
+            ])
+        #expect(!findings(bundle).contains { $0.rule == .v23 })
+    }
+
+    // MARK: - V24 · one sidequest, one slot, both directions (FR-SIDE-05)
+
+    @Test func v24RejectsASideQuestThatFillsNoSlot() {
+        // A place the walker can complete for no letter. Silent in the app, loud here.
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a"),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+            ContentFactory.sideQuest(id: "sq-orphan", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v24 })
+    }
+
+    @Test func v24RejectsASideQuestFillingSlotsInTwoCollections() {
+        let second = ContentFactory.collection(
+            id: "collection-b", phrase: "AB",
+            slots: [
+                LetterSlot(index: 0, letter: "A", sideQuestId: "sq-a"),
+                LetterSlot(index: 1, letter: "B", sideQuestId: "sq-b"),
+            ],
+            badgeId: "badge-collection-b")
+        let bundle = ContentFactory.sideQuestBundle(collections: [ContentFactory.collection(), second])
+        #expect(findings(bundle).contains { $0.rule == .v24 })
+    }
+
+    // MARK: - V25 · slots match the phrase (FR-SIDE-08)
+
+    @Test func v25RejectsAPhraseLongerThanItsSlotList() {
+        // The phrase *is* the place count: three letters means three places to author.
+        let bundle = ContentFactory.sideQuestBundle(collections: [ContentFactory.collection(phrase: "ABC")])
+        #expect(findings(bundle).contains { $0.rule == .v25 })
+    }
+
+    @Test func v25RejectsASlotLetterThatIsNotThePhrasesLetterAtThatPosition() {
+        let bundle = ContentFactory.sideQuestBundle(collections: [ContentFactory.collection(
+            phrase: "AB",
+            slots: [
+                LetterSlot(index: 0, letter: "A", sideQuestId: "sq-a"),
+                LetterSlot(index: 1, letter: "Z", sideQuestId: "sq-b"),
+            ])])
+        #expect(findings(bundle).contains { $0.rule == .v25 })
+    }
+
+    @Test func v25CountsThePhrasesSpacesAsDisplayOnly() {
+        // "A B" is two letters and therefore two slots, not three.
+        let bundle = ContentFactory.sideQuestBundle(collections: [ContentFactory.collection(phrase: "A B")])
+        #expect(!findings(bundle).contains { $0.rule == .v25 })
+    }
+
+    // MARK: - V26 · slot indices and references (FR-SIDE-08)
+
+    @Test func v26RejectsANonContiguousSlotIndex() {
+        let bundle = ContentFactory.sideQuestBundle(collections: [ContentFactory.collection(
+            slots: [
+                LetterSlot(index: 0, letter: "A", sideQuestId: "sq-a"),
+                LetterSlot(index: 2, letter: "B", sideQuestId: "sq-b"),
+            ])])
+        #expect(findings(bundle).contains { $0.rule == .v26 })
+    }
+
+    @Test func v26RejectsASlotNamingASideQuestThatDoesNotExist() {
+        // A letter nobody can earn.
+        let bundle = ContentFactory.sideQuestBundle(collections: [ContentFactory.collection(
+            slots: [
+                LetterSlot(index: 0, letter: "A", sideQuestId: "sq-a"),
+                LetterSlot(index: 1, letter: "B", sideQuestId: "sq-missing"),
+            ])])
+        #expect(findings(bundle).contains { $0.rule == .v26 })
+    }
+
+    @Test func v26RejectsOneSideQuestFillingTwoSlotsInTheSameCollection() {
+        let bundle = ContentFactory.sideQuestBundle(collections: [ContentFactory.collection(
+            slots: [
+                LetterSlot(index: 0, letter: "A", sideQuestId: "sq-a"),
+                LetterSlot(index: 1, letter: "B", sideQuestId: "sq-a"),
+            ])])
+        #expect(findings(bundle).contains { $0.rule == .v26 })
+    }
+
+    // MARK: - V27 · the iOS region budget (FR-PROX-14, FR-SIDE-16)
+
+    @Test func v27RejectsACollectionOfTwentyOneSideQuests() {
+        // iOS monitors 20 regions per app. The twenty-first place simply never notifies, which in
+        // the field is indistinguishable from a GPS problem.
+        let letters = (0..<21).map { String(UnicodeScalar(UInt8(65 + $0))) }
+        let sideQuests = letters.enumerated().map { index, _ in
+            ContentFactory.sideQuest(id: "sq-\(index)", placeId: index.isMultiple(of: 2) ? "place-a" : "place-b")
+        }
+        let slots = letters.enumerated().map { index, letter in
+            LetterSlot(index: index, letter: letter, sideQuestId: "sq-\(index)")
+        }
+        let bundle = ContentFactory.sideQuestBundle(
+            sideQuests: sideQuests,
+            collections: [ContentFactory.collection(phrase: letters.joined(), slots: slots)])
+        #expect(findings(bundle).contains { $0.rule == .v27 })
+    }
+
+    // MARK: - V28 · sidequest assets exist
+
+    @Test func v28RejectsAMissingSideQuestHeroImage() {
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", heroImageAsset: "sidequests/sq-a/hero.jpg"),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v28 })
+    }
+
+    @Test func v28AcceptsAHeroImageThatIsPresent() {
+        let bundle = ContentFactory.sideQuestBundle(sideQuests: [
+            ContentFactory.sideQuest(id: "sq-a", heroImageAsset: "sidequests/sq-a/hero.jpg"),
+            ContentFactory.sideQuest(id: "sq-b", placeId: "place-b"),
+        ])
+        let found = ContentValidator.validate(
+            bundle,
+            assets: ContentFactory.assets(present: [
+                "quests/quest-a/route.geojson", "quests/quest-a/route-preview.png",
+                "sidequests/sq-a/hero.jpg",
+            ]),
+            today: ContentFactory.today)
+        #expect(!found.contains { $0.rule == .v28 })
+    }
+
+    // MARK: - The rules a sidequest Place inherits for free
+
+    @Test func aSideQuestPlaceIsAnOrdinaryPlaceAndIsJudgedByV4() {
+        // The main reason a sidequest points at a `Place` rather than carrying its own coordinate
+        // and hours: consent, sources and radius are covered with no new rule.
+        let bundle = ContentFactory.sideQuestBundle(places: [
+            ContentFactory.place(id: "place-a", consentRecordId: "place-missing"),
+            ContentFactory.place(id: "place-b"),
+        ])
+        #expect(findings(bundle).contains { $0.rule == .v4 })
+    }
+
+    // MARK: - Helper
+
+    private func findings(_ bundle: ContentBundle) -> [ValidationFinding] {
+        ContentValidator.validate(bundle, assets: ContentFactory.assets(), today: ContentFactory.today)
     }
 }

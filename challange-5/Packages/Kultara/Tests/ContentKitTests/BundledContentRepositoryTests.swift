@@ -59,7 +59,28 @@ struct BundledContentRepositoryTests {
         // AD-4: a Run pins this at start. Nothing in M5 starts a Run, but the value a Run would
         // pin must already be readable, or the pin has nothing to attach to.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.08.3")
+        #expect(try repository.contentBundleVersion() == "2026.09.0")
+    }
+
+    // MARK: - PRD §5.15 — the sidequest seam, with nothing behind it yet
+
+    @Test func theBundleShipsNoSideQuestsOrCollectionsYet() throws {
+        // Schema 2 is in the manifest; the documents are not authored. Every new place needs its
+        // own consent record and its own citations (`s5`, Phase E), so the arrays ship empty
+        // rather than shipping a place nobody has been granted.
+        let repository = try repository()
+        #expect(try repository.manifest().schemaVersion == 2)
+        #expect(try repository.sideQuests().isEmpty)
+        #expect(try repository.collections().isEmpty)
+        #expect(try repository.sideQuest(id: "sq-badung-catur-muka") == nil)
+        #expect(try repository.sideQuests(atPlaceID: "badung-catur-muka").isEmpty)
+    }
+
+    @Test func suppressionOverAnEmptySideQuestSetIsStillAnswerable() throws {
+        // `AD-5`/`FR-SIDE-14`: the suppressed sets are passed in, never fetched here.
+        let repository = try repository()
+        #expect(try repository.sideQuests(
+            suppressingSideQuestIDs: ["sq-a"], suppressingPlaceIDs: ["badung-catur-muka"]).isEmpty)
     }
 
     @Test func questsAreReturnedInManifestOrder() throws {

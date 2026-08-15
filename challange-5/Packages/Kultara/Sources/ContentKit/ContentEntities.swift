@@ -289,7 +289,13 @@ public struct StartWindow: Codable, Sendable, Equatable, Hashable {
     }
 }
 
-public struct SideQuest: Codable, Sendable, Equatable, Hashable, Identifiable {
+/// An optional suggestion at a Checkpoint, decoded and tracked by nothing (`FR-TASK-08/09`).
+///
+/// Called `SideQuest` until the `FR-SIDE` amendment (PRD §5.15) claimed that word for a different
+/// entity — a single-place activity outside any Run. The concept and its requirement IDs are
+/// unchanged; only the name moved, so that *sidequest* names one thing (`s0` D2). The JSON key
+/// moved with it: `sideQuests` → `bonusPrompts`.
+public struct BonusPrompt: Codable, Sendable, Equatable, Hashable, Identifiable {
     public let id: String
     public let prompt: LocalizedText
 
@@ -324,7 +330,7 @@ public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
     /// `null` for the final checkpoint, non-null everywhere else (V10).
     public let clueToNext: LocalizedText?
     public let tasks: [ContentTask]
-    public let sideQuests: [SideQuest]
+    public let bonusPrompts: [BonusPrompt]
     public let stampId: String
 
     public init(
@@ -335,7 +341,7 @@ public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
         loreSegment: [LoreBlock],
         clueToNext: LocalizedText?,
         tasks: [ContentTask] = [],
-        sideQuests: [SideQuest] = [],
+        bonusPrompts: [BonusPrompt] = [],
         stampId: String
     ) {
         self.id = id
@@ -345,7 +351,7 @@ public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
         self.loreSegment = loreSegment
         self.clueToNext = clueToNext
         self.tasks = tasks
-        self.sideQuests = sideQuests
+        self.bonusPrompts = bonusPrompts
         self.stampId = stampId
     }
 
@@ -358,7 +364,7 @@ public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
         loreSegment = try c.decode([LoreBlock].self, forKey: .loreSegment)
         clueToNext = try c.decodeIfPresent(LocalizedText.self, forKey: .clueToNext)
         tasks = try c.decodeIfPresent([ContentTask].self, forKey: .tasks) ?? []
-        sideQuests = try c.decodeIfPresent([SideQuest].self, forKey: .sideQuests) ?? []
+        bonusPrompts = try c.decodeIfPresent([BonusPrompt].self, forKey: .bonusPrompts) ?? []
         stampId = try c.decode(String.self, forKey: .stampId)
     }
 }
@@ -473,6 +479,10 @@ public struct Manifest: Codable, Sendable, Equatable {
     public let languages: [ContentLanguage]
     public let places: [String]
     public let quests: [String]
+    /// Schema 2 (PRD §5.15). Decoded with a default so a bundle authored against schema 1 still
+    /// loads and simply has no sidequests — which is what a content rollback has to be able to do.
+    public let sideQuests: [String]
+    public let collections: [String]
     /// Absent when content ships no illustrated map; the map screen then has nothing to draw and
     /// says so rather than showing an empty frame.
     public let regionMap: RegionMapAsset?
@@ -483,6 +493,8 @@ public struct Manifest: Codable, Sendable, Equatable {
         languages: [ContentLanguage],
         places: [String],
         quests: [String],
+        sideQuests: [String] = [],
+        collections: [String] = [],
         regionMap: RegionMapAsset? = nil
     ) {
         self.schemaVersion = schemaVersion
@@ -490,6 +502,8 @@ public struct Manifest: Codable, Sendable, Equatable {
         self.languages = languages
         self.places = places
         self.quests = quests
+        self.sideQuests = sideQuests
+        self.collections = collections
         self.regionMap = regionMap
     }
 
@@ -500,6 +514,8 @@ public struct Manifest: Codable, Sendable, Equatable {
         languages = try c.decode([ContentLanguage].self, forKey: .languages)
         places = try c.decode([String].self, forKey: .places)
         quests = try c.decode([String].self, forKey: .quests)
+        sideQuests = try c.decodeIfPresent([String].self, forKey: .sideQuests) ?? []
+        collections = try c.decodeIfPresent([String].self, forKey: .collections) ?? []
         regionMap = try c.decodeIfPresent(RegionMapAsset.self, forKey: .regionMap)
     }
 }

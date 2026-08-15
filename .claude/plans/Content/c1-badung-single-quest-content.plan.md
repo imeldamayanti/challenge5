@@ -231,7 +231,9 @@ Every checkpoint needs, in `quests/badung-empat-wajah.json`:
   - Checkpoint 5's task is the closing reflection `FR-TASK-07` requires. It is answered *after* the
     walk completes, which the Run model already allows (`markLoreOpened` / `recordTaskResult` accept
     `completed`).
-- `sideQuests`: 0–1 each, optional, never required.
+- `bonusPrompts`: 0–1 each, optional, never required. (Authored as `sideQuests` until `s1` renamed
+  the key and the type — `ContentKit.BonusPrompt` — to free the word for the FR-SIDE entity,
+  PRD §5.15. Same concept, same `FR-TASK-08/09`.)
 - `stampId`: `stamp-badung-empat-wajah-<n>`.
 
 Quest-level:

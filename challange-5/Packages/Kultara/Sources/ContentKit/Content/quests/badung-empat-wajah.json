@@ -1,6 +1,6 @@
 {
   "id": "badung-empat-wajah",
-  "contentVersion": "2026.08.3",
+  "contentVersion": "2026.09.0",
   "title": {
     "id": "Empat Wajah Kota Badung",
     "en": "The Four Faces of Badung"
@@ -128,7 +128,7 @@
           "blocksProgression": false
         }
       ],
-      "sideQuests": [
+      "bonusPrompts": [
         {
           "id": "badung-empat-wajah-cp1-s1",
           "prompt": {
@@ -191,7 +191,7 @@
           "blocksProgression": false
         }
       ],
-      "sideQuests": [
+      "bonusPrompts": [
         {
           "id": "badung-empat-wajah-cp2-s1",
           "prompt": {
@@ -254,7 +254,7 @@
           "blocksProgression": false
         }
       ],
-      "sideQuests": [
+      "bonusPrompts": [
         {
           "id": "badung-empat-wajah-cp3-s1",
           "prompt": {
@@ -317,7 +317,7 @@
           "blocksProgression": false
         }
       ],
-      "sideQuests": [],
+      "bonusPrompts": [],
       "stampId": "stamp-badung-empat-wajah-4"
     },
     {
@@ -369,7 +369,7 @@
           "blocksProgression": false
         }
       ],
-      "sideQuests": [
+      "bonusPrompts": [
         {
           "id": "badung-empat-wajah-cp5-s1",
           "prompt": {

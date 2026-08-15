@@ -132,7 +132,7 @@ struct ContentModelTests {
         #expect(checkpoint.tasks.count == 1)
         #expect(checkpoint.tasks[0].type == .photo)
         #expect(checkpoint.tasks[0].blocksProgression == false)
-        #expect(checkpoint.sideQuests.count == 1)
+        #expect(checkpoint.bonusPrompts.count == 1)
         #expect(checkpoint.stampId == "stamp-jtb-1")
     }
 
@@ -144,14 +144,14 @@ struct ContentModelTests {
         #expect(checkpoint.clueToNext == nil)
     }
 
-    @Test func checkpointOmittingTasksAndSideQuestsDecodesAsEmpty() throws {
+    @Test func checkpointOmittingTasksAndBonusPromptsDecodesAsEmpty() throws {
         let checkpoint = try decoder.decode(Checkpoint.self, from: Data(#"""
         { "id": "jtb-cp5", "orderIndex": 4, "placeId": "pasar-badung", "role": "finish",
           "loreSegment": [ { "text": { "id": "A.", "en": "A." }, "accuracy": "oral", "sourceRefs": [0] } ],
           "clueToNext": null, "stampId": "stamp-jtb-5" }
         """#.utf8))
         #expect(checkpoint.tasks.isEmpty)
-        #expect(checkpoint.sideQuests.isEmpty)
+        #expect(checkpoint.bonusPrompts.isEmpty)
     }
 
     @Test func checkpointRejectsAnUnknownRole() {
@@ -256,7 +256,7 @@ struct ContentModelTests {
           "prompt": { "id": "Foto gerbang utama.", "en": "Photograph the main gate." },
           "blocksProgression": false }
       ],
-      "sideQuests": [
+      "bonusPrompts": [
         { "id": "jtb-cp1-s1",
           "prompt": { "id": "Cari tahu siapa raja terakhir.", "en": "Find out who the last king was." } }
       ],
@@ -396,4 +396,168 @@ struct RegionMapAndHeroTests {
         let quest = try decoder.decode(Quest.self, from: Data(ContentModelTests.questJSON.utf8))
         #expect(quest.checkpointCount == quest.checkpoints.count)
     }
+
+    @Test func manifestWithoutSideQuestsOrCollectionsStillDecodesAsEmpty() throws {
+        // A schema 1 bundle, or a rollback to one, must still load and simply have no sidequests.
+        let manifest = try decoder.decode(Manifest.self, from: Data(#"""
+        { "schemaVersion": 1, "contentBundleVersion": "2026.08.3",
+          "languages": ["id", "en"], "places": ["p"], "quests": ["q"] }
+        """#.utf8))
+        #expect(manifest.sideQuests.isEmpty)
+        #expect(manifest.collections.isEmpty)
+    }
+
+    @Test func manifestCarriesTheSchemaTwoLists() throws {
+        let manifest = try decoder.decode(Manifest.self, from: Data(#"""
+        { "schemaVersion": 2, "contentBundleVersion": "2026.09.0",
+          "languages": ["id", "en"], "places": ["p"], "quests": ["q"],
+          "sideQuests": ["sq-a"], "collections": ["bali-the-explorer"] }
+        """#.utf8))
+        #expect(manifest.schemaVersion == 2)
+        #expect(manifest.sideQuests == ["sq-a"])
+        #expect(manifest.collections == ["bali-the-explorer"])
+    }
+}
+
+/// The sidequest content model (`schema.md` §A.10–A.11, PRD §5.15). The tests that carry weight are
+/// the rejections: an unknown challenge mechanic, and a lore block with no accuracy label — a
+/// sidequest story is subject to `FR-CP-05` exactly as a checkpoint's is (`FR-SIDE-04`).
+struct SideQuestModelTests {
+
+    private let decoder = JSONDecoder()
+
+    @Test func sideQuestWithAQuizDecodesTheSchemaExample() throws {
+        let sideQuest = try decoder.decode(SideQuest.self, from: Data(Self.quizSideQuestJSON.utf8))
+        #expect(sideQuest.id == "sq-badung-catur-muka")
+        #expect(sideQuest.placeId == "badung-catur-muka")
+        #expect(sideQuest.triggerRadiusM == 75)
+        #expect(sideQuest.noticeRadiusM == 250)
+        #expect(sideQuest.lore.map(\.accuracy) == [.documented])
+        guard case .quiz(let quiz) = sideQuest.challenge else {
+            Issue.record("Expected a quiz challenge, got \(sideQuest.challenge)")
+            return
+        }
+        #expect(quiz.options.count == 3)
+        #expect(quiz.correctIndex == 2)
+        #expect(quiz.explanation.value(for: .en).hasPrefix("The four faces"))
+
+        let reDecoded = try decoder.decode(SideQuest.self, from: try JSONEncoder().encode(sideQuest))
+        #expect(reDecoded == sideQuest)
+    }
+
+    @Test func sideQuestWithAPhotoChallengeRoundTrips() throws {
+        let json = Self.quizSideQuestJSON.replacingOccurrences(
+            of: Self.quizChallengeJSON,
+            with: #"""
+            { "type": "photo",
+              "prompt": { "id": "Foto gerbang bata merahnya.", "en": "Photograph the red brick gateway." } }
+            """#)
+        let sideQuest = try decoder.decode(SideQuest.self, from: Data(json.utf8))
+        guard case .photo(let photo) = sideQuest.challenge else {
+            Issue.record("Expected a photo challenge, got \(sideQuest.challenge)")
+            return
+        }
+        #expect(photo.prompt.value(for: .id).hasPrefix("Foto"))
+
+        let reDecoded = try decoder.decode(SideQuest.self, from: try JSONEncoder().encode(sideQuest))
+        #expect(reDecoded == sideQuest)
+    }
+
+    @Test(arguments: ["riddle", "timed", "scavenger", "", "Quiz"])
+    func sideQuestRejectsAnUnknownChallengeMechanic(_ mechanic: String) {
+        // A closed enum with a discriminator, so an unknown mechanic fails the decode rather than
+        // becoming a silently ignored challenge — and `FR-TASK-05`'s limit at sacred places is
+        // satisfied by construction.
+        let json = Self.quizSideQuestJSON.replacingOccurrences(
+            of: #""type": "quiz""#, with: #""type": "\#(mechanic)""#)
+        #expect(throws: (any Error).self) {
+            try decoder.decode(SideQuest.self, from: Data(json.utf8))
+        }
+    }
+
+    @Test func sideQuestLoreWithoutAnAccuracyLabelFailsToDecode() {
+        // FR-SIDE-04: a new surface does not get to render an unlabelled claim.
+        let json = Self.quizSideQuestJSON.replacingOccurrences(
+            of: #""accuracy": "documented","#, with: "")
+        #expect(throws: (any Error).self) {
+            try decoder.decode(SideQuest.self, from: Data(json.utf8))
+        }
+    }
+
+    @Test func sideQuestWithoutAHeroImageStillDecodes() throws {
+        #expect(try decoder.decode(SideQuest.self, from: Data(Self.quizSideQuestJSON.utf8)).heroImageAsset == nil)
+    }
+
+    @Test func letterCollectionDecodesTheSchemaExample() throws {
+        let collection = try decoder.decode(LetterCollection.self, from: Data(#"""
+        {
+          "id": "bali-the-explorer",
+          "region": "Bali",
+          "phrase": "BALI THE",
+          "title": { "id": "Bali the Explorer", "en": "Bali the Explorer" },
+          "caption": { "id": "Kumpulkan satu huruf di setiap tempat.",
+                       "en": "Collect one letter at each place." },
+          "badgeId": "badge-bali-the-explorer",
+          "slots": [
+            { "index": 0, "letter": "B", "sideQuestId": "sq-1" },
+            { "index": 1, "letter": "A", "sideQuestId": "sq-2" },
+            { "index": 2, "letter": "L", "sideQuestId": "sq-3" },
+            { "index": 3, "letter": "I", "sideQuestId": "sq-4" },
+            { "index": 4, "letter": "T", "sideQuestId": "sq-5" },
+            { "index": 5, "letter": "H", "sideQuestId": "sq-6" },
+            { "index": 6, "letter": "E", "sideQuestId": "sq-7" }
+          ]
+        }
+        """#.utf8))
+        #expect(collection.badgeId == "badge-bali-the-explorer")
+        #expect(collection.slots.count == 7)
+        #expect(collection.orderedSlots.map(\.letter).joined() == "BALITHE")
+    }
+
+    @Test func aPhrasesSpacesAreDisplayOnlyAndGetNoSlot() throws {
+        // The phrase is the place count (`s0` D7): "BALI THE EXPLORER" is 15 letters and therefore
+        // 15 places, not 17.
+        let collection = LetterCollection(
+            id: "c", region: "Bali", phrase: "BALI THE EXPLORER",
+            title: LocalizedText(id: "T", en: "T"), caption: LocalizedText(id: "C", en: "C"),
+            badgeId: "b", slots: [])
+        #expect(collection.phraseLetters.count == 15)
+    }
+
+    @Test func aLetterSlotIsIdentifiedByItsIndex() {
+        #expect(LetterSlot(index: 3, letter: "I", sideQuestId: "sq-4").id == 3)
+    }
+
+    // MARK: - Fixtures
+
+    static let quizChallengeJSON = #"""
+    { "type": "quiz",
+      "question": { "id": "Berapa wajah yang dimiliki arca ini?",
+                    "en": "How many faces does this statue have?" },
+      "options": [
+        { "id": "Dua", "en": "Two" },
+        { "id": "Tiga", "en": "Three" },
+        { "id": "Empat", "en": "Four" }
+      ],
+      "correctIndex": 2,
+      "explanation": { "id": "Empat wajah menghadap empat penjuru catus patha.",
+                       "en": "The four faces look out along the catus patha crossroads." } }
+    """#
+
+    static let quizSideQuestJSON = #"""
+    {
+      "id": "sq-badung-catur-muka",
+      "placeId": "badung-catur-muka",
+      "title": { "id": "Catur Muka", "en": "Catur Muka" },
+      "synopsis": { "id": "Arca berwajah empat di persimpangan kota.",
+                    "en": "A four-faced statue at the city crossroads." },
+      "lore": [
+        { "text": { "id": "Arca ini berdiri di catus patha.", "en": "The statue stands on the catus patha." },
+          "accuracy": "documented", "sourceRefs": [0] }
+      ],
+      "challenge": \#(quizChallengeJSON),
+      "triggerRadiusM": 75,
+      "noticeRadiusM": 250
+    }
+    """#
 }

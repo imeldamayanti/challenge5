@@ -35,6 +35,21 @@ public protocol ContentRepository: Sendable {
     /// type stays free of it.
     func quests(suppressingQuestIDs: Set<String>, suppressingPlaceIDs: Set<String>) throws -> [Quest]
 
+    // Sidequests and letter collections (PRD §5.15). Still no notion of loading, refreshing,
+    // connectivity or freshness: a sidequest is exactly the kind of feature that invites a "check
+    // for new places nearby" call, and adding one here is the specific mistake `AD-3` exists to
+    // prevent (`FR-SIDE-15`).
+    func sideQuests() throws -> [SideQuest]
+    func sideQuest(id: String) throws -> SideQuest?
+    func sideQuests(atPlaceID placeID: String) throws -> [SideQuest]
+    func collections() throws -> [LetterCollection]
+    func collection(id: String) throws -> LetterCollection?
+
+    /// The discovery set minus anything withdrawn (`AD-5`, `FR-SIDE-14`). Suppressed sets are
+    /// passed in, never fetched here — whoever owns the kill-switch owns the fetch.
+    func sideQuests(suppressingSideQuestIDs: Set<String>,
+                    suppressingPlaceIDs: Set<String>) throws -> [SideQuest]
+
     /// A URL for a bundled asset path such as `quests/x/route-preview.png`, or nil if absent.
     func assetURL(_ relativePath: String) throws -> URL?
 }
@@ -109,6 +124,34 @@ public struct BundledContentRepository: ContentRepository {
 
     public func place(id: String) throws -> Place? { cache.bundle.place(id: id) }
 
+    /// Manifest order, for the same reason `quests()` uses it: directory enumeration order is a
+    /// filesystem detail and would reshuffle a collection between machines.
+    public func sideQuests() throws -> [SideQuest] {
+        cache.bundle.manifest.sideQuests.compactMap { id in cache.bundle.sideQuest(id: id) }
+    }
+
+    public func sideQuest(id: String) throws -> SideQuest? { cache.bundle.sideQuest(id: id) }
+
+    public func sideQuests(atPlaceID placeID: String) throws -> [SideQuest] {
+        try sideQuests().filter { $0.placeId == placeID }
+    }
+
+    public func collections() throws -> [LetterCollection] {
+        cache.bundle.manifest.collections.compactMap { id in cache.bundle.collection(id: id) }
+    }
+
+    public func collection(id: String) throws -> LetterCollection? { cache.bundle.collection(id: id) }
+
+    public func sideQuests(
+        suppressingSideQuestIDs: Set<String>,
+        suppressingPlaceIDs: Set<String>
+    ) throws -> [SideQuest] {
+        try sideQuests().filter { sideQuest in
+            !suppressingSideQuestIDs.contains(sideQuest.id)
+                && !suppressingPlaceIDs.contains(sideQuest.placeId)
+        }
+    }
+
     public func quests(
         suppressingQuestIDs: Set<String>,
         suppressingPlaceIDs: Set<String>
@@ -172,6 +215,13 @@ enum ContentDirectoryLoader {
         let manifest = try decode(Manifest.self, "manifest.json")
         let places = try manifest.places.map { try decode(Place.self, "places/\($0).json") }
         let quests = try manifest.quests.map { try decode(Quest.self, "quests/\($0).json") }
+        // Both lists are empty for a schema 1 bundle, so nothing is read and a rollback loads.
+        let sideQuests = try manifest.sideQuests.map {
+            try decode(SideQuest.self, "sidequests/\($0).json")
+        }
+        let collections = try manifest.collections.map {
+            try decode(LetterCollection.self, "collections/\($0).json")
+        }
 
         // Consent is a build input. When the directory is absent — which is the case in every
         // shipped app — the bundle simply carries none, and rules V4/V5 are not judged at
@@ -188,7 +238,9 @@ enum ContentDirectoryLoader {
 
         return LoadedContent(
             bundle: ContentBundle(
-                manifest: manifest, places: places, quests: quests, consentRecords: consentRecords),
+                manifest: manifest, places: places, quests: quests,
+                sideQuests: sideQuests, collections: collections,
+                consentRecords: consentRecords),
             rawDocuments: raw)
     }
 }

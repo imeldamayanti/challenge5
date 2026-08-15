@@ -20,9 +20,12 @@ Precise names matter here because the same word means different things to design
 | **Checkpoint** | One position in a Quest's ordered sequence, bound to exactly one Place, carrying its own lore segment, clue, and tasks. The same Place may appear in multiple Quests with different lore segments. |
 | **Run** | One user's attempt at one Quest. The unit of progress, drafting, and completion. A user MAY have at most one active Run per Quest. |
 | **Task** | An activity offered at a Checkpoint — photo, reflection, or question. Never gates progression. |
-| **Side quest** | An optional suggestion at a Checkpoint. Not tracked in v1. |
+| **Bonus prompt** | An optional suggestion at a Checkpoint. Not tracked in v1. Called *side quest* until the `FR-SIDE` amendment (§5.15) claimed that name for a different entity; the ID `FR-TASK-08/09` and the concept are unchanged, only the word. |
+| **Sidequest** | *(proposed, §5.15)* A single-place activity outside any quest: one story with its provenance, one challenge, and one letter of a collectible phrase. Never part of a Run, never blocks one, never changes one. |
+| **Letter collection** | *(proposed, §5.15)* A phrase and one slot per letter, each slot filled by completing one named Sidequest. |
 | **Stamp** | Award for reaching one Checkpoint. |
-| **Badge** | Award for completing a whole Quest, or for a cross-Quest achievement (v2). |
+| **Badge** | Award for completing a whole Quest, for a cross-Quest achievement (v2), or for completing every slot of a Letter collection (v2, proposed — `FR-SIDE-09`). |
+| **Letter** | *(proposed, §5.15)* Award for completing one Sidequest's challenge. One letter, once, per Sidequest. |
 | **Arrival** | The system's confirmation that the user is physically at a Checkpoint. Either GPS-confirmed or manually asserted. |
 | **Content version** | An immutable version identifier for a Quest's text, media, and route. Pinned to a Run at start. |
 | **Consent record** | Documented permission from a Place's managing community to include it in a Quest. |
@@ -37,10 +40,12 @@ Precise names matter here because the same word means different things to design
 | Content delivery | bundled in app | bundled | bundled | CMS/API |
 | Accounts | none | none | Sign in with Apple | — |
 | Network required | never | never | sync only | content refresh only |
-| Notifications | quest proximity (opt-in, off) | — | + History Alert (opt-in, off) | — |
-| Background location | region monitoring only | — | + History Alert regions | — |
+| Notifications | quest proximity (opt-in, off) | — | + History Alert (opt-in, off), + sidequest proximity (opt-in, off) ¹ | — |
+| Background location | region monitoring only | — | + History Alert regions, + sidequest place regions ¹ | — |
 | Apple Watch | forwarded haptic only | — | arrival haptic during a Run | — |
 | Languages | ID + EN | ID + EN | ID + EN | +JA/ZH/KO |
+
+¹ **Proposed, not accepted.** Depends on §5.15 `FR-SIDE-*` being signed off. If that block is rejected, both cells revert to History Alert alone.
 
 ---
 
@@ -62,11 +67,20 @@ Two location behaviors with different permissions, different costs, and differen
 
 *Consequence for the walking model.* The user experience is still "pocket the phone, walk, open on arrival" during a Run. This must be taught in onboarding and in the pre-start safety notice, not left to be discovered.
 
+*Extension in v2 — sidequest places.* **Proposed, not accepted; depends on §5.15.** The set of monitored regions grows from quest start points alone to quest start points **and** sidequest places (`FR-SIDE-11`). The mechanism is unchanged — region monitoring, opt-in, default off — and so is the split above: foreground sampling decides entry to a sidequest (`FR-SIDE-02`), background monitoring only says one is near. What does change is arithmetic: a 15-slot collection plus quest starts crosses the iOS 20-region cap, so nearest-N selection stops being a v3 concern and becomes a requirement of the release that ships the first collection (`FR-SIDE-16`, superseding `FR-PROX-14`'s timing).
+
 ### AD-2 — Arrival is gated by position; tasks are never gates
 
 Progression requires Arrival only. Every Task is skippable with no penalty and no altered reward.
 
 *Rationale.* The app cannot verify photo content, so a photo is not evidence — it is a souvenir. Treating it as a gate creates a failure the app cannot resolve: photography is prohibited in parts of active temples, and the PRD's own field-validation list flags photo permission as unresolved per site.
+
+*Carve-out for sidequest challenges.* **Proposed, not accepted; depends on §5.15.** A sidequest's challenge gates its own letter (`FR-SIDE-05`) and nothing else: no checkpoint, no quest, no route, no other sidequest. This is not a weakening of the rule above, because the rule above is about a walk — a photograph must never stand between a walker and the next checkpoint. Not completing a sidequest's challenge leaves its letter slot blank and the place re-openable indefinitely (`FR-SIDE-07`); it blocks no progression anywhere.
+
+Two consequences are stated so nobody later reverses them by inference:
+
+- `FR-TASK-01` and validator rule V8 (`blocks_progression` **MUST** be false for all content) keep their exact current meaning and scope. **V8 must not be widened to cover sidequest challenges** — a sidequest challenge is not a Task and has no `blocks_progression` field.
+- `FR-SIDE-05` is not an `AD-2` violation and must not be "fixed" as one.
 
 ### AD-3 — Local store is authoritative; no connectivity branching
 
@@ -141,7 +155,7 @@ Field lists are requirements, not schema. Types are indicative.
 | `lore_segment` | localized, with per-claim accuracy labels |
 | `clue_to_next` | localized; null for the final checkpoint |
 | `tasks[]` | |
-| `side_quests[]` | |
+| `bonus_prompts[]` | optional suggestions, untracked (`FR-TASK-08`). Named `side_quests[]` until the `FR-SIDE` amendment; on device the type is `ContentKit.BonusPrompt` and the JSON key is `bonusPrompts`. Renamed to free the word *sidequest* for §5.15 — two entities of that name in one codebase is a defect waiting to be written. Renaming a content key bumps `contentBundleVersion`. |
 | `stamp_id` | |
 
 **Task**
@@ -170,11 +184,21 @@ All user records **MUST** carry a device-generated UUID, `created_at`, and `upda
 
 **TaskResult** — `checkpoint_result_id`, `task_id`, `type`, `photo_local_id` | `text`, `skipped`, `completed_at`
 
-**Award** — `type` (stamp / badge), `source_id`, `run_id`, `awarded_at`
+**Award** — `type` (stamp / badge / **letter** ¹), `source_id`, `run_id`, `awarded_at`
 
 **SurveyResponse** — `run_id`, `question_id`, `text`, `created_at`, `sync_state`
 
 **AnalyticsEvent** — `id`, `name`, `params`, `created_at`, `sync_state`
+
+#### Sidequest user entities — proposed, not accepted
+
+¹ These land only if §5.15 `FR-SIDE-*` is signed off. They are a **separate aggregate from `Run`**, stored separately: modelling a sidequest as a one-checkpoint Run would put sidequests into the home screen's resume entry (`FR-RUN-03`), break the one-active-Run-per-quest assumption for a place visited twice, and make `FR-PROX-08` suppress the very alerts the feature exists to send. The same no-object-reference rule applies as everywhere else — string IDs plus a pinned content version, snapshot at completion (`AD-4`, `FR-SIDE-10`).
+
+**SideQuestRecord** — `id`, `side_quest_id`, `place_id`, `collection_id`, `content_version`, `language`, `state`, `discovered_at`, `updated_at`, `completed_at`, `arrival_method` (gps / manual), `gps_accuracy_m`, `lore_first_opened_at`, plus the snapshot fields `place_name`, `synopsis`, `lore_blocks[]` with their accuracy labels and citations, `challenge_prompt`, `letter`
+
+**SideQuestChallengeResult** — `side_quest_record_id`, `type` (quiz / photo), `attempts`, `revealed_answer`, `photo_relative_path` | `selected_option_id`, `completed_at`
+
+`Award.type = letter` carries `source_id` = the sidequest's ID and a null `run_id`. The authored content entities behind these — the Sidequest and the Letter collection — are specified in `.claude/plans/sidequest/s1-content-schema.plan.md` and are deliberately not restated here; this section is the user-data half.
 
 ---
 
@@ -275,8 +299,10 @@ All user records **MUST** carry a device-generated UUID, `created_at`, and `upda
 | FR-TASK-05 | At a Place with `is_sacred = true`, the app **MUST** display the Place's dress code and photo policy before offering any task, and **MUST NOT** offer puzzle, scavenger, or timed mechanics. Permitted mechanics are limited to photo, reading, reflection, and a single light question. | P0 | v1 |
 | FR-TASK-06 | At a Place with `photo_policy = prohibited`, a photo task **MUST NOT** be offered at all. | P0 | v1 |
 | FR-TASK-07 | The final checkpoint's task **MUST** include a free-text reflection prompt, and its answer **MUST** flow into the trip summary. | P0 | v1 |
-| FR-TASK-08 | Side quests **MUST** be presented as clearly optional and **MUST NOT** be tracked, scored, or rewarded in v1. | P1 | v1 |
-| FR-TASK-09 | Side quest tracking with bonus stamps. | P2 | v2 |
+| FR-TASK-08 | Bonus prompts **MUST** be presented as clearly optional and **MUST NOT** be tracked, scored, or rewarded in v1. | P1 | v1 |
+| FR-TASK-09 | Bonus prompt tracking with bonus stamps. | P2 | v2 |
+
+Both requirements read *side quest* before the `FR-SIDE` amendment (§5.15). The IDs and the requirements are unchanged; only the term moved, so that *sidequest* names one thing. These are checkpoint-level suggestions and have nothing to do with `FR-SIDE-*`.
 
 ### 5.9 Run state, drafts, interruption — `FR-RUN`
 
@@ -357,13 +383,77 @@ Scoped in v1 to **quest start points only**, not intermediate checkpoints. Durin
 | FR-PROX-11 | `proximity_radius_m` **MUST** be larger than the start checkpoint's `arrival_radius_m` — the point is a warning on approach, not a confirmation at the gate — and **MUST** be tunable per quest through content. | P0 | v1 |
 | FR-PROX-12 | Regions for a suppressed quest (AD-5) **MUST** be deregistered on the next launch. | P0 | v1 |
 | FR-PROX-13 | Turning the feature off **MUST** deregister all monitored regions immediately. | P0 | v1 |
-| FR-PROX-14 | iOS limits an app to 20 monitored regions. From the release where quest count could exceed that, the app **MUST** register only the nearest regions, recomputed from coarse location, rather than failing silently at the cap. | P0 | v3 |
+| FR-PROX-14 | iOS limits an app to 20 monitored regions. From the release where quest count could exceed that, the app **MUST** register only the nearest regions, recomputed from coarse location, rather than failing silently at the cap. | P0 | ~~v3~~ ¹ |
 | FR-PROX-15 | Region entry **MUST** be handled entirely on-device. Proximity alerts **MUST NOT** be triggered by a server or delivered as remote push. | P0 | v1 |
 | FR-WATCH-01 | Watch support in v1 **MUST** be limited to receiving forwarded notifications and their haptic. A standalone watchOS app **MUST NOT** be required. | P0 | v1 |
 | FR-WATCH-02 | The app **MUST** be fully functional for users with no Apple Watch. The watch is an enhancement, never a dependency. | P0 | v1 |
 | FR-WATCH-03 | A watchOS companion delivering checkpoint arrival haptics during an active Run, so the phone can stay pocketed for the whole walk. | P2 | v2 |
 
-### 5.15 Post-MVP functional areas
+¹ **Timing superseded by `FR-SIDE-16` — proposed, not accepted.** The requirement itself is unchanged and keeps its ID; only its release moves. `FR-PROX-14` was scheduled for v3 on the arithmetic that v1 ships two quests, well under the cap. A single 15-slot letter collection plus quest starts crosses 20 as soon as a second collection is authored, so nearest-N selection is required by the release that ships §5.15. If that block is rejected, `FR-PROX-14` reverts to v3 unchanged.
+
+### 5.15 Sidequests and letter collections — `FR-SIDE`
+
+> **STATUS: PROPOSED — NOT ACCEPTED.** Owner: unassigned. This section is a requirement block awaiting
+> the product owner's signature, and it is the gate on everything in `.claude/plans/sidequest/`
+> (`s0` §4). Until it is accepted, amended, or rejected, no part of the feature ships. Requirement IDs
+> `FR-SIDE-01` … `FR-SIDE-16` are reserved and stable from now on — if the block is rejected they are
+> marked `WITHDRAWN` and kept, never reused. Four decisions inside it need a signature and not merely
+> an ID; they are listed after the table. Every other edit this amendment made elsewhere in this
+> document carries the same marker and reverts with it.
+
+A sidequest is a single-place activity outside any quest: a story with its provenance, one challenge,
+and one letter of a collectible phrase. It exists to reach the traveller who did not plan a walk — the
+same audience `FR-PROX` was written for — and to give a reason to return to a region after its quests
+are finished. A sidequest never blocks, alters, or is part of a Run.
+
+| ID | Requirement | Pri | Rel |
+|---|---|---|---|
+| FR-SIDE-01 | A sidequest **MUST** be independent of any Run. Discovering or completing one **MUST NOT** change a Run's state, progress, or awards, and **MUST NOT** be required to complete any quest. | P0 | v2 |
+| FR-SIDE-02 | Opening a sidequest's story **MUST** require the same two-condition gate as checkpoint arrival (`FR-ARR-01`): inside the trigger radius, with horizontal accuracy no worse than that radius. | P0 | v2 |
+| FR-SIDE-03 | A manual override **MUST** be offered after 60 s of unsuccessful detection, and immediately when location permission is refused. The entry method and last known accuracy **MUST** be recorded, and a manual entry **MUST NOT** be rewarded differently (`FR-ARR-03`, `FR-ARR-04`). | P0 | v2 |
+| FR-SIDE-04 | Sidequest story claims **MUST** display their accuracy label and **MUST** make their sources reachable, as `FR-CP-05`/`FR-CP-06` require at a checkpoint. | P0 | v2 |
+| FR-SIDE-05 | Completing a sidequest's challenge **MUST** award exactly one letter, once. Re-opening a completed sidequest **MUST NOT** award a second. | P0 | v2 |
+| FR-SIDE-06 | A quiz challenge **MUST** allow unlimited attempts with no penalty, and **MUST** reveal the correct answer with its explanation after three wrong attempts, awarding the letter regardless. | P0 | v2 |
+| FR-SIDE-07 | An incomplete sidequest **MUST** remain openable at its place indefinitely, and **MUST** be reachable from the collection screen and from a nearby-places list without waiting for a notification. | P0 | v2 |
+| FR-SIDE-08 | Collection progress **MUST** show earned letters in place and unearned slots as blanks. An unearned slot **MUST NOT** reveal its letter, and **MUST** name the place that fills it, so that a traveller can plan a visit. | P0 | v2 |
+| FR-SIDE-09 | Completing every slot of a collection **MUST** award that collection's badge, once. | P1 | v2 |
+| FR-SIDE-10 | A sidequest record **MUST** render identically after the content that produced it is corrected, replaced, or withdrawn. Place name, story, citations and letter **MUST** be snapshotted at discovery, and the content version pinned (`AD-4`). | P0 | v2 |
+| FR-SIDE-11 | Proximity notification for sidequests **MUST** follow `FR-PROX-03` … `FR-PROX-15` in full: opt-in with a default of off, region monitoring only, self-disabling without `Always`, local delivery, quiet hours, and rate limits. | P0 | v2 |
+| FR-SIDE-12 | Sidequest alerts **MUST NOT** fire while any Run is active, and **MUST NOT** fire for a sidequest already completed. | P0 | v2 |
+| FR-SIDE-13 | A photo challenge's photograph **MUST** remain on the device, **MUST** be stored by a path relative to the app container, and **MUST** be deleted by `FR-SET-02` erasure. | P0 | v2 |
+| FR-SIDE-14 | Sidequests suppressed by the kill-switch (`AD-5`) **MUST** disappear from every surface and have their regions deregistered on next launch. Letters already earned **MUST** be retained. | P0 | v2 |
+| FR-SIDE-15 | Every part of the sidequest flow except the kill-switch fetch **MUST** work with no network (`AD-3`). | P0 | v2 |
+| FR-SIDE-16 | The number of monitored regions across quests and sidequests **MUST NOT** exceed the platform limit; when candidates exceed it, the app **MUST** register the nearest, recomputed from coarse location, rather than failing silently. Supersedes `FR-PROX-14`'s v3 timing. | P0 | v2 |
+
+#### Decisions that need a signature, not just an ID
+
+**1. The challenge gates the letter — `AD-2` is not weakened.** Recorded as an explicit carve-out in
+`AD-2`'s own text, so that nobody later reads `FR-SIDE-05` as a violation and removes it, and nobody
+widens validator rule V8 to cover sidequest challenges. **Status: written into `AD-2`, awaiting the
+same signature as this block.**
+
+**2. The collection phrase is not localized.** `BALI THE EXPLORER` is the same string in both
+interface languages. Translating it changes the letter count, which changes the number of places,
+which forks the content tree per language. `NFR-I18N-01` still holds for every sentence around it: the
+phrase is a plain `String`, and a localized caption beside it carries the explanation in both
+languages. This is a product constraint that has to be accepted knowingly. **Status: accepted
+2026-08-15. Consequence: the phrase, and therefore the number of places to author, is one decision —
+see §10.**
+
+**3. An unearned slot names its place.** The alternative — hiding the place name as well as the letter,
+on the grounds that a visible list of addresses makes the notification pointless — was considered and
+rejected: a traveller planning a day should be able to see where the remaining letters are. The letter
+itself stays hidden. **Status: decided 2026-08-15, written into `FR-SIDE-08` above rather than left to
+a view.**
+
+**4. `FR-CP-05` still needs its own, earlier amendment.** Separate from this feature and outstanding
+since 2026-08-13: the run flow's Story Reveal pages render lore without the accuracy chip or citation,
+by a product decision recorded in `.claude/plans/m8-qa-fixes.plan.md` and `docs/hisplora-tokens.md`
+but **not** in this document. `FR-SIDE-04` deliberately does not inherit that exception — a new surface
+does not acquire it by inference, and extending it here would be a second signed exception with its own
+owner. **Status: unresolved, no owner named. `FR-CP-05` is left unedited on purpose; see §10.**
+
+### 5.16 Post-MVP functional areas
 
 Stated at requirement level so v1 does not foreclose them, not specified in full.
 
@@ -579,6 +669,20 @@ v1 is not shippable until all of the following hold. These are gates, not aspira
 12. Standby battery measured over 24 hours with proximity monitoring on shows no meaningful regression against monitoring off. *(NFR-BAT-05)*
 13. Starting a quest from outside the start radius is impossible by every path tested, including the manual override, which requires presence confirmation. *(FR-START-08, 09)*
 
+### Sidequest release gates — proposed, v2
+
+**Not part of the v1 list above.** These gate the release that ships §5.15, and they apply only if that
+block is accepted. They are additional to, not a replacement for, gates 1–13.
+
+1. Every place in every shipped collection has a real, unexpired consent grant from the site, with a named grantor and a named region owner. **A self-grant by the project team does not pass.** *(NFR-GOV-01, 02, FR-SIDE-10)*
+2. Every claim in every sidequest story has an openable citation. No unverified-claim placeholders. *(NFR-CONT-01, 02, FR-SIDE-04)*
+3. Every sidequest coordinate and radius has been stood on, not taken from a map search. *(NFR-CONT-03, FR-SIDE-02)*
+4. Sidequest proximity verified in the field on a device: fires on entering a real notice radius with the app closed, respects quiet hours and rate limits, does not fire during an active Run or for a completed sidequest, disables itself cleanly when `Always` is refused, deregisters on switch-off. *(FR-SIDE-11, 12)*
+5. The whole sidequest flow traversed in airplane mode on a physical device. *(FR-SIDE-15, NFR-REL-03)*
+6. The whole sidequest flow traversed with VoiceOver and at the largest Dynamic Type size, on every new screen. *(NFR-A11Y-01, 02)*
+7. A Release build contains neither the simulated location provider nor the simulated region entry, verified by grepping the binary. *(NFR-SEC, debug-tooling hygiene)*
+8. `Info.plist` purpose strings for `Always` location and camera exist in both languages. *(FR-PROX-03, NFR-PRIV-10, NFR-I18N-01)*
+
 ---
 
 ## 9. Traceability
@@ -598,6 +702,7 @@ Every P0 functional area exists to serve the hypothesis or to protect against a 
 | NFR-A11Y | Risk: accessibility exclusion |
 | FR-DISC-05, FR-DISC-06, FR-ERR-06 | Risk: unexpected cost, closed site mid-quest |
 | AD-3, AD-4, NFR-MAINT-04, FR-OFF-04 | Risk: offline-first lost during the v3 CMS migration |
+| FR-SIDE *(proposed, §5.15)* | The same discovery goal as FR-PROX, extended past the moment of discovery: a reason to enter one place, and a reason to return to a region after its quests are finished. Cut this row with the block if it is rejected. |
 
 ---
 
@@ -615,6 +720,13 @@ Unchanged from the lean PRD unless noted. These block specific requirements rath
 - Whether a proximity alert should fire for a quest the user has already previewed but not started, more prominently than for one they have never seen — blocks nothing, but it is the difference between a reminder and a discovery.
 - App name and branding — blocks submission.
 - Actual production hours per quest — blocks the v3 decision, answerable only by producing the first two.
+- **`FR-CP-05` and the Story Reveal screen** — blocks nothing in code, because the screen already ships that way, and that is the problem. The run flow's Story Reveal pages render lore without the accuracy chip or its citation, by a product decision taken 2026-08-13 and recorded only in `.claude/plans/m8-qa-fixes.plan.md` and `docs/hisplora-tokens.md`. This document still states `FR-CP-05` without exception, so the code and the requirement disagree. It needs either an amendment to `FR-CP-05` or a signed exception with a named owner. **Neither exists, and no owner has been named — which is why `FR-CP-05` is left unedited above rather than quietly softened.** Outstanding since 2026-08-13.
+
+The three below arrive with §5.15 and lapse if it is rejected.
+
+- **The collection phrase, and therefore the number of places** — blocks `FR-SIDE-09` and all sidequest content scoping. The phrase length *is* the place count: `BALI THE EXPLORER` is 15 letters and therefore 15 places, each needing its own consent record and its own citations. It is not localized (decision 2, §5.15), so the count is the same in both languages. This is a content-production commitment measured in weeks, not a string.
+- **`noticeRadiusM` default** — blocks `FR-SIDE-11`, and joins `proximity_radius_m` as a figure that must come out of field validation rather than a spreadsheet. It must exceed the trigger radius — a warning on approach, not a confirmation at the gate — but by how much depends on how the approach feels on the ground at each place.
+- **`proximity_radius_m` default** *(restated)* — the same question already open for `FR-PROX-11`. The two should be answered on the same field walk, by the same method, or the app will warn about a quest and a sidequest at incomparable distances.
 
 ---
 
