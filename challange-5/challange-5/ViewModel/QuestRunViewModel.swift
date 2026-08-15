@@ -21,8 +21,13 @@ final class QuestRunViewModel {
         /// `CutsceneScreens.swift`.
         case cutsceneIntro
         case cutscenePortrait
-        /// The paged lore reader, one page per `LoreBlock`.
+        /// The lore reveal — one passage, joined from every `LoreBlock` at the checkpoint.
         case storyReveal
+        /// `50:137` — the sacred-Place notice, before the task menu. Only reached when
+        /// `checkpoint.isSacred`; every other checkpoint's story goes straight to `checkpointDetail`.
+        case placeNotice
+        /// `51:201` — what is waiting at this checkpoint, named before it is answered.
+        case checkpointDetail
         /// The place name, before the checkpoint proper.
         case transition
         case atCheckpoint
@@ -495,7 +500,15 @@ final class QuestRunViewModel {
 
     func advanceFromCutscenePortrait() { stage = .storyReveal }
 
-    func advanceFromStoryReveal() { stage = .transition }
+    /// A sacred Place explains itself before the task menu (`FR-TASK-05`'s rule, moved one screen
+    /// earlier); every other checkpoint goes straight to the menu.
+    func advanceFromStoryReveal() {
+        stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .checkpointDetail
+    }
+
+    func advanceFromPlaceNotice() { stage = .checkpointDetail }
+
+    func advanceFromCheckpointDetail() { stage = .transition }
 
     func advanceFromTransition() { stage = .atCheckpoint }
 
@@ -504,14 +517,17 @@ final class QuestRunViewModel {
         switch stage {
         case .cutscenePortrait: stage = .cutsceneIntro
         case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .cutscenePortrait : .storyReveal
+        case .placeNotice: stage = .storyReveal
+        case .checkpointDetail: stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .storyReveal
         default: break
         }
     }
 
-    /// One page per `LoreBlock`, already resolved to the run's language. The `n/3` pager is this
-    /// count, so a checkpoint with two blocks pages `1/2` rather than padding to three.
-    var storyRevealPages: [String] {
-        checkpoint?.claims.map(\.block.text) ?? []
+    /// Every `LoreBlock` at this checkpoint, joined into the one passage the story reveal shows —
+    /// the same join `hookText` uses, so a multi-block checkpoint reads as paragraphs rather than a
+    /// pager (`46:120` restyle).
+    var storyRevealText: String {
+        (checkpoint?.claims.map(\.block.text) ?? []).joined(separator: "\n\n")
     }
 
     /// The quest's hook, joined into one passage for the typewriter. Content, not a literal.
@@ -682,6 +698,8 @@ final class QuestRunViewModel {
             id: checkpoint.id,
             orderIndex: checkpoint.orderIndex,
             placeName: place?.nameOfficial.value(for: language) ?? checkpoint.placeId,
+            placeDescription: (place?.loreStandalone ?? [])
+                .map { $0.text.value(for: language) }.joined(separator: "\n\n"),
             isSacred: place?.isSacred ?? false,
             dressCodeText: place?.dressCode.value(for: language) ?? "",
             photoPolicyText: place.map { formatter.photoPolicy($0.photoPolicy.level) } ?? "",

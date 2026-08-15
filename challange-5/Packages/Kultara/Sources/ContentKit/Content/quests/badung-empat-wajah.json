@@ -1,9 +1,13 @@
 {
   "id": "badung-empat-wajah",
+<<<<<<< HEAD
   "contentVersion": "2026.09.0",
+=======
+  "contentVersion": "2026.08.4",
+>>>>>>> 3d7866ca17169f23e68cea52a79c3da68b617c90
   "title": {
-    "id": "Empat Wajah Kota Badung",
-    "en": "The Four Faces of Badung"
+    "id": "Jejak Terakhir Badung",
+    "en": "The Last Traces of Badung"
   },
   "region": "Badung",
   "city": "Denpasar",

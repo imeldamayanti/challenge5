@@ -238,8 +238,12 @@ auto-advancing and the login carrying a "Skip for now".
 - `.claude/launch.json` is stale scaffolding pointing at another user's Downloads folder. It has nothing to do with this project.
 - The app has no name. "Kultara" appears throughout the code as a working title, but Kultara is a community storyteller organization in Sanur that the team interviewed — a research partner, not a brand. "Hisplora" is the Figma file's name and is used for the visual direction only, not as a product name. This needs resolving before any release.
 - **The shipped content is one authored quest over five real places, and it is partly unverified.**
-  `badung-empat-wajah` ("Empat Wajah Kota Badung" / "The Four Faces of Badung") walks Puri Agung
-  Pemecutan → Pura Maospahit → Pasar Kumbasari → Catur Muka → Museum Bali. The `contoh-*`
+  `badung-empat-wajah` ("Jejak Terakhir Badung" / "The Last Traces of Badung") walks Puri Agung
+  Pemecutan → Pura Maospahit → Pasar Kumbasari → Catur Muka → Museum Bali. **The quest id no longer
+  matches its title**: the id is the key user data pins (`Run.questID`), so renaming it would orphan
+  every completed walk — the title moved to the Ngalcer frame's wording and the id stayed. The
+  four-faces reading is still what the quest is *about*, and every lore block, hook and clue still
+  says so. The `contoh-*`
   placeholders are gone. What is real: Museum Bali's address and hours, Pura Maospahit's address and
   architecture, Pasar Kumbasari's address, four-storey layout, 1977 founding and market rules, and
   Catur Muka's position relative to the catus patha — each with an openable citation. What is **not**
