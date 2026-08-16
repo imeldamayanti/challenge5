@@ -24,6 +24,23 @@ struct ImportBoundaryTests {
         #expect(offenders.isEmpty, "RunEngine must not import \(Self.forbiddenModules.joined(separator: ", ")); found: \(offenders)")
     }
 
+    /// `c1` D5/D8. `TelemetryKit` must not import CoreLocation, and that is not a layering
+    /// preference: it is what makes "no coordinate leaves the device in any form" structural. A
+    /// target that cannot name a `CLLocation` cannot accidentally serialise one, and the arrival
+    /// event's only constructor takes a checkpoint id and an accuracy *band*.
+    @Test func telemetryKitImportsNoUIOrLocationFramework() throws {
+        let offenders = try Self.forbiddenImports(inTargetNamed: "TelemetryKit")
+        #expect(offenders.isEmpty, "TelemetryKit must not import \(Self.forbiddenModules.joined(separator: ", ")); found: \(offenders)")
+    }
+
+    /// `GovernanceKit` fetches one static file and keeps the last good copy. It has no business
+    /// with a UI framework, and `AD-3` means it has no business with a reachability API either —
+    /// the second half is `PermissionCallBoundaryTests`; this is the first.
+    @Test func governanceKitImportsNoUIOrLocationFramework() throws {
+        let offenders = try Self.forbiddenImports(inTargetNamed: "GovernanceKit")
+        #expect(offenders.isEmpty, "GovernanceKit must not import \(Self.forbiddenModules.joined(separator: ", ")); found: \(offenders)")
+    }
+
     @Test func contentValidatorCLIImportsNoUIOrLocationFramework() throws {
         let offenders = try Self.forbiddenImports(inTargetNamed: "ContentValidatorCLI")
         #expect(offenders.isEmpty, "The validator CLI must stay headless; found: \(offenders)")

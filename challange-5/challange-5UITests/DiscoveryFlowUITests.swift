@@ -64,6 +64,18 @@ final class DiscoveryFlowUITests: XCTestCase {
         let preferences = app.buttons["Settings"].firstMatch
         XCTAssertTrue(preferences.waitForExistence(timeout: timeout),
                       "Profile did not offer a way into the app preferences")
+
+        // `exists` is not `isHittable`. At the largest accessibility size the profile's two
+        // controls run past the fold and the lower one lands under the floating tab bar, so the
+        // centre tap XCUITest always performs hits the tab bar and the screen never changes — the
+        // same failure `tapQuestCard` documents, and the reason this test was red. A person scrolls
+        // the control into view first, so this does too. Bounded, because a swipe that never makes
+        // it hittable is a finding rather than something to retry forever.
+        for _ in 0..<4 where !preferences.isHittable {
+            app.scrollViews.firstMatch.swipeUp()
+        }
+        XCTAssertTrue(preferences.isHittable,
+                      "The app-preferences control never scrolled into reach — \(preferences.frame) in \(app.windows.firstMatch.frame)")
         preferences.tap()
     }
 

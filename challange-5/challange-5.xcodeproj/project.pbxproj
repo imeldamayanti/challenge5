@@ -11,10 +11,21 @@
 		A0A0A0A0000000000000A008 /* RunEngine in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A006 /* RunEngine */; };
 		A0A0A0A0000000000000A009 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A007 /* DesignSystem */; };
 		A0A0A0A0000000000000A00C /* UIStringsKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A00B /* UIStringsKit */; };
+		A0C0C0C0000000000000C010 /* ContentKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00C /* ContentKit */; };
+		A0C0C0C0000000000000C011 /* RunEngine in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00D /* RunEngine */; };
+		A0C0C0C0000000000000C012 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00E /* DesignSystem */; };
+		A0C0C0C0000000000000C013 /* UIStringsKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00F /* UIStringsKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
 		A0B0B0B0000000000000B00B /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = A031C9CA302A038800764D07 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = A031C9D1302A038800764D07;
+			remoteInfo = "challange-5";
+		};
+		A0C0C0C0000000000000C00B /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = A031C9CA302A038800764D07 /* Project object */;
 			proxyType = 1;
@@ -26,6 +37,7 @@
 /* Begin PBXFileReference section */
 		A031C9D2302A038800764D07 /* challange-5.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "challange-5.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0B0B0B0000000000000B002 /* challange-5UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "challange-5UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0C0C0C0000000000000C002 /* challange-5Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "challange-5Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -37,6 +49,11 @@
 		A0B0B0B0000000000000B003 /* challange-5UITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = "challange-5UITests";
+			sourceTree = "<group>";
+		};
+		A0C0C0C0000000000000C003 /* challange-5Tests */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = "challange-5Tests";
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -60,6 +77,17 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A0C0C0C0000000000000C005 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A0C0C0C0000000000000C010 /* ContentKit in Frameworks */,
+				A0C0C0C0000000000000C011 /* RunEngine in Frameworks */,
+				A0C0C0C0000000000000C012 /* DesignSystem in Frameworks */,
+				A0C0C0C0000000000000C013 /* UIStringsKit in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -67,6 +95,7 @@
 			isa = PBXGroup;
 			children = (
 				A031C9D4302A038800764D07 /* challange-5 */,
+				A0C0C0C0000000000000C003 /* challange-5Tests */,
 				A0B0B0B0000000000000B003 /* challange-5UITests */,
 				A031C9D3302A038800764D07 /* Products */,
 			);
@@ -76,6 +105,7 @@
 			isa = PBXGroup;
 			children = (
 				A031C9D2302A038800764D07 /* challange-5.app */,
+				A0C0C0C0000000000000C002 /* challange-5Tests.xctest */,
 				A0B0B0B0000000000000B002 /* challange-5UITests.xctest */,
 			);
 			name = Products;
@@ -133,6 +163,33 @@
 			productReference = A0B0B0B0000000000000B002 /* challange-5UITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
 		};
+		A0C0C0C0000000000000C001 /* challange-5Tests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A0C0C0C0000000000000C007 /* Build configuration list for PBXNativeTarget "challange-5Tests" */;
+			buildPhases = (
+				A0C0C0C0000000000000C004 /* Sources */,
+				A0C0C0C0000000000000C005 /* Frameworks */,
+				A0C0C0C0000000000000C006 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A0C0C0C0000000000000C00A /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				A0C0C0C0000000000000C003 /* challange-5Tests */,
+			);
+			name = "challange-5Tests";
+			packageProductDependencies = (
+				A0C0C0C0000000000000C00C /* ContentKit */,
+				A0C0C0C0000000000000C00D /* RunEngine */,
+				A0C0C0C0000000000000C00E /* DesignSystem */,
+				A0C0C0C0000000000000C00F /* UIStringsKit */,
+			);
+			productName = "challange-5Tests";
+			productReference = A0C0C0C0000000000000C002 /* challange-5Tests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -147,6 +204,10 @@
 						CreatedOnToolsVersion = 26.6;
 					};
 					A0B0B0B0000000000000B001 = {
+						CreatedOnToolsVersion = 26.6;
+						TestTargetID = A031C9D1302A038800764D07;
+					};
+					A0C0C0C0000000000000C001 = {
 						CreatedOnToolsVersion = 26.6;
 						TestTargetID = A031C9D1302A038800764D07;
 					};
@@ -170,6 +231,7 @@
 			projectRoot = "";
 			targets = (
 				A031C9D1302A038800764D07 /* challange-5 */,
+				A0C0C0C0000000000000C001 /* challange-5Tests */,
 				A0B0B0B0000000000000B001 /* challange-5UITests */,
 			);
 		};
@@ -184,6 +246,13 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 		A0B0B0B0000000000000B006 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A0C0C0C0000000000000C006 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -207,6 +276,13 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		A0C0C0C0000000000000C004 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
@@ -214,6 +290,11 @@
 			isa = PBXTargetDependency;
 			target = A031C9D1302A038800764D07 /* challange-5 */;
 			targetProxy = A0B0B0B0000000000000B00B /* PBXContainerItemProxy */;
+		};
+		A0C0C0C0000000000000C00A /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = A031C9D1302A038800764D07 /* challange-5 */;
+			targetProxy = A0C0C0C0000000000000C00B /* PBXContainerItemProxy */;
 		};
 /* End PBXTargetDependency section */
 
@@ -346,7 +427,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YG7T52597K;
+				DEVELOPMENT_TEAM = 62ZRZ6VZKC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used only to confirm you have reached a checkpoint on a quest you are walking, and only while the app is open. Your location is never sent anywhere.";
@@ -359,7 +440,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.umar.challange-5";
+				PRODUCT_BUNDLE_IDENTIFIER = com.astungkara.hisplora;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -378,7 +459,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YG7T52597K;
+				DEVELOPMENT_TEAM = 62ZRZ6VZKC;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used only to confirm you have reached a checkpoint on a quest you are walking, and only while the app is open. Your location is never sent anywhere.";
@@ -391,7 +472,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "com.umar.challange-5";
+				PRODUCT_BUNDLE_IDENTIFIER = com.astungkara.hisplora;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
@@ -435,6 +516,46 @@
 			};
 			name = Release;
 		};
+		A0C0C0C0000000000000C008 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 62ZRZ6VZKC;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.astungkara.hisploraTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/challange-5.app/challange-5";
+			};
+			name = Debug;
+		};
+		A0C0C0C0000000000000C009 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 62ZRZ6VZKC;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.astungkara.hisploraTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 6.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/challange-5.app/challange-5";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -465,6 +586,15 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
+		A0C0C0C0000000000000C007 /* Build configuration list for PBXNativeTarget "challange-5Tests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A0C0C0C0000000000000C008 /* Debug */,
+				A0C0C0C0000000000000C009 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 /* End XCConfigurationList section */
 
 /* Begin XCLocalSwiftPackageReference section */
@@ -488,6 +618,22 @@
 			productName = DesignSystem;
 		};
 		A0A0A0A0000000000000A00B /* UIStringsKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = UIStringsKit;
+		};
+		A0C0C0C0000000000000C00C /* ContentKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = ContentKit;
+		};
+		A0C0C0C0000000000000C00D /* RunEngine */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = RunEngine;
+		};
+		A0C0C0C0000000000000C00E /* DesignSystem */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = DesignSystem;
+		};
+		A0C0C0C0000000000000C00F /* UIStringsKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = UIStringsKit;
 		};

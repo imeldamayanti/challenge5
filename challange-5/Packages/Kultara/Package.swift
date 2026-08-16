@@ -15,6 +15,8 @@ let package = Package(
         .library(name: "RunEngine", targets: ["RunEngine"]),
         .library(name: "UIStringsKit", targets: ["UIStringsKit"]),
         .library(name: "DesignSystem", targets: ["DesignSystem"]),
+        .library(name: "GovernanceKit", targets: ["GovernanceKit"]),
+        .library(name: "TelemetryKit", targets: ["TelemetryKit"]),
         .executable(name: "content-validator", targets: ["ContentValidatorCLI"]),
     ],
     targets: [
@@ -73,6 +75,17 @@ let package = Package(
                 .copy("Resources/Images"),
             ]
         ),
+        // The two Edge Services phase-0 clients (`c1`). Both are Foundation only and depend on
+        // nothing in this package: they sit at the platform layer, they are optional at runtime,
+        // and if either fails entirely the app behaves exactly as it does today.
+        //
+        // `GovernanceKit` fetches the kill-switch document (`AD-5`); `TelemetryKit` queues and
+        // posts anonymous events (design §10). Neither contains a reachability check and neither
+        // may acquire one — `AD-3`, held by `PermissionCallBoundaryTests`. Neither imports
+        // CoreLocation, which is what makes "no coordinate leaves the device" (`c1` D5) structural
+        // rather than a habit; `ImportBoundaryTests` scans both.
+        .target(name: "GovernanceKit"),
+        .target(name: "TelemetryKit"),
         .executableTarget(
             name: "ContentValidatorCLI",
             dependencies: ["ContentKit"]
@@ -92,6 +105,17 @@ let package = Package(
         .testTarget(
             name: "DesignSystemTests",
             dependencies: ["DesignSystem"]
+        ),
+        .testTarget(
+            name: "GovernanceKitTests",
+            dependencies: ["GovernanceKit"]
+        ),
+        // `RunEngine` for `UUID.v7` alone (`c1` D7). The dependency is on the TEST target, not on
+        // `TelemetryKit`: the service takes ids from its caller, and a telemetry kit that reached
+        // into the Run engine would be the wrong direction of dependency for a platform edge.
+        .testTarget(
+            name: "TelemetryKitTests",
+            dependencies: ["TelemetryKit", "RunEngine"]
         ),
     ]
 )
