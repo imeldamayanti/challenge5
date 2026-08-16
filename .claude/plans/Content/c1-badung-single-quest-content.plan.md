@@ -23,6 +23,12 @@ numbers, publication years, or URLs were invented.
 **D3 — Quest identity.** `id: badung-empat-wajah` · `title.id: "Empat Wajah Kota Badung"` ·
 `title.en: "The Four Faces of Badung"` · `region: "Badung"` · `city: "Denpasar"`.
 
+> **Superseded 2026-08-14, title only.** The title is now `"Jejak Terakhir Badung"` /
+> `"The Last Traces of Badung"`, taken from the Ngalcer Home frame. The **id did not move**:
+> `Run.questID` pins it, so renaming it would orphan every completed walk. The four-faces reading
+> is still what the quest is about and every lore block, hook and clue still says so — only the
+> name on the card changed. `contentBundleVersion` went to `2026.08.4`.
+
 **Status:** E0–E10 executed 2026-08-14. Field verification (§11) still open.
 
 ---

@@ -57,10 +57,13 @@ public struct KultaraSearchField: View {
                 .accessibilityLabel(clearLabel)
             }
         }
-        .padding(.horizontal, KultaraMetrics.md)
+        .padding(.horizontal, KultaraMetrics.lg)
         .frame(minHeight: KultaraMetrics.minimumTapTarget)
+        // The Ngalcer frame draws the pill as a clean white shape lifted off the sheet rather than
+        // ruled onto it (`28:168`), so the hairline gives way to the same soft shadow the masthead
+        // button carries. The fill is still a measured token; only the edge treatment changed.
         .background(palette.paperRaised.color, in: Capsule())
-        .overlay(Capsule().stroke(palette.rule.color, lineWidth: KultaraMetrics.hairline))
+        .shadow(color: palette.photoScrim.color.opacity(0.10), radius: 6, y: 2)
         .accessibilityLabel(placeholder)
     }
 
@@ -74,39 +77,41 @@ public struct KultaraSearchField: View {
     }
 }
 
-/// The small map thumbnail beside the search field. It shows the region illustration itself rather
-/// than a globe glyph, because that is what it opens — and when content ships no map the button is
+/// The round button the Home masthead carries beside the title (`28:173`) — the one that swaps the
+/// list for the illustrated region map.
+///
+/// The frame draws it as Apple's Liquid Glass symbol button. There is no glass here: the deployment
+/// floor is iOS 18, and a material over an opaque cream sheet reads as the sheet anyway. What it is
+/// instead is the theme's raised stock, a hairline, and a soft lift — which is what the frame's
+/// glass resolves to visually on this ground, and which keeps the glyph measured against a token
+/// rather than against whatever the blur happens to pick up (`NFR-A11Y-03`).
+///
+/// The caller decides whether it appears at all: when content ships no region map the button is
 /// simply absent rather than present and inert.
 public struct MapSurfaceButton: View {
     @Environment(\.kultaraPalette) private var palette
 
-    private let thumbnail: Image?
+    private let symbolName: String
     private let label: String
     private let action: () -> Void
 
-    public init(thumbnail: Image?, label: String, action: @escaping () -> Void) {
-        self.thumbnail = thumbnail
+    public init(symbolName: String = "map.fill", label: String, action: @escaping () -> Void) {
+        self.symbolName = symbolName
         self.label = label
         self.action = action
     }
 
     public var body: some View {
         Button(action: action) {
-            Group {
-                if let thumbnail {
-                    thumbnail
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } else {
-                    palette.paperSunken.color
-                        .overlay(Image(systemName: "map")
-                            .foregroundStyle(palette.seal.color))
-                }
-            }
-            .frame(width: KultaraMetrics.minimumTapTarget, height: KultaraMetrics.minimumTapTarget)
-            .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.sm))
-            .overlay(RoundedRectangle(cornerRadius: KultaraMetrics.sm)
-                .stroke(palette.rule.color, lineWidth: KultaraMetrics.hairline))
+            Image(systemName: symbolName)
+                .font(.system(size: 20, weight: .medium))
+                .foregroundStyle(palette.seal.color)
+                .frame(width: KultaraMetrics.circleButtonSize,
+                       height: KultaraMetrics.circleButtonSize)
+                .background(palette.paperRaised.color, in: Circle())
+                .overlay(Circle().stroke(palette.rule.color, lineWidth: KultaraMetrics.hairline))
+                .shadow(color: palette.photoScrim.color.opacity(0.12), radius: 6, y: 2)
+                .contentShape(Circle())
         }
         .accessibilityLabel(label)
     }

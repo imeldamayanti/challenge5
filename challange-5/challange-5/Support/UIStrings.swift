@@ -47,14 +47,17 @@ enum UIStrings {
 
         // MARK: Discovery
         .questListTitle: LocalizedText(id: "Kuis", en: "Quests"),
+        .homeMasthead: LocalizedText(id: "Telusuri Bali", en: "Uncover Bali"),
         .questListSubtitle: LocalizedText(
             id: "Bisa dijelajahi dari mana saja, tanpa jaringan.",
             en: "Browsable from anywhere, with no network."),
         .questListEmpty: LocalizedText(
             id: "Belum ada kuis yang tersedia.",
             en: "No quests are available yet."),
+        // The Ngalcer frame's own copy (`28:170`). It asks where the reader is going rather than
+        // naming what the field searches, which is what the field's accessibility label is for.
         .questListSearchPlaceholder: LocalizedText(
-            id: "Cari warisan budaya", en: "Find cultural heritage"),
+            id: "Mau ke mana?", en: "Where to next?"),
         .questListSearchClear: LocalizedText(id: "Hapus pencarian", en: "Clear search"),
         .questListSearchEmpty: LocalizedText(
             id: "Tidak ada kuis yang cocok dengan pencarian itu.",
@@ -214,6 +217,9 @@ enum UIStrings {
         .transitionSteppingInto: LocalizedText(
             id: "Melangkah ke titik pertama %@", en: "Stepping into the first place of %@"),
         .transitionContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .placeNoticeBeforeExplore: LocalizedText(
+            id: "Sebelum menjelajah:", en: "Before you explore:"),
+        .checkpointDetailContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
 
         .runMapHeading: LocalizedText(id: "Rute", en: "The route"),
         .runMapAccessibility: LocalizedText(
@@ -255,6 +261,9 @@ enum UIStrings {
         .taskPhotoNotInThisBuild: LocalizedText(
             id: "Kegiatan foto belum ada di versi ini. Titik ini tetap selesai tanpa foto.",
             en: "Photo activities are not in this build yet. This checkpoint completes without one."),
+        .taskTypeReflection: LocalizedText(id: "Refleksi", en: "Reflection"),
+        .taskTypePhoto: LocalizedText(id: "Foto", en: "Photo"),
+        .taskTypeQuestion: LocalizedText(id: "Pertanyaan", en: "Question"),
 
         // MARK: Completion and summary
         .runCompletedHeading: LocalizedText(id: "Rute selesai", en: "Route complete"),
@@ -282,6 +291,12 @@ enum UIStrings {
         .homeActiveRunHeading: LocalizedText(id: "Sedang berjalan", en: "In progress"),
         .homeActiveRunAction: LocalizedText(id: "Lanjutkan", en: "Resume"),
         .homeCompletedHeading: LocalizedText(id: "Sudah selesai", en: "Finished"),
+        .homePlaceholderCardsNotice: LocalizedText(
+            id: "Tiga kartu terakhir adalah contoh tampilan dari rancangan, bukan kuis. Belum ada tempat, rute, maupun sumbernya, jadi kartu itu tidak bisa dibuka.",
+            en: "The last three cards are sample artwork from the design, not quests. There is no place, route or source behind them, so they do not open."),
+        .homePlaceholderCardHint: LocalizedText(
+            id: "Contoh tampilan. Belum bisa dibuka.",
+            en: "Sample card. Not openable."),
 
         // MARK: Developer build only
         .devHeading: LocalizedText(id: "Alat pengembang", en: "Developer tools"),
