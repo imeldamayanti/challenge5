@@ -180,7 +180,9 @@ All user records **MUST** carry a device-generated UUID, `created_at`, and `upda
 
 **Run** — `id`, `quest_id`, `content_version`, `language`, `state`, `started_at`, `updated_at`, `completed_at`, `abandoned_at`, `current_checkpoint_index`
 
-**CheckpointResult** — `run_id`, `checkpoint_id`, `arrived_at`, `arrival_method` (gps / manual), `gps_accuracy_m`, `lore_first_opened_at`, `lore_dwell_ms`, `stamp_awarded_at`
+**CheckpointResult** — `run_id`, `checkpoint_id`, `arrived_at`, `arrival_method` (gps / manual), `gps_accuracy_m`, `lore_first_opened_at`, `stamp_awarded_at`
+
+> **Amended 2026-08-16. Owner: af (afindo.mi01@gmail.com).** `lore_dwell_ms` was removed from this entity. A dwell *measurement* on a record keyed by `user_id` contradicts `docs/backend-supabase.md` §2.4 — "signing in must not deanonymise the measurement apparatus… `NFR-PRIV-02`/`03`/`05` are enforced by the absence of columns, not by a policy somebody has to remember." `NFR-OBS-06` still requires per-checkpoint dwell to be instrumented and is unaffected: `docs/schema.md` §B.7 already specifies the `checkpoint_departed` telemetry event carrying `{checkpointID, dwellMs}` into `ops.events`, which has no `user_id` column. The metric survives; the join back to a person does not exist to be made. `lore_first_opened_at` stays — it is the `FR-CP-04` fact that lore was opened, not a duration, and the award rules read it. Dropped by migration 0015; nothing had ever written it and no client type had a field for it.
 
 **TaskResult** — `checkpoint_result_id`, `task_id`, `type`, `photo_local_id` | `text`, `skipped`, `completed_at`
 
@@ -255,13 +257,39 @@ All user records **MUST** carry a device-generated UUID, `created_at`, and `upda
 | FR-START-01 | Starting a Run **MUST** require Arrival at the first checkpoint, established per FR-ARR. | P0 | v1 |
 | FR-START-02 | Before the location permission prompt, the app **MUST** show a plain-language explanation of why location is needed and that it is used only while the app is open. | P0 | v1 |
 | FR-START-03 | If location permission is denied, quest preview **MUST** remain fully available and the start control **MUST** explain what is blocked and offer a path to Settings. | P0 | v1 |
-| FR-START-04 | The user **MUST** acknowledge the safety notice before the first Run of a quest. | P0 | v1 |
+| FR-START-04 | The user **MUST** acknowledge the safety notice before the first Run of a quest. A narrative screen that asks nothing of the user and starts nothing **MAY** precede it — see the amendment below. | P0 | v1 |
+| FR-START-04a | Acknowledgement of the safety notice **MUST** precede any location sampling, any permission request, and any write to a Run. This is the load-bearing half of FR-START-04 and admits no exception. | P0 | v1 |
 | FR-START-05 | Starting a Run **MUST** pin `content_version` and `language` to the Run. | P0 | v1 |
 | FR-START-06 | At most one Run per quest **MAY** be active. Starting a quest with an existing draft **MUST** offer resume or restart, and restart **MUST** warn that existing photos and reflections for that Run will be discarded. | P0 | v1 |
 | FR-START-07 | Multiple Runs of *different* quests **MAY** be in draft simultaneously. | P1 | v1 |
 | FR-START-08 | A quest **MUST NOT** be startable from outside the start radius by any path. When arrival cannot be confirmed, the only available action is preview. | P0 | v1 |
 | FR-START-09 | Manual override at the *start* checkpoint **MUST** require an explicit confirmation that names the Place — for example, "Are you standing at the main gate of Puri Agung Pemecutan?" — before the Run begins. Override exists for GPS failure, not for remote starting, and the wording must make that plain without accusing the user. | P0 | v1 |
 | FR-START-10 | Manual override **MUST** remain available at the start checkpoint. Removing it would make the entire product unusable wherever GPS fails at the first gate, which is precisely where dense urban sites are worst. | P0 | v1 |
+
+#### Amendment to `FR-START-04` — the story preview may open a fresh walk
+
+**Amended 2026-08-16. Owner: af (afindo.mi01@gmail.com).**
+
+A narrative screen that asks nothing of the user and starts no Run **MAY** precede the safety notice.
+Acknowledgement **MUST** still precede any location sampling, any permission request, and any Run
+write — that is `FR-START-04a` above, and it is not amendable.
+
+**Why.** M8 gave the run flow a story preview (`QuestRunViewModel.Stage.storyPreview`) as the opening
+of a fresh walk, so the quest opens on its hook the way the Figma board does. A resumed Run never sees
+it — `initialStage` returns it only when there is no existing Run, which is what keeps it an opening
+rather than a gate. On that stage nothing is sampled (`screenAppeared()` guards on `.awaitingArrival`),
+no permission is requested, and no Run is written. The safety notice therefore still precedes the first
+Run in the sense `FR-START-04` was written to protect.
+
+**What this amendment does not license.** It is not a general permission to put screens before the
+notice. A screen that collects input, requests a capability, or writes user data is not narrative and
+is not covered. `FR-START-04a` is what the restored `QuestRunTests` now assert, and it is a stronger
+guard than the screen-order assertion it replaced.
+
+**How it was found.** `.claude/plans/m7-restore-test-guards.plan.md` restored 112 guards deleted by
+`b597b5b`; nine of them failed on this ordering. M8 changed the order without its own plan recording
+it — `.claude/plans/m8-qa-fixes.plan.md` line 162 still describes the pre-M8 path. The restoration is
+what surfaced it.
 
 ### 5.6 Arrival detection — `FR-ARR`
 
@@ -721,6 +749,7 @@ Unchanged from the lean PRD unless noted. These block specific requirements rath
 - App name and branding — blocks submission.
 - Actual production hours per quest — blocks the v3 decision, answerable only by producing the first two.
 - **`FR-CP-05` and the Story Reveal screen** — blocks nothing in code, because the screen already ships that way, and that is the problem. The run flow's Story Reveal pages render lore without the accuracy chip or its citation, by a product decision taken 2026-08-13 and recorded only in `.claude/plans/m8-qa-fixes.plan.md` and `docs/hisplora-tokens.md`. This document still states `FR-CP-05` without exception, so the code and the requirement disagree. It needs either an amendment to `FR-CP-05` or a signed exception with a named owner. **Neither exists, and no owner has been named — which is why `FR-CP-05` is left unedited above rather than quietly softened.** Outstanding since 2026-08-13.
+- **`FR-START-04` and the story preview — closed 2026-08-16.** M8 put a narrative screen ahead of the safety notice without recording it anywhere; the m7 test restoration surfaced it. Amended in §5.5 with af (afindo.mi01@gmail.com) as owner, and split so the load-bearing half is its own unamendable requirement (`FR-START-04a`). Listed here because it is the second such deviation found by restoring deleted guards, and the pattern — a flow change made in execution that no plan records — is the finding, not the individual screen.
 
 The three below arrive with §5.15 and lapse if it is rejected.
 

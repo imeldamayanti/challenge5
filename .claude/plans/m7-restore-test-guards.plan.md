@@ -405,3 +405,264 @@ decisions:
 8. **Airplane-mode traversal on a physical device** (`NFR-REL-03`, `FR-OFF-02`, a release gate) is
    still not done. The reachability scan proves no code asks about connectivity; the requirement asks
    for the test, not the argument.
+
+---
+
+## Execution — 2026-08-16
+
+**Status: the target exists, all 112 guards compile and run, 91 of 109 pass. The remaining 18 are
+drift findings, not wiring problems, and they are listed below rather than edited away.**
+
+### Two failures that predate this milestone
+
+Step 1's baseline was supposed to prove the starting point was green. It was not.
+
+1. **The app target did not compile at all.** An uncommitted working-tree edit to
+   `project.pbxproj` had removed the `UIStringsKit` package product dependency — all four objects
+   (`PBXBuildFile`, the Frameworks entry, `packageProductDependencies`, and the
+   `XCSwiftPackageProductDependency` itself) — while 20+ files in `ViewModel/`, `View/`, `Model/`
+   and `Support/` import it. Restored; the same uncommitted diff also sets
+   `PRODUCT_BUNDLE_IDENTIFIER = com.astungkara.hisplora` and `DEVELOPMENT_TEAM = 62ZRZ6VZKC`, which
+   read as deliberate and were left alone.
+2. **All four XCUITests fail** once the build succeeds. They had never run, because the compile
+   failed first. Not diagnosed here; not caused by this milestone.
+
+### What was built
+
+- **Step 2.** `Tests/ContentKitTests/PermissionCallBoundaryTests.swift`, 5 tests, green under
+  `swift test` in 0.08 s. Scans the app target and the package targets, not `Sources/AppFeatures`.
+- **Step 3.** `challange-5Tests` unit-test target, hand-written into `project.pbxproj` in an
+  `A0C0C0C0…C0xx` block beside the existing `A0B0B0B0…` UI-test block, with a
+  `PBXFileSystemSynchronizedRootGroup` so no future test file needs a project edit. Plus the shared
+  scheme at `xcshareddata/xcschemes/challange-5.xcscheme` naming both test targets.
+- **Step 4.** `HostLinkageTests` — 2 tests, green. `@testable import challange_5` resolves, the four
+  package products link, content resources are in the built app.
+- **Steps 5–9.** All five suites restored from `b597b5b^`. The import change was
+  `@testable import AppFeatures` → `@testable import challange_5` **plus `import UIStringsKit`**,
+  which the plan could not have known about: `UIStrings` and `UIStringKey` were extracted into their
+  own package target after m7 was written.
+
+### Deviations
+
+1. **The arrival-owning file set is four files, not two.** Decision 3 names `LocationService.swift`
+   and `QuestRunViewModel.swift`. `ArrivalSampling.swift` (the sampler extracted out of the view
+   model) and `SideQuestFlowViewModel.swift` (sidequest discovery runs the same radius gate,
+   `s2` §6) have joined them. Neither is a new *kind* of caller, which is what the guard exists to
+   catch; a view or a settings model appearing there still fails it. Stated in the test file itself.
+2. **`indonesianAndEnglishAreActuallyDifferentText` gained a third exemption**, by property rather
+   than by name: a string containing no letters once printf specifiers are stripped cannot be the
+   half-translation the guard exists to catch. Found by the restored test firing on a progress
+   counter's `"%1$d / %2$d"`. Exempting by property rather than adding keys to a list is what stops
+   the guard getting shorter every time.
+3. **`FailingContentRepository` and `MapLessContentRepository` gained the six sidequest methods**
+   (`s1` §6 widened `ContentRepository`). The failing double throws from them; the map-less double
+   delegates.
+
+### The 18 that fail, and why each is a finding rather than a fix
+
+**A — six tests pinned to content that no longer exists.** The `contoh-*` placeholders are gone,
+replaced by `badung-empat-wajah` over five real places. `costIsVisibleOnTheCardWhenTheQuestCostsMoney`
+and `previewShowsEveryFieldFRDISC03Requires` assume a paid quest; the shipped one is free.
+`theWarningNamesTheSiteThatClosesAndItsClosingTime` asks for `contoh-museum-arsip-kota`.
+`noWarningBeforeTheLatestStart` and `exactlyAtTheLatestStartIsStillAllowed` use the fixture's
+`hard_latest_start`. `aPlaceWherePhotographyIsProhibitedSaysSoInWords` needs a prohibited-photo place
+and no real one has that policy. **These need fixtures of their own rather than assertions against
+shipped content** — a test that reads the live content tree changes meaning every time an author
+edits a JSON file, which is the wrong dependency for a requirement guard.
+
+**B — nine tests that predate M8's story flow.** `QuestRunViewModel.stage` now begins at
+`.storyPreview`; the tests expect `.safetyNotice` or `.awaitingArrival`. **This one is not
+bookkeeping.** `FR-START-04` says the safety notice precedes everything on a first run, and the
+restored test asserts exactly that. Either the story preview legitimately precedes it — which is a
+PRD amendment with an owner's name on it, like the `FR-CP-05` exception m8 already took — or the
+ordering is a regression M8 introduced and nothing has been checking. **That question is the single
+most valuable thing this restoration has produced, and it is a product decision, not a test edit.**
+
+**C — one map test with nothing to cluster.** `aClusterOfPinsOpensZoomedInFarEnoughToSeparateTheMarkers`
+needs two pins; the content ships one quest. Rewrite against a fixture, per A.
+
+**D — `theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources`** collides with m8's undocumented
+`FR-CP-05` exception (Story Reveal renders lore without the accuracy chip or citation). Same shape as
+B: the exception is recorded in code comments and `docs/hisplora-tokens.md` but **not in the PRD**,
+so the test and the product disagree and the PRD does not settle it.
+
+### Verification
+
+```
+$ swift test                                        # package, macOS, no simulator
+Test run with 342 tests in 39 suites passed after 0.05 seconds.   (was 337 in 38)
+
+$ xcodebuild test -only-testing:challange-5Tests -destination '…iPhone 17,OS=26.5'
+Test run with 109 tests in 11 suites failed after 2.99 seconds with 27 issues.
+  HostLinkageTests ✔   OnboardingTests ✔   LanguageResolverTests ✔
+  AppPreferencesStoreTests ✔   ContentFormatterTests ✔   UIStringsTests ✔
+  SettingsTests ✔   QuestListTests ✔   QuestPreviewTests ✘   QuestCardAndMapTests ✘
+  QuestRunTests ✘
+```
+
+**91 pass, 18 fail.** Every UI string key now has a checked entry in both languages for the first
+time since M6 — that alone is step 6's stated purpose, and it passes.
+
+### Not done
+
+- Step 10's `CLAUDE.md` edits, beyond the `supabase/` work already there. Deferred until the 18 are
+  resolved, because the honest sentence to write depends on how B and D are decided.
+- The four XCUITests remain red for a reason that predates this work.
+
+## Execution — 2026-08-16 (second pass): the 18 resolved
+
+**Status: 110 unit tests, 0 failures. 375 package tests, 0 failures. All five XCUITests pass.**
+The count moved from 109 to 110 because one guard was replaced by two.
+
+### Group B — the ordering, and what it turned out to be
+
+The single most valuable thing this restoration produced (previous section, group B) was put to the
+user with evidence and **decided rather than edited away**.
+
+**The evidence.** `QuestRunViewModel.initialStage` returns `.storyPreview` for a fresh Run, and
+`advanceFromStoryPreview()` then runs safetyNotice → locationNotice → awaitingArrival — its own
+comment claiming "The order after it is unchanged: `FR-START-04` before `FR-START-02` before any
+sampling". On `.storyPreview` nothing is sampled (`screenAppeared()` guards on `.awaitingArrival`),
+no permission is requested and no Run is written. `FR-START-04` reads "before the first Run of a
+quest", and acknowledgement does still precede the Run.
+
+**But `m8-qa-fixes.plan.md` line 162 describes the path as "safety notice → location notice →
+`awaitingArrival`"** — the pre-M8 order. A grep for `advanceFromStoryPreview` and `initialStage`
+across `.claude/plans/` and `docs/` returns nothing. So M8 changed the order during execution and
+**no plan, doc or PRD records it**. Not a regression against the requirement's letter; an
+undocumented flow change that nothing had been checking.
+
+**Decision: amend the PRD.** Owner **af (afindo.mi01@gmail.com)**, dated 2026-08-16. Written into
+`.claude/prds/cultural-heritage-quest.full.prd.md` §5.5 as an amendment block, and split so the
+load-bearing half is its own unamendable requirement:
+
+- `FR-START-04` gains "A narrative screen that asks nothing of the user and starts nothing **MAY**
+  precede it".
+- **`FR-START-04a` is new**: acknowledgement **MUST** precede any location sampling, any permission
+  request, and any Run write.
+
+§10's outstanding list records it as closed, alongside the still-open `FR-CP-05` item, with the note
+that the *pattern* — a flow change made in execution that no plan records — is the finding rather
+than the individual screen.
+
+**The tests got stronger, not shorter.** `theSafetyNoticeComesBeforeAnythingElseOnAFirstRun` asserted
+screen order; it is now `theSafetyNoticeComesBeforeAnySamplingPermissionOrRunWrite`, which asserts
+`FR-START-04a` directly: on `.storyPreview` nothing samples, nothing is requested, no Run exists —
+**and it stays that way after `screenAppeared()`**, which is what a SwiftUI `.onAppear` calls, so a
+stage that ignores it is the only safe one. A second test was added,
+`aResumedWalkNeverSeesTheNarrativeOpeningAgain`, because the amendment is narrow: the preview is an
+opening, not a gate, and a resumed Run must not re-show it.
+
+### Group D — m7's own record was wrong, and this is the correction
+
+`theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources` does **not** collide with M8's
+`FR-CP-05` exception. It asserts on `model.checkpoint`, and
+`QuestRunViewModel.presentation(forOrderIndex:)` still builds every claim with `accuracyLabel` and
+`citations`. The exception is a *view*-level omission on Story Reveal; this test never reaches a
+view. It was failing for the group-B cascade — `screenAppeared()` no-ops at `.storyPreview`, so no
+arrival, so no checkpoint — and it went green when B was fixed, with neither side edited.
+
+No product decision was needed. The PRD already carries the `FR-CP-05` exception as outstanding
+(§10), and it stays outstanding.
+
+### A second ordering drift, found while fixing the first
+
+Arrival no longer lands on `.atCheckpoint`. `arriveAtCurrentCheckpoint()` sets `.cutsceneIntro` on
+the first arrival of a walk and `.storyReveal` otherwise; the checkpoint screen is five stages
+later. Also undocumented.
+
+Resolved the same way as B rather than by editing the expectation to `.storyReveal`: a
+`walkTheStoryStages` helper walks cutscene → reveal → place notice → checkpoint detail → transition
+the way a walker does, and the assertion became **"the story stages terminate at `.atCheckpoint`"**
+— which also catches a stage that loops or never hands over, and the old assertion did not. The loop
+is bounded at 8 rather than `while`, so a self-returning stage fails the suite instead of hanging it.
+
+### Groups A and C — fixtures
+
+New file: `challange-5Tests/ContentFixtures.swift` — `ContentFixture` (5 places, 2 quests) and
+`FixtureContentRepository`. Shaped to hold exactly what the seven guards need and nothing else: a
+paid quest with a breakdown summing to its total, five checkpoints, a place where photography is
+prohibited, a sacred place, `hardLatestStart` 13:30 against an earliest closing of 15:30 at a named
+place (120 minutes apart, so V16's derivation actually holds), and two start places a thousandth of
+the illustration apart so the region map has something to cluster.
+
+Seven tests retargeted: `costIsVisibleOnTheCardWhenTheQuestCostsMoney`,
+`previewShowsEveryFieldFRDISC03Requires`, `aPlaceWherePhotographyIsProhibitedSaysSoInWords`, all four
+FR-DISC-06 boundary cases (`aWarningAfterTheLatestStart` joined them for consistency — it was
+passing, but on a value an author can change), and
+`aClusterOfPinsOpensZoomedInFarEnoughToSeparateTheMarkers`.
+
+**No shipped content was edited.** The fixture place names are deliberately fictional ("Galeri
+Fiktif", "Pura Fiktif") — a fixture carrying a real institution's name would be a claim about that
+site with no source and no consent record behind it.
+
+`nonisolated` on `ContentFixture`: the app target builds with MainActor default isolation and
+`ContentRepository` is not main-actor bound, so a double that could only be read from the main actor
+would be a different protocol from the one the app uses.
+
+### Deviations from the previous section's plan for these
+
+1. **Group A's list said six tests; seven were retargeted.** `aWarningAfterTheLatestStart` was
+   passing against shipped content by luck of the hour, not by the rule, and leaving one of four
+   FR-DISC-06 boundary cases on a different content tree would have made the set incoherent.
+2. **Group C's `pinsThatAreAlreadyFarApartOpenTheMapWhole` was left on the bundled repository.** It
+   proves the *other* branch by drawing at 40 000 × 87 000 points, which works with one pin, so it
+   needed no fixture.
+
+### The four XCUITests — Phase 2
+
+The previous section recorded "all four XCUITests fail". **That was a stale simulator, not a test
+defect**, and the count was four of five. After `simctl erase`, four of five passed unchanged: the
+launch helper already walks splash → Skip → "Skip for now", the tab bar is already Quests / Journal
+/ Profile, and `openSettings` already goes through Profile. There was no navigation drift.
+
+One real failure, and it was real:
+`testTheWholeFlowSurvivesTheLargestDynamicTypeSize` — "Settings unreachable at the largest
+accessibility size". `openSettings` found the control (`exists`) and tapped it; at
+`AccessibilityXXXL` the profile's two controls run past the fold and the lower one sits under the
+floating tab bar, so XCUITest's centre tap hit the tab bar and the screen never changed. Exactly the
+failure `tapQuestCard`'s own comment documents for the quest card.
+
+Fixed in the test, because a person scrolls: `openSettings` now swipes the scroll view (bounded at
+four attempts) until the control is `isHittable`, and asserts hittability with the frame and the
+window in the message if it never becomes so. `exists` is not `isHittable`, and this is the second
+place in this file where that distinction was load-bearing.
+
+### Verification
+
+```
+$ DEVELOPER_DIR=… swift test                      # package, macOS, no simulator
+􁁛  Test run with 375 tests in 44 suites passed after 0.131 seconds.     (was 342 in 39)
+
+$ DEVELOPER_DIR=… swift run content-validator Sources/ContentKit/Content
+OK  1 quest(s), 5 place(s), 3451352 bytes — all 28 rules pass.
+
+$ xcodebuild test -project challange-5.xcodeproj -scheme challange-5 \
+    -destination 'platform=iOS Simulator,id=128624DB-…'   # iPhone 17, iOS 26.5
+✔ Test run with 110 tests in 11 suites passed after 0.699 seconds.
+Test Case '…testQuestListAndSettingsAreReachable' passed (29.598 seconds).
+Test Case '…testStoryPreviewWithholdsEveryCheckpointStoryAndClue' passed (28.757 seconds).
+Test Case '…testTappingAQuestCardOpensTheStoryFlow' passed (28.850 seconds).
+Test Case '…testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow' passed (29.186 seconds).
+Test Case '…testTheWholeFlowSurvivesTheLargestDynamicTypeSize' passed (43.304 seconds).
+** TEST SUCCEEDED **
+```
+
+The 375 includes 33 new package tests from `c1` (UUIDv7, GovernanceKit, TelemetryKit) and two new
+`ImportBoundaryTests` cases, not from this milestone.
+
+### New known gaps
+
+- **The discovery guards no longer see shipped content.** That is the fix, and it has a cost: a
+  content mistake in `badung-empat-wajah` will not turn `QuestPreviewTests` red any more.
+  `content-validator` (28 rules) and `BundledContentRepositoryTests` are what catch those, and
+  `docs/field-verification-checklist.md` §7 step 8 says so where a content author will read it.
+- **`testTheWholeFlowSurvivesTheLargestDynamicTypeSize` now passes by scrolling.** The underlying
+  layout — a control that lands under the floating tab bar at `AccessibilityXXXL` — is unchanged.
+  Reachable, not comfortable. `reportTruncation` reports `A11Y-OK` on all three screens, so nothing
+  is clipped; this is an occlusion problem, and it is a design question rather than a test one.
+- **Two undocumented M8 ordering changes were found by restoring deleted guards.** One is now a
+  signed PRD amendment; the other (arrival → story stages) is recorded here and in the test's own
+  comment, but **not** in the PRD, because it does not contradict a requirement — it sits between
+  `FR-ARR-01` and `FR-CP-*` rather than against either. If a third turns up, the pattern deserves a
+  process answer rather than a third one-off.
