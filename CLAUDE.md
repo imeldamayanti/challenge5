@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A native iOS app (SwiftUI, iOS 18.0) for story-led cultural heritage walking quests in Bali. Users walk a fixed-order route of physical checkpoints, unlock narrative lore at each one, and finish with a shareable recap.
 
-Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. Photo tasks, the share card, the recall survey, telemetry, proximity alerts, and the kill-switch are not built. See `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
+Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. Photo tasks, the share card, the recall survey and proximity alerts are not built. Telemetry and the kill-switch are **half** built: the server side is deployed and the client kits (`TelemetryKit`, `GovernanceKit`) exist and are tested, but nothing in the app calls either — see `.claude/plans/supabase/c1-client-phase0.plan.md` §6. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
 
-Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — is planned and **not** done.
+Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — **is done**: 110 tests in `challange-5Tests`, all passing, plus the two source-scanning guards in the package. `.claude/plans/supabase/b0`–`b3` built and deployed a Supabase backend, and `.claude/plans/supabase/c1-client-phase0.plan.md` added the kill-switch publisher, `GovernanceKit` and `TelemetryKit` — **none of which the app calls yet**, deliberately.
 
 ## Directory layout
 
@@ -17,28 +17,67 @@ The repo root and the Xcode project directory share a name, which is confusing:
 ```
 /                              repo root — CLAUDE.md and .gitignore only
 ├── docs/                      system-design.md, schema.md, hisplora-tokens.md,
-│                              backend-supabase.md (design only — nothing built)
+│                              backend-supabase.md (the design of record for `supabase/`;
+│                              it outranks the plans where they disagree),
+│                              consent-request-pack.md and
+│                              field-verification-checklist.md (what a human has
+│                              to do before any of this is public — desk work,
+│                              no invented values), and
+│                              branch-backend-design-revision.md — what this
+│                              branch did, plus the database end to end: ERD,
+│                              every table, every column, read out of the
+│                              running database rather than from the design
 │   ├── screenshots/           captured UI verification screenshots
 │   └── research/              field research artifacts — interview summary,
 │                              affinity diagram, tourist-findings and
 │                              top-insights photos, the team research deck
 ├── .claude/prds/              product requirements (the spec)
 ├── .claude/plans/             implementation plans, including executed verification results
+├── supabase/                  the backend. Fully deployed as of 2026-08-16 —
+│                              18 migrations and 4 functions on the hosted project
+│   ├── config.toml            two of its settings are security controls, not preferences
+│   ├── migrations/            18 forward-only files; a merged one is never edited
+│   ├── functions/             ingest, delete-account, merge-anonymous,
+│   │                          publish-suppressions (AD-5's kill-switch publisher)
+│   ├── tests/                 pgTAP + Deno: structure, isolation, sync, concurrency, HTTP
+│   └── seed.sql               local only; installs pgTAP and the fixtures
 └── challange-5/               Xcode project directory
     ├── challange-5.xcodeproj
     ├── challange-5/           app target — Model/ ViewModel/ View/ Service/ Support/
     ├── challange-5UITests/    XCUITest, the only tests needing a simulator
+    ├── challange-5Tests/       unit tests for the app target — view models,
+    │                           presentation models, UI strings
     └── Packages/Kultara/      local SPM package — ContentKit, RunEngine,
-                               DesignSystem, content-validator
+                               UIStringsKit, DesignSystem, GovernanceKit,
+                               TelemetryKit, content-validator
 ```
 
-**The app target has no unit-test target** — `challange-5UITests` is XCUITest only. So a guard for
-anything in `ViewModel/` or `View/` has nowhere to live as written. The way through is to push the
-rule being guarded down into a package target as a pure value and test it there: the arrival
-countdown became `RunEngine.ManualOverrideSchedule`, the map-marker tap threshold became
-`DesignSystem.MapMarkerGesture`, the route maths became `RunEngine.RouteProjection`. That is a better
-shape anyway, but it is a constraint rather than a preference — do not assume you can write a
-view-model test.
+**The app target now has a unit-test target.** `challange-5Tests` was added by `m7` — hand-written
+`project.pbxproj` objects in an `A0C0C0C0…C0xx` block, with a `PBXFileSystemSynchronizedRootGroup`,
+so **adding a file to `challange-5Tests/` needs no project edit**. The shared scheme at
+`challange-5.xcodeproj/xcshareddata/xcschemes/challange-5.xcscheme` names both test targets and *is*
+tracked in Git, unlike every other scheme here.
+
+So a view-model test is now writable. It is still often the wrong shape: a rule pushed down into a
+package target as a pure value runs under `swift test` in milliseconds without a simulator, and the
+arrival countdown (`RunEngine.ManualOverrideSchedule`), the map-marker tap threshold
+(`DesignSystem.MapMarkerGesture`) and the route maths (`RunEngine.RouteProjection`) all went that way
+for good reasons that have not changed. Prefer the package. Use `challange-5Tests` for what genuinely
+needs the app target — SwiftUI-adjacent view models, `Model/` presentation types, `@testable import
+challange_5`.
+
+### Which suites run where
+
+| Command | Runs | Needs a simulator |
+|---|---|---|
+| `swift test` (from `Packages/Kultara`) | 375 tests / 44 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `xcodebuild test -only-testing:challange-5Tests` | 110 tests / 11 suites — view models, presentation, UI strings, host linkage | Yes |
+| `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
+
+`ImportBoundaryTests` and `PermissionCallBoundaryTests` live in `ContentKitTests` and **link
+nothing** — they scan source text under both the package and the app target, walking out from
+`#filePath`. That is why guards about the *app* target run in two seconds on macOS. If you are adding
+a rule that can be checked by reading source, put it there rather than in `challange-5Tests`.
 
 ## Commands
 
@@ -58,6 +97,66 @@ swift run content-validator Sources/ContentKit/Content
 ```
 
 Exits 0 when rules V1–V18 pass, 1 on any finding, 2 on bad arguments. Point it at an authored content tree (the directory holding `manifest.json`, `places/`, `quests/`, `assets/`, `consent/`).
+
+Backend — run from the repository root, with Docker running:
+
+```bash
+supabase start
+supabase db reset && supabase db lint -s app,ops,catalog,public --fail-on warning && supabase test db
+deno test --allow-net --allow-env --allow-run supabase/tests/functions/
+deno test --allow-net --allow-env --allow-run supabase/tests/http/
+deno test --allow-net --allow-env --allow-run supabase/tests/concurrency/
+```
+
+236 assertions (165 pgTAP + 50 + 13 + 8 Deno). Scope `db lint` to the four schemas the repo owns:
+pgTAP installs ~90 plpgsql functions of its own into `extensions` and an unscoped lint reports
+upstream warnings for them. `deno` needs its permission flags spelled out under Deno 2.
+
+**`supabase functions serve` must be running for the three Deno suites.** On this machine
+`supabase start` brings up no `supabase_edge_runtime_*` container, so without it every function test
+fails with `503 {"message":"name resolution failed"}` — which reads like a code failure and is not
+one.
+
+**This is deployed and the repo matches it.** `Histoplora` (`ppwcxmvetmmwliusliac`,
+ap-southeast-1) holds all **18 migrations**, the pushed `config.toml` and **4 functions** as of
+2026-08-16. `b3`'s execution record has the first push; `c1`'s second execution entry has 0014 and
+`publish-suppressions`. `AD-5`'s kill-switch document is live and world-readable at
+`/storage/v1/object/public/content/suppressions.json` — currently three empty arrays, schema 2.
+
+`config push` will say "up to date" after a change to `[functions.*] verify_jwt`, and that is not a
+bug: function JWT settings are applied by `functions deploy`, not by `config push`. Verify them with
+`supabase functions list`, which prints `verify_jwt` per function. Prod holds **no real users yet**, which is the only reason `db reset` on it would still be
+survivable — and it will stop being true without anything announcing it.
+
+Deploying is `link → db push --dry-run → db push → config push → functions deploy → the HTTP suite
+against the prod URL`. **`config.toml` must be pushed too**: `[api] schemas = ["app"]` and
+`max_rows` are security controls, and a hosted project defaults to exposing `public,
+graphql_public` instead.
+
+**Use the Supabase MCP read-only** (`b0` D9) — `apply_migration` writes to the remote and creates no
+migration file, so the repo and the project diverge with nothing to detect it. `deploy_edge_function`
+does the same to `supabase/functions/`. Every schema change goes: migration file → `db reset` →
+tests → `db push`. There is no second path.
+
+**This is a convention, not a guard.** `.mcp.json` carried `&read_only=true` briefly on 2026-08-16
+and the server was re-registered without it later the same day, at the user's explicit instruction,
+so `apply_migration`, `execute_sql` DDL and `deploy_edge_function` are all reachable again. Nothing
+stops you using them and nothing detects it afterwards — which is precisely why `b0` D9 was written
+down. If you want the guard back:
+
+```bash
+claude mcp remove --scope project supabase
+claude mcp add --scope project --transport http supabase \
+  "https://mcp.supabase.com/mcp?project_ref=ppwcxmvetmmwliusliac&read_only=true&features=docs%2Caccount%2Cdatabase%2Cdebugging%2Cdevelopment%2Cfunctions%2Cbranching"
+```
+
+Either way the change takes effect on the **next** MCP connection, not mid-session: a session that
+connected before the edit keeps whatever tool list it started with. Verify by listing tools after a
+restart, not by assuming.
+
+`execute_sql` runs elevated and **bypasses RLS**, so it is good for asking what a table contains and
+worthless for proving who can read it. Isolation is proved by real HTTP requests with real user
+tokens (`b3` §4).
 
 App build and UI tests — run from `challange-5/`:
 
@@ -178,17 +277,40 @@ These are the places where a reasonable-looking change silently breaks a guarant
 - **A completed Run stays writable for reading and answering.** The final checkpoint completes the walk the instant it is reached (`FR-DONE-01`), while the walker is still standing there with the closing reflection unanswered. `markLoreOpened` and `recordTaskResult` therefore accept `completed` as well as `active`; gating them on `active` makes completion swallow the ending that `FR-TASK-07` requires.
 - **The run map is drawn, never tiled.** `FR-MAP-01`/`FR-OFF-03` rule out live map tiles, so there is no `MKMapView` and there must never be one. `RunRouteMapView` projects the authored `route.geojson` onto a `Canvas` via `RunEngine.RouteProjection`, which shares `Geo.earthRadiusM` with `Geo.distanceM` so the drawn length and the printed distance cannot disagree. `Place.mapPoint` is *not* usable here — it is authored against the stylised island illustration and means nothing at street scale.
 
-## Invariants no longer held by anything
+## Invariants the restored guards hold again
 
-The presentation layer has **zero automated tests**. `AppFeaturesTests` (~1,400 lines, 112 tests) was deleted by `b597b5b` when `AppFeatures` stopped being a package target, and the app target has no unit-test bundle to receive it. The suites are recoverable from git history at `b597b5b^`, and restoring them is what `.claude/plans/m7-restore-test-guards.plan.md` is for — that plan is **not** done.
+`AppFeaturesTests` (~1,400 lines, 112 tests) was deleted by `b597b5b`. `m7` restored them into
+`challange-5Tests` and they are green: **110 tests, 11 suites, 0 failures.** UI string ID/EN parity
+(`NFR-I18N-01/02`), `FR-START-08` through `QuestRunViewModel`, `FR-ONB-02/04`, the summary model
+taking no `ContentRepository`, and the `@State` view-model rule are guarded again rather than
+reviewed.
 
-Treat these as review-only until a unit-test target exists — they read as guaranteed but are not:
+Two things about *how* they are guarded matter more than the count:
 
-- **UI string ID/EN parity** (`NFR-I18N-01/02`). `everyKeyHasAnEntry`, `everyEntryIsTranslatedInBothLanguages` and `indonesianAndEnglishAreActuallyDifferentText` are gone. Adding a `UIStringKey` case without a `UIStrings.table` entry now fails silently at runtime — `UIStrings.string` returns the raw key name, and its own comment still cites the test that would have caught it. The `LocalizedText` no-fallback rule still protects *content*, not the interface.
-- **`FR-START-08` at the view-model level.** `aFixOutsideTheStartRadiusStartsNothing` and `aVagueFixOnTopOfTheGateStartsNothingEither` are gone. `RunEngineTests` still covers `ArrivalEvaluator` itself, so the rule is tested — the wiring through `QuestRunViewModel` is not.
-- **`FR-ONB-02/04`** — skip available from the first screen, and the Settings authorization reporter being structurally unable to request permission.
-- **The summary model takes no `ContentRepository`.** `RunSummaryViewModel` renders from snapshots alone, which is how `FR-DONE-04/05` and `FR-RUN-06` are guaranteed rather than intended. Handing it a repository would make a withdrawn Place able to blank a walk somebody finished. Now enforced only by the initializer's signature.
-- **A screen's view model belongs in `@State`.** Building one inside a `body` rebuilds it on every redraw, which orphans anything in flight — see `View/Component/ScreenHost.swift`. This presented as an arrival screen that never found a fix.
+- **The discovery guards read a fixture, not the shipped content.** `challange-5Tests/ContentFixtures.swift`
+  supplies a paid quest, a prohibited-photo place, a known `hardLatestStart`/closing pair and two
+  clusterable pins. Seven guards used to assert against `BundledContentRepository` and went red when
+  the `contoh-*` placeholders were replaced by `badung-empat-wajah` — no requirement had changed. A
+  requirement guard that reads live content changes meaning every time an author edits JSON. **Do not
+  edit shipped content to satisfy a test, and do not point a new requirement guard at the bundle.**
+  The cost: a content mistake will not turn these red. `swift run content-validator` and
+  `BundledContentRepositoryTests` are what catch those.
+- **Restoring them found two undocumented M8 flow changes**, which is what the restoration was for.
+  A fresh walk opens on `.storyPreview` *before* the `FR-START-04` safety notice — now a signed PRD
+  amendment (§5.5, owner af, 2026-08-16) that splits the load-bearing half into `FR-START-04a`:
+  acknowledgement must precede any sampling, any permission request and any Run write. And arrival
+  lands on `.cutsceneIntro`/`.storyReveal`, not `.atCheckpoint` — five stages earlier than the tests
+  expected. Both are recorded in `m7`'s second execution section.
+
+Still unguarded:
+
+- **`FR-CP-05`'s Story Reveal exception** remains undocumented in the PRD (§10 lists it as
+  outstanding, no owner named). `theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources` does *not*
+  cover it — that test asserts on `CheckpointPresentation`, which still carries every accuracy label
+  and citation. The omission is in the view.
+- **`AccessibilityXXXL` occlusion.** `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` passes, but
+  only because the test now scrolls: at the largest size a Profile control lands under the floating
+  tab bar. Reachable, not comfortable.
 
 ## Two visual directions, split at a screen boundary
 
@@ -232,7 +354,7 @@ auto-advancing and the login carrying a "Skip for now".
 ## Known state
 
 - Deployment target is iOS 18.0. Installed simulator runtimes are iOS 26.3 / 26.4 / 26.5; layout is verified on 26.5, and the 18.0 floor itself has never been run. Do not claim otherwise.
-- The app target and the package are both Swift 6 language mode. The app target was Swift 5.0 until the presentation layer moved in — `DeveloperSwitchableLocationProvider`'s `#if DEBUG` default argument depends on SE-0411 isolated default value expressions and does not compile under Swift 5. `challange-5UITests` is still `SWIFT_VERSION = 5.0`.
+- The app target, `challange-5Tests` and the package are all `SWIFT_VERSION = 6.0`. The app target was Swift 5.0 until the presentation layer moved in — `DeveloperSwitchableLocationProvider`'s `#if DEBUG` default argument depends on SE-0411 isolated default value expressions and does not compile under Swift 5. **`challange-5UITests` is still `SWIFT_VERSION = 5.0`**, and that is the only target that is. The app target also builds with MainActor default isolation, which is why a nonisolated test double (`ContentFixtures.swift`) has to say so explicitly — a `ContentRepository` that could only be read from the main actor would be a different protocol from the one the app uses.
 - `SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY` is on for the app target, so a type used from `RunEngine` or `DesignSystem` needs that module imported in the file that uses it — a transitive import will not do.
 - `.claude/plans/cultural-heritage-quest.plan.md` (Milestone 1, content model) is superseded by `docs/schema.md`.
 - `.claude/launch.json` is stale scaffolding pointing at another user's Downloads folder. It has nothing to do with this project.
@@ -252,17 +374,26 @@ auto-advancing and the login carrying a "Skip for now".
   opening hours at four of five places, all dress codes and photo policies, all entry costs
   (Museum Bali sells a ticket and ships as `0`), and step counts at four of five places. Unverified
   claims carry a `sources` entry whose citation begins `BELUM DIVERIFIKASI`. The full ledger is
-  `.claude/plans/Content/c1-badung-single-quest-content.plan.md` §11.0.
+  `.claude/plans/Content/c1-badung-single-quest-content.plan.md` §11.0, and
+  `docs/field-verification-checklist.md` turns it into the list a person walking the route works
+  through — in route order, with the exact value to capture and where it is written back. The
+  highest-priority two: Catur Muka's seed coordinate is in the **wrong quadrant** (~293 m out, right
+  neighbourhood), and Museum Bali's `entryCost: 0` renders as "Gratis"/"Free" for a museum that
+  sells a ticket.
 - **Consent for those five places is a self-grant, not a grant.** D1-b: every `consent/badung-*.json`
   names the project team as `grantingBody`, scoped to inclusion and naming, for a non-public academic
   prototype. None of the five sites has been approached. The signatory fields are still literal
   placeholders (`[NAMA TIM]`, `[NAMA ANGGOTA 1]`, …). Tracking lives in `docs/consent-log.md` and
-  `docs/consent/*-prototype-note.md`. This must not survive into anything public.
+  `docs/consent/*-prototype-note.md`, and `docs/consent-request-pack.md` sets out per site who to
+  approach, what is being asked, and what changes if they decline. This must not survive into
+  anything public. Its four cross-cutting blockers — the team name, the signatories, **the app
+  having no name**, and whether the build stays non-public — block all five approaches equally and
+  are not per-site problems.
 - The Figma frames name a real quest (I Gusti Ngurah Made Agung, Puri Agung Pemecutan, the Puputan)
   that still does not exist in the content tree and still cannot be authored without consent records
   and citations. Screens render from `ContentKit` by ID; never bake those names in (`AD-4`,
   `FR-RUN-06`).
 - `Support/UIStrings.swift:338` still describes the content as "data contoh dengan tempat fiktif".
   That string is now wrong and needs a product decision, not a content edit.
-- **`FR-CP-05` has an undocumented exception.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**. It needs an amendment or a signed exception with an owner.
+- **`FR-CP-05` has an undocumented exception, and it is still open.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**, which lists it as outstanding with no owner named (§10). It needs an amendment or a signed exception with an owner. `FR-START-04`'s comparable exception *was* signed on 2026-08-16 (owner af); this one was not, and the two are not a package.
 - The story flow has been seen rendering on iPhone 17 / iOS 26.5 (story preview, both cutscenes, story reveal). The "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP; drive arrival with `xcrun simctl location <udid> set -8.6595,115.2077` instead — the start checkpoint of `badung-empat-wajah` (Puri Agung Pemecutan — an unverified seed coordinate), with `ArrivalEvaluator` unmodified. The transition screen is still unseen.

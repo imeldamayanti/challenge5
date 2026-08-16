@@ -1,0 +1,72 @@
+name: supabase
+
+# b1 §7 and b3 §0. The job runs EXACTLY the commands a developer runs locally, which is what makes
+# a local pass meaningful rather than personal.
+#
+# `db reset` from scratch on every run is what makes b0 D2's forward-only rule safe: a migration
+# that only works against a database which already had the previous shape fails here rather than on
+# deploy.
+#
+# There is no deploy step in this file, and that is deliberate (b3 §3). Pushing is steps 5–9 of a
+# release, taken by a human who has read `db push --dry-run` and taken a backup first.
+
+on:
+  pull_request:
+    paths:
+      - "supabase/**"
+      - ".github/workflows/supabase.yml"
+  push:
+    branches: [master]
+    paths:
+      - "supabase/**"
+      - ".github/workflows/supabase.yml"
+
+jobs:
+  local-stack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      # GitHub runners have Docker, so the local stack needs no special arrangement. `supabase
+      # start` applies config.toml, which is why the ops/catalog exposure checks below are a valid
+      # LOCAL test rather than something only a deployed project could catch (b3 §0).
+      - name: Start the local stack
+        run: supabase start
+
+      # Rebuilds from empty and runs seed.sql, which installs pgTAP and the fixtures. b2 §9.1/§9.4.
+      - name: Reset the database from migrations
+        run: supabase db reset
+
+      # Scoped to the schemas this repository owns. pgTAP installs ~90 of its own plpgsql functions
+      # into `extensions` and plpgsql_check reports upstream warnings for them; linting those would
+      # be reporting somebody else's code.
+      - name: Lint
+        run: supabase db lint -s app,ops,catalog,public --fail-on warning
+
+      - name: pgTAP — structure, isolation, constraints, sync, auth, performance
+        run: supabase test db
+
+      - name: Edge Functions
+        run: deno test --allow-net --allow-env --allow-run supabase/tests/functions/
+
+      # b3 §4, against localhost. The ops/catalog rows here are the ones that catch a config.toml
+      # mistake on the pull request rather than after a deploy.
+      - name: Isolation over HTTP
+        run: deno test --allow-net --allow-env --allow-run supabase/tests/http/
+
+      # b2 §6. Two real sessions per test, so these run last and alone.
+      - name: Concurrency and locking
+        run: deno test --allow-net --allow-env --allow-run supabase/tests/concurrency/
+
+      - name: Stack logs on failure
+        if: failure()
+        run: supabase status && docker ps -a

@@ -28,3 +28,18 @@ Package.resolved
 **/.idea/
 .vscode/
 **/.vscode/
+
+# Supabase
+.branches
+.temp
+
+# dotenvx
+.env.keys
+.env.local
+.env.*.local
+
+# Edge Function secrets (b3 §2). `supabase secrets set --env-file` reads these; none of them
+# belongs in the repository, and the service_role key belongs in exactly two places — Edge Function
+# environment and CI secrets (design §8).
+.env
+.env.production
