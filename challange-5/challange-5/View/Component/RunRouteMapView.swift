@@ -126,6 +126,34 @@ struct RunRouteMapView: View {
         }
         context.stroke(path, with: .color(palette.inkMuted.color),
                        style: StrokeStyle(lineWidth: 2, lineCap: .round, lineJoin: .round))
+
+        // Directional Arrows
+        for i in 0..<(route.line.count - 1) {
+            let p1 = point(route.line[i], projection)
+            let p2 = point(route.line[i+1], projection)
+            
+            let dx = p2.x - p1.x
+            let dy = p2.y - p1.y
+            let dist = sqrt(dx*dx + dy*dy)
+            
+            if dist > 30 {
+                let angle = atan2(dy, dx)
+                let midX = p1.x + dx * 0.5
+                let midY = p1.y + dy * 0.5
+                
+                var arrowPath = Path()
+                let arrowLength: CGFloat = 6
+                let arrowWidth: CGFloat = 4
+                
+                arrowPath.move(to: CGPoint(x: midX + cos(angle) * arrowLength, y: midY + sin(angle) * arrowLength))
+                arrowPath.addLine(to: CGPoint(x: midX + cos(angle + .pi*0.75) * arrowWidth, y: midY + sin(angle + .pi*0.75) * arrowWidth))
+                arrowPath.addLine(to: CGPoint(x: midX + cos(angle - .pi*0.75) * arrowWidth, y: midY + sin(angle - .pi*0.75) * arrowWidth))
+                arrowPath.closeSubpath()
+                
+                context.fill(arrowPath, with: .color(palette.paper.color))
+                context.stroke(arrowPath, with: .color(palette.inkMuted.color), lineWidth: 1.5)
+            }
+        }
     }
 
     /// The straight line `FR-MAP-02` asks for, with the distance printed on it. Dashed, so it does

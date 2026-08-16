@@ -10,12 +10,17 @@ struct QuestListView: View {
         case list, map
     }
 
+    enum MapScope: String, CaseIterable {
+        case denpasar, wholeBali
+    }
+
     private let model: QuestListViewModel
     private let mapModel: RegionMapViewModel?
     private let journal: RunJournalSummary
     /// `FR-SIDE-07` — "Places nearby", the way into a sidequest that does not wait for a
     /// notification. Empty until `s5` authors any.
     private let nearby: [NearbySideQuestRow]
+    private let makeLocationProvider: (@MainActor () -> any LocationProviding)?
     private let onSelect: (String) -> Void
     private let onOpenRun: (UUID) -> Void
     private let onOpenSideQuest: (String) -> Void
@@ -24,6 +29,7 @@ struct QuestListView: View {
     /// and the floating tab bar belongs to the root: the root cannot hide a bar for a surface it
     /// cannot see.
     @Binding private var surface: Surface
+    @State private var mapScope: MapScope = .denpasar
 
     init(
         model: QuestListViewModel,
@@ -31,6 +37,7 @@ struct QuestListView: View {
         surface: Binding<Surface>,
         journal: RunJournalSummary = .empty,
         nearby: [NearbySideQuestRow] = [],
+        makeLocationProvider: (@MainActor () -> any LocationProviding)? = nil,
         onSelect: @escaping (String) -> Void,
         onOpenRun: @escaping (UUID) -> Void = { _ in },
         onOpenSideQuest: @escaping (String) -> Void = { _ in }
@@ -40,6 +47,7 @@ struct QuestListView: View {
         _surface = surface
         self.journal = journal
         self.nearby = nearby
+        self.makeLocationProvider = makeLocationProvider
         self.onSelect = onSelect
         self.onOpenRun = onOpenRun
         self.onOpenSideQuest = onOpenSideQuest
@@ -52,10 +60,8 @@ struct QuestListView: View {
         // edge — so it replaces the whole screen rather than sitting below the masthead. Only the
         // list surface keeps the header.
         Group {
-            if surface == .map, let mapModel {
-                RegionMapView(model: mapModel,
-                              onSelect: onSelect,
-                              onClose: { surface = .list })
+            if surface == .map {
+                mapSurface
             } else {
                 listSurface
             }
@@ -66,6 +72,45 @@ struct QuestListView: View {
         // full-bleed. The title above stays set for VoiceOver's rotor and for the back button of
         // whatever pushes on top of this.
         .kultaraHiddenNavigationBar()
+    }
+
+    @ViewBuilder private var mapSurface: some View {
+        if let mapModel {
+            RegionMapView(
+                model: mapModel,
+                onSelect: { questID in
+                    surface = .list
+                    onSelect(questID)
+                },
+                onClose: { surface = .list }
+            )
+        } else if mapScope == .denpasar {
+            HisploraInteractiveMapScreen(
+                model: HisploraMapViewModel(
+                    language: language,
+                    locationProvider: makeLocationProvider?()
+                ),
+                onBack: { surface = .list },
+                onSwitchScope: { mapScope = .wholeBali },
+                onBeginTrace: { trace in
+                    surface = .list
+                    onSelect(trace.placeId ?? "badung-empat-wajah")
+                }
+            )
+        } else {
+            HisploraBaliMapScreen(
+                model: HisploraBaliMapViewModel(
+                    language: language,
+                    locationProvider: makeLocationProvider?()
+                ),
+                onBack: { surface = .list },
+                onSwitchScope: { mapScope = .denpasar },
+                onOpenQuest: { landmark in
+                    surface = .list
+                    onSelect(landmark.id == "denpasar-heritage-district" ? "badung-empat-wajah" : landmark.id)
+                }
+            )
+        }
     }
 
     private var listSurface: some View {

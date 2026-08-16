@@ -170,6 +170,7 @@ struct KultaraRootView: View {
                 journal: journal,
                 // `FR-SIDE-07` — a way into a sidequest that does not wait for a notification.
                 nearby: nearbySideQuests,
+                makeLocationProvider: environment.makeLocationProvider,
                 onSelect: { startOrResumeRun(questID: $0) },
                 onOpenRun: openRun,
                 onOpenSideQuest: { pendingSideQuestID = $0 })
