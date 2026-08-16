@@ -264,14 +264,24 @@ Served as a static file (AD-5).
 
 ```json
 {
-  "schemaVersion": 1,
-  "updatedAt": "2026-08-10T09:00:00Z",
+  "schemaVersion": 2,
+  "updatedAt": "2026-08-15T09:00:00Z",
   "suppressedPlaceIds": [],
-  "suppressedQuestIds": []
+  "suppressedQuestIds": [],
+  "suppressedSideQuestIds": []
 }
 ```
 
 Schema-validated before use; anything malformed is discarded in favour of the last cached copy (NFR-SEC-02).
+
+**`suppressedSideQuestIds` and the bump to schema 2.** The kill-switch has authority over sidequests as well (`FR-SIDE-14`, sidequest plan `s3` §7): a withdrawn sidequest leaves every surface and its region is deregistered on next launch, while **the letter it already awarded is retained** — the record is a snapshot and the walk happened.
+
+Two rules on the new array, and the second is the one that bites:
+
+- Suppressing a **place** already suppresses the sidequests standing at it: `ContentRepository.sideQuests(suppressingSideQuestIDs:suppressingPlaceIDs:)` filters on either set. The new array is for withdrawing one story while the place itself stays walkable, which is the likelier request.
+- **Decode it as `decodeIfPresent … ?? []`.** A validator that rejects a schema-1 document sends the app to its last good copy (NFR-SEC-02, FR-ERR-09), and the failure mode is a withdrawal that silently stops applying — the exact thing AD-5 exists to prevent. A schema-1 file must keep validating and simply carry no sidequests, the same way `manifest.json` already tolerates a bundle authored before its own two new arrays existed (§A.3).
+
+The server side of this document is `docs/backend-supabase.md` §6.1, where `ops.suppressions.entity_type` gains `'sidequest'` alongside `'place'` and `'quest'`.
 
 ### A.9 Build-time validation rules
 
@@ -603,6 +613,22 @@ Bounded at 30 days or 10,000 rows; prune drops the **oldest `pending` analytics 
 | `proximity_alert_shown` \| `proximity_alert_opened` | questID | proximity value |
 
 `accuracyBucket` is a band (`<20m`, `20–75m`, `>75m`), never a coordinate (NFR-PRIV-02).
+
+**Sidequests — PRD §5.15, proposed with the `FR-SIDE` block.** The sidequest feature adds six screens and a second engagement loop, and specifies no telemetry at all. That is a gap rather than a decision: NFR-OBS-01 is explicit that an uninstrumented metric is not a metric, and every row above exists because a quest metric would otherwise be unmeasurable. `TelemetryEventRecord` needs no change — `paramsJSON` absorbs these — so this is a catalogue addition and a `schemaVersion` bump on the envelope.
+
+| Event | Params | Serves |
+|---|---|---|
+| `sidequest_alert_shown` \| `sidequest_alert_opened` | sideQuestID | whether the notification is worth the `Always` permission it costs |
+| `sidequest_discovered` | sideQuestID, arrivalMethod, accuracyBucket | how often the FR-ARR-01 gate fails in the field, and whether it fails differently than at a checkpoint |
+| `sidequest_quiz_resolved` | sideQuestID, attempts, wasRevealed | which questions are badly written. `SideQuestChallengeResult` keeps `attempts` for exactly this (§B.13) and nothing carries it off the device today |
+| `sidequest_completed` | sideQuestID, collectionID | letter conversion — how many people who open a story finish one |
+| `collection_completed` | collectionID, durationDays | whether a collection is finishable at all |
+
+Three constraints these inherit:
+
+- **No Run key.** `docs/backend-supabase.md` §2.4 gives each Run a pseudonymous `run_key` so the funnel stays analysable without a join back to a person. A sidequest has no Run, and minting a second key to correlate one walker's sidequests across a region would rebuild precisely what that decision prevents. These events are single-shot; there is no funnel to reconstruct.
+- `accuracyBucket` stays a band, as above (NFR-PRIV-02).
+- They are **analytics, not survey data**, so they prune with everything else at 30 days. FR-ERR-10's never-drop protection covers `SurveyResponseRecord` only.
 
 ### B.8 `ProximityAlertRecord`
 
