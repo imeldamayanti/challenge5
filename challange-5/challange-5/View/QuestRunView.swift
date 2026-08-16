@@ -145,6 +145,10 @@ struct QuestRunView: View {
         StoryRevealScreen(
             language: language,
             text: model.storyRevealText,
+            // `447:1878` centres the quest's own title over the picture, and `293:1652` ends its
+            // lead on the place being walked to. Both come from content (`AD-4`, `FR-RUN-06`).
+            title: model.questTitle,
+            placeName: model.currentPlaceName,
             // The content tree ships no per-place illustration, so this stays nil — the screen
             // falls back to its own packaged art (`StoryIllustrationMetrics`). See the note atop
             // `StoryRevealScreen`.
@@ -185,12 +189,12 @@ struct QuestRunView: View {
     }
 
     private var transition: some View {
+        // `293:1595` draws a sealed scroll and two words. The quest name, the route map and the
+        // five-second timer `187:1103` carried are gone with that frame — see the note on
+        // `StoryTransitionScreen` for where each of them still lives.
         StoryTransitionScreen(
             language: language,
-            questName: model.questTitle,
             placeName: model.currentPlaceName,
-            route: model.routeMap,
-            totalCheckpoints: model.totalCheckpoints,
             onContinue: { model.advanceFromTransition() })
     }
 

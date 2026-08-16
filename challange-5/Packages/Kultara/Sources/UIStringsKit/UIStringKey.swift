@@ -136,8 +136,14 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case storyRevealNext
     case storyRevealBack
     case storyRevealSkip
+    /// `293:1643` — the sentence the place name closes, and the words the marker loop rings. Two
+    /// halves rather than one string because the second half is content (`AD-4`): the lead is the
+    /// app's, the place is the quest's.
+    case storyRevealJourneyLead
     case transitionSteppingInto
     case transitionContinue
+    /// `293:1595` — the only words on the transition screen.
+    case transitionTapToReveal
     // The place notice — `50:137` ("Quest") — and the checkpoint's task menu — `51:201`
     // ("Detail Quest").
     case placeNoticeBeforeExplore

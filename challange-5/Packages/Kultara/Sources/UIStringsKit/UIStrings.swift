@@ -225,9 +225,12 @@ public enum UIStrings {
         .storyRevealNext: LocalizedText(id: "Berikutnya", en: "Next"),
         .storyRevealBack: LocalizedText(id: "Sebelumnya", en: "Back"),
         .storyRevealSkip: LocalizedText(id: "Lewati cerita", en: "Skip the story"),
+        .storyRevealJourneyLead: LocalizedText(
+            id: "Perjalananmu dimulai di", en: "Your journey begins at"),
         .transitionSteppingInto: LocalizedText(
             id: "Melangkah ke titik pertama %@", en: "Stepping into the first place of %@"),
         .transitionContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .transitionTapToReveal: LocalizedText(id: "Ketuk untuk membuka", en: "Tap to reveal"),
         .placeNoticeBeforeExplore: LocalizedText(
             id: "Sebelum menjelajah:", en: "Before you explore:"),
         .checkpointDetailContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
