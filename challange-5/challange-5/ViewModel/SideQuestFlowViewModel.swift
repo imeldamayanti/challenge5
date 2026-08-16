@@ -4,6 +4,7 @@ import ContentKit
 import DesignSystem
 import Foundation
 import RunEngine
+import UIKit
 import UIStringsKit
 
 /// The whole sidequest flow, as `QuestRunViewModel` owns the run (PRD §5.15).
@@ -35,6 +36,7 @@ final class SideQuestFlowViewModel {
 
     private let engine: SideQuestEngine
     private let repository: any ContentRepository
+    private let photoStore: any PhotoStore
     let sampling: ArrivalSampling
     let language: ContentLanguage
     let sideQuestID: String
@@ -60,6 +62,7 @@ final class SideQuestFlowViewModel {
         engine: SideQuestEngine,
         repository: any ContentRepository,
         locationProvider: any LocationProviding,
+        photoStore: any PhotoStore,
         sideQuestID: String,
         language: ContentLanguage,
         manualOverrideDelay: Duration = .seconds(60)
@@ -71,6 +74,7 @@ final class SideQuestFlowViewModel {
 
         self.engine = engine
         self.repository = repository
+        self.photoStore = photoStore
         self.sideQuestID = sideQuestID
         self.language = language
         self.presentation = presentation
@@ -269,25 +273,23 @@ final class SideQuestFlowViewModel {
         apply(outcome)
     }
 
-    /// Phase D is the photo pipeline; until it lands a photo challenge states its prompt, says
-    /// photographs are not in this build, and awards the letter on acknowledgement — the same shape
-    /// M6 used for photo tasks (`s4` §7). `FR-TASK-06`'s runtime gate still applies: a photo
-    /// challenge is not offered at all where photography is prohibited, filtered in `presentation`.
-    func acknowledgePhotoChallenge() {
+    /// `s4` §7. The picked or captured image goes to `PhotoStore` first — downscaled, written
+    /// relative to the app container, never absolute (`NFR-REL-05`) — and only the path it returns
+    /// reaches the engine. `FR-TASK-06`'s runtime gate still applies: a photo challenge is not
+    /// offered at all where photography is prohibited, filtered in `presentation`.
+    func capturedPhoto(_ image: UIImage) {
+        guard let recordID = record?.id else { return }
         do {
-            record = try engine.completePhoto(sideQuestID: sideQuestID, relativePath: nil)
-            awardedLetter = record?.letter
-            refreshCollectionProgress()
-            stage = .letter
+            let relativePath = try photoStore.save(image, recordID: recordID)
+            attachPhoto(relativePath)
         } catch {
             message = String(describing: error)
         }
     }
 
-    /// Phase D's writer hands back a path relative to the app container, never absolute
-    /// (`NFR-REL-05`, `FR-SIDE-13`). Present now so the engine call has exactly one caller when the
-    /// capture pipeline arrives.
-    func attachPhoto(_ relativePath: String) {
+    /// The engine call's one caller — reached from `capturedPhoto` once `PhotoStore` has written
+    /// the file.
+    private func attachPhoto(_ relativePath: String) {
         do {
             record = try engine.completePhoto(
                 sideQuestID: sideQuestID, relativePath: relativePath)

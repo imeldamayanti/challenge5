@@ -26,6 +26,7 @@ struct SettingsView: View {
                     .accessibilityAddTraits(.isHeader)
                 languageSection
                 locationSection
+                nearbyAlertsSection
                 storageSection
                 deletionSection
                 attributionSection
@@ -37,6 +38,9 @@ struct SettingsView: View {
             .padding(KultaraMetrics.lg)
             .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
         }
+        // Permission state changes out from under the app — a trip to system Settings and back —
+        // and there is no push channel for it, so the screen re-checks whenever it is shown.
+        .onAppear { model.refreshNearbyAlertsStatus() }
         .background(palette.paper.color)
         // Deliberately empty: the sheet's name is the typed heading at the top of the page, and a
         // bar title as well would print it twice. The heading carries the header trait, so nothing
@@ -99,6 +103,53 @@ struct SettingsView: View {
                     .foregroundStyle(palette.inkMuted.color)
                     .fixedSize(horizontal: false, vertical: true)
                 if let url = model.systemSettingsURL {
+                    Button { openURL(url) } label: {
+                        Text(model.openSystemSettingsTitle)
+                            .kultaraFont(.buttonLabel)
+                            .foregroundStyle(palette.seal.color)
+                            .frame(minHeight: KultaraMetrics.minimumTapTarget)
+                    }
+                }
+            }
+        }
+    }
+
+    private var nearbyAlertsSection: some View {
+        SettingsSection(heading: .settingsNearbyAlertsHeading, language: language) {
+            VStack(alignment: .leading, spacing: KultaraMetrics.md) {
+                Toggle(isOn: Binding(
+                    get: { model.nearbyAlertsEnabled },
+                    set: { model.setNearbyAlertsEnabled($0) })
+                ) {
+                    Text(model.nearbyAlertsToggleTitle)
+                        .kultaraFont(.body)
+                        .foregroundStyle(palette.ink.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .frame(minHeight: KultaraMetrics.minimumTapTarget)
+
+                // `FR-PROX-03` — this text is the in-app explanation. It is visible before the
+                // toggle is ever touched, never only after.
+                Text(model.nearbyAlertsExplanation)
+                    .kultaraFont(.metadata)
+                    .foregroundStyle(palette.inkMuted.color)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let needsAlways = model.nearbyAlertsNeedsAlwaysText {
+                    Text(needsAlways)
+                        .kultaraFont(.metadata)
+                        .foregroundStyle(palette.warning.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if let needsNotifications = model.nearbyAlertsNeedsNotificationsText {
+                    Text(needsNotifications)
+                        .kultaraFont(.metadata)
+                        .foregroundStyle(palette.warning.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                if (model.nearbyAlertsNeedsAlwaysText != nil
+                    || model.nearbyAlertsNeedsNotificationsText != nil),
+                   let url = model.systemSettingsURL {
                     Button { openURL(url) } label: {
                         Text(model.openSystemSettingsTitle)
                             .kultaraFont(.buttonLabel)
@@ -188,7 +239,7 @@ struct SettingsView: View {
 #if DEBUG
 extension SettingsView {
     var developerSection: some View {
-        DeveloperToolsSection(language: language)
+        DeveloperToolsSection(model: model)
     }
 }
 #endif

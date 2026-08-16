@@ -20,8 +20,11 @@ import UIStringsKit
 struct DeveloperToolsSection: View {
     @Environment(\.kultaraPalette) private var palette
     @AppStorage(DeveloperPreferences.simulateArrivalKey) private var simulatesArrivalAnywhere = false
+    @State private var selectedSideQuestID: String?
 
-    let language: ContentLanguage
+    let model: SettingsViewModel
+
+    private var language: ContentLanguage { model.language }
 
     var body: some View {
         SettingsSection(heading: .devHeading, language: language) {
@@ -38,7 +41,53 @@ struct DeveloperToolsSection: View {
                     .kultaraFont(.metadata)
                     .foregroundStyle(palette.warning.color)
                     .fixedSize(horizontal: false, vertical: true)
+
+                KultaraRule()
+                simulatePassingSection
             }
+        }
+    }
+
+    /// `s3` §8 — fires the same `didEnterRegion` handler `SystemProximityMonitor` uses for a real
+    /// region entry. The position is simulated; `ProximityGate` — quiet hours, the cooldown, the
+    /// daily cap — is not.
+    private var simulatePassingSection: some View {
+        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
+            Text(UIStrings.string(.devSimulatePassingTitle, language))
+                .kultaraFont(.body)
+                .foregroundStyle(palette.ink.color)
+                .fixedSize(horizontal: false, vertical: true)
+
+            let options = model.devSideQuestOptions
+            if options.isEmpty {
+                Text(UIStrings.string(.sideQuestNearbyEmpty, language))
+                    .kultaraFont(.metadata)
+                    .foregroundStyle(palette.inkMuted.color)
+            } else {
+                Picker(UIStrings.string(.devSimulatePassingTitle, language), selection: $selectedSideQuestID) {
+                    ForEach(options, id: \.id) { option in
+                        Text(option.title).tag(Optional(option.id))
+                    }
+                }
+                .pickerStyle(.menu)
+                .onAppear { selectedSideQuestID = selectedSideQuestID ?? options.first?.id }
+
+                Button {
+                    guard let selectedSideQuestID else { return }
+                    model.simulateSideQuestPassing(selectedSideQuestID)
+                } label: {
+                    Text(UIStrings.string(.devSimulatePassingTitle, language))
+                        .kultaraFont(.buttonLabel)
+                        .foregroundStyle(palette.seal.color)
+                        .frame(minHeight: KultaraMetrics.minimumTapTarget)
+                }
+                .disabled(selectedSideQuestID == nil)
+            }
+
+            Text(UIStrings.string(.devSimulatePassingNote, language))
+                .kultaraFont(.metadata)
+                .foregroundStyle(palette.warning.color)
+                .fixedSize(horizontal: false, vertical: true)
         }
     }
 }

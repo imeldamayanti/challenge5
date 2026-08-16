@@ -94,7 +94,7 @@ struct SideQuestFlowView: View {
                 isSettled: model.isChallengeSettled,
                 onSelect: { model.selectOption($0) },
                 onSubmit: { model.submitQuiz() },
-                onAcknowledgePhoto: { model.acknowledgePhotoChallenge() },
+                onCapturePhoto: { model.capturedPhoto($0) },
                 onContinue: { model.advanceFromChallenge() },
                 onBack: { model.retreatFromChallenge() })
         case .letter:

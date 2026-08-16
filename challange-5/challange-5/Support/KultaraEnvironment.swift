@@ -15,6 +15,13 @@ struct KultaraEnvironment {
     let sideQuestStore: any SideQuestStore
     let locationAuthorization: any LocationAuthorizationReporting
     let storage: any StorageUsageReporting
+    /// The background half of `AD-1` (`s3`). One instance, not a factory: unlike arrival sampling,
+    /// region monitoring is not scoped to a screen — it has to keep running (or keep *not*
+    /// running) no matter what is on screen, so every caller shares the same monitor.
+    let proximityMonitor: any ProximityMonitoring
+    /// `s4` §7. One instance, not a factory: unlike `makeLocationProvider`, nothing about a photo
+    /// write is scoped to a screen's lifetime, and every caller can share the same directory.
+    let photoStore: any PhotoStore
     /// A factory rather than a single instance: each arrival screen owns its own sampling and its
     /// own callbacks, and two screens sharing one provider would have the second silently steal the
     /// first's fixes.
@@ -27,6 +34,8 @@ struct KultaraEnvironment {
         sideQuestStore: any SideQuestStore,
         locationAuthorization: any LocationAuthorizationReporting = SystemLocationAuthorizationReporter(),
         storage: any StorageUsageReporting = ContainerStorageReporter(),
+        proximityMonitor: (any ProximityMonitoring)? = nil,
+        photoStore: (any PhotoStore)? = nil,
         makeLocationProvider: (@MainActor () -> any LocationProviding)? = nil
     ) {
         self.repository = repository
@@ -35,6 +44,13 @@ struct KultaraEnvironment {
         self.sideQuestStore = sideQuestStore
         self.locationAuthorization = locationAuthorization
         self.storage = storage
+        self.proximityMonitor = proximityMonitor ?? SystemProximityMonitor(
+            repository: repository,
+            sideQuestEngine: SideQuestEngine(repository: repository, store: sideQuestStore),
+            runStore: runStore,
+            preferences: preferences,
+            alertStore: FileProximityAlertStore())
+        self.photoStore = photoStore ?? FilePhotoStore()
         self.makeLocationProvider = makeLocationProvider ?? Self.defaultLocationProvider
     }
 

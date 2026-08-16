@@ -330,9 +330,6 @@ public enum UIStrings {
         .sideQuestPhotoPrompt: LocalizedText(id: "Ambil satu foto", en: "Take one photograph"),
         .sideQuestPhotoTake: LocalizedText(id: "Buka kamera", en: "Open the camera"),
         .sideQuestPhotoChoose: LocalizedText(id: "Pilih dari galeri", en: "Choose from the library"),
-        .sideQuestPhotoNotInThisBuild: LocalizedText(
-            id: "Tantangan foto belum ada di versi ini. Hurufnya tetap kamu dapat tanpa foto.",
-            en: "Photo challenges are not in this build yet. The letter is yours without one."),
         .sideQuestLetterAwarded: LocalizedText(id: "Huruf didapat", en: "Letter earned"),
         .sideQuestLetterProgress: LocalizedText(id: "%1$d dari %2$d huruf", en: "%1$d of %2$d letters"),
         .sideQuestCollectionOpen: LocalizedText(id: "Lihat koleksinya", en: "See the collection"),

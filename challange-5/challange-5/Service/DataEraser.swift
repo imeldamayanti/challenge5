@@ -37,20 +37,34 @@ final class PreferencesOnlyDataEraser: LocalDataEraser {
 /// The sidequest store is a *separate* store rather than more rows in the Run store (`FR-SIDE-01`,
 /// `s0` D1), which is exactly why it has to be named here: `FR-SET-02` is about everything on the
 /// device, and a second aggregate is a second thing to forget.
+///
+/// The proximity monitor is named for the same reason: its alert rows are a third aggregate
+/// (`s3` §2), and `NFR-PRIV-09` treats them as the closest thing this app keeps to a movement
+/// history, which is exactly what "delete all local data" must not leave standing.
+///
+/// The photo store is a fourth: deleting a sidequest record alone leaves its image file on disk,
+/// which passes every database test and fails `FR-SET-02` — the exact mistake `s4` §7 warns about
+/// (`NFR-PRIV-01`).
 @MainActor
 final class RunAndPreferencesDataEraser: LocalDataEraser {
 
     private let store: any RunStore
     private let sideQuestStore: (any SideQuestStore)?
+    private let proximityMonitor: (any ProximityMonitoring)?
+    private let photoStore: (any PhotoStore)?
     private let preferences: any AppPreferencesStore
 
     init(
         store: any RunStore,
         sideQuestStore: (any SideQuestStore)? = nil,
+        proximityMonitor: (any ProximityMonitoring)? = nil,
+        photoStore: (any PhotoStore)? = nil,
         preferences: any AppPreferencesStore
     ) {
         self.store = store
         self.sideQuestStore = sideQuestStore
+        self.proximityMonitor = proximityMonitor
+        self.photoStore = photoStore
         self.preferences = preferences
     }
 
@@ -59,11 +73,14 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
         // Letters go with them. A collection is a record of where somebody has been, and
         // "delete all local data" that left it standing would be the plainest possible lie.
         let deletedSideQuests = try sideQuestStore?.deleteAll() ?? 0
+        let deletedProximityAlerts = try proximityMonitor?.deleteAllAlerts() ?? 0
+        let deletedPhotos = try photoStore?.deleteAll() ?? 0
         preferences.removeAll()
         return ErasureSummary(
             deletedRuns: deletedRuns,
             deletedSideQuests: deletedSideQuests,
-            deletedPhotos: 0,
+            deletedProximityAlerts: deletedProximityAlerts,
+            deletedPhotos: deletedPhotos,
             deletedTelemetryEvents: 0,
             clearedPreferences: true)
     }
