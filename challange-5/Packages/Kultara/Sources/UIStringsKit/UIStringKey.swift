@@ -126,8 +126,11 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case locationNotThereTitle
     case locationNotThereBody
     case locationNotThereBack
+    case locationNavigateThere
+    case locationNavigateThereHint
     case cutsceneLegendTitle
     case cutsceneSwipeHint
+    case cutsceneRevealAction
     case cutsceneStartAction
     case storyRevealPager
     case storyRevealNext

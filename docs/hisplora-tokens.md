@@ -138,10 +138,56 @@ answerable.
 
 These are requirement conflicts, not omissions.
 
-- **"Navigate There"** (`223:2004`) hands off to an external maps app. Not built: it leaves the app
-  during the one flow that has to work in airplane mode (`AD-3`), it routes along roads rather than
-  the authored walking route, and it makes the clue pointless. The plan's recommendation — allow it
-  at the start checkpoint only — is still open.
+- **"Navigate There"** (`223:2004`) hands off to an external maps app. **Now built** — the earlier
+  entry here said it was not, and that is what changed. `FR-MAP-04` permits the handoff outright
+  ("presented as leaving the app"), so the objection was never that it is forbidden; it was that
+  nothing must *depend* on it. It does not: the clue, the drawn route, the distance and the manual
+  override are all still on the screen and all still work with the radio off (`AD-3`). The three
+  things that make it honest rather than a shortcut are the arrow glyph and the accessibility hint
+  (`locationNavigateThereHint`) that say it leaves the app, the fact that it hides itself when no
+  place resolves rather than opening nothing, and `ExternalMapsLink` building a `maps.apple.com`
+  URL rather than importing MapKit — which `PermissionCallBoundaryTests` bans for `FR-MAP-01`.
+  It routes along roads, which is Apple Maps' job and not this app's (`FR-MAP-03`); the authored
+  walking route is what `RunRouteMapView` still draws above it. Apple Maps reverse-geocodes the
+  coordinate for the pin's label, so the `q` place name is not what the walker sees — with the
+  seed coordinates still unwalked, the pin lands on a street name, not the place.
+- **The back arrow and "Back to Homepage"** (`223:2004`) are built. Both pop the run screen; neither
+  abandons the walk — the draft Run stays on disk and the quest list resumes it.
+
+### The arrival screen now matches `223:2004` exactly, and four requirements lost their controls
+
+Decided 2026-08-17, on the instruction that the screen match the frame element for element. **This
+is the one place in this document where the design wins and the requirement yields**, and it is
+recorded here rather than resolved, because the reverse is what the rest of this file argues for.
+
+Gone from the arrival screen: the clue card (`FR-CP-03`, `NFR-SAFE-02`), the distance and
+fix-quality readout (`FR-ARR-05`), the manual override (`FR-START-10`), the abandon control
+(`FR-RUN-04`) and the link to system Settings shown on a permission refusal (`FR-ERR-02`). The
+`CHECKPOINT n OF m` eyebrow (`FR-CP-08`) went with them.
+
+What that costs, plainly: **a walker whose GPS never resolves can no longer reach the checkpoint.**
+`FR-START-10` exists because inside a covered market the accuracy gate fails legitimately and often,
+and the override was the way out. There is no longer one. A walker who refused location permission
+likewise has no route to Settings from this screen.
+
+None of the code was deleted. `manualOverride`, `manualOverrideSheet`, `arrivalNumbers` and
+`LocationClueCard` are all still built and still wired to `QuestRunViewModel`; restoring any of them
+is putting its line back in `arrivalScreen`'s stack. `QuestRunTests` stays green because those
+guards assert on the view model, which is unchanged — **so the tests will not catch this if it was
+the wrong call.** It needs a signed PRD exception with an owner, like `FR-START-04a` got and unlike
+`FR-CP-05`'s Story Reveal omission, which is still outstanding.
+
+### What is measured on that screen now
+
+| Element | Frame value | Shipped |
+|---|---|---|
+| Ground | `#58453E` | `brownStone` — was `brownMid`, now the drawn value |
+| Title | New York 40, tracking −0.8, `#FDF2DE` | as drawn (`inkCream`) |
+| Lead | SF Pro Display 15, tracking −0.45, `#AA9B8E` | `inkDusty` `#D0B5AE` — the documented lift; `#AA9B8E` is 3.34:1 on this ground |
+| Primary action | white capsule, 58 tall, label SF Pro Medium 17 / −0.51 / `#151311` | `HisploraLightPillButtonStyle`; no ring, because white on `brownStone` already clears 3:1 |
+| Second action | SF Pro Medium 17 / −0.51 / white | `hisploraPlain(ink: \.inkOnButton)` |
+| Back glyph | `arrow.backward`, 24, at `20, 82` | as drawn; tap target stays 44 (`NFR-A11Y-06`) |
+| Lead line count | one line | **two** — SF Pro Text is set wider than the SF Pro Display the frame specifies, and iOS has no public API to ask for the Display cut below 20 points. The gap under it is 59 rather than the drawn 100 so the map still lands at 328. |
 - **The `Maps` rectangle** on `223:2004` and the scrolled paper map on `89:1402` are replaced by
   `RunRouteMapView`, the drawn canvas from `FR-MAP-02`. `FR-MAP-01` forbids live tiles.
 - **The AI-generated portrait** of I Gusti Ngurah Made Agung is not shipped. A likeness of a named

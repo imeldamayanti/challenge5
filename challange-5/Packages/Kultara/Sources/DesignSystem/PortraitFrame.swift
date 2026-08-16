@@ -36,6 +36,11 @@ public struct KultaraPortraitFrame<Portrait: View>: View {
                     .offset(x: size.width * PortraitFrameMetrics.openingOrigin.x,
                             y: size.height * PortraitFrameMetrics.openingOrigin.y)
                 ornament(size: size)
+                    // The carved gold is drawn *over* the picture and its PNG is the full 360×450
+                    // rectangle, transparent oval and all — so without this it takes every touch
+                    // that lands on the portrait underneath it. Nothing in the frame is a control;
+                    // what is behind it can be (`98:1588`'s rub).
+                    .allowsHitTesting(false)
             }
             .frame(width: size.width, height: size.height)
         }

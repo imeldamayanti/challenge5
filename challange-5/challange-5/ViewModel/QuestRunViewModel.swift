@@ -434,6 +434,19 @@ final class QuestRunViewModel {
 
     var currentPlaceName: String { placeName(for: currentCheckpoint) }
 
+    /// `FR-MAP-04` — where "Navigate There" on `223:2004` goes.
+    ///
+    /// The checkpoint's own coordinate, not the walker's: this is a handoff to the place the quest
+    /// is waiting at. `nil` when the place cannot be resolved, so the arrival screen hides the
+    /// control rather than offering one that opens nothing. Nothing else on that screen depends on
+    /// it (`AD-3`).
+    var externalMapsURL: URL? {
+        guard let place = place(for: currentCheckpoint) else { return nil }
+        return ExternalMapsLink.appleMapsWalkingURL(
+            to: place.coordinate,
+            name: place.nameOfficial.value(for: language))
+    }
+
     /// Which of the Hisplora location frames the arrival screen is showing. The mapping is the
     /// arrival rule's own and lives on `ArrivalSampling`, so the sidequest gate draws the same
     /// three states from the same decision.

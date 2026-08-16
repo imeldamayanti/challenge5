@@ -14,7 +14,8 @@ struct SettingsTests {
         store: InMemoryAppPreferencesStore = InMemoryAppPreferencesStore(),
         authorization: LocationAuthorizationSnapshot = .notRequested,
         eraser: SpyLocalDataEraser = SpyLocalDataEraser(),
-        storageBytes: Int = 3 * 1024 * 1024
+        storageBytes: Int = 3 * 1024 * 1024,
+        proximityMonitor: StubProximityMonitor = StubProximityMonitor()
     ) throws -> SettingsViewModel {
         SettingsViewModel(
             repository: try BundledContentRepository(),
@@ -22,7 +23,8 @@ struct SettingsTests {
             language: language,
             locationAuthorization: StubLocationAuthorizationReporter(snapshot: authorization),
             eraser: eraser,
-            storage: StubStorageReporter(bytes: storageBytes))
+            storage: StubStorageReporter(bytes: storageBytes),
+            proximityMonitor: proximityMonitor)
     }
 
     // MARK: - FR-SET-01, the four things Settings must expose
@@ -201,6 +203,30 @@ struct StubLocationAuthorizationReporter: LocationAuthorizationReporting {
 struct StubStorageReporter: StorageUsageReporting {
     let bytes: Int
     func bytesUsedOnDevice() -> Int { bytes }
+}
+
+/// `SettingsViewModel` gained a `proximityMonitor` when the sidequest branch landed and this suite
+/// stopped compiling. A stub rather than a spy: nothing in here asserts on proximity behaviour, and
+/// the settings requirements this file guards (`FR-SET-01..04`) are unchanged by it. `enable()` and
+/// `requestAlwaysAuthorization()` deliberately do nothing — a test double that requested a real
+/// permission would be the exact thing `PermissionCallBoundaryTests` bans.
+@MainActor
+final class StubProximityMonitor: ProximityMonitoring {
+    var isEnabled = false
+    var authorization: LocationAuthorizationSnapshot = .notRequested
+    var notificationsAuthorized = false
+    var onSideQuestNearby: ((String) -> Void)?
+
+    func requestAlwaysAuthorization() {}
+    func enable() { isEnabled = true }
+    func disable() { isEnabled = false }
+    func refreshRegions() {}
+    func refreshNotificationStatus(completion: @escaping @MainActor () -> Void) { completion() }
+    @discardableResult func deleteAllAlerts() throws -> Int { 0 }
+
+    #if DEBUG
+    func simulateEntry(sideQuestID: String) { onSideQuestNearby?(sideQuestID) }
+    #endif
 }
 
 @MainActor

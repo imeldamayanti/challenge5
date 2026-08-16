@@ -202,12 +202,23 @@ public enum UIStrings {
             id: "Kamu belum berada di tempat yang tepat. Mendekatlah untuk memulai ceritanya.",
             en: "You're not at the right place yet. Get closer to begin the story."),
         .locationNotThereBack: LocalizedText(id: "Kembali ke beranda", en: "Back to Homepage"),
+        // `FR-MAP-04`. The label is the frame's; the hint is what makes it "presented as leaving
+        // the app", which is the half of that requirement a label alone cannot carry.
+        .locationNavigateThere: LocalizedText(id: "Arahkan ke sana", en: "Navigate There"),
+        .locationNavigateThereHint: LocalizedText(
+            id: "Membuka Apple Maps di luar aplikasi untuk rute berjalan kaki.",
+            en: "Opens Apple Maps outside this app for walking directions."),
         .cutsceneLegendTitle: LocalizedText(
             id: "Sebuah legenda akan menuntun perjalananmu",
             en: "A Legend Will Guide Your Journey"),
         .cutsceneSwipeHint: LocalizedText(
             id: "Geser bingkai foto untuk membuka legendanya",
             en: "Swipe photo frame to reveal the legends"),
+        // The way past the rub for anyone the rub does not work for — VoiceOver, Reduce Motion, or
+        // simply not discovering an undrawn gesture. It says what it does rather than "Next",
+        // because it is the same act as the swipe and not a way around it.
+        .cutsceneRevealAction: LocalizedText(
+            id: "Buka legendanya", en: "Reveal the legend"),
         .cutsceneStartAction: LocalizedText(id: "Mulai perjalanan", en: "Start the Journey"),
         .storyRevealPager: LocalizedText(
             id: "Halaman %1$d dari %2$d", en: "Page %1$d of %2$d"),

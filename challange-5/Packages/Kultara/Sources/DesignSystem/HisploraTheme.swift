@@ -165,6 +165,15 @@ public struct HisploraPalette: Sendable, Equatable {
         pairs.append(ContrastPair(label: "inkOnButton on buttonFill",
                                   foreground: inkOnButton, background: buttonFill,
                                   requirement: .bodyText))
+        // `223:2004` inverts it — a white capsule with near-black type. Both halves are measured
+        // rather than assumed symmetrical, and the white fill's own boundary against the ground is
+        // what lets `HisploraLightPillButtonStyle` do without the ring the dark pill needs.
+        pairs.append(ContrastPair(label: "buttonFill on inkOnButton",
+                                  foreground: buttonFill, background: inkOnButton,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "inkOnButton on brownStone",
+                                  foreground: inkOnButton, background: brownStone,
+                                  requirement: .bodyText))
         pairs.append(ContrastPair(label: "buttonRing on brownMid",
                                   foreground: buttonRing, background: brownMid,
                                   requirement: .nonTextEssential))
