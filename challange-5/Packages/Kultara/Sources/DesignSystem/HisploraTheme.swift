@@ -39,6 +39,26 @@ public struct HisploraPalette: Sendable, Equatable {
     public let inkCream: SRGBColor
     public let inkDusty: SRGBColor
 
+    /// The quest-row card on `452:3132` — a shade warmer and lighter than `paperCream`, drawn as a
+    /// ticket rather than as a sheet. Kept as its own token instead of rounded into `paperCream`
+    /// because the two sit on the same screen: the stamp's cream and the rows' cream differ, and
+    /// collapsing them loses the layering the frame builds.
+    public let paperTicket: SRGBColor
+    /// The row title on that card. Not `inkDark`: the frame sets the titles a touch warmer than
+    /// the near-black it uses on the story papers.
+    public let inkTicket: SRGBColor
+    /// The well of the segmented task progress bar (`452:3138`), which the filled segments are
+    /// stamped into.
+    public let trackWell: SRGBColor
+    /// The site-map screen's ground (`452:3028`). The only screen in the story flow that is not on
+    /// a brown: the plan is a document, and the frame lays it on paper rather than on earth.
+    public let mapGround: SRGBColor
+    /// The marker dots on the site plan (`452:3032`–`3034`). Drawn on the plan itself, so it is
+    /// measured against the papers rather than against "whatever the drawing happens to be" — and
+    /// it never carries meaning alone (`NFR-A11Y-05`): the markers are also named in the plan's
+    /// accessibility label, and each one carries a cream ring so it reads as a placed object.
+    public let mapMarker: SRGBColor
+
     // Inks on the paper grounds.
     public let inkDark: SRGBColor
     public let inkBody: SRGBColor
@@ -66,6 +86,11 @@ public struct HisploraPalette: Sendable, Equatable {
         paperCream: SRGBColor,
         paperWarm: SRGBColor,
         paperLight: SRGBColor,
+        paperTicket: SRGBColor,
+        inkTicket: SRGBColor,
+        trackWell: SRGBColor,
+        mapGround: SRGBColor,
+        mapMarker: SRGBColor,
         inkCream: SRGBColor,
         inkDusty: SRGBColor,
         inkDark: SRGBColor,
@@ -82,6 +107,11 @@ public struct HisploraPalette: Sendable, Equatable {
         self.paperCream = paperCream
         self.paperWarm = paperWarm
         self.paperLight = paperLight
+        self.paperTicket = paperTicket
+        self.inkTicket = inkTicket
+        self.trackWell = trackWell
+        self.mapGround = mapGround
+        self.mapMarker = mapMarker
         self.inkCream = inkCream
         self.inkDusty = inkDusty
         self.inkDark = inkDark
@@ -94,13 +124,20 @@ public struct HisploraPalette: Sendable, Equatable {
     }
 
     /// Sampled 2026-08-13, re-read 2026-08-14 from frames `81:588`, `81:617`, `89:1402`,
-    /// `223:2004`, `98:1588`, `187:866`, `105:1699`, `187:954`, `187:1053`, `187:1103`.
+    /// `223:2004`, `98:1588`, `187:866`, `105:1699`, `187:954`, `187:1053`, `187:1103`. Extended
+    /// 2026-08-17 from `452:3132` ("Quest 1/3"), `447:1880` ("Quest_Filled") and `452:3028`
+    /// ("Site Map").
     ///
     /// Two values are not the design's. `inkDusty` is drawn `#AA9B8E` and measures 3.34:1 on
     /// `brownStone` — a lead paragraph, so it is held to body text, and the theme yields to the
     /// threshold rather than the other way round (`NFR-A11Y-03`). It is lightened to the nearest
     /// passing value. `buttonRing` does not exist in the design at all and is added for the reason
     /// given on the property. Everything else is as drawn.
+    ///
+    /// The 2026-08-17 additions are all as drawn; what moved on those three screens is *usage*, not
+    /// values, and all three moves are recorded in `docs/hisplora-tokens.md`: `452:3138`'s unfilled
+    /// segments lose their 29% cream wash, that bar's `#9F8E88` outline is replaced by the already
+    /// measured `buttonRing`, and `447:1900`'s `#CAB7B0` pill outline is replaced by `brownMid`.
     public static let standard = HisploraPalette(
         brownDeep: SRGBColor(hex: "#6E2717"),
         brownMid: SRGBColor(hex: "#6E3B26"),
@@ -108,6 +145,11 @@ public struct HisploraPalette: Sendable, Equatable {
         paperCream: SRGBColor(hex: "#EEE7D2"),
         paperWarm: SRGBColor(hex: "#EADBC7"),
         paperLight: SRGBColor(hex: "#F4EADD"),
+        paperTicket: SRGBColor(hex: "#EFEBD7"),   // 10.79:1 under inkTicket
+        inkTicket: SRGBColor(hex: "#34312E"),
+        trackWell: SRGBColor(hex: "#8D7870"),     // 3.36:1 against a filled segment
+        mapGround: SRGBColor(hex: "#DFCDB5"),     // 11.95:1 under buttonFill
+        mapMarker: SRGBColor(hex: "#B44934"),     // 4.31:1 on paperCream, 3.43:1 on mapGround
         inkCream: SRGBColor(hex: "#FDF2DE"),      // 9.63:1 on brownDeep, 8.11:1 on brownStone
         inkDusty: SRGBColor(hex: "#D0B5AE"),      // moved from the drawn #AA9B8E; 4.67:1 on brownStone
         inkDark: SRGBColor(hex: "#1D1D1D"),       // 14.18:1 on paperLight
@@ -121,6 +163,8 @@ public struct HisploraPalette: Sendable, Equatable {
     public var allTokens: [(name: String, value: SRGBColor)] {
         [("brownDeep", brownDeep), ("brownMid", brownMid), ("brownStone", brownStone),
          ("paperCream", paperCream), ("paperWarm", paperWarm), ("paperLight", paperLight),
+         ("paperTicket", paperTicket), ("inkTicket", inkTicket), ("trackWell", trackWell),
+         ("mapGround", mapGround), ("mapMarker", mapMarker),
          ("inkCream", inkCream), ("inkDusty", inkDusty),
          ("inkDark", inkDark), ("inkBody", inkBody), ("inkMuted", inkMuted),
          ("buttonFill", buttonFill), ("inkOnButton", inkOnButton), ("buttonRing", buttonRing),
@@ -160,6 +204,48 @@ public struct HisploraPalette: Sendable, Equatable {
                                       foreground: inkMuted, background: paper,
                                       requirement: .bodyText))
         }
+
+        // The quest-row ticket on `452:3132`. Its own ink plus the two the row's subtitle and any
+        // resolved-state note are set in, because a card is only as legible as the least legible
+        // thing printed on it.
+        for (name, ink) in [("inkTicket", inkTicket), ("inkBody", inkBody), ("inkMuted", inkMuted)] {
+            pairs.append(ContrastPair(label: "\(name) on paperTicket",
+                                      foreground: ink, background: paperTicket,
+                                      requirement: .bodyText))
+        }
+
+        // The segmented task progress bar (`452:3138`). This pair *is* the bar's state: a filled
+        // segment is `paperCream`, an unfilled one is the bare well, and if the two are not
+        // distinguishable the bar says nothing. It is why the frame's 29% cream wash on the
+        // unfilled segments is gone — washed, they measure 2.25:1 against a filled one.
+        pairs.append(ContrastPair(label: "paperCream on trackWell",
+                                  foreground: paperCream, background: trackWell,
+                                  requirement: .nonTextEssential))
+
+        // The site-map screen (`452:3028`) — the one paper ground in the story flow.
+        //
+        // `inkMuted` is deliberately absent: it measures 4.39:1 here, just under body text, so the
+        // plan's citation line is set in `inkBody` instead. Enumerating the pair would assert
+        // something this screen does not do.
+        for (name, ink) in [("buttonFill", buttonFill), ("inkDark", inkDark), ("inkBody", inkBody)] {
+            pairs.append(ContrastPair(label: "\(name) on mapGround",
+                                      foreground: ink, background: mapGround,
+                                      requirement: .bodyText))
+        }
+        // The marker dots. Measured against the plan's own cream, which is where they are actually
+        // drawn — never against `mapGround`, which is the screen behind the plan and not a ground
+        // any marker lands on.
+        pairs.append(ContrastPair(label: "mapMarker on paperCream",
+                                  foreground: mapMarker, background: paperCream,
+                                  requirement: .nonTextEssential))
+
+        // `447:1880`'s parchment sheet does two jobs in `brownMid`: the place name printed at its
+        // head, and — after the deviation — the outline of the "Take Photo" control. The sheet's
+        // lightest sampled interior is `#F3F1E5`; `paperCream` stands in for it here as the
+        // packaged art's own darker end, which is the conservative direction for both.
+        pairs.append(ContrastPair(label: "brownMid on paperCream",
+                                  foreground: brownMid, background: paperCream,
+                                  requirement: .bodyText))
 
         // The filled control: its label, and its boundary against the ground it sits on.
         pairs.append(ContrastPair(label: "inkOnButton on buttonFill",
