@@ -29,7 +29,7 @@ struct RunSummaryView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
         .background(palette.paper.color)
         .navigationTitle(UIStrings.string(.summaryHeading, language))

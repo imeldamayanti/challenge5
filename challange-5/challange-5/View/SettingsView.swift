@@ -36,7 +36,7 @@ struct SettingsView: View {
                 #endif
             }
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
         // Permission state changes out from under the app — a trip to system Settings and back —
         // and there is no push channel for it, so the screen re-checks whenever it is shown.

@@ -79,6 +79,17 @@ public extension View {
             .textCase(role.isUppercased ? .uppercase : nil)
     }
 
+    /// Reserves room at the foot of a scrolling screen for the floating tab bar, scaled to the
+    /// reader's text size (`NFR-A11Y-02`, `NFR-A11Y-06`).
+    ///
+    /// A modifier rather than `.padding(.bottom, KultaraMetrics.floatingTabBarClearance)` at each
+    /// call site, because the scale can only be read from the environment and eleven screens reading
+    /// it independently is eleven chances to read it wrong — or to keep using the fixed 88 and put
+    /// the last control back under the bar.
+    func kultaraFloatingTabBarClearance() -> some View {
+        modifier(FloatingTabBarClearance())
+    }
+
     /// Keeps the system from setting a screen's name a second time, in its own face, above a page
     /// that already carries a typed heading. Platform-conditional because the modifier does not
     /// exist off iOS, and the package builds for macOS in test.
@@ -192,5 +203,20 @@ public struct AccuracyChip: View {
             shape.stroke(palette[keyPath: ink].color,
                          style: StrokeStyle(lineWidth: appearance.borderWidth, dash: [3, 2]))
         }
+    }
+}
+
+/// The scaled foot clearance, as a modifier so the label scale is read once.
+///
+/// `@ScaledMetric` against `.footnote` because that is the text style `KultaraTabBar` sets its labels
+/// in (`chipLabel`), and the bar's height is what is being cleared. A base of 100 makes the ratio
+/// fall straight out: the framework scales the number, so the quotient is the scale.
+private struct FloatingTabBarClearance: ViewModifier {
+    @ScaledMetric(relativeTo: .footnote) private var scaledUnit: CGFloat = 100
+
+    func body(content: Content) -> some View {
+        content.padding(
+            .bottom,
+            KultaraMetrics.floatingTabBarClearance(labelScale: scaledUnit / 100))
     }
 }

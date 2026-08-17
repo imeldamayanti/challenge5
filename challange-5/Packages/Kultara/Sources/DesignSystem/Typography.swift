@@ -204,7 +204,34 @@ public enum KultaraMetrics {
     ///
     /// 64 for the pill, 8 for the padding under it, and 16 of air so the last line is not flush
     /// against it.
+    ///
+    /// **This value is the clearance at the default text size only.** `floatingTabBarClearance(labelScale:)`
+    /// is what a screen should actually reserve; this stays public because it is the design's own
+    /// number and the scaled form is defined in terms of it.
     public static let floatingTabBarClearance: CGFloat = 88
+
+    /// The bar's own content height at the default text size — `KultaraTabBar`'s `minHeight`.
+    ///
+    /// A minimum rather than a height, which is the whole reason the clearance has to scale: the bar
+    /// grows with its labels and a fixed 88 does not.
+    public static let floatingTabBarContentHeight: CGFloat = 64
+
+    /// The room a scrolling screen has to leave for the floating tab bar at a given label scale
+    /// (`NFR-A11Y-02`, `NFR-A11Y-06`).
+    ///
+    /// The bug this exists for: the clearance was a fixed 88 while `KultaraTabBar` is a `minHeight`
+    /// that grows with its labels. At the largest accessibility size the bar stands roughly 210
+    /// points tall, the last control on a scrolling screen came to rest underneath it, and a tap on
+    /// that control's centre belonged to the bar — so tapping "Settings" switched tab instead of
+    /// opening Settings. `FloatingTabBarClearanceTests` holds every part of the contract below.
+    ///
+    /// Never *less* than the design's 88, however small the text: the bar has a minimum height, so
+    /// shrinking the labels does not shrink the thing being cleared.
+    public static func floatingTabBarClearance(labelScale: CGFloat) -> CGFloat {
+        // The 24 is the 8 of padding under the pill plus the 16 of air above the last line — both
+        // fixed, because neither is type.
+        max(floatingTabBarClearance, floatingTabBarContentHeight * labelScale + sm + lg)
+    }
 
     public static let cardCornerRadius: CGFloat = 4
     /// The photo cards on Home are rounded far more than a sheet of paper is — they are

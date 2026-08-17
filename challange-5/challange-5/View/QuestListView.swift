@@ -197,7 +197,7 @@ struct QuestListView: View {
                 .padding(.top, KultaraMetrics.sm)
             }
             .padding(.horizontal, KultaraMetrics.xl)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
     }
 }

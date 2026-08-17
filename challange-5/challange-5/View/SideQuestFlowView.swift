@@ -147,7 +147,7 @@ struct LocationNoticeScreen: View {
                     .buttonStyle(.seal)
             }
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
         .background(palette.paper.color)
     }
