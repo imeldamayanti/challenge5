@@ -125,7 +125,7 @@ Both images are generated art exported from the design file (`ChatGPT Image Aug 
 answer rather than an editorial one — recorded here and in the component headers so it stays
 answerable.
 
-**Three assets in the file were deliberately not shipped.** They are not oversights:
+**Four assets in the file were deliberately not shipped.** They are not oversights:
 
 - **The Google Maps screenshots** on `89:1402` and `223:2004`, and the traced street map derived
   from them. They are a third party's map imagery under that party's terms, and `FR-MAP-01`
@@ -133,6 +133,48 @@ answerable.
   static route image per quest (`route.previewImageAsset`) is the supported way to show a map here.
 - **The Apple system icons** in the permission-dialog mock. iOS draws that dialog itself.
 - **The AI-generated portrait** of I Gusti Ngurah Made Agung — see below.
+- **The place notice's plate**, `293:1630` on `293:1613` — see the next section.
+
+### The plate on `293:1613`, and what the code draws instead
+
+`293:1630` is a stock wedding-invitation plate. Exported, it carries a dozen real individuals' and
+businesses' names engraved across its middle; in Figma the designer laid three opaque rectangles
+(`293:1631`–`1633`) over them rather than removing them. Shipping the file — whole or patched — would
+put third parties' names and somebody else's licensed engraving in every copy of the app, so it is
+out, and no amount of cropping changes that.
+
+What replaced it went through three passes, and the first two are worth recording because they are the
+failure modes of drawing ornament in code:
+
+1. **Silhouette only.** Cream fill, one inset rule, scooped corners. On device it read as a blank
+   cream ticket beside the mock-up — which is the state the user rejected.
+2. **Stroked centre lines.** Stems, hooks and hung arcs at 0.9–2.2 points. It read as wire: a pair of
+   antennae flanking the portrait, then a scatter of pins. Bare centre lines do not read as carving.
+3. **What ships now.** Every limb is a tapered ribbon with two edges, filled and then outlined; leaves
+   are closed teardrops whose belly is held to a third of their own length (asked for less, they
+   render as blades and the spray reads as wheat); volutes are spirals sampled 40 times a turn, not
+   8 (at 8 the eye is a visible hexagon). Plus four corner flourishes, a pendant sized to the lobe it
+   sits in, and a quatrefoil watermark at 26-point pitch and 3.8% ink.
+
+**Every dimension of the shape is measured, not styled.** `HisploraPlaqueMetrics` holds the numbers
+and `PlaqueGeometryTests` asserts them, read off the exported plate's alpha coverage (402 × 675,
+sitting at y = 94 on the 874-point frame): straight sides at x = 24…381, sheet top at y = 44 and
+bottom at y = 616, a head lobe rising to y ≈ 8, a pendant lobe falling to y ≈ 660, and corner arcs
+centred **on** the corner point — a scoop, radius 36. A conventional inset rounded corner misses three
+of the five measured edge samples by more than 20 points, which is why the test checks the wrong
+answer as well as the right one.
+
+**The gilded oval straddles the plate's head.** `320:2485` draws it at y = 125 while the sheet starts
+at 138, so 13 points of gold overlap the cream — reproduced, because centring it politely below the
+edge is a different design. It is an overlay on the panel rather than its first row, since a row
+inside the panel cannot hang past it.
+
+**What is still not the mock-up: the ornament's density.** The drawn spray is a delicate laurel; the
+stock plate is a dense damask. Closing that gap needs artwork this project owns — commissioned,
+licensed, or generated for it. The seam for that is already in place: `HisploraPlaqueArtwork` prefers
+`Resources/Images/plaque-engraving.png`, clipped to the same silhouette, and falls back to the drawn
+spray whenever the file is absent (as it is today). Dropping the file in is the whole change; no sizes
+or layout move.
 
 ## What the frames draw that the code does not, and why
 
@@ -243,8 +285,13 @@ table, which is the reason the table exists.
 ## Seen rendering
 
 `81:588`, `98:1588` and `187:866` were verified on iPhone 17 / iOS 26.5 on 2026-08-14 — the first
-time the cutscene screens had been seen at all. The run reaches them from a desk by setting the
-simulator's location to the first checkpoint rather than by the debug toggle:
+time the cutscene screens had been seen at all. **`293:1613` was verified the same way on 2026-08-17**,
+also for the first time: the place notice at Puri Agung Pemecutan, reached in one pass — splash →
+onboarding (Skip) → login wireframe (Skip for now) → quest card → story preview → `FR-START-04a`
+safety notice → location rationale → permission → cutscene portrait (the scratch reveal needs a real
+drag path, not taps) → story reveal → place notice. It is what drove the plate rewrite above. The run
+reaches these screens from a desk by setting the simulator's location to the first checkpoint rather
+than by the debug toggle:
 
 ```bash
 xcrun simctl location <udid> set -8.6595,115.2077

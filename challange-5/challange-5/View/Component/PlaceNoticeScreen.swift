@@ -56,22 +56,46 @@ struct PlaceNoticeScreen: View {
     /// description, then (only at a sacred Place) the dress-code and photo-policy rules.
     @State private var showsPoints = false
 
-    /// The frame's margins, in its own 402-point terms: 20 to the screen's edge for the pill and
-    /// the back arrow, and a 66-point column inside the plaque for everything printed on it.
+    /// The frame's margins, in its own 402-point terms.
+    ///
+    /// `margin` is the 20 to the screen's edge the pill and the back arrow both keep. The rest are
+    /// read off the exported plate (`293:1630`, alpha-measured — see `HisploraPlaqueMetrics`): its
+    /// straight sides stand at x = 24 and x = 381, so the panel is inset `plaqueInset`; the bullets
+    /// run x = 66…339, which is `plaqueColumn` inside that; and the description runs x = 90…332, a
+    /// further `descriptionIndent` in on the leading edge and `descriptionTrail` on the trailing one.
+    /// The mock-up indents its prose past its own list and that reads as deliberate — a lead
+    /// paragraph set narrower than the points under it — so it is reproduced rather than tidied away.
     private static let margin: CGFloat = 20
-    private static let plaqueColumn: CGFloat = 66
+    private static let plaqueInset: CGFloat = 22
+    private static let plaqueColumn: CGFloat = 44
+    private static let descriptionIndent: CGFloat = 24
+    private static let descriptionTrail: CGFloat = 7
+
+    /// Where the gilded oval hangs. `320:2485` draws it 156.856 wide at y = 125, while the plate's
+    /// own sheet starts at y = 138 — so the frame **straddles** the plate's head rather than sitting
+    /// inside it, and 13 points of gold overlap the cream's top edge. Reproducing that overlap is
+    /// most of what separates this screen from the mock-up; centring the oval politely below the edge
+    /// reads as a different design.
+    private static let portraitWidth: CGFloat = 157
+    private static let portraitTopOffset: CGFloat = HisploraPlaqueMetrics.crestHeight - 13
+
+    /// The room the panel reserves above its first line of prose: the oval's 196, plus the 54 of air
+    /// `293:1613` leaves under it, less the head lobe the panel already reserves for itself.
+    private static let plaqueInteriorTop: CGFloat =
+        portraitTopOffset + 196 + 54 - HisploraPlaqueMetrics.crestHeight
 
     var body: some View {
         HisploraStage(ground: \.brownStone) {
             ZStack(alignment: .top) {
                 ScrollView {
                     plaque
-                        // The plate's drawn top edge falls at about 130 of 874, which on a screen
-                        // whose status bar has already taken 59 is this much. It is not the
-                        // `293:1630` node's own 94: that PNG carries transparent margin above the
-                        // artwork, and `HisploraPlaqueShape` does not. Getting this wrong puts the
-                        // cream under the back arrow, where a cream arrow disappears.
-                        .padding(.top, 71)
+                        .padding(.horizontal, Self.plaqueInset)
+                        // The plate's head lobe tips at y ≈ 105 of 874 — measured, not the
+                        // `293:1630` node's own 94, because that PNG carries transparent margin above
+                        // the artwork. On a screen whose status bar has already taken 59 that is this
+                        // much. Getting it wrong puts cream under the back arrow, where a cream arrow
+                        // disappears.
+                        .padding(.top, 46)
                         .padding(.bottom, KultaraMetrics.lg)
                 }
                 .scrollBounceBehavior(.basedOnSize)
@@ -101,23 +125,21 @@ struct PlaceNoticeScreen: View {
             .padding(.bottom, Self.margin)
     }
 
-    /// The plate, with the gilded oval standing over its head the way `320:2485` draws it.
+    /// The plate, with the gilded oval standing over its head the way `320:2485` draws it — as an
+    /// overlay rather than as the panel's first row, because the oval has to hang *past* the cream's
+    /// top edge and a row inside the panel cannot.
     private var plaque: some View {
-        HisploraPlaquePanel {
-            VStack(spacing: 0) {
-                HisploraFramedImage(url: portraitURL, label: placeName)
-                    // 156.856 of 402 wide, and 31 below the plate's own top edge.
-                    .containerRelativeFrame(.horizontal, alignment: .center) { width, _ in
-                        width * (156.856 / 402.0)
-                    }
-                    .padding(.top, 31)
-                    // 375 − 321: the gap between the oval's foot and the first line of prose.
-                    .padding(.bottom, 54)
-                printedMatter
-                    .padding(.horizontal, Self.plaqueColumn)
-                    // The plate runs on well past its last line; it does not end on it.
-                    .padding(.bottom, KultaraMetrics.xxl + KultaraMetrics.xl)
-            }
+        HisploraPlaquePanel(interiorTop: Self.plaqueInteriorTop) {
+            printedMatter
+                .padding(.horizontal, Self.plaqueColumn)
+                // The plate runs on well past its last line; it does not end on it. 710 − 630, in
+                // the frame's terms: its last bullet to the foot of its sheet.
+                .padding(.bottom, 80)
+        }
+        .overlay(alignment: .top) {
+            HisploraFramedImage(url: portraitURL, label: placeName)
+                .frame(width: Self.portraitWidth)
+                .offset(y: Self.portraitTopOffset)
         }
     }
 
@@ -132,6 +154,8 @@ struct PlaceNoticeScreen: View {
                         showsPoints = true
                     }
                 })
+                .padding(.leading, Self.descriptionIndent)
+                .padding(.trailing, Self.descriptionTrail)
 
             if isSacred {
                 // The heading belongs to the rules, not to the prose: it arrives with them, once
@@ -144,6 +168,9 @@ struct PlaceNoticeScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     // 454 − 375, less the three lines of prose the frame sets above it.
                     .padding(.top, KultaraMetrics.lg)
+                    // `320:3182` sets the heading on the prose's indent, not the list's.
+                    .padding(.leading, Self.descriptionIndent)
+                    .padding(.trailing, Self.descriptionTrail)
                     .opacity(showsPoints ? 1 : 0)
                     .animation(
                         reduceMotion || voiceOverEnabled ? nil : .easeOut(duration: 0.3),
