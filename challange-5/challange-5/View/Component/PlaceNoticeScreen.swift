@@ -3,11 +3,10 @@ import DesignSystem
 import SwiftUI
 import UIStringsKit
 
-/// The place notice — `293:1613` ("Quest"), which replaces the earlier `50:137` treatment — and the
-/// checkpoint's task menu — `51:201` ("Detail Quest"). Two stops between the story reveal and the
-/// walk itself, both reached only when there is something to say: the notice only for a sacred
-/// Place (`checkpoint.isSacred`, the same gate `checkpointScreen`'s inline notice already used),
-/// the menu always.
+/// The place notice — `293:1613` ("Quest"), which replaces the earlier `50:137` treatment. One of
+/// two stops between the story reveal and the walk itself, and the conditional one: it is reached
+/// only at a sacred Place (`checkpoint.isSacred`, the same gate `checkpointScreen`'s inline notice
+/// already used). The task menu that always follows it is `CheckpointDetailScreen`.
 ///
 /// **The plaque is drawn, not shipped, and that is a licence decision rather than an omission.**
 /// `293:1630` — the ornate cream plate the whole screen is printed on — is a stock
@@ -31,10 +30,8 @@ import UIStringsKit
 /// (the temple-entry rule) has no field behind it at all. `description` renders
 /// `Place.loreStandalone` and the rules render the Place's own `dressCode` and `photoPolicy`, so
 /// this screen states what the content actually says rather than what the mock-up says.
-/// `51:201`'s three found-object tasks ("The Iron Statue", "The Ancient Script", "The Whip Bearer")
-/// do not exist anywhere in the content tree either — the shipped checkpoint carries exactly one
-/// task, a written reflection — so `CheckpointDetailScreen` lists whatever `tasks` the run actually
-/// has, titled by `TaskType` rather than by an invented name.
+/// The task menu that follows this screen has the same problem with its own frame's copy, and the
+/// same answer; it now lives in `CheckpointDetailScreen.swift`, restyled to `452:3132`.
 struct PlaceNoticeScreen: View {
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -211,104 +208,5 @@ struct PlaceNoticeScreen: View {
             reduceMotion || voiceOverEnabled ? nil
                 : .easeOut(duration: 0.3).delay(Double(index) * 0.15),
             value: showsPoints)
-    }
-}
-
-/// The checkpoint's task menu — `51:201` ("Detail Quest"). A menu, not the tasks themselves: every
-/// row continues into the existing checkpoint screen, where `TaskCard` already carries the answer
-/// field, the save, and the skip (`FR-TASK-02`). This screen's own job is narrower — name what is
-/// waiting, in the order it is waiting in — so it does not duplicate that machinery.
-struct CheckpointDetailScreen: View {
-    @Environment(\.hisploraPalette) private var palette
-
-    let language: ContentLanguage
-    let placeName: String
-    let tasks: [ContentTask]
-    let taskPrompts: [String: String]
-    let onContinue: () -> Void
-    let onBack: () -> Void
-
-    var body: some View {
-        HisploraStage(ground: \.brownStone) {
-            VStack(spacing: 0) {
-                HStack {
-                    HisploraBackButton(
-                        accessibilityLabel: UIStrings.string(.storyRevealBack, language),
-                        action: onBack)
-                    Spacer()
-                }
-                .overlay {
-                    Text(placeName)
-                        .font(KultaraTypography.font(.questTitle))
-                        .foregroundStyle(palette.inkCream.color)
-                        .lineLimit(1)
-                        .accessibilityAddTraits(.isHeader)
-                }
-                .padding(.horizontal, KultaraMetrics.lg)
-                .padding(.top, KultaraMetrics.lg)
-                ScrollView {
-                    rows
-                        .padding(.vertical, KultaraMetrics.lg)
-                        .padding(.horizontal, KultaraMetrics.lg)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                HStack {
-                    Spacer()
-                    HisploraNextButton(
-                        accessibilityLabel: UIStrings.string(.checkpointDetailContinue, language),
-                        action: onContinue)
-                }
-                .padding(.horizontal, KultaraMetrics.lg)
-                .padding(.bottom, KultaraMetrics.lg)
-            }
-        }
-    }
-
-    private var rows: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            ForEach(Array(tasks.enumerated()), id: \.element.id) { offset, task in
-                if offset > 0 {
-                    Rectangle()
-                        .fill(palette.inkDark.color.opacity(0.2))
-                        .frame(height: KultaraMetrics.hairline)
-                        .accessibilityHidden(true)
-                }
-                row(task)
-            }
-        }
-        .padding(KultaraMetrics.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.paperCream.color, in: RoundedRectangle(cornerRadius: KultaraMetrics.sm))
-    }
-
-    private func row(_ task: ContentTask) -> some View {
-        Button(action: onContinue) {
-            HStack(spacing: KultaraMetrics.md) {
-                VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
-                    Text(taskTypeLabel(task.type))
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(palette.brownDeep.color)
-                    Text(taskPrompts[task.id] ?? "")
-                        .font(.system(size: 13, weight: .light))
-                        .foregroundStyle(palette.inkBody.color)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.forward")
-                    .foregroundStyle(palette.brownDeep.color)
-            }
-            .frame(minHeight: KultaraMetrics.minimumTapTarget)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-    }
-
-    private func taskTypeLabel(_ type: TaskType) -> String {
-        switch type {
-        case .reflection: UIStrings.string(.taskTypeReflection, language)
-        case .photo: UIStrings.string(.taskTypePhoto, language)
-        case .question: UIStrings.string(.taskTypeQuestion, language)
-        }
     }
 }

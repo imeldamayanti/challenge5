@@ -23,4 +23,8 @@ struct CheckpointPresentation: Sendable, Equatable, Identifiable {
     let coordinate: Coordinate
     let arrivalRadiusM: Int
     let isFinal: Bool
+    /// The plan of these grounds, when the Place ships one (`452:3028`). Nil for the four stops that
+    /// are a temple wall, a market floor, a road junction and a museum — none of which the content
+    /// tree carries a plan for, and none of which should show an empty frame where one would be.
+    let siteMap: SiteMapPresentation?
 }

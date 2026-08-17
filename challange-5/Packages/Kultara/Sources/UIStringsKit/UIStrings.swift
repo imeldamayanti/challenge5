@@ -234,6 +234,33 @@ public enum UIStrings {
         .placeNoticeBeforeExplore: LocalizedText(
             id: "Sebelum menjelajah:", en: "Before you explore:"),
         .checkpointDetailContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .checkpointDetailAllTasks: LocalizedText(id: "Semua Kegiatan", en: "All Quest"),
+        .checkpointDetailContinueToNext: LocalizedText(
+            id: "Lanjut ke titik berikutnya", en: "Continue to Next Location"),
+        .checkpointDetailStampLabel: LocalizedText(
+            id: "Stempel titik ini", en: "This checkpoint's stamp"),
+        .checkpointDetailProgressLabel: LocalizedText(
+            id: "%1$d dari %2$d kegiatan selesai", en: "%1$d of %2$d activities done"),
+        .checkpointDetailTaskDone: LocalizedText(id: "Selesai", en: "Done"),
+        .checkpointDetailTaskOpen: LocalizedText(id: "Belum dikerjakan", en: "Not done yet"),
+
+        .taskDetailTakePhoto: LocalizedText(id: "Ambil Foto", en: "Take Photo"),
+        .taskDetailAnswerAction: LocalizedText(id: "Jawab di titik ini", en: "Answer at the stop"),
+        .taskDetailSeeMap: LocalizedText(id: "Ketuk untuk lihat peta", en: "Tap to see the map"),
+        .taskDetailSeeMapHint: LocalizedText(
+            id: "Membuka denah tapak tempat ini.",
+            en: "Opens the drawn plan of this place's grounds."),
+        .siteMapClose: LocalizedText(id: "Tutup denah", en: "Close the plan"),
+        .siteMapGestureHint: LocalizedText(
+            id: "Cubit untuk memperbesar, geser untuk menjelajah",
+            en: "Pinch to zoom, drag to explore"),
+        .siteMapAccessibility: LocalizedText(
+            id: "Denah tapak %1$@, dengan %2$d titik bertanda.",
+            en: "Site plan of %1$@, with %2$d marked points."),
+        .siteMapSourceHeading: LocalizedText(id: "Sumber denah", en: "Plan source"),
+        .siteMapUnavailable: LocalizedText(
+            id: "Tempat ini belum punya denah tapak di versi konten ini.",
+            en: "This place ships no site plan in this content version."),
 
         .runMapHeading: LocalizedText(id: "Rute", en: "The route"),
         .runMapAccessibility: LocalizedText(
