@@ -22,7 +22,8 @@ enum ContentFactory {
         consentRecordId: String = "place-a",
         entryCost: Money = Money(amount: 0, currency: "IDR"),
         close: TimeOfDay = TimeOfDay(hour: 17, minute: 0),
-        mapPoint: MapPoint? = nil
+        mapPoint: MapPoint? = nil,
+        siteMap: PlaceSiteMap? = nil
     ) -> Place {
         Place(
             id: id,
@@ -42,7 +43,8 @@ enum ContentFactory {
             loreStandalone: [lore()],
             sources: sources,
             consentRecordId: consentRecordId,
-            mapPoint: mapPoint)
+            mapPoint: mapPoint,
+            siteMap: siteMap)
     }
 
     static func task(

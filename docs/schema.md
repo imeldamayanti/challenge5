@@ -33,6 +33,7 @@ Content/
 │   └── puri-agung-pemecutan.json        # not shipped; validated at build
 └── assets/
     ├── places/{place_id}/hero.heic
+    ├── places/{place_id}/site-map.png          # drawn plan of the grounds (Place.siteMap)
     ├── quests/{quest_id}/route-preview.png
     ├── quests/{quest_id}/route.geojson
     ├── quests/{quest_id}/hero.png            # discovery card image
@@ -136,11 +137,23 @@ When absent, the map surface is not offered at all rather than shown empty.
 | `sources` | ≥ 1 required (NFR-CONT-02) |
 | `consentRecordId` | must resolve to a `granted`, unexpired record (NFR-GOV-01) |
 | `mapPoint` | `{ x, y }`, each within 0…1 — position on `manifest.regionMap`, required for every Place a quest visits when a region map ships (V17) |
+| `siteMap` | optional `{ asset, aspectRatio, sourceRef }` — the drawn plan of these grounds. `asset` must exist (V14); `sourceRef` must index this Place's `sources` (V3) |
 
 **`mapPoint` is authored, not derived from `coordinate`.** The region map is an illustration:
 hand-drawn, taller than the island is, with a stylised coastline. Projecting a real coordinate onto
 it would put every pin somewhere wrong while looking precise. A drawing's pin positions are a
 drawing decision, so the validator checks the range and not the geography.
+
+**`siteMap` carries a `sourceRef`, and that is the point of it being a struct.** A site plan is not
+decoration: it asserts where the gates are, how the courtyards divide, and — where the drawing is
+annotated — how many metres across the walls stand. Those are claims about a real place, so
+`FR-CP-05` applies to them exactly as it applies to a `LoreBlock`, and the index resolves against the
+Place's own `sources` in the same way. The site-map screen prints that citation under the drawing, so
+a plan nobody has verified says so on the screen rather than in a JSON file nobody opens.
+
+It lives on `Place` rather than on `Quest` because the grounds belong to the place, not to the walk
+across it: two quests visiting the same puri show the same plan. It is optional, and most Places will
+never have one — a market floor and a road junction are not buildings with a plan.
 
 ### A.5 Quest
 
@@ -291,7 +304,7 @@ CI fails on any of these. This is the enforcement mechanism for requirements tha
 |---|---|---|
 | V1 | Every `LocalizedText` has non-empty `id` and `en` | NFR-I18N-02 |
 | V2 | Every `Place.sources` has ≥ 1 entry | NFR-CONT-02 |
-| V3 | Every `LoreBlock` has `accuracy` and ≥ 1 `sourceRefs` | NFR-CONT-01 |
+| V3 | Every `LoreBlock` has `accuracy` and ≥ 1 `sourceRefs`; every `sourceRef` — a lore block's or `Place.siteMap`'s — indexes an existing source | NFR-CONT-01, FR-CP-05 |
 | V4 | Every `Place.consentRecordId` resolves; status `granted`; `expiresAt` in the future | NFR-GOV-01/03 |
 | V5 | Every ConsentRecord has `grantedByName`, `grantedByRole`, `regionOwner` | NFR-GOV-02/07 |
 | V6 | No photo task at a Place with `photoPolicy.level == "prohibited"` | FR-TASK-06 |
@@ -302,7 +315,7 @@ CI fails on any of these. This is the enforcement mechanism for requirements tha
 | V11 | `distanceSource == "walking-directions"` | NFR-CONT-05 |
 | V12 | `proximityRadiusM > startCheckpoint.place.arrivalRadiusM` | FR-PROX-11 |
 | V13 | `arrivalRadiusM` within 30–250 | FR-ARR-07 |
-| V14 | Every asset path referenced exists | — |
+| V14 | Every asset path referenced exists, including `Place.siteMap.asset`; `siteMap.aspectRatio > 0` | — |
 | V15 | Total content payload ≤ 200 MB (leaves headroom under the 250 MB app budget) | NFR-PERF-07 |
 | V16 | `hardLatestStart` matches recomputation from visiting hours | FR-DISC-06 |
 | V17 | When `manifest.regionMap` is present, every Place a quest visits has a `mapPoint` within 0…1 | FR-DISC-02/03 |

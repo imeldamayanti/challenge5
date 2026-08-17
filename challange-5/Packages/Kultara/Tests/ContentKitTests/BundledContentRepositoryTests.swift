@@ -56,10 +56,11 @@ struct BundledContentRepositoryTests {
     }
 
     @Test func exposesTheContentBundleVersionAQuestRunWouldPin() throws {
-        // AD-4: a Run pins this at start. `s5` shipped the `badung-jejak` collection alongside
-        // this version bump — any content change bumps it, per `manifest.json`'s own rule.
+        // AD-4: a Run pins this at start. Any content change bumps it, per `manifest.json`'s own
+        // rule — `s5` shipped the `badung-jejak` collection at `2026.09.1`, and `2026.09.2` added
+        // Puri Agung Pemecutan's site plan and the third source that cites it (`452:3028`).
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.1")
+        #expect(try repository.contentBundleVersion() == "2026.09.2")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)
