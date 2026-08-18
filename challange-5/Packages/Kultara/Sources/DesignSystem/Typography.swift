@@ -49,6 +49,11 @@ public enum KultaraTypography {
         /// Bold at 17 — the smallest and heaviest of the four, which is what makes it read as a
         /// standfirst rather than as a second title.
         case storyPlaceMark
+        /// The onboarding screens' title (`523:1951`, `523:1978`, `523:2006`). New York Regular at
+        /// 30 — between `storyDisplay` and `storySection`, and its own role rather than either of
+        /// those bent at a call site, because it is the masthead of a screen that has no other
+        /// serif on it.
+        case onboardingDisplay
         /// The place name a story-flow screen carries in its top bar (`452:3136`), where the frame
         /// sets the serif rather than the sans the other bars use.
         case storyBarTitle
@@ -73,6 +78,7 @@ public enum KultaraTypography {
             // 25 and 17 as drawn; `.title2` and `.title3` are the two system styles those sit
             // between, and a text style is what makes them scale at all (`NFR-A11Y-01`).
             case .storySection, .storyTaskTitle: .title2
+            case .onboardingDisplay: .title
             case .storyPlaceMark, .storyBarTitle: .title3
             case .typedSheet: .footnote
             case .typedFigure: .title3
@@ -89,7 +95,8 @@ public enum KultaraTypography {
             case .body, .lore, .metadata, .caption: .regular
             // Special Elite ships in one weight, and New York's display cut is drawn light on
             // purpose — the frames set both regular.
-            case .storyDisplay, .typedSheet, .typedFigure, .storyBarTitle: .regular
+            case .storyDisplay, .typedSheet, .typedFigure, .storyBarTitle,
+                 .onboardingDisplay: .regular
             // The three weights `452:3174`, `447:1896` and `447:1906` are drawn in. New York is
             // the system's own serif and ships every weight, so unlike Instrument Serif these are
             // real cuts rather than a synthesised smear.
@@ -110,7 +117,7 @@ public enum KultaraTypography {
             switch self {
             case .questTitleLarge, .questTitle, .sectionHeading: .serif
             case .storyDisplay, .storySection, .storyTaskTitle, .storyPlaceMark,
-                 .storyBarTitle: .displaySerif
+                 .storyBarTitle, .onboardingDisplay: .displaySerif
             case .typedSheet, .typedFigure: .typewriter
             default: .sans
             }
@@ -135,6 +142,7 @@ public enum KultaraTypography {
             case .questTitle: 24
             case .sectionHeading: 22
             case .storyDisplay: 38
+            case .onboardingDisplay: 30
             case .storySection, .storyTaskTitle: 25
             case .storyPlaceMark, .storyBarTitle: 17
             // The frame types the sheet at 8.5 pt, because on the frame the sheet is a small
@@ -163,6 +171,8 @@ public enum KultaraTypography {
             case .questTitleLarge, .questTitle, .sectionHeading, .body, .lore: 0
             // The frames track the display down (-0.76 at 38 pt) and the typed sheet in slightly.
             case .storyDisplay: -0.76
+            // The onboarding frames set the 30-point title untracked, unlike the 38-point display.
+            case .onboardingDisplay: 0
             case .storySection, .storyTaskTitle: -0.5
             case .storyPlaceMark: -0.34
             case .storyBarTitle: -0.38
@@ -188,7 +198,7 @@ public enum KultaraTypography {
             // `typedFigure` is deliberately absent. It is `.title3` — 20 pt regular — which is
             // under WCAG's 24 pt, so claiming the allowance here would quietly lower the bar the
             // palette is measured against. It is inkDark on paper anyway, at 13.64:1.
-            case .questTitleLarge, .questTitle, .storyDisplay: true
+            case .questTitleLarge, .questTitle, .storyDisplay, .onboardingDisplay: true
             default: false
             }
         }
@@ -207,6 +217,7 @@ public enum KultaraTypography {
             case .questTitleLarge: -4
             case .questTitle, .sectionHeading: -2
             case .storyDisplay: -3
+            case .onboardingDisplay: -2
             case .storySection, .storyTaskTitle, .storyPlaceMark, .storyBarTitle: -1
             // 1.4 line height on the frame's sheet, which at this size is a few points of air.
             case .typedSheet: 3

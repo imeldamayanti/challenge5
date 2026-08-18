@@ -19,31 +19,36 @@ public enum UIStrings {
         // MARK: Onboarding
         .onboardingSkip: LocalizedText(id: "Lewati", en: "Skip"),
         .onboardingNext: LocalizedText(id: "Lanjut", en: "Next"),
-        .onboardingStart: LocalizedText(id: "Mulai menjelajah", en: "Start exploring"),
-        .onboardingWelcomeTitle: LocalizedText(
-            id: "Jalan kaki, bukan gulir layar",
-            en: "A walk, not a feed"),
-        .onboardingWelcomeBody: LocalizedText(
-            id: "Setiap kuis adalah satu rute berjalan kaki dengan cerita yang bersambung dari satu titik ke titik berikutnya. Tidak perlu akun, tidak perlu email.",
-            en: "Each quest is one walking route with a story that carries from one stop to the next. No account, no email."),
+        // `523:2051`. The last screen's action names the thing it starts rather than saying
+        // "Done" — the frame's wording, and the one place onboarding promises what happens next.
+        .onboardingStart: LocalizedText(
+            id: "Mulai petualangan pertamamu",
+            en: "Begin Your First Quest"),
+        .onboardingProgress: LocalizedText(id: "Layar %d dari %d", en: "Screen %d of %d"),
+        .onboardingExploreTitle: LocalizedText(
+            id: "Menjelajah Lebih Dalam",
+            en: "Explore Beyond The Surface"),
+        .onboardingExploreBody: LocalizedText(
+            id: "Susuri kerajaan kuno, pura yang terlupakan, dan kisah tersembunyi yang jarang didengar wisatawan.",
+            en: "Walk through ancient kingdoms, forgotten temples, and hidden stories that most tourists never hear about."),
         .onboardingPocketTitle: LocalizedText(
-            id: "Simpan ponsel saat berjalan",
-            en: "Pocket the phone while you walk"),
+            id: "Simpan Ponsel Saat Berjalan",
+            en: "Pocket The Phone While You Walk"),
         .onboardingPocketBody: LocalizedText(
             id: "Petunjuk dibaca sekali saat berhenti, lalu ponsel masuk kantong. Aplikasi ini dibuka di titik pemberhentian, bukan dibawa terbuka sepanjang jalan.",
             en: "You read the clue once while standing still, then the phone goes away. This app is opened at checkpoints, not carried open along the street."),
-        .onboardingAccuracyTitle: LocalizedText(
-            id: "Tercatat atau tutur, selalu ditandai",
-            en: "Documented or oral, always labelled"),
-        .onboardingAccuracyBody: LocalizedText(
-            id: "Setiap klaim membawa label sumbernya: catatan tertulis atau cerita yang diwariskan. Sumbernya bisa dibuka dari layar cerita.",
-            en: "Every claim carries its provenance: a written record, or a story handed down. The sources are reachable from the story screen."),
-        .onboardingRespectTitle: LocalizedText(
-            id: "Tempat ini masih dipakai",
-            en: "These places are still in use"),
-        .onboardingRespectBody: LocalizedText(
-            id: "Beberapa titik adalah tempat ibadah aktif. Aturan pakaian dan aturan foto ditampilkan sebelum kamu sampai, dan tidak ada permainan di dalamnya.",
-            en: "Some stops are active places of worship. Dress and photography rules are shown before you arrive, and no game mechanics are used inside them."),
+        .onboardingQuestTitle: LocalizedText(
+            id: "Sejarah Menjadi Petualangan",
+            en: "History Becomes A Quest"),
+        .onboardingQuestBody: LocalizedText(
+            id: "Ikuti jalur jalan kaki nyata melewati situs bersejarah. Setiap perhentian membuka satu bab tersembunyi — pecahkan, potret, kumpulkan.",
+            en: "Follow real walking trails through historical sites. Each stop reveals a hidden chapter — solve it, photograph it, collect it."),
+        .onboardingCollectionTitle: LocalizedText(
+            id: "Kisahmu, Koleksimu",
+            en: "Your Story, Your Collection"),
+        .onboardingCollectionBody: LocalizedText(
+            id: "Kumpulkan prangko dari setiap situs yang kamu datangi, raih lencana bersegel untuk kuis yang tuntas, dan bangun jurnal pribadi berisi temuanmu.",
+            en: "Collect stamps from every site you visit, earn sealed badges for completed quests, and build a personal journal of your discoveries."),
 
         // MARK: Discovery
         .questListTitle: LocalizedText(id: "Kuis", en: "Quests"),

@@ -18,14 +18,16 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case onboardingSkip
     case onboardingNext
     case onboardingStart
-    case onboardingWelcomeTitle
-    case onboardingWelcomeBody
+    /// The spoken position of the segmented bar (`523:2053`). `%d of %d`.
+    case onboardingProgress
+    case onboardingExploreTitle
+    case onboardingExploreBody
     case onboardingPocketTitle
     case onboardingPocketBody
-    case onboardingAccuracyTitle
-    case onboardingAccuracyBody
-    case onboardingRespectTitle
-    case onboardingRespectBody
+    case onboardingQuestTitle
+    case onboardingQuestBody
+    case onboardingCollectionTitle
+    case onboardingCollectionBody
 
     // Discovery — FR-DISC-02/05
     case questListTitle

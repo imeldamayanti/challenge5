@@ -42,6 +42,7 @@ so the next import is not another archaeology exercise.
 | `paperTicket` | `#EFEBD7` | the quest-row ticket on `452:3132` |
 | `inkTicket` | `#34312E` | that row's title |
 | `trackWell` | `#8D7870` | the well of the segmented task bar, `452:3138` |
+| `trackDim` | `#926954` | the unfilled segment of the onboarding bar, `523:2054`–`2056` — the frame's 25% `inkCream` over `brownMid`, flattened |
 | `mapGround` | `#DFCDB5` | ground: the site-map screen `452:3028` — the one paper ground in the flow |
 | `mapMarker` | `#B44934` | the marker dots on the site plan, `452:3032`–`3034` |
 | `inkCream` | `#FDF2DE` | headings on the brown grounds |
@@ -88,8 +89,9 @@ it cannot quietly start carrying text.
 
 ## Deviations from the frames
 
-Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `447:1880` and
-`452:3028` on 2026-08-17; deviation 10 came from `452:2651` on 2026-08-18.
+Twelve, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `447:1880` and
+`452:3028` on 2026-08-17; deviation 10 came from `452:2651` on 2026-08-18; 11 and 12 came from the
+three onboarding frames on 2026-08-18.
 
 1. **`inkDusty` was lightened.** As drawn it is `#AA9B8E`, which measures 3.34:1 on `brownStone` —
    it carries the lead paragraph under the cutscene's title, so it is held to body text.
@@ -208,6 +210,28 @@ Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `44
     reproduced exactly: leading inset 16, no trailing inset, filled by height so the drawing runs
     off the right edge, opening on its leading edge rather than centred.
 
+11. **Onboarding is four screens, not the frames' three.** `523:1946`, `523:1973` and `523:1999`
+    are Explore / Quest / Collection, and none of them explains that the phone goes in a pocket
+    between checkpoints. `FR-ONB-03` is a P0 MUST and `AD-1` is the safety model of the product, so
+    that screen survives the redesign; `FR-ONB-02` allows four, so nothing had to be traded for it.
+    It is the second of the four — a walker who taps Skip on screen three has still been told — and
+    it is the one screen whose picture is an SF Symbol in a ruled circle rather than an export,
+    because inventing an illustration would make it read as a fourth Figma screen, which it is not.
+    Two screens from the old onboarding were dropped with no requirement behind them: the
+    accuracy-label screen (the labels are on every lore block, where `FR-CP-05` puts them) and the
+    still-in-use screen (dress and photo rules are shown before any task, where `FR-TASK-05` puts
+    them).
+
+12. **The onboarding bar's segments are flexible, and it is a position indicator.** The frames draw
+    three fixed 115-point segments; a fourth screen at that width runs off the row, so the segments
+    are equal and flexible instead. What is *not* changed is which one is lit: `523:1985`–`1987` dim
+    the first **and** third segment on screen two, so the bar marks position rather than filling as
+    it goes, and it is reproduced that way. The unfilled segment's 25% cream over `brownMid` is
+    flattened into `trackDim` rather than left as an alpha, because the suite measures token pairs
+    and a translucency over "whatever is behind it" is not a pair anyone measured; against a filled
+    segment it is 4.33:1. The row carries a spoken "Screen 2 of 4", so the count is never in the
+    shape alone (`NFR-A11Y-05`).
+
 ## Assets shipped from the file
 
 | Asset | Where | Note |
@@ -216,8 +240,21 @@ Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `44
 | `typewriter.png` | `DesignSystem/Resources/Images` | the machine, cropped from the photograph at 47% height so the drawn sheet joins it |
 | `quest-parchment.png` | `DesignSystem/Resources/Images` | `447:1886`, the sheet the task is printed on |
 | `quest-scroll.png` | `DesignSystem/Resources/Images` | the rolled scroll — a list row's icon at 48, and the map hint's glyph at 32, tilted 41.6° |
+| `onboarding-explore.png` | `DesignSystem/Resources/Images` | `670:1692`, the dancers — **1×, wants replacing, see below** |
+| `onboarding-quest.png` | `DesignSystem/Resources/Images` | `670:1694`, three fanned task scrolls — **1×, wants replacing** |
+| `onboarding-collection.png` | `DesignSystem/Resources/Images` | `670:1749`, five stamps under a wax seal — **1×, wants replacing** |
 | `story-divider.png` | `DesignSystem/Resources/Images` | `447:1887`'s flourish, **converted to an alpha mask** — see below |
 | `SpecialElite-Regular.ttf` | `DesignSystem/Resources/Fonts` | Apache 2.0, licence shipped beside it |
+
+**The three onboarding pictures are 1× and want a hand export.** Same failure mode as the divider
+below, in the other direction: `download_assets` at 3× composites the *frame's* fill behind the art,
+and on these three frames that is a cream sheet — so each picture arrived opaque, sitting on a cream
+card that does not exist in the design (`#FEF8F8` on `523:1946`, `#EEE7D2` on the other two, read out
+of the corner pixel). The only transparent form the tool returns is a contents-only render, which it
+will not upscale past the node's own size. So what ships is 378×277, 353×267 and 321×300 — exactly
+the frames' boxes, shadows included, at 1×, and soft on a 3× screen. A 3× export made from Figma's
+own export panel is a drop-in replacement: same three names, same three boxes, and the fractions in
+`HisploraOnboardingArt` are in points and do not move.
 
 **`story-divider.png` is not the frame's pixels.** Figma exports that node with the containing
 frame's `#808080` backdrop baked in, so the file as exported is a solid grey bar with a faint
@@ -284,6 +321,47 @@ licensed, or generated for it. The seam for that is already in place: `HisploraP
 `Resources/Images/plaque-engraving.png`, clipped to the same silhouette, and falls back to the drawn
 spray whenever the file is absent (as it is today). Dropping the file in is the whole change; no sizes
 or layout move.
+
+#### 2026-08-18: the plate ships as a picture, with the names taken out of it
+
+The user asked for the notice's background to be the plate itself, from `625:4373` — the same screen
+again on a later frame, with the same plate (`625:4377`) under the same three blanking rectangles
+(`625:4378`–`4380`). It now ships as `Resources/Images/plaque-plate.png`, and
+`HisploraPlaquePanel` draws it in place of the shape, the fill, the engraving and the two rules. The
+drawn plate above is **not** deleted: it is the fallback, and it is what the screen returns to if the
+picture is ever replaced or dropped.
+
+**The names are erased from the pixels, and that is a different claim from the licence being clear.**
+The exported file's names sit on flat cream between y 330 and 540; a grayscale morphological closing
+(dilate then erode, radius 3) over that box takes thin dark strokes off a light ground and leaves the
+cream, its gradient and the faint watermark. Verified by re-running the same scan that found the text:
+the only dark run left in the file is the small glyph on the lower lobe. What is *not* settled is the
+engraving's own licence — it is still somebody else's plate, and commissioning or generating a
+replacement is now a one-file swap rather than a rewrite.
+
+**Three-slice, not resize.** Content length varies with Dynamic Type and a plain `.resizable()`
+stretches the crest with the cream. `HisploraPlateArtMetrics` pins the caps at 430 from the top and
+141 from the bottom, leaving the 60-pixel band at y 430…490 — measured to be the one horizontal strip
+of the artwork carrying no ornament at all, only the two edge rules, which run vertically there and so
+extend rather than smear. `PlateArtTests` re-measures that band against the shipped pixels, so an
+artwork swap that puts a flourish there fails rather than ships.
+
+**The picture is placed by its sheet, not by its edges.** The artwork is not centred in its own canvas
+(26 points of margin on the left, 38 on the right) and every column on this screen is measured against
+the sheet's straight sides. `HisploraPlateArtMetrics.frame(forPanel:)` does that arithmetic and
+`PlateArtTests` asserts the result lands on `HisploraPlaqueShape.body(in:)` to within half a point —
+which is what lets the drawn plate and the picture be swapped for one another with no layout moving.
+
+**Contrast, since the ground is now a picture.** `KultaraPaperTexture`'s note — that the contrast suite
+cannot see a picture behind text — applies here in full, so the darkest opaque pixel anywhere text can
+land (`#D3CAAD`, a faint flourish) is measured directly: `inkBody` clears **5.95:1** on it, against
+7.9:1 on the `paperCream` token. Above AA for body text, and a real drop worth knowing about. The
+plate's cream itself samples `#EDE6D1`, one step off `paperCream`'s `#EEE7D2`, so every other ratio
+the theme suite measures still describes what is on screen.
+
+**Motion.** The plate fades and rises 14 points over 0.5 s on appear, and does neither under Reduce
+Motion — where the value still flips, so the screen is complete on the first frame rather than fading
+in slowly. Seen on iPhone 17 / iOS 26.5: `screenshots/m9-place-notice-plate.png`.
 
 ### `452:3028`'s site plan is content, not chrome — and that is the whole decision
 
@@ -419,6 +497,9 @@ the checkpoint screen still displays both; what changed is that the reveal scree
 | `447:1880` | Quest_Filled — one task on its parchment sheet |
 | `452:3028` | Site Map — the drawn plan of a place's grounds |
 | `452:2651` | Site Map, full — the same plan filled, cropped and dragged |
+| `523:1946` | Onboarding 1 — "Explore Beyond The Surface" |
+| `523:1973` | Onboarding 2 — "History Becomes A Quest" |
+| `523:1999` | Onboarding 3 — "Your Story, Your Collection" |
 | `1:92` | Typography (template) |
 | `1:632` | Colors (template) |
 
@@ -449,6 +530,11 @@ screenshots are what show it against the frame.
 
 A resumed walk lands on `.atCheckpoint` and skips all three, so reaching them from a desk means a
 fresh install (`xcrun simctl uninstall com.umar.hisplora`) rather than relaunching.
+
+**`523:1946`, `523:1973` and `523:1999` were verified on iPhone 17 Pro / iOS 26.4 on 2026-08-18**,
+from a fresh install, tapped through all four screens and out into the login wireframe.
+Screenshots are in `docs/screenshots/m10-onboarding-1.png` … `-4.png`. Screen two of the four is the
+pocket-the-phone screen, which is not in Figma — see below.
 
 `81:588`, `98:1588` and `187:866` were verified on iPhone 17 / iOS 26.5 on 2026-08-14 — the first
 time the cutscene screens had been seen at all. **`293:1613` was verified the same way on 2026-08-17**,
