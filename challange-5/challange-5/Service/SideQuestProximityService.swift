@@ -272,7 +272,8 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             postNotification(
                 sideQuestID: identifier,
                 title: place.nameOfficial.value(for: language),
-                body: sideQuest.synopsis.value(for: language))
+                body: sideQuest.synopsis.value(for: language),
+                heroImageAsset: sideQuest.heroImageAsset)
         }
     }
 
@@ -292,19 +293,32 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
     private static func limits(for targetID: String) -> ProximityGate.Limits { ProximityGate.Limits() }
     #endif
 
-    private func postNotification(sideQuestID: String, title: String, body: String) {
+    private func postNotification(
+        sideQuestID: String, title: String, body: String, heroImageAsset: String?
+    ) {
         // `requestAuthorization` only shows a dialog the first time a decision hasn't been made;
         // once granted or denied it just reports that back. Asking here — rather than trusting
         // `enable()` already ran it — means the debug "simulate passing a place" button (which
         // skips the location-authorization gate entirely, `forceNotification`) still gets a real
         // chance at notification permission even when `Always` location was never granted.
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [repository] _, _ in
             let content = UNMutableNotificationContent()
             content.title = title
             content.body = body
             // `userInfo` carries the id and nothing else — no coordinates in a payload (`FR-PROX-15`).
             content.userInfo = ["sideQuestID": sideQuestID]
             content.sound = .default
+            // `FR-WATCH-07` — additive: a plain system-rendered notification tolerates a category
+            // identifier it has no registered actions for, so this changes nothing observable on a
+            // phone with no paired watch (`FR-WATCH-08`, `s9` §6).
+            content.categoryIdentifier = SideQuestNotificationCategory.identifier
+            // Local file only, no network fetch (`AD-3`). Every current sidequest has
+            // `heroImageAsset == nil`, so this branch is correct-but-unexercised today.
+            if let heroImageAsset,
+               let url = try? repository.assetURL(heroImageAsset),
+               let attachment = try? UNNotificationAttachment(identifier: "hero", url: url) {
+                content.attachments = [attachment]
+            }
             // `trigger: nil` — delivered immediately, this is a live region-entry event, not a
             // scheduled reminder.
             let request = UNNotificationRequest(identifier: sideQuestID, content: content, trigger: nil)
@@ -437,6 +451,31 @@ final class FileProximityAlertStore: ProximityAlertStore {
     private func write() throws {
         let data = try encoder.encode(cache)
         try data.write(to: url, options: .atomic)
+    }
+}
+
+// MARK: - Notification category
+
+/// `FR-WATCH-07` — a shared category identifier the phone always sets and both
+/// targets register at launch, so a v2 watch companion's long-look (not built
+/// yet, `s9` Phase B) has an "Open in App" action to bind to. Additive only:
+/// `FR-WATCH-08` requires nothing here to change `postNotification`'s call
+/// shape for a phone with no paired watch.
+enum SideQuestNotificationCategory {
+    static let identifier = "sidequest-nearby"
+    static let openInAppActionIdentifier = "OPEN_IN_APP"
+
+    static func register() {
+        let openInApp = UNNotificationAction(
+            identifier: openInAppActionIdentifier,
+            title: "Open in App",
+            options: [.foreground])
+        let category = UNNotificationCategory(
+            identifier: identifier,
+            actions: [openInApp],
+            intentIdentifiers: [],
+            options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 }
 
