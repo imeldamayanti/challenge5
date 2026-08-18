@@ -47,17 +47,24 @@ struct JournalLetterView: View {
     private var language: ContentLanguage { model.language }
 
     var body: some View {
+        // Edge to edge, top to bottom. The page *is* the screen here — a sheet floating in a brown
+        // margin reads as a card on a shelf, which is the thing the reader has just left.
+        // `HisploraStage` stays the wrapper rather than a hand-rolled `ZStack`: it is what registers
+        // the packaged fonts and puts the palette in the environment.
         HisploraStage(ground: \.brownMid, grain: true) {
-            ScrollView {
-                sheet
-                    .padding(.horizontal, KultaraMetrics.lg)
-                    // Clear of the close control, which floats over the scroll rather than sitting
-                    // in a bar: a bar here would be the museum chrome this screen exists without.
-                    .padding(.top, 68)
-                    .padding(.bottom, KultaraMetrics.xxl)
+            ZStack(alignment: .topTrailing) {
+                ScrollView {
+                    sheet
+                        .padding(.bottom, KultaraMetrics.xxl)
+                }
+                .scrollIndicators(.hidden)
+                // The paper runs under the status bar rather than stopping below it: a sheet that
+                // stops short of the top of the screen reads as a modal that failed to present.
+                // The sheet's own top padding is what keeps the words clear of the clock.
+                .ignoresSafeArea(edges: .top)
+
+                closeControl
             }
-            .scrollIndicators(.hidden)
-            .overlay(alignment: .topTrailing) { closeControl }
         }
     }
 
@@ -75,13 +82,12 @@ struct JournalLetterView: View {
             stampsSection
             colophon
         }
-        .padding(KultaraMetrics.xl)
+        .padding(.horizontal, KultaraMetrics.xl)
+        .padding(.bottom, KultaraMetrics.xxl)
+        // Clear of the status bar and of the close control, both of which sit over this edge.
+        .padding(.top, 76)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(palette.paperCream.color)
-        // A sheet, not a card: a hairline rather than a corner radius, because the object is paper
-        // laid on the ground and paper does not have rounded corners.
-        .overlay(Rectangle().stroke(palette.paperWarm.color, lineWidth: KultaraMetrics.hairline))
-        .shadow(color: .black.opacity(0.28), radius: 14, y: 6)
     }
 
     private var masthead: some View {
@@ -238,14 +244,21 @@ struct JournalLetterView: View {
 
     // MARK: - Out
 
+    /// The way out, floating over the page rather than sitting in a bar — a navigation bar here
+    /// would be the museum chrome this screen exists without.
+    ///
+    /// **Dark on paper, not paper on paper.** It used to be a cream disc, which is the colour of
+    /// the sheet it sits on: at the top of a full-bleed page that is an invisible control. The disc
+    /// is `brownDeep` with `inkCream` on it — 9.63:1, the pairing `HisploraThemeTests` already
+    /// measures — and it reads on the sheet and on the ground behind it alike. It is a fixed 44
+    /// points, the tap target `NFR-A11Y-06` asks for, rather than padding that happens to add up.
     private var closeControl: some View {
         Button(action: onClose) {
             Image(systemName: "xmark")
-                .font(.system(size: 15, weight: .semibold))
-                .foregroundStyle(palette.inkDark.color)
-                .padding(KultaraMetrics.md)
-                .background(palette.paperCream.color, in: Circle())
-                .kultaraTapTarget()
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(palette.inkCream.color)
+                .frame(width: 44, height: 44)
+                .background(palette.brownDeep.color, in: Circle())
         }
         .buttonStyle(.plain)
         .accessibilityLabel(UIStrings.string(.siteMapClose, language))

@@ -47,13 +47,28 @@ struct HisploraEnvelopeTests {
         }
     }
 
-    @Test func theDwellIsTheTwoToThreeSecondsTheNoteAsksFor() {
-        // "Delay 2 or 3 seconds then the detail page comes out of the envelope" — the one number
-        // on the frames, so it is the one number worth pinning.
+    @Test func theOpeningKeepsItsShapeAtHalfTheNotesLength() {
+        // The frames say "delay 2 or 3 seconds then the detail page comes out of the envelope",
+        // and the opening was built to it — 6.4s end to end. **Overridden on 2026-08-18**: this is
+        // the gate in front of *every* letter a reader opens, not a title sequence seen once, and
+        // at that length it stopped reading as an opening and started reading as a wait.
+        //
+        // What is pinned now is the shape rather than the note's literal number, because the shape
+        // is what makes it an opening: the flap is the quickest beat, the dwell is the longest
+        // thing that isn't motion, and the zoom outlasts the rise so the page still arrives
+        // *slowly*. Rebalancing is free; inverting any of these is a different animation.
         let sequence = HisploraEnvelopeSequence(rendersImmediately: false)
+        let opening = sequence.duration(of: .opening)
         let dwell = sequence.duration(of: .dwelling)
-        #expect(dwell >= .seconds(2))
-        #expect(dwell <= .seconds(3))
+        let rising = sequence.duration(of: .rising)
+        let zooming = sequence.duration(of: .zooming)
+
+        #expect(opening < rising)
+        #expect(rising < zooming)
+        #expect(zooming < dwell)
+        // And a dwell is still a dwell: long enough for the reader to see the envelope standing
+        // open before anything comes out of it.
+        #expect(dwell >= .milliseconds(600))
     }
 
     @Test func reduceMotionCollapsesTheWholeOpeningToACut() {
@@ -68,10 +83,11 @@ struct HisploraEnvelopeTests {
     }
 
     @Test func theFullOpeningIsShortEnoughToSitThrough() {
-        // A reader who taps "Unseal" is waiting. Six seconds of paper is a beat; twelve is a
-        // loading screen wearing a costume.
+        // A reader who taps "Unseal" is waiting, and they will wait through this every time they
+        // open a letter. Three seconds of paper is a beat; six is a loading screen wearing a
+        // costume, which is what it was.
         let sequence = HisploraEnvelopeSequence(rendersImmediately: false)
-        #expect(sequence.total <= .seconds(8))
+        #expect(sequence.total <= .seconds(3.5))
     }
 
     @Test func theFlapOpensPastVerticalSoItLandsBehindTheEnvelope() {

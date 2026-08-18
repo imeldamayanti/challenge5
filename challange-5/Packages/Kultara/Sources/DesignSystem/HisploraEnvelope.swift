@@ -57,15 +57,21 @@ public struct HisploraEnvelopeSequence: Sendable, Equatable {
         self.rendersImmediately = rendersImmediately
     }
 
+    /// **Halved against the designer's note, deliberately.** The frames ask for a two-to-three
+    /// second dwell and a slow zoom, which read correctly once and then read as a wait: this is the
+    /// gate in front of every letter a reader opens, not a title sequence they see at launch. The
+    /// beats keep their proportions to each other — the flap is still the quickest, the dwell is
+    /// still the longest, the zoom still outlasts the rise — so the opening is the same shape at
+    /// 2.9s that it was at 6.4s. `total` is what any test should assert against, never a literal.
     public func duration(of stage: HisploraEnvelopeStage) -> Duration {
         guard !rendersImmediately else { return .zero }
         switch stage {
         case .sealed: return .zero
-        case .opening: return .milliseconds(900)
-        // The designer's "2 or 3 seconds", taken at the middle.
-        case .dwelling: return .milliseconds(2500)
-        case .rising: return .milliseconds(1400)
-        case .zooming: return .milliseconds(1600)
+        case .opening: return .milliseconds(520)
+        // The designer's "2 or 3 seconds", taken at a beat the reader will sit through repeatedly.
+        case .dwelling: return .milliseconds(900)
+        case .rising: return .milliseconds(700)
+        case .zooming: return .milliseconds(780)
         }
     }
 

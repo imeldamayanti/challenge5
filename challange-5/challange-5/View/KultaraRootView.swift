@@ -155,6 +155,9 @@ struct KultaraRootView: View {
         // against the keyboard: a floating bar covering the control the screen is asking for.
         // Switching tabs mid-walk is not an interaction the run flow offers anyway.
         if runDestination != nil { return true }
+        // The opened letter is a full-screen page drawn inside the Journal's own stack rather than
+        // a modal over it, so nothing else takes the bar away.
+        if journalLetter != nil { return true }
         return false
     }
 
@@ -255,15 +258,26 @@ struct KultaraRootView: View {
                     onOpenCollection: { collectionDestination = $0 })
             }
             .toolbar(.hidden, for: .navigationBar)
-            .fullScreenCover(item: $journalLetter) { letter in
-                journalLetterScreen(letter)
-            }
             // `FR-SIDE-08` — the collection lives in the Journal tab. It stays museum: it is a
             // catalogue, and the seam between the two directions falls between whole screens.
             .navigationDestination(item: $collectionDestination) { collectionID in
                 collectionScreen(collectionID)
             }
         }
+        // **An overlay, not a `fullScreenCover`.** A cover slides up from the bottom, and the beat
+        // before it is a page zooming *toward* the reader — so the opening ended by throwing the
+        // page away and sliding a different one in from somewhere else. Drawn here, the letter
+        // picks the zoom up where it stopped: it enters a little over-size and settles, which is
+        // the same motion the envelope's last beat was making.
+        .overlay {
+            if let letter = journalLetter {
+                journalLetterScreen(letter)
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 1.14)),
+                        removal: .opacity.combined(with: .scale(scale: 0.97))))
+            }
+        }
+        .animation(.easeOut(duration: 0.42), value: journalLetter)
     }
 
     /// The opened letter, full screen and scrollable.

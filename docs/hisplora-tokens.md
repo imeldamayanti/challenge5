@@ -285,6 +285,33 @@ painting the token first and the sheet over it a true composite rather than a su
 grain is **opt-in on `HisploraStage`** and on only where the design shows it; the story-flow frames
 draw the same brown flat.
 
+### The opening runs at half the note's length, and the letter opens in place
+
+Two changes on 2026-08-18, both from watching it rather than from the frames.
+
+**6.4s → 2.9s.** The designer's note asks for a two-to-three second dwell and a slow zoom, and the
+sequence was built to it: 900 / 2500 / 1400 / 1600. That is a title sequence's budget, and this is
+not a title sequence — it is the gate in front of *every* letter a reader opens. It now runs 520 /
+900 / 700 / 780. The beats keep their proportions to each other, and that is what
+`theOpeningKeepsItsShapeAtHalfTheNotesLength` pins instead of the note's literal number: flap
+quickest, zoom outlasting the rise so the page still arrives slowly, dwell the longest thing that
+is not motion. Rebalancing is free; inverting any of those is a different animation.
+
+**The letter is an overlay, not a `fullScreenCover`.** A cover slides up from the bottom — and the
+beat immediately before it is a page zooming *toward* the reader, so the opening ended by throwing
+that page away and sliding a different one in from somewhere else. `KultaraRootView.journalStack`
+now draws `JournalLetterView` in an `.overlay` with an asymmetric transition: in at 1.14× and
+settling, out at 0.97×, over 420ms of `easeOut`. It picks the zoom up where it stopped. The cost is
+that nothing else takes the floating tab bar away, so `hidesTabBar` names `journalLetter` too.
+
+**And the page is full-bleed.** The sheet had a `KultaraMetrics.lg` margin of brown down both
+sides, which reads as a card on a shelf — the exact thing the reader has just left. It now runs
+edge to edge and under the status bar, with its own 76-point top inset keeping the masthead clear
+of the clock and of the close control. That control was a `paperCream` disc sitting on a
+`paperCream` sheet, which at the top of a full-bleed page is an invisible button; it is `brownDeep`
+with `inkCream` on it — 9.63:1, a pairing `HisploraThemeTests` already measures — at a fixed 44
+points rather than padding that happened to add up.
+
 ### The sheet is taller than the envelope, and the opening now admits it
 
 `332:1252`'s page rises out of the pocket. The offsets that did it were fractions of the *card* —
