@@ -14,7 +14,7 @@ struct SideQuestLongLookView: View {
     let synopsis: String
     let heroImage: UIImage?
 
-    private let imageSlotSize: CGFloat = 64
+    let imageSlotSize: CGFloat = 64
 
     var body: some View {
         VStack(spacing: 8) {
