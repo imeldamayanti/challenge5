@@ -88,8 +88,8 @@ it cannot quietly start carrying text.
 
 ## Deviations from the frames
 
-Nine, all recorded rather than argued. The last four came from `452:3132`, `447:1880` and
-`452:3028` on 2026-08-17.
+Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `447:1880` and
+`452:3028` on 2026-08-17; deviation 10 came from `452:2651` on 2026-08-18.
 
 1. **`inkDusty` was lightened.** As drawn it is `#AA9B8E`, which measures 3.34:1 on `brownStone` —
    it carries the lead paragraph under the cutscene's title, so it is held to body text.
@@ -141,6 +141,15 @@ Nine, all recorded rather than argued. The last four came from `452:3132`, `447:
    absent from `contrastPairs`.
    `HisploraThemeTests.theSiteMapScreenAvoidsTheMutedInkBecauseItMissesByATenth` records that as a
    threshold call rather than an oversight.
+
+10. **The plan does not get `452:2651`'s literal 594.6 points of height, because the citation stays
+    on screen.** The frame gives the drawing y 130 → 724.6 and prints nothing under the gesture
+    hint. The plan is content asserting distances and gate positions about a real puri, so
+    `FR-CP-05` puts its `sources` citation on the screen — in full, not truncated, not behind a tap
+    — and today's citation runs to four lines. It therefore takes its space first and the drawing
+    fills what is left, about 520 points on an iPhone 17. Everything else about the frame's crop is
+    reproduced exactly: leading inset 16, no trailing inset, filled by height so the drawing runs
+    off the right edge, opening on its leading edge rather than centred.
 
 ## Assets shipped from the file
 
@@ -352,6 +361,7 @@ the checkpoint screen still displays both; what changed is that the reveal scree
 | `452:3132` | Quest 1/3 — the checkpoint's task list |
 | `447:1880` | Quest_Filled — one task on its parchment sheet |
 | `452:3028` | Site Map — the drawn plan of a place's grounds |
+| `452:2651` | Site Map, full — the same plan filled, cropped and dragged |
 | `1:92` | Typography (template) |
 | `1:632` | Colors (template) |
 
@@ -371,6 +381,14 @@ intro (the scratch reveal needs real drag paths) → cutscene portrait → story
 → **All Quest** → **the task sheet** → **the site plan**, pinched to zoom and closed back to the
 sheet. Screenshots are in `docs/screenshots/m9-*.png`. The grey-bar divider bug above was found
 on that pass and nowhere else — no test could have seen it.
+
+**`452:2651` was verified on iPhone 17 / iOS 26.5 on 2026-08-18** — the filled plan, dragged to its
+right edge and pinched to zoom, in `docs/screenshots/m10-site-map-full.png` and
+`m10-site-map-zoomed.png`. It was reached with a temporary probe in `challange_5App.swift` rather
+than by walking, and the probe was reverted: the story-reveal pill and the forward FAB do not
+respond to the simulator MCP's synthesized taps reliably, which is the same class of problem the
+"Simulate arrival anywhere" toggle has. `ArtworkViewportTests` is what holds the geometry; the
+screenshots are what show it against the frame.
 
 A resumed walk lands on `.atCheckpoint` and skips all three, so reaching them from a desk means a
 fresh install (`xcrun simctl uninstall com.umar.hisplora`) rather than relaunching.
