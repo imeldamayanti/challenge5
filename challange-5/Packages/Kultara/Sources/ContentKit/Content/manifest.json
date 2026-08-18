@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentBundleVersion": "2026.09.2",
+  "contentBundleVersion": "2026.09.3",
   "languages": [
     "id",
     "en"
@@ -10,7 +10,8 @@
     "badung-pura-maospahit",
     "badung-pasar-kumbasari",
     "badung-catur-muka",
-    "badung-museum-bali"
+    "badung-museum-bali",
+    "park23"
   ],
   "quests": [
     "badung-empat-wajah"
@@ -20,10 +21,12 @@
     "sq-badung-puri-agung-pemecutan",
     "sq-badung-pura-maospahit",
     "sq-badung-pasar-kumbasari",
-    "sq-badung-museum-bali"
+    "sq-badung-museum-bali",
+    "sq-park23"
   ],
   "collections": [
-    "badung-jejak"
+    "badung-jejak",
+    "sidequest-test"
   ],
   "regionMap": {
     "asset": "maps/bali-illustrated.png",

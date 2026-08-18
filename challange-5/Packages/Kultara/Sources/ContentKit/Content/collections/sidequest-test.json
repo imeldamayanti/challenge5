@@ -1,0 +1,17 @@
+{
+  "id": "sidequest-test",
+  "region": "Denpasar",
+  "phrase": "T",
+  "title": {
+    "id": "Uji Coba Sidequest",
+    "en": "Sidequest Test"
+  },
+  "caption": {
+    "id": "Koleksi khusus pengembangan untuk mencoba alur sidequest tanpa berjalan ke Bali. Hapus sebelum rilis.",
+    "en": "A dev-only collection for trying the sidequest flow without walking to Bali. Remove before release."
+  },
+  "badgeId": "badge-sidequest-test",
+  "slots": [
+    { "index": 0, "letter": "T", "sideQuestId": "sq-park23" }
+  ]
+}

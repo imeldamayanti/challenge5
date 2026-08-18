@@ -57,6 +57,10 @@ protocol ProximityMonitoring: AnyObject {
     /// counts. Debug builds only, and the whole conformance is one `#if DEBUG` case among several
     /// that a Release build simply does not compile.
     func simulateEntry(sideQuestID: String)
+    /// A pure OS-pipeline check: fixed title/body, no content lookup, no `ProximityGate`, no
+    /// location authorization at all. If this doesn't appear, nothing in this file can be the
+    /// cause — the answer is in iOS Settings → Notifications for this app.
+    func fireHardcodedTestNotification()
     #endif
 }
 
@@ -167,7 +171,26 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
 
     #if DEBUG
     func simulateEntry(sideQuestID: String) {
-        handleRegionEntered(identifier: sideQuestID)
+        // Tapping this button *is* asking to see the actual notification — the foreground/sheet
+        // path is already exercised for real whenever a region fires while the app is open, so
+        // forcing the notification here is what makes the button useful standing still.
+        handleRegionEntered(identifier: sideQuestID, forceNotification: true)
+    }
+
+    func fireHardcodedTestNotification() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+            let content = UNMutableNotificationContent()
+            content.title = "Test notification"
+            content.body = "Kalau ini muncul, jalur notifikasi OS-nya beres — masalahnya bukan di kode."
+            content.sound = .default
+            let request = UNNotificationRequest(
+                identifier: "dev-hardcoded-test", content: content, trigger: nil)
+            UNUserNotificationCenter.current().add(request) { addError in
+                if let error { print("[dev] notification auth error: \(error)") }
+                if let addError { print("[dev] notification add error: \(addError)") }
+                print("[dev] notification authorized: \(granted), request added")
+            }
+        }
     }
     #endif
 
@@ -208,17 +231,29 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
     // MARK: - The decision
 
     /// `didEnterRegion`'s body, and the debug simulator's. The trigger differs; the rule does not.
-    private func handleRegionEntered(identifier: String) {
-        guard isEnabled, authorization == .always else { return }
+    ///
+    /// `forceNotification` also skips the `isEnabled`/`Always` gate: a real region event can only
+    /// fire once both are true, so the gate is meaningful there. The debug button is an explicit
+    /// "show me the notification" request — making it depend on the same slow, often-never-granted
+    /// `Always` upgrade iOS does in its own time would defeat the point of having it.
+    private func handleRegionEntered(identifier: String, forceNotification: Bool = false) {
+        guard forceNotification || (isEnabled && authorization == .always) else { return }
 
-        let hasActiveRun = ((try? runStore.mostRecentActiveRun()) ?? nil) != nil
-        let isCompleted = ((try? sideQuestEngine.record(sideQuestID: identifier)) ?? nil)?
-            .isCompleted ?? false
-        let alerts = (try? alertStore.alerts()) ?? []
-        let decision = ProximityGate.decide(
-            targetID: identifier, now: now(), calendar: calendar, alerts: alerts,
-            hasActiveRun: hasActiveRun, isTargetCompleted: isCompleted)
-        guard decision.isAllowed else { return }
+        // `forceNotification` also skips the whole `ProximityGate` decision — active Run, already
+        // completed, quiet hours, cooldown, daily cap. Those are meaningful for a real region event;
+        // for "prove a notification can appear right now" they are just more ways to get nothing
+        // and no explanation why.
+        if !forceNotification {
+            let hasActiveRun = ((try? runStore.mostRecentActiveRun()) ?? nil) != nil
+            let isCompleted = ((try? sideQuestEngine.record(sideQuestID: identifier)) ?? nil)?
+                .isCompleted ?? false
+            let alerts = (try? alertStore.alerts()) ?? []
+            let decision = ProximityGate.decide(
+                targetID: identifier, now: now(), calendar: calendar, alerts: alerts,
+                hasActiveRun: hasActiveRun, isTargetCompleted: isCompleted,
+                limits: Self.limits(for: identifier))
+            guard decision.isAllowed else { return }
+        }
 
         guard let sideQuest = ((try? repository.sideQuest(id: identifier)) ?? nil),
               let place = ((try? repository.place(id: sideQuest.placeId)) ?? nil)
@@ -231,7 +266,7 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         // `FR-ONB-05` — the app's language, not the device's; it may differ.
         let language = LanguageResolver.resolve(override: preferences.preferredLanguage)
 
-        if UIApplication.shared.applicationState == .active {
+        if UIApplication.shared.applicationState == .active && !forceNotification {
             onSideQuestNearby?(identifier)
         } else {
             postNotification(
@@ -241,17 +276,40 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         }
     }
 
+    #if DEBUG
+    /// A minute-scale cooldown for the local `park23` dev test target only, so "Simulate passing a
+    /// place" — or repeatedly leaving and re-entering the real 50 m radius — can be tapped over and
+    /// over while iterating on the flow. Every other target, real or test, keeps `Limits()`'s normal
+    /// 24 h cooldown and 3-per-day cap (`FR-PROX-09`) — this never loosens rate limiting for content
+    /// that ships.
+    private static func limits(for targetID: String) -> ProximityGate.Limits {
+        guard targetID == "sq-park23" else { return ProximityGate.Limits() }
+        return ProximityGate.Limits(
+            quietFrom: TimeOfDay(hour: 0, minute: 0), quietUntil: TimeOfDay(hour: 0, minute: 0),
+            perTargetCooldown: 60, maxPerDay: .max)
+    }
+    #else
+    private static func limits(for targetID: String) -> ProximityGate.Limits { ProximityGate.Limits() }
+    #endif
+
     private func postNotification(sideQuestID: String, title: String, body: String) {
-        let content = UNMutableNotificationContent()
-        content.title = title
-        content.body = body
-        // `userInfo` carries the id and nothing else — no coordinates in a payload (`FR-PROX-15`).
-        content.userInfo = ["sideQuestID": sideQuestID]
-        content.sound = .default
-        // `trigger: nil` — delivered immediately, this is a live region-entry event, not a
-        // scheduled reminder.
-        let request = UNNotificationRequest(identifier: sideQuestID, content: content, trigger: nil)
-        UNUserNotificationCenter.current().add(request)
+        // `requestAuthorization` only shows a dialog the first time a decision hasn't been made;
+        // once granted or denied it just reports that back. Asking here — rather than trusting
+        // `enable()` already ran it — means the debug "simulate passing a place" button (which
+        // skips the location-authorization gate entirely, `forceNotification`) still gets a real
+        // chance at notification permission even when `Always` location was never granted.
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
+            let content = UNMutableNotificationContent()
+            content.title = title
+            content.body = body
+            // `userInfo` carries the id and nothing else — no coordinates in a payload (`FR-PROX-15`).
+            content.userInfo = ["sideQuestID": sideQuestID]
+            content.sound = .default
+            // `trigger: nil` — delivered immediately, this is a live region-entry event, not a
+            // scheduled reminder.
+            let request = UNNotificationRequest(identifier: sideQuestID, content: content, trigger: nil)
+            UNUserNotificationCenter.current().add(request)
+        }
     }
 
     private func ensureNotificationsThenRefresh() {

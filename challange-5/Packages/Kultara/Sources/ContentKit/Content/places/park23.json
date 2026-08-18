@@ -1,0 +1,82 @@
+{
+  "id": "park23",
+  "nameOfficial": {
+    "id": "Park 23 XXI",
+    "en": "Park 23 XXI"
+  },
+  "nameVariants": [
+    "Park23"
+  ],
+  "type": "ruang-publik",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.7367831,
+    "lon": 115.1759419
+  },
+  "arrivalRadiusM": 120,
+  "address": {
+    "id": "Park 23 XXI, Denpasar. Titik uji sementara buat nyoba alur sidequest \"Catur Muka\" tanpa harus ke lokasi aslinya — cerita/lore di sidequest ini tetap tentang Catur Muka, cuma koordinatnya dipindah ke sini buat testing.",
+    "en": "Park 23 XXI, Denpasar. A temporary test point for trying the \"Catur Muka\" sidequest without traveling to the real site — the sidequest's story stays about Catur Muka, only the coordinate is moved here for testing."
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Jam buka belum diverifikasi; pakai jam operasional pusat perbelanjaan setempat sebagai perkiraan.",
+      "en": "Opening hours not yet verified; assume the local mall's operating hours as an estimate."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "00:00", "close": "23:59" },
+      { "weekday": 2, "open": "00:00", "close": "23:59" },
+      { "weekday": 3, "open": "00:00", "close": "23:59" },
+      { "weekday": 4, "open": "00:00", "close": "23:59" },
+      { "weekday": 5, "open": "00:00", "close": "23:59" },
+      { "weekday": 6, "open": "00:00", "close": "23:59" },
+      { "weekday": 7, "open": "00:00", "close": "23:59" }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan busana khusus.",
+    "en": "No specific dress code."
+  },
+  "photoPolicy": {
+    "level": "allowed",
+    "notes": {
+      "id": "Ruang publik; memotret umumnya tidak dibatasi.",
+      "en": "A public space; photography is generally unrestricted."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": false,
+    "stepCount": null,
+    "surface": "paving",
+    "notes": {
+      "id": "Belum disurvei secara detail.",
+      "en": "Not surveyed in detail."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Titik ini dipakai sebagai lokasi uji untuk sidequest Catur Muka, bukan tempat bersejarah itu sendiri.",
+        "en": "This point is used as a test location for the Catur Muka sidequest, not the historical site itself."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Catatan internal tim — titik uji lokal untuk pengembangan fitur sidequest",
+      "url": null
+    }
+  ],
+  "consentRecordId": "park23",
+  "mapPoint": {
+    "x": 0.406,
+    "y": 0.613
+  }
+}
