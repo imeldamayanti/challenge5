@@ -22,13 +22,21 @@ public extension EnvironmentValues {
 /// fixed editorial pairing, the way a printed page is. See `HisploraPalette` for the argument.
 public struct HisploraStage<Content: View>: View {
     private let ground: KeyPath<HisploraPalette, SRGBColor>
+    private let grain: Bool
     private let content: Content
 
+    /// - Parameter grain: whether to print `HisploraGround` over the ground — the speckled sheet
+    ///   `547:2953` exports. Opt-in rather than automatic: the story-flow frames draw the same brown
+    ///   flat, and turning the grain on everywhere would be redrawing screens nobody sampled it
+    ///   from. It is on where the design actually shows it, which is the Journal and the Explorer's
+    ///   Card.
     public init(
         ground: KeyPath<HisploraPalette, SRGBColor> = \.brownDeep,
+        grain: Bool = false,
         @ViewBuilder content: () -> Content
     ) {
         self.ground = ground
+        self.grain = grain
         self.content = content()
     }
 
@@ -38,7 +46,13 @@ public struct HisploraStage<Content: View>: View {
         return content
             .environment(\.hisploraPalette, palette)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(palette[keyPath: ground].color.ignoresSafeArea())
+            .background {
+                ZStack {
+                    palette[keyPath: ground].color
+                    if grain { HisploraGroundSheet() }
+                }
+                .ignoresSafeArea()
+            }
     }
 }
 

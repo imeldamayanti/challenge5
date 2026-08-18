@@ -16,10 +16,15 @@ struct KultaraRootView: View {
     @State private var showsSplash = true
     @State private var showsAuth = true
     @State private var runDestination: RunDestination?
-    /// The same run screen, reached from the Journal tab. A second piece of state rather than a
-    /// shared one, because each tab owns its own navigation stack and a destination pushed on one
-    /// cannot be popped by the other.
-    @State private var journalRunDestination: RunDestination?
+    /// The letter the Journal has opened, drawn full screen over the shelf.
+    ///
+    /// **Not a navigation destination.** Unsealing used to push `runScreen`, which handed the
+    /// reader out to the museum summary after an animation that had just spent four seconds saying
+    /// *this is a letter*. The letter now opens where it is: `JournalLetterView` renders the same
+    /// snapshots as a page, and there is no stack to pop.
+    @State private var journalLetter: SealedLetterPresentation?
+    /// And a third, for the Profile tab's Quests list. Same argument as the one above it.
+    @State private var profileRunDestination: RunDestination?
     /// Bumped whenever a walk changes, so the home screen's journal is rebuilt. The store is not
     /// observable — it is a protocol with a file behind it — and a counter is a smaller thing to
     /// own than an observation layer this milestone would use in exactly one place.
@@ -130,7 +135,7 @@ struct KultaraRootView: View {
     private var sideQuestCover: Binding<SideQuestDestination?> {
         Binding(
             get: {
-                guard runDestination == nil, journalRunDestination == nil else { return nil }
+                guard runDestination == nil, journalLetter == nil else { return nil }
                 return router.pendingSideQuestID.map(SideQuestDestination.init)
             },
             set: { if $0 == nil { router.pendingSideQuestID = nil } })
@@ -149,7 +154,7 @@ struct KultaraRootView: View {
         // Journey". The bar sits on top of every one of them, which is the same defect QA reported
         // against the keyboard: a floating bar covering the control the screen is asking for.
         // Switching tabs mid-walk is not an interaction the run flow offers anyway.
-        if runDestination != nil || journalRunDestination != nil { return true }
+        if runDestination != nil { return true }
         return false
     }
 
@@ -245,22 +250,36 @@ struct KultaraRootView: View {
                     language: language,
                     collections: collectionIDs,
                     onOpenRun: { runID in
-                        guard let run = (try? environment.runStore.run(id: runID)) ?? nil else { return }
-                        journalRunDestination = RunDestination(
-                            questID: run.questID, existingRunID: run.id,
-                            discardingExistingDraft: false)
+                        journalLetter = model.letters.first { $0.id == runID }
                     },
                     onOpenCollection: { collectionDestination = $0 })
             }
             .toolbar(.hidden, for: .navigationBar)
-            .navigationDestination(item: $journalRunDestination) { destination in
-                runScreen(destination)
+            .fullScreenCover(item: $journalLetter) { letter in
+                journalLetterScreen(letter)
             }
             // `FR-SIDE-08` — the collection lives in the Journal tab. It stays museum: it is a
             // catalogue, and the seam between the two directions falls between whole screens.
             .navigationDestination(item: $collectionDestination) { collectionID in
                 collectionScreen(collectionID)
             }
+        }
+    }
+
+    /// The opened letter, full screen and scrollable.
+    ///
+    /// Built from the Run rather than from the shelf's own row: the page prints the walk's lore
+    /// snapshots, its written answers and its pinned content version, none of which a card on a
+    /// shelf carries. A Run that has gone — erased from another screen while this one was open —
+    /// closes the cover rather than drawing an empty page.
+    @ViewBuilder private func journalLetterScreen(_ letter: SealedLetterPresentation) -> some View {
+        if let run = (try? environment.runStore.run(id: letter.id)) ?? nil {
+            JournalLetterView(
+                model: RunSummaryViewModel(run: run),
+                letter: letter,
+                onClose: { journalLetter = nil })
+        } else {
+            Color.clear.onAppear { journalLetter = nil }
         }
     }
 
@@ -306,9 +325,20 @@ struct KultaraRootView: View {
                 ExplorerCardView(
                     model: model,
                     language: language,
-                    onOpenPreferences: { showsPreferences = true })
+                    onOpenPreferences: { showsPreferences = true },
+                    // The same hand-off the Journal's envelopes make, from the other tab: a walk
+                    // listed as unfinished is picked up where it was left.
+                    onResumeRun: { runID in
+                        guard let run = (try? environment.runStore.run(id: runID)) ?? nil else { return }
+                        profileRunDestination = RunDestination(
+                            questID: run.questID, existingRunID: run.id,
+                            discardingExistingDraft: false)
+                    })
             }
             .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(item: $profileRunDestination) { destination in
+                runScreen(destination)
+            }
             .navigationDestination(isPresented: $showsPreferences) { settingsDestination }
         }
     }

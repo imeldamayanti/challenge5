@@ -78,8 +78,16 @@ public struct HisploraStampCard<Picture: View>: View {
     private let showsFranking: Bool
     private let picture: Picture
 
-    /// 25.788 × 35 in the design.
-    public static var aspectRatio: CGFloat { 25.788 / 35 }
+    /// 152 × 206 — the perforated frame `547:2851` exports (`Images/badges-frame.svg`), and the
+    /// proportion every stamp on the Explorer's Card is now cut to.
+    ///
+    /// **Fixed, not derived.** The card used to size its window and let the caption add whatever
+    /// height it needed, so a two-line place name made one stamp in a grid of them taller than its
+    /// neighbour and the perforations came out at a different pitch on each. A stamp is a die-cut
+    /// object: it is the same shape whatever is printed on it. The earlier `25.788 / 35` was the
+    /// thumbnail's own box on the envelope and is within a thousandth of this one, so the envelope's
+    /// franking is unchanged by the switch.
+    public static var aspectRatio: CGFloat { 152.0 / 206.0 }
 
     /// - Parameter showsFranking: whether to print the name and region under the window. The
     ///   design sets them at 2.27 and 1.42 points on the envelope, which is a texture rather than
@@ -104,9 +112,11 @@ public struct HisploraStampCard<Picture: View>: View {
                 Rectangle().fill(palette.paperWarm.color)
                 picture
             }
+            // The window takes whatever the fixed outer ratio leaves after the caption, rather than
+            // holding a ratio of its own and pushing the card taller. That is what makes every
+            // stamp in the grid the same object at the same size.
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
             .clipped()
-            .frame(maxWidth: .infinity)
-            .aspectRatio(showsFranking ? 1.05 : nil, contentMode: .fit)
 
             if showsFranking {
             VStack(alignment: .leading, spacing: 1) {
@@ -129,6 +139,7 @@ public struct HisploraStampCard<Picture: View>: View {
             }
         }
         .padding(showsFranking ? KultaraMetrics.xs : 2)
+        .aspectRatio(Self.aspectRatio, contentMode: .fit)
         .background(palette.paperLight.color)
         // Even-odd, not the default non-zero. The path is a rectangle plus a run of circles
         // straddling its edges; under non-zero they union into the body and the card comes out a

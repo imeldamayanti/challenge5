@@ -125,7 +125,13 @@ struct HisploraStampTests {
     }
 
     @Test func theStampKeepsTheFramesProportions() {
-        #expect(abs(HisploraStampCard<EmptyView>.aspectRatio - 25.788 / 35) < 0.0001)
+        // `547:2851` — `Images/badges-frame.svg`, 152 × 206 — is the die the Explorer's Card cuts
+        // its stamps to, and the card now holds it for the whole object rather than for the window
+        // alone, so a two-line place name cannot make one stamp taller than the one beside it.
+        #expect(abs(HisploraStampCard<EmptyView>.aspectRatio - 152.0 / 206.0) < 0.0001)
+        // And it is still the envelope's thumbnail box to within a thousandth, which is why the
+        // franking down the pocket did not have to move when the die changed.
+        #expect(abs(HisploraStampCard<EmptyView>.aspectRatio - 25.788 / 35) < 0.002)
     }
 }
 

@@ -494,8 +494,11 @@ public enum UIStrings {
         .profileTabBadges: LocalizedText(id: "Lencana", en: "Badges"),
         .profileActivityComplete: LocalizedText(id: "Selesai", en: "Completed"),
         .profileQuestsEmpty: LocalizedText(
-            id: "Kegiatan yang kamu selesaikan di sepanjang rute muncul di sini.",
-            en: "Activities you finish along a route show up here."),
+            id: "Perjalanan yang sudah kamu mulai tapi belum selesai muncul di sini.",
+            en: "Walks you have started but not finished show up here."),
+        .profileQuestResumeHint: LocalizedText(
+            id: "Lanjutkan perjalanan ini",
+            en: "Resume this walk"),
         .profileStampsEmpty: LocalizedText(
             id: "Setiap titik yang kamu capai memberi satu stempel.",
             en: "Every checkpoint you reach gives one stamp."),

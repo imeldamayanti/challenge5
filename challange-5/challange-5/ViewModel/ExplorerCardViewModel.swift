@@ -45,11 +45,16 @@ final class ExplorerCardViewModel {
         let stampAwards = runs
             .flatMap { run in run.awards.filter { $0.type == .stamp }.map { (run, $0) } }
             .sorted { $0.1.awardedAt > $1.1.awardedAt }
+        // Built once for the whole card: which of a place's three drawings the reader has earned is
+        // a question about every Run, not about the one this stamp came from.
+        let artwork = StampArtworkResolver(runs: runs, repository: repository)
         let stamps = stampAwards.map { run, award in
             StampPresentation(
                 id: "\(run.id)-\(award.sourceID)",
                 placeName: award.snapshotName,
-                region: (try? repository.quest(id: run.questID))??.region ?? "")
+                region: (try? repository.quest(id: run.questID))??.region ?? "",
+                artworkName: artwork.artworkName(
+                    questID: run.questID, stampSourceID: award.sourceID))
         }
 
         // Badges: a finished walk (`FR-DONE-01`) and a completed collection (`FR-SIDE-09`). Both
@@ -61,14 +66,19 @@ final class ExplorerCardViewModel {
             BadgePresentation(id: award.id.uuidString, name: award.snapshotName, waxIndex: index)
         }
 
-        let activities = records
+        // The Quests tab: walks under way, most recently touched first. Not a list of everything
+        // the reader has ever done — a finished walk is a badge and a sealed letter already, and
+        // an abandoned one was explicitly put down (`FR-RUN-05`).
+        let inProgress = runs
+            .filter { $0.state == .active }
             .sorted { $0.updatedAt > $1.updatedAt }
-            .map { record in
-                ActivityPresentation(
-                    id: record.sideQuestID,
-                    title: record.snapshotTitle,
-                    detail: record.snapshotSynopsis,
-                    isComplete: record.isCompleted)
+            .map { run in
+                InProgressQuestPresentation(
+                    id: run.id,
+                    title: run.snapshotQuestTitle,
+                    detail: String(
+                        format: UIStrings.string(.checkpointProgress, language),
+                        run.reachedCount, run.checkpointCount))
             }
 
         presentation = ExplorerCardPresentation(
@@ -76,7 +86,7 @@ final class ExplorerCardViewModel {
             questCount: runs.filter { $0.state == .completed }.count,
             stampCount: stamps.count,
             badgeCount: badges.count,
-            activities: activities,
+            inProgressQuests: inProgress,
             stamps: stamps,
             badges: badges)
     }

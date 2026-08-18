@@ -70,8 +70,8 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 425 tests / 52 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
-| `xcodebuild test -only-testing:challange-5Tests` | 127 tests / 13 suites — view models, presentation, UI strings, host linkage | Yes |
+| `swift test` (from `Packages/Kultara`) | 448 tests / 56 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `xcodebuild test -only-testing:challange-5Tests` | 164 tests / 18 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
 **Two `swift test` failures are pre-existing on this branch and are not yours.** They were red at
@@ -324,9 +324,16 @@ Still unguarded:
   outstanding, no owner named). `theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources` does *not*
   cover it — that test asserts on `CheckpointPresentation`, which still carries every accuracy label
   and citation. The omission is in the view.
-- **`AccessibilityXXXL` occlusion.** `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` passes, but
-  only because the test now scrolls: at the largest size a Profile control lands under the floating
-  tab bar. Reachable, not comfortable.
+- **`AccessibilityXXXL` occlusion, and the test is now red.**
+  `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` fails at
+  `DiscoveryFlowUITests.swift:105` — "Profile did not offer a way into the app preferences" — which
+  is the *existence* check, before the scroll-into-reach loop it was given. At the largest content
+  size the tap on the floating bar's Profile does not switch the tab, so the Explorer's Card is
+  never on screen to be scrolled. **Verified pre-existing on this branch**: the same test fails
+  identically in a clean worktree at `a1d914c`, so it is not the stamp/journal/profile work.
+  `testQuestListAndSettingsAreReachable` walks the same Profile → Settings path at the default size
+  and is green, which is what narrows it to the size. `resetLocalData` already carries a one-retry
+  workaround for exactly this mistimed-tab-bar-tap failure; `openSettings` does not.
 
 ## Two visual directions, split at a screen boundary
 
@@ -416,6 +423,44 @@ auto-advancing and the login carrying a "Skip for now".
   titled "Quest 1/3" and invents three tasks ("The Iron Statue", "The Ancient Script", "The Whip
   Bearer") that exist nowhere in the content tree; the shipped checkpoints carry exactly one task
   each. The bar counts the run's own tasks (`AD-4`).
+- **The Journal's stamps carry real artwork now, and it is tiered by walking.** Figma exports
+  fifteen stamp SVGs (five places × three drawings) whose payload is an embedded base64 PNG — about
+  90 MB of files nothing in this app can render, because every package image goes through
+  `UIImage(data:)`. What ships is each file's picture **composited the way the file composites it**
+  — the topmost `<rect>`'s pattern image, cropped by that pattern's own matrix — at 480 × 519:
+  `DesignSystem/Resources/Images/<place>-stamp1…3.png`, 6.4 MB for the set. Taking the embedded PNG
+  whole, which is what the first pass did, ships a different picture from the design's. The
+  **SVGs live in `docs/design-sources/stamps/` and are `.gitignore`d**; they must never go back into
+  `Resources/Images`, because `Package.swift` copies that directory wholesale and the exports would
+  ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — one finished quest through a place shows
+  the first drawing, two the second, three or more the third, clamped at both ends —
+  `StampArtworkResolver` (`Support/StampArtwork.swift`) counts finished walks per place, and place
+  id → asset stem is **a table in the app target, not a field on `Place`**. A sixth authored place
+  gets an empty window until that table is edited, which is the honest fallback and also the debt.
+  `docs/hisplora-tokens.md` has the extraction detail.
+- **The Profile tab's Quests surface lists unfinished walks, not sidequests.** It used to list
+  `SideQuestRecord`s, which are not quests; it now lists Runs with `state == .active`, most recently
+  touched first, and each row resumes its walk (`profileRunDestination`, the third `RunDestination`
+  in `KultaraRootView`). Sidequests keep their own surfaces — the collection in the Journal and the
+  nearby list. `ActivityPresentation` is now `InProgressQuestPresentation`.
+- **Unsealing a letter no longer redirects.** It used to push `runScreen`, which for a finished
+  walk lands on the museum-catalogue summary — a second visual direction with a navigation bar,
+  reached by an animation that had just spent four seconds saying *this is a letter*.
+  `View/JournalLetterView.swift` now opens the letter full screen over the shelf as a scrollable
+  page: the same `RunSummaryViewModel` snapshots (lore claims with their accuracy labels and
+  citations, the walker's written answers, the pinned content version) set as a paper sheet on the
+  printed brown ground, with the earned stamps at the foot. `KultaraRootView.journalRunDestination`
+  is gone; `journalLetter: SealedLetterPresentation?` drives a `fullScreenCover`. The lore claims
+  are drawn in that file rather than by `LoreClaimList` because that component reads
+  `\.kultaraPalette`, which is not this screen's palette.
+- **The Journal's opening was clipped and is not any more.** The envelope's last two beats put the
+  page two thirds of a card above itself and then grew it 2.1×, all inside a `ScrollView` that
+  clips — so the top of the page was cut off mid-zoom. The opening is now drawn as a sibling of the
+  scroll view rather than inside it, and the centred card steps aside while it plays. Two smaller
+  fixes with it: each beat animates on its own curve and its own length
+  (`HisploraEnvelopeSequence.animation(of:)`) instead of one 900 ms ease for all four, and the page
+  fades in over 200 ms rather than cross-fading across its whole travel, so it reads as coming out
+  of the pocket rather than appearing in front of the envelope.
 - **Consent for those five places is a self-grant, not a grant.** D1-b: every `consent/badung-*.json`
   names the project team as `grantingBody`, scoped to inclusion and naming, for a non-public academic
   prototype. None of the five sites has been approached. The signatory fields are still literal

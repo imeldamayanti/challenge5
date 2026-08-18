@@ -307,6 +307,8 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case profileTabBadges
     case profileActivityComplete
     case profileQuestsEmpty
+    /// Spoken on a Quests-tab row, which resumes the walk it names.
+    case profileQuestResumeHint
     case profileStampsEmpty
     case profileBadgesEmpty
 

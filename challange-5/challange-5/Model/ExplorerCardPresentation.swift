@@ -20,20 +20,20 @@ struct ExplorerCardPresentation: Sendable, Equatable {
     let questCount: Int
     let stampCount: Int
     let badgeCount: Int
-    let activities: [ActivityPresentation]
+    let inProgressQuests: [InProgressQuestPresentation]
     let stamps: [StampPresentation]
     let badges: [BadgePresentation]
 
     static let empty = ExplorerCardPresentation(
         name: "", questCount: 0, stampCount: 0, badgeCount: 0,
-        activities: [], stamps: [], badges: [])
+        inProgressQuests: [], stamps: [], badges: [])
 
     init(
         name: String,
         questCount: Int,
         stampCount: Int,
         badgeCount: Int,
-        activities: [ActivityPresentation],
+        inProgressQuests: [InProgressQuestPresentation],
         stamps: [StampPresentation],
         badges: [BadgePresentation]
     ) {
@@ -41,29 +41,36 @@ struct ExplorerCardPresentation: Sendable, Equatable {
         self.questCount = questCount
         self.stampCount = stampCount
         self.badgeCount = badgeCount
-        self.activities = activities
+        self.inProgressQuests = inProgressQuests
         self.stamps = stamps
         self.badges = badges
     }
 }
 
-/// One row on the Quests tab: something the reader was asked to find, and whether they did.
+/// One row on the Quests tab: a walk the reader started and has not finished.
 ///
-/// These are sidequests — the encounters that ask for a thing at a place and record an answer
-/// (`FR-SIDE-04`). Checkpoint tasks are deliberately not listed here: `AD-2` makes them keepsakes
-/// that never gate anything, and a list of them under a "completed" seal would say they were a
-/// requirement.
-struct ActivityPresentation: Sendable, Equatable, Identifiable {
-    let id: String
+/// **Unfinished only, and that is the whole list.** A finished walk is already told twice — as a
+/// badge on the third tab and as a sealed letter in the Journal — so repeating it here would make
+/// the tab a second Journal. What no other surface answers is "what am I part-way through", which
+/// is what a reader opens their own card to find out.
+///
+/// Every word comes from the Run's own snapshots (`FR-DONE-05`, `FR-RUN-06`), so a walk keeps
+/// naming itself after a content correction and after the quest is withdrawn underneath it.
+///
+/// Sidequests used to be listed here and no longer are. They are not quests — `FR-SIDE-04`
+/// encounters have their own surfaces in the Journal's collection and the nearby list — and a row
+/// of them under a tab called "Quests" said they were part of the walk.
+struct InProgressQuestPresentation: Sendable, Equatable, Identifiable {
+    /// The Run's id, which is also what the row opens.
+    let id: UUID
     let title: String
+    /// "3 of 5 checkpoints", already formatted.
     let detail: String
-    let isComplete: Bool
 
-    init(id: String, title: String, detail: String, isComplete: Bool) {
+    init(id: UUID, title: String, detail: String) {
         self.id = id
         self.title = title
         self.detail = detail
-        self.isComplete = isComplete
     }
 }
 

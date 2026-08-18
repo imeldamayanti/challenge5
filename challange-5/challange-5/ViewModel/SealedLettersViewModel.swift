@@ -56,7 +56,10 @@ final class SealedLettersViewModel {
                 if (lhs.state == .active) != (rhs.state == .active) { return lhs.state == .active }
                 return lhs.updatedAt > rhs.updatedAt
             }
-        letters = runs.map(presentation)
+        // Built once for the whole shelf rather than per letter: it counts finished walks per
+        // place, which is a question about every Run and not about this one.
+        let artwork = StampArtworkResolver(runs: runs, repository: repository)
+        letters = runs.map { presentation($0, artwork: artwork) }
         if !letters.indices.contains(selectedIndex) { selectedIndex = 0 }
     }
 
@@ -101,13 +104,20 @@ final class SealedLettersViewModel {
 
     // MARK: - Building one letter
 
-    private func presentation(_ run: Run) -> SealedLetterPresentation {
+    private func presentation(_ run: Run, artwork: StampArtworkResolver) -> SealedLetterPresentation {
         let quest = (try? repository.quest(id: run.questID)) ?? nil
         let region = quest?.region ?? ""
         let stamps = run.awards
             .filter { $0.type == .stamp }
             .sorted { $0.awardedAt < $1.awardedAt }
-            .map { StampPresentation(id: $0.sourceID, placeName: $0.snapshotName, region: region) }
+            .map {
+                StampPresentation(
+                    id: $0.sourceID,
+                    placeName: $0.snapshotName,
+                    region: region,
+                    artworkName: artwork.artworkName(
+                        questID: run.questID, stampSourceID: $0.sourceID))
+            }
         let progress = String(
             format: UIStrings.string(.checkpointProgress, language),
             run.reachedCount, run.checkpointCount)

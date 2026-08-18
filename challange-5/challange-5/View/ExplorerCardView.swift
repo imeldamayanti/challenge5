@@ -21,19 +21,27 @@ struct ExplorerCardView: View {
     /// Home → Profile → App preferences, which is the only route to Settings now that it is not a
     /// tab. The frame's header row is a `justify-between` with one child; this is the other slot.
     let onOpenPreferences: () -> Void
+    /// The walk a row on the Quests tab picks back up. A list of unfinished walks that could not be
+    /// resumed from where it is read would be a reminder rather than a card.
+    let onResumeRun: (UUID) -> Void
 
     init(
         model: ExplorerCardViewModel,
         language: ContentLanguage,
-        onOpenPreferences: @escaping () -> Void
+        onOpenPreferences: @escaping () -> Void,
+        onResumeRun: @escaping (UUID) -> Void = { _ in }
     ) {
         self.model = model
         self.language = language
         self.onOpenPreferences = onOpenPreferences
+        self.onResumeRun = onResumeRun
     }
 
     var body: some View {
-        HisploraStage(ground: \.brownMid) {
+        // `547:2953` prints the card's ground as `brownMid` under a fine white speckle, which is
+        // `HisploraGround`. See that file for the measured ratios — the sheet is drawn over the
+        // token rather than replacing it, so `HisploraThemeTests` still describes this screen.
+        HisploraStage(ground: \.brownMid, grain: true) {
             VStack(spacing: 0) {
                 header
                 identity
@@ -148,30 +156,54 @@ struct ExplorerCardView: View {
 
     @ViewBuilder private var surface: some View {
         switch model.tab {
-        case .quests: activities
+        case .quests: inProgressQuests
         case .stamps: stamps
         case .badges: badges
         }
     }
 
-    @ViewBuilder private var activities: some View {
-        if model.presentation.activities.isEmpty {
+    @ViewBuilder private var inProgressQuests: some View {
+        if model.presentation.inProgressQuests.isEmpty {
             empty(.profileQuestsEmpty)
         } else {
             LazyVStack(spacing: KultaraMetrics.md) {
-                ForEach(model.presentation.activities) { activity in
-                    HisploraActivityCard(
-                        title: activity.title,
-                        detail: activity.detail,
-                        isComplete: activity.isComplete,
-                        completeLabel: UIStrings.string(.profileActivityComplete, language)
-                    ) {
-                        Image(systemName: "scroll")
-                            .font(.system(size: 28))
-                            .foregroundStyle(palette.brownMid.color)
+                ForEach(model.presentation.inProgressQuests) { quest in
+                    Button {
+                        onResumeRun(quest.id)
+                    } label: {
+                        // Never sealed: this tab lists only what is unfinished, so a completion
+                        // seal here would contradict the list it sits in.
+                        HisploraActivityCard(
+                            title: quest.title,
+                            detail: quest.detail,
+                            isComplete: false,
+                            completeLabel: UIStrings.string(.profileActivityComplete, language)
+                        ) {
+                            questMark
+                        }
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityHint(UIStrings.string(.profileQuestResumeHint, language))
                 }
             }
+        }
+    }
+
+    /// The mark on an unfinished walk's row: the sealed scroll the transition screen already
+    /// carries (`293:1599`), rather than SF Symbols' `scroll`. One drawn object for one idea —
+    /// a quest — instead of a glyph here and an illustration two screens away.
+    ///
+    /// The symbol stays as the fallback for the same reason every packaged picture in this project
+    /// has one: a dropped resource should cost the drawing, not the row.
+    @ViewBuilder private var questMark: some View {
+        if let scroll = TransitionScrollMetrics.image {
+            scroll
+                .resizable()
+                .aspectRatio(TransitionScrollMetrics.aspectRatio, contentMode: .fit)
+        } else {
+            Image(systemName: "scroll")
+                .font(.system(size: 28))
+                .foregroundStyle(palette.brownMid.color)
         }
     }
 
@@ -181,7 +213,10 @@ struct ExplorerCardView: View {
         } else {
             LazyVGrid(columns: twoColumns, spacing: KultaraMetrics.xl) {
                 ForEach(model.presentation.stamps) { stamp in
-                    HisploraStampCard(title: stamp.placeName, subtitle: stamp.region)
+                    HisploraStampCard(
+                        title: stamp.placeName,
+                        subtitle: stamp.region,
+                        artworkName: stamp.artworkName)
                 }
             }
         }

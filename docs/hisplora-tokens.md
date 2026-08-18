@@ -152,6 +152,8 @@ Nine, all recorded rather than argued. The last four came from `452:3132`, `447:
 | `quest-scroll.png` | `DesignSystem/Resources/Images` | the rolled scroll — a list row's icon at 48, and the map hint's glyph at 32, tilted 41.6° |
 | `story-divider.png` | `DesignSystem/Resources/Images` | `447:1887`'s flourish, **converted to an alpha mask** — see below |
 | `SpecialElite-Regular.ttf` | `DesignSystem/Resources/Fonts` | Apache 2.0, licence shipped beside it |
+| `<place>-stamp1…3.png` × 5 places | `DesignSystem/Resources/Images` | the fifteen stamp illustrations, composited out of the SVGs at 480 × 519 — see below |
+| `hisplora-ground.png` | `DesignSystem/Resources/Images` | `547:2953` rendered, 804 × 1748 — the printed brown the Journal and the Explorer's Card sit on |
 
 **`story-divider.png` is not the frame's pixels.** Figma exports that node with the containing
 frame's `#808080` backdrop baked in, so the file as exported is a solid grey bar with a faint
@@ -177,6 +179,123 @@ answerable.
 - **The circular portrait** `447:1905` puts beside `447:1880`'s title. It is the same generated
   likeness of I Gusti Ngurah Made Agung; `TaskDetailScreen` frames the quest's own hero image in
   that circle instead, and draws nothing when the quest ships no hero.
+
+### The SVGs are the source; three of them ship as pixels
+
+Seventeen SVGs sit in `DesignSystem/Resources/Images` and **none is loaded at runtime**. iOS has no
+SVG image loader, and Xcode's asset-catalogue SVG support handles neither the embedded rasters nor
+the filters these files are made of. They are kept as the record of where the pixels came from, and
+what ships is what each file actually describes.
+
+- **`badges-frame.svg` (152 × 206) is a die, and is drawn as one.** Its proportion is now
+  `HisploraStampCard.aspectRatio`, and the card holds it for **the whole object** rather than for
+  the picture window alone. Before this the window held a ratio and the caption added whatever
+  height it needed, so a two-line place name made one stamp in the grid taller than the one beside
+  it and the perforations came out at a different pitch on each — the opposite of what a die-cut
+  object does. The value is within a thousandth of the envelope thumbnail's old `25.788 / 35`,
+  which is why the franking down the pocket did not move.
+- **`Rectangle 10.svg` is a filter, not a fill.** Its rectangle is `#6E3B26`, which is `brownMid`
+  and already a token; everything else is `feTurbulence` fractal noise at `baseFrequency 0.588`,
+  `luminanceToAlpha`, a discrete transfer keeping ten of a hundred steps, and a white flood at
+  `0.25` composited back in. Rendered once through the system's own SVG renderer and shipped as
+  `hisplora-ground.png` — 804 × 1748, the frame's 402 × 874 at 2x, 137 KB. `HisploraGround` loads
+  it and `HisploraStage(grain:)` prints it over the token, on the Journal and the Explorer's Card.
+- **The fifteen stamp SVGs are a frame, a caption and a photograph** — see below.
+
+#### What the printed ground does to the measured ratios
+
+Worth writing out, because white on brown is a stronger mark than the museum theme's speckle:
+
+| | luminance | `inkCream` on it |
+|---|---|---|
+| `brownMid` alone | 0.0659 | **7.94:1** |
+| one speckled pixel | 0.1763 | **4.07:1** |
+| the ground, averaged over 10% coverage | 0.0769 | **7.25:1** |
+
+The speckle is a one-point dot at a tenth coverage, so what a reader integrates behind a glyph is
+the average, not the dot; the flat `brownMid` token `HisploraThemeTests` measures still honestly
+describes the ground. The render's own flat pixels are `#6E3B26` exactly, which is what makes
+painting the token first and the sheet over it a true composite rather than a substitution. The
+grain is **opt-in on `HisploraStage`** and on only where the design shows it; the story-flow frames
+draw the same brown flat.
+
+### The sheet is taller than the envelope, and the opening now admits it
+
+`332:1252`'s page rises out of the pocket. The offsets that did it were fractions of the *card* —
+`+0.34` inside, `-0.62` risen — chosen against a sheet the size of the envelope. A real
+`SealedLetterPage` is about 190 points tall against a 173-point card, because the card is landscape
+and a letter is portrait, so `-0.62` lifted the whole sheet **bottom edge included** clear of the
+pocket's lip: a page hanging in front of an envelope it was visibly not coming out of. Three
+changes, all in `HisploraEnvelope`:
+
+- The offsets are computed from the sheet's **measured** height against the pocket lip, not from
+  the card. `pageRiseRatio` is gone; `pageGripRatio` replaces it and says how deep in the pocket
+  the risen sheet's bottom edge stays. How far it stands proud is then whatever is left of it,
+  which is the right way round — a tall page rises further because there is more of it.
+- What hangs past the card's bottom edge is masked. "Inside the pocket" cannot mean "within the
+  card's bounds" for a sheet that does not fit inside it; it means top edge below the lip, with the
+  rest cut rather than drawn onto the brown. One mask whose rectangle moves, not a mask that comes
+  and goes — swapping between a masked and an unmasked branch changes view identity and restarts
+  the scale animation mid-zoom.
+- **The sheet goes in front of the envelope from `zooming` on.** At 2.1× it is half a card wider
+  than the envelope, and the pocket band went on drawing a strip of paper straight across the
+  middle of it. The envelope's own layers fade out across the same 1600 ms, which is what makes the
+  z-order swap invisible: at the instant it happens the sheet is still barely larger than the card,
+  and a bottom edge appearing over the pocket in one frame reads as a glitch.
+
+### The fifteen stamps are composited from the SVGs, not lifted out of them
+
+The design exports each stamp as a 152 × 206 SVG — `badung-stamp1.svg` and fourteen siblings. Each
+file is a perforated outline, a caption set as vector text, and **an embedded base64 PNG** of the
+place. They average six megabytes each and total about ninety; the largest is eleven.
+
+None of them is shipped, and none of them can be: `UIImage(data:)` does not read SVG, and every
+image in this package is loaded that way (`HisploraWaxSealMetrics.image(named:)`). What ships is
+each file's picture **composited the way the file composites it**, at 480 × 519 — 6.4 MB for the
+set, against ninety.
+
+That compositing is the whole of the second pass. The first extraction took the embedded PNG whole
+and resampled it, which is not what the export draws: the picture is painted into a
+`<rect x="9.674" y="11.258" width="132.431" height="143.105">` through an `objectBoundingBox`
+pattern whose `<use transform="matrix(a 0 0 d tx ty)">` places the image *larger than the rect and
+offset left*, so the stamp shows a crop of it. Taking the payload uncropped shipped a different
+picture from the design's — off-centre, and at the wrong aspect. The crop is recoverable from the
+matrix alone (`px = (unit − tx) / a` on each axis), and that is what the current PNGs are.
+
+**No SVG sits in `Resources/Images`, and none may.** `Package.swift` declares
+`.copy("Resources/Images")`, which copies the *directory*, so eighty-nine megabytes of base64 rode
+into the app bundle for as long as the exports were there — invisible in code review, and roughly
+fifteen times the size of everything the package actually draws. Every SVG now lives under
+`docs/design-sources/`: the fifteen stamp exports in `stamps/`, which is `.gitignore`d because they
+are re-exportable and enormous, and the two small vector files (`badges-frame.svg`,
+`Rectangle 10.svg`) beside them, which are tracked because they are the record and cost eight
+kilobytes. Nothing in the package loads any of them. **Anything dropped into `Resources/Images`
+ships**, so check what is in it before adding to it.
+
+Two more things the files turned out to say. Several carry **two stacked pattern images** and only
+the last one drawn is visible — the earlier one is a leftover under-layer, and reading it instead
+gives the wrong picture entirely. And the design's own tiers are not always three distinct
+drawings: `caturmuka-stamp2`/`3` and `pemecutan-stamp2`/`3` are the same photograph in the export,
+so the third walk through those places earns a stamp that looks like the second. That is the
+design file's duplication faithfully carried, not an extraction bug — worth fixing in Figma rather
+than in code.
+
+The outline and the caption are *not* taken from the export, and were not before this: the stamp is
+drawn by `HisploraStampShape` and franked by `HisploraStampCard`, for the reason recorded in that
+file — a perforation is a parameter, and the same stamp is set at 26 points on the Journal envelope
+and at 160 on the Explorer's Card.
+
+**Three drawings per place, and walking is what moves between them.** `HisploraStampArtwork.tier`
+holds the rule: one finished quest through a place shows the first drawing, two the second, three or
+more the third. It clamps rather than wraps — a fourth walk must not send a reader back to the
+sketch — and its floor is the first drawing rather than a blank, because a stamp is only ever drawn
+once it has been earned and a walk in progress has earned its stamps without having finished.
+`StampArtworkResolver` in the app target does the counting; place id → asset stem is a table there
+rather than a field on `Place`, which is a debt to pay the moment content stops being one quest.
+
+The drawings depict real places, so the rule `PortraitFrame.swift` sets out applies: the picture is
+a licence question and the words under it are the editorial one. Nothing is captioned from the
+artwork — every stamp's name and region come from the Run's own snapshots.
 
 ### The plate on `293:1613`, and what the code draws instead
 

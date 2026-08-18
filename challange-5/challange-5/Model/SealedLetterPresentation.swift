@@ -43,21 +43,27 @@ struct SealedLetterPresentation: Sendable, Equatable, Identifiable {
 
 /// One franked stamp: a checkpoint that was actually reached.
 ///
-/// **There is no picture on it, and that is a decision.** The frames fill each stamp with an
-/// illustration of the place it names. The content tree carries no per-place artwork, and an
-/// illustration captioned with a real place's name is a claim about that place — `FR-CP-05` wants
-/// every claim to arrive with its source and this one would arrive with none. So the stamp is
-/// franked with the name and the region the Run recorded, on aged paper.
+/// **The picture is a resource name, never an image.** The design draws each place three times and
+/// the reader climbs the set by finishing walks through it (`StampArtworkResolver`); which drawing
+/// they are on is decided before this type is built, and what lands here is the stem the view hands
+/// to `DesignSystem`. A presentation model that carried an `Image` would be holding a piece of the
+/// theme, which is the rule `LoreBlockPresentation.Ink` exists to keep.
+///
+/// `nil` is a real state and stays one: a place the design never drew, or content that has been
+/// withdrawn under a finished walk, franks aged paper rather than a borrowed picture.
 struct StampPresentation: Sendable, Equatable, Identifiable {
     /// The award's `sourceID` — the authored `Checkpoint.stampId`.
     let id: String
     /// `Award.snapshotName`, which is the place name as it read on the day.
     let placeName: String
     let region: String
+    /// `"pemecutan-stamp2"`, or `nil` when this place has no drawing.
+    let artworkName: String?
 
-    init(id: String, placeName: String, region: String) {
+    init(id: String, placeName: String, region: String, artworkName: String? = nil) {
         self.id = id
         self.placeName = placeName
         self.region = region
+        self.artworkName = artworkName
     }
 }

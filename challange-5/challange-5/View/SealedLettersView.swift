@@ -41,7 +41,8 @@ struct SealedLettersView: View {
     }
 
     var body: some View {
-        HisploraStage(ground: \.brownMid) {
+        // `547:2953`'s printed ground, the same sheet the Explorer's Card sits on.
+        HisploraStage(ground: \.brownMid, grain: true) {
             VStack(spacing: 0) {
                 header
                 if model.isEmpty {
@@ -132,39 +133,68 @@ struct SealedLettersView: View {
         GeometryReader { proxy in
             let cardWidth = proxy.size.width * 0.72
             let inset = (proxy.size.width - cardWidth) / 2
-            ScrollView(.horizontal) {
-                LazyHStack(spacing: KultaraMetrics.sm) {
-                    ForEach(Array(model.letters.enumerated()), id: \.element.id) { index, letter in
-                        SealedLetterEnvelope(
-                            letter: letter,
-                            language: language,
-                            stage: index == model.selectedIndex ? model.stage : .sealed,
-                            wiggles: index == model.selectedIndex && model.showsSwipeHint
-                                && !reduceMotion && !voiceOverEnabled)
-                            .frame(width: cardWidth)
-                            .scrollTransition { content, phase in
-                                content
-                                    .opacity(phase.isIdentity ? 1 : 0.5)
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.75)
-                            }
-                            .id(index)
+            ZStack {
+                ScrollView(.horizontal) {
+                    LazyHStack(spacing: KultaraMetrics.sm) {
+                        ForEach(Array(model.letters.enumerated()), id: \.element.id) { index, letter in
+                            SealedLetterEnvelope(
+                                letter: letter,
+                                language: language,
+                                wiggles: index == model.selectedIndex && model.showsSwipeHint
+                                    && !reduceMotion && !voiceOverEnabled)
+                                .frame(width: cardWidth)
+                                // The centred card steps aside for the opening drawn over it, so
+                                // there is never a second copy of the same envelope on screen.
+                                .opacity(index == model.selectedIndex && isOpening ? 0 : 1)
+                                .scrollTransition { content, phase in
+                                    content
+                                        .opacity(phase.isIdentity ? 1 : 0.5)
+                                        .scaleEffect(phase.isIdentity ? 1 : 0.75)
+                                }
+                                .id(index)
+                        }
                     }
+                    .scrollTargetLayout()
                 }
-                .scrollTargetLayout()
+                .contentMargins(.horizontal, inset, for: .scrollContent)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollIndicators(.hidden)
+                .scrollDisabled(model.stage != .sealed)
+                .scrollPosition(id: Binding(
+                    get: { model.letters.indices.contains(model.selectedIndex) ? model.selectedIndex : nil },
+                    set: { if let index = $0 { model.select(index) } }))
+
+                // **The opening is drawn outside the ScrollView, and that is the whole point.**
+                // A `ScrollView` clips its content. The page rises two thirds of a card above the
+                // envelope and then grows to 2.1×, which put most of the last two beats outside a
+                // 260-point band and cut the top off the page mid-zoom. Same envelope, same place
+                // on screen, nothing clipping it.
+                if isOpening, let letter = model.selectedLetter {
+                    SealedLetterEnvelope(
+                        letter: letter,
+                        language: language,
+                        stage: model.stage,
+                        sequence: sequence)
+                        .frame(width: cardWidth)
+                        .allowsHitTesting(false)
+                }
             }
-            .contentMargins(.horizontal, inset, for: .scrollContent)
-            .scrollTargetBehavior(.viewAligned)
-            .scrollIndicators(.hidden)
-            .scrollDisabled(model.stage != .sealed)
-            .scrollPosition(id: Binding(
-                get: { model.letters.indices.contains(model.selectedIndex) ? model.selectedIndex : nil },
-                set: { if let index = $0 { model.select(index) } }))
-            // The zoom takes the page well outside the card's own bounds, and a clipped zoom stops
-            // being one.
-            .frame(height: proxy.size.height)
+            .frame(width: proxy.size.width, height: proxy.size.height)
         }
         .frame(height: 260)
-        .animation(.easeInOut(duration: 0.9), value: model.stage)
+        // Each beat carries its own curve and its own length: `.animation(_:value:)` resolves the
+        // animation against the stage being moved *to*, so the flap, the rise and the slow zoom no
+        // longer share one 900ms ease.
+        .animation(sequence.animation(of: model.stage), value: model.stage)
+    }
+
+    /// Whether the centred envelope is anywhere past closed.
+    private var isOpening: Bool { model.stage != .sealed }
+
+    /// The timings this reader gets. Zero-length throughout under Reduce Motion or VoiceOver, where
+    /// the opening is a cut rather than a skipped animation.
+    private var sequence: HisploraEnvelopeSequence {
+        HisploraEnvelopeSequence(rendersImmediately: reduceMotion || voiceOverEnabled)
     }
 
     private func unseal() {

@@ -19,9 +19,12 @@ struct SealedLetterEnvelope: View {
     let language: ContentLanguage
     var stage: HisploraEnvelopeStage = .sealed
     var wiggles: Bool = false
+    /// Passed through so Reduce Motion reaches the page's own reveal, which is the one beat the
+    /// envelope times for itself rather than taking from the caller.
+    var sequence: HisploraEnvelopeSequence = HisploraEnvelopeSequence(rendersImmediately: false)
 
     var body: some View {
-        HisploraEnvelope(stage: stage, wiggles: wiggles) {
+        HisploraEnvelope(stage: stage, wiggles: wiggles, sequence: sequence) {
             franking
         } contents: {
             SealedLetterPage(letter: letter, language: language)
@@ -77,10 +80,15 @@ struct SealedLetterEnvelope: View {
         let columns = [0.7655, 0.8759]
         let rows = [0.3103, 0.5287, 0.7471]
         return ForEach(Array(letter.stamps.prefix(6).enumerated()), id: \.element.id) { index, stamp in
-            // Paper only. At 26 points the frame's own franking is 2.3 points high — texture, not
-            // words. The names are printed on the Explorer's Card, where the same stamp is set
-            // large enough to read them.
-            HisploraStampCard(title: stamp.placeName, subtitle: stamp.region, showsFranking: false)
+            // The drawing, but no franking. At 26 points the frame's own caption is 2.3 points
+            // high — texture, not words — so the names are printed on the Explorer's Card, where
+            // the same stamp is set six times larger. The picture survives the shrink; the words
+            // do not.
+            HisploraStampCard(
+                title: stamp.placeName,
+                subtitle: stamp.region,
+                showsFranking: false,
+                artworkName: stamp.artworkName)
                 .frame(width: size.width * 0.0889, height: size.height * 0.2011)
                 .offset(x: size.width * columns[index % 2],
                         y: size.height * rows[index / 2])
