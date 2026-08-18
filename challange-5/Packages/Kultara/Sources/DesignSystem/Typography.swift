@@ -29,13 +29,29 @@ public enum KultaraTypography {
 
         // MARK: The Hisplora story flow
         //
-        // Three roles that exist only on the story screens, in the faces those frames are drawn
-        // with. They live in the same table as everything else so there is still exactly one place
-        // that decides what a piece of type is.
+        // The roles that exist only on the story screens, in the faces those frames are drawn with.
+        // They live in the same table as everything else so there is still exactly one place that
+        // decides what a piece of type is — which is why `452:3132` and `447:1880`'s four New York
+        // sizes are four roles here and not four `.system(size:)` calls in two views.
 
         /// The heading on a story-flow screen — "The Last Traces of Badung", "A Legend Will Guide
         /// Your Journey". Set in the system serif, as the frames set it.
         case storyDisplay
+        /// A section's name on a story-flow screen: "All Quest" on `452:3174`. New York Medium at
+        /// 25 as drawn — a third the size of `storyDisplay`, so it is its own role rather than that
+        /// one shrunk at a call site.
+        case storySection
+        /// The task's own name on the parchment sheet (`447:1896`). Same size as `storySection` and
+        /// a weight above it, because on that screen it is the masthead and there is nothing over
+        /// it.
+        case storyTaskTitle
+        /// The place name printed at the head of the sheet, over the ornament (`447:1906`). New York
+        /// Bold at 17 — the smallest and heaviest of the four, which is what makes it read as a
+        /// standfirst rather than as a second title.
+        case storyPlaceMark
+        /// The place name a story-flow screen carries in its top bar (`452:3136`), where the frame
+        /// sets the serif rather than the sans the other bars use.
+        case storyBarTitle
         /// The hook typed onto the sheet in the typewriter (`81:588`).
         case typedSheet
         /// The two figures ruled beneath it: the distance and the duration.
@@ -54,6 +70,10 @@ public enum KultaraTypography {
             case .chipLabel: .footnote
             case .buttonLabel: .body
             case .storyDisplay: .largeTitle
+            // 25 and 17 as drawn; `.title2` and `.title3` are the two system styles those sit
+            // between, and a text style is what makes them scale at all (`NFR-A11Y-01`).
+            case .storySection, .storyTaskTitle: .title2
+            case .storyPlaceMark, .storyBarTitle: .title3
             case .typedSheet: .footnote
             case .typedFigure: .title3
             }
@@ -69,7 +89,13 @@ public enum KultaraTypography {
             case .body, .lore, .metadata, .caption: .regular
             // Special Elite ships in one weight, and New York's display cut is drawn light on
             // purpose — the frames set both regular.
-            case .storyDisplay, .typedSheet, .typedFigure: .regular
+            case .storyDisplay, .typedSheet, .typedFigure, .storyBarTitle: .regular
+            // The three weights `452:3174`, `447:1896` and `447:1906` are drawn in. New York is
+            // the system's own serif and ships every weight, so unlike Instrument Serif these are
+            // real cuts rather than a synthesised smear.
+            case .storySection: .medium
+            case .storyTaskTitle: .semibold
+            case .storyPlaceMark: .bold
             }
         }
 
@@ -83,7 +109,8 @@ public enum KultaraTypography {
         public var face: KultaraFace {
             switch self {
             case .questTitleLarge, .questTitle, .sectionHeading: .serif
-            case .storyDisplay: .displaySerif
+            case .storyDisplay, .storySection, .storyTaskTitle, .storyPlaceMark,
+                 .storyBarTitle: .displaySerif
             case .typedSheet, .typedFigure: .typewriter
             default: .sans
             }
@@ -108,6 +135,8 @@ public enum KultaraTypography {
             case .questTitle: 24
             case .sectionHeading: 22
             case .storyDisplay: 38
+            case .storySection, .storyTaskTitle: 25
+            case .storyPlaceMark, .storyBarTitle: 17
             // The frame types the sheet at 8.5 pt, because on the frame the sheet is a small
             // object inside a photograph. Reproduced literally it is unreadable, so the sheet is
             // set at a size a person can read and scales from there (`NFR-A11Y-01`). Deviation
@@ -128,6 +157,9 @@ public enum KultaraTypography {
             case .questTitleLarge, .questTitle, .sectionHeading, .body, .lore: 0
             // The frames track the display down (-0.76 at 38 pt) and the typed sheet in slightly.
             case .storyDisplay: -0.76
+            case .storySection, .storyTaskTitle: -0.5
+            case .storyPlaceMark: -0.34
+            case .storyBarTitle: -0.38
             case .typedSheet, .typedFigure: -0.34
             }
         }
@@ -169,6 +201,7 @@ public enum KultaraTypography {
             case .questTitleLarge: -4
             case .questTitle, .sectionHeading: -2
             case .storyDisplay: -3
+            case .storySection, .storyTaskTitle, .storyPlaceMark, .storyBarTitle: -1
             // 1.4 line height on the frame's sheet, which at this size is a few points of air.
             case .typedSheet: 5
             default: 0
@@ -204,7 +237,34 @@ public enum KultaraMetrics {
     ///
     /// 64 for the pill, 8 for the padding under it, and 16 of air so the last line is not flush
     /// against it.
+    ///
+    /// **This value is the clearance at the default text size only.** `floatingTabBarClearance(labelScale:)`
+    /// is what a screen should actually reserve; this stays public because it is the design's own
+    /// number and the scaled form is defined in terms of it.
     public static let floatingTabBarClearance: CGFloat = 88
+
+    /// The bar's own content height at the default text size — `KultaraTabBar`'s `minHeight`.
+    ///
+    /// A minimum rather than a height, which is the whole reason the clearance has to scale: the bar
+    /// grows with its labels and a fixed 88 does not.
+    public static let floatingTabBarContentHeight: CGFloat = 64
+
+    /// The room a scrolling screen has to leave for the floating tab bar at a given label scale
+    /// (`NFR-A11Y-02`, `NFR-A11Y-06`).
+    ///
+    /// The bug this exists for: the clearance was a fixed 88 while `KultaraTabBar` is a `minHeight`
+    /// that grows with its labels. At the largest accessibility size the bar stands roughly 210
+    /// points tall, the last control on a scrolling screen came to rest underneath it, and a tap on
+    /// that control's centre belonged to the bar — so tapping "Settings" switched tab instead of
+    /// opening Settings. `FloatingTabBarClearanceTests` holds every part of the contract below.
+    ///
+    /// Never *less* than the design's 88, however small the text: the bar has a minimum height, so
+    /// shrinking the labels does not shrink the thing being cleared.
+    public static func floatingTabBarClearance(labelScale: CGFloat) -> CGFloat {
+        // The 24 is the 8 of padding under the pill plus the 16 of air above the last line — both
+        // fixed, because neither is type.
+        max(floatingTabBarClearance, floatingTabBarContentHeight * labelScale + sm + lg)
+    }
 
     public static let cardCornerRadius: CGFloat = 4
     /// The photo cards on Home are rounded far more than a sheet of paper is — they are

@@ -27,8 +27,16 @@ final class QuestRunViewModel {
         /// `50:137` — the sacred-Place notice, before the task menu. Only reached when
         /// `checkpoint.isSacred`; every other checkpoint's story goes straight to `checkpointDetail`.
         case placeNotice
-        /// `51:201` — what is waiting at this checkpoint, named before it is answered.
+        /// `452:3132` ("Quest 1/3") — what is waiting at this checkpoint, named before it is
+        /// answered. Replaces the earlier `51:201` treatment.
         case checkpointDetail
+        /// `447:1880` ("Quest_Filled") — one task on its own parchment sheet, reached by tapping its
+        /// row on `checkpointDetail`.
+        ///
+        /// It carries the task id rather than an index: the presentation's `tasks` are already
+        /// filtered (`FR-TASK-06` drops a photo task at a Place where photography is prohibited), so
+        /// an index into the list would point at a different task depending on the Place.
+        case taskDetail(taskID: String)
         /// The place name, before the checkpoint proper.
         case transition
         case atCheckpoint
@@ -392,6 +400,50 @@ final class QuestRunViewModel {
 
     func advanceFromTransition() { stage = .atCheckpoint }
 
+    /// Opening one task's own sheet (`452:3145` → `447:1880`).
+    ///
+    /// Guarded on the task actually being at this checkpoint. Not defensiveness: the presentation's
+    /// task list is filtered by `FR-TASK-06`, and a stage holding an id nothing resolves would draw
+    /// an empty sheet with a back button and no way to tell what went wrong.
+    func openTaskDetail(taskID: String) {
+        guard checkpoint?.tasks.contains(where: { $0.id == taskID }) == true else { return }
+        stage = .taskDetail(taskID: taskID)
+    }
+
+    /// The task the `taskDetail` stage is showing, or nil on every other stage.
+    var detailTask: ContentTask? {
+        guard case .taskDetail(let taskID) = stage else { return nil }
+        return checkpoint?.tasks.first { $0.id == taskID }
+    }
+
+    /// How many of this checkpoint's tasks have been resolved — answered or skipped, since
+    /// `FR-TASK-02` makes those the same kind of outcome and `AD-2` means neither gates anything.
+    /// This is what fills the segmented bar on `452:3138`.
+    var resolvedTaskCount: Int {
+        (checkpoint?.tasks ?? []).count { resolution(for: $0) != nil }
+    }
+
+    var taskCount: Int { checkpoint?.tasks.count ?? 0 }
+
+    var taskProgressLabel: String {
+        String(format: UIStrings.string(.checkpointDetailProgressLabel, language),
+               resolvedTaskCount, taskCount)
+    }
+
+    // MARK: The site plan — `452:3028`
+
+    /// Whether the plan is over the task sheet. A cover rather than a stage, because the plan is
+    /// something the walker glances at and dismisses back to the same task — it is not a step in the
+    /// walk, and putting it in `Stage` would make backing out of it ambiguous.
+    private(set) var isPresentingSiteMap = false
+
+    func presentSiteMap() {
+        guard checkpoint?.siteMap != nil else { return }
+        isPresentingSiteMap = true
+    }
+
+    func dismissSiteMap() { isPresentingSiteMap = false }
+
     /// Backing out of a story stage returns to the one before it rather than leaving the walk.
     func retreatFromStoryStage() {
         switch stage {
@@ -399,6 +451,7 @@ final class QuestRunViewModel {
         case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .cutscenePortrait : .storyReveal
         case .placeNotice: stage = .storyReveal
         case .checkpointDetail: stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .storyReveal
+        case .taskDetail: stage = .checkpointDetail
         default: break
         }
     }
@@ -597,6 +650,29 @@ final class QuestRunViewModel {
                 uniqueKeysWithValues: tasks.map { ($0.id, $0.prompt.value(for: language)) }),
             coordinate: place?.coordinate ?? Coordinate(lat: 0, lon: 0),
             arrivalRadiusM: place?.arrivalRadiusM ?? 75,
-            isFinal: checkpoint.orderIndex == (orderedCheckpoints.last?.orderIndex ?? 0))
+            isFinal: checkpoint.orderIndex == (orderedCheckpoints.last?.orderIndex ?? 0),
+            siteMap: place.flatMap(siteMap(for:)))
+    }
+
+    /// The Place's drawn plan, with its citation resolved (`452:3028`).
+    ///
+    /// Returns nil rather than a plan with an empty citation when the `sourceRef` does not resolve.
+    /// V3 rejects such content at build time, but content can be corrected after a build and this is
+    /// the one screen that must not be the thing carrying an unsourced claim about a real place's
+    /// layout to a temple gate — the same runtime-half-of-a-validator-rule argument `FR-TASK-06`'s
+    /// photo filter above makes.
+    private func siteMap(for place: Place) -> SiteMapPresentation? {
+        guard let authored = place.siteMap,
+              place.sources.indices.contains(authored.sourceRef)
+        else { return nil }
+        return SiteMapPresentation(
+            imageURL: (try? repository.assetURL(authored.asset)) ?? nil,
+            aspectRatio: authored.aspectRatio,
+            citation: place.sources[authored.sourceRef].citation,
+            // `452:3032`–`3034` draw three dots on the plan. They are not authored anywhere in the
+            // content tree, and inventing coordinates for them here would be this file asserting
+            // where three things stand inside a real puri — which is precisely the claim the
+            // citation above exists to qualify. Empty until content carries them.
+            markers: [])
     }
 }

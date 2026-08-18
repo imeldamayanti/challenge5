@@ -3,11 +3,10 @@ import DesignSystem
 import SwiftUI
 import UIStringsKit
 
-/// The place notice — `293:1613` ("Quest"), which replaces the earlier `50:137` treatment — and the
-/// checkpoint's task menu — `51:201` ("Detail Quest"). Two stops between the story reveal and the
-/// walk itself, both reached only when there is something to say: the notice only for a sacred
-/// Place (`checkpoint.isSacred`, the same gate `checkpointScreen`'s inline notice already used),
-/// the menu always.
+/// The place notice — `293:1613` ("Quest"), which replaces the earlier `50:137` treatment. One of
+/// two stops between the story reveal and the walk itself, and the conditional one: it is reached
+/// only at a sacred Place (`checkpoint.isSacred`, the same gate `checkpointScreen`'s inline notice
+/// already used). The task menu that always follows it is `CheckpointDetailScreen`.
 ///
 /// **The plaque is drawn, not shipped, and that is a licence decision rather than an omission.**
 /// `293:1630` — the ornate cream plate the whole screen is printed on — is a stock
@@ -31,10 +30,8 @@ import UIStringsKit
 /// (the temple-entry rule) has no field behind it at all. `description` renders
 /// `Place.loreStandalone` and the rules render the Place's own `dressCode` and `photoPolicy`, so
 /// this screen states what the content actually says rather than what the mock-up says.
-/// `51:201`'s three found-object tasks ("The Iron Statue", "The Ancient Script", "The Whip Bearer")
-/// do not exist anywhere in the content tree either — the shipped checkpoint carries exactly one
-/// task, a written reflection — so `CheckpointDetailScreen` lists whatever `tasks` the run actually
-/// has, titled by `TaskType` rather than by an invented name.
+/// The task menu that follows this screen has the same problem with its own frame's copy, and the
+/// same answer; it now lives in `CheckpointDetailScreen.swift`, restyled to `452:3132`.
 struct PlaceNoticeScreen: View {
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -56,22 +53,46 @@ struct PlaceNoticeScreen: View {
     /// description, then (only at a sacred Place) the dress-code and photo-policy rules.
     @State private var showsPoints = false
 
-    /// The frame's margins, in its own 402-point terms: 20 to the screen's edge for the pill and
-    /// the back arrow, and a 66-point column inside the plaque for everything printed on it.
+    /// The frame's margins, in its own 402-point terms.
+    ///
+    /// `margin` is the 20 to the screen's edge the pill and the back arrow both keep. The rest are
+    /// read off the exported plate (`293:1630`, alpha-measured — see `HisploraPlaqueMetrics`): its
+    /// straight sides stand at x = 24 and x = 381, so the panel is inset `plaqueInset`; the bullets
+    /// run x = 66…339, which is `plaqueColumn` inside that; and the description runs x = 90…332, a
+    /// further `descriptionIndent` in on the leading edge and `descriptionTrail` on the trailing one.
+    /// The mock-up indents its prose past its own list and that reads as deliberate — a lead
+    /// paragraph set narrower than the points under it — so it is reproduced rather than tidied away.
     private static let margin: CGFloat = 20
-    private static let plaqueColumn: CGFloat = 66
+    private static let plaqueInset: CGFloat = 22
+    private static let plaqueColumn: CGFloat = 44
+    private static let descriptionIndent: CGFloat = 24
+    private static let descriptionTrail: CGFloat = 7
+
+    /// Where the gilded oval hangs. `320:2485` draws it 156.856 wide at y = 125, while the plate's
+    /// own sheet starts at y = 138 — so the frame **straddles** the plate's head rather than sitting
+    /// inside it, and 13 points of gold overlap the cream's top edge. Reproducing that overlap is
+    /// most of what separates this screen from the mock-up; centring the oval politely below the edge
+    /// reads as a different design.
+    private static let portraitWidth: CGFloat = 157
+    private static let portraitTopOffset: CGFloat = HisploraPlaqueMetrics.crestHeight - 13
+
+    /// The room the panel reserves above its first line of prose: the oval's 196, plus the 54 of air
+    /// `293:1613` leaves under it, less the head lobe the panel already reserves for itself.
+    private static let plaqueInteriorTop: CGFloat =
+        portraitTopOffset + 196 + 54 - HisploraPlaqueMetrics.crestHeight
 
     var body: some View {
         HisploraStage(ground: \.brownStone) {
             ZStack(alignment: .top) {
                 ScrollView {
                     plaque
-                        // The plate's drawn top edge falls at about 130 of 874, which on a screen
-                        // whose status bar has already taken 59 is this much. It is not the
-                        // `293:1630` node's own 94: that PNG carries transparent margin above the
-                        // artwork, and `HisploraPlaqueShape` does not. Getting this wrong puts the
-                        // cream under the back arrow, where a cream arrow disappears.
-                        .padding(.top, 71)
+                        .padding(.horizontal, Self.plaqueInset)
+                        // The plate's head lobe tips at y ≈ 105 of 874 — measured, not the
+                        // `293:1630` node's own 94, because that PNG carries transparent margin above
+                        // the artwork. On a screen whose status bar has already taken 59 that is this
+                        // much. Getting it wrong puts cream under the back arrow, where a cream arrow
+                        // disappears.
+                        .padding(.top, 46)
                         .padding(.bottom, KultaraMetrics.lg)
                 }
                 .scrollBounceBehavior(.basedOnSize)
@@ -101,23 +122,21 @@ struct PlaceNoticeScreen: View {
             .padding(.bottom, Self.margin)
     }
 
-    /// The plate, with the gilded oval standing over its head the way `320:2485` draws it.
+    /// The plate, with the gilded oval standing over its head the way `320:2485` draws it — as an
+    /// overlay rather than as the panel's first row, because the oval has to hang *past* the cream's
+    /// top edge and a row inside the panel cannot.
     private var plaque: some View {
-        HisploraPlaquePanel {
-            VStack(spacing: 0) {
-                HisploraFramedImage(url: portraitURL, label: placeName)
-                    // 156.856 of 402 wide, and 31 below the plate's own top edge.
-                    .containerRelativeFrame(.horizontal, alignment: .center) { width, _ in
-                        width * (156.856 / 402.0)
-                    }
-                    .padding(.top, 31)
-                    // 375 − 321: the gap between the oval's foot and the first line of prose.
-                    .padding(.bottom, 54)
-                printedMatter
-                    .padding(.horizontal, Self.plaqueColumn)
-                    // The plate runs on well past its last line; it does not end on it.
-                    .padding(.bottom, KultaraMetrics.xxl + KultaraMetrics.xl)
-            }
+        HisploraPlaquePanel(interiorTop: Self.plaqueInteriorTop) {
+            printedMatter
+                .padding(.horizontal, Self.plaqueColumn)
+                // The plate runs on well past its last line; it does not end on it. 710 − 630, in
+                // the frame's terms: its last bullet to the foot of its sheet.
+                .padding(.bottom, 80)
+        }
+        .overlay(alignment: .top) {
+            HisploraFramedImage(url: portraitURL, label: placeName)
+                .frame(width: Self.portraitWidth)
+                .offset(y: Self.portraitTopOffset)
         }
     }
 
@@ -132,6 +151,8 @@ struct PlaceNoticeScreen: View {
                         showsPoints = true
                     }
                 })
+                .padding(.leading, Self.descriptionIndent)
+                .padding(.trailing, Self.descriptionTrail)
 
             if isSacred {
                 // The heading belongs to the rules, not to the prose: it arrives with them, once
@@ -144,6 +165,9 @@ struct PlaceNoticeScreen: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     // 454 − 375, less the three lines of prose the frame sets above it.
                     .padding(.top, KultaraMetrics.lg)
+                    // `320:3182` sets the heading on the prose's indent, not the list's.
+                    .padding(.leading, Self.descriptionIndent)
+                    .padding(.trailing, Self.descriptionTrail)
                     .opacity(showsPoints ? 1 : 0)
                     .animation(
                         reduceMotion || voiceOverEnabled ? nil : .easeOut(duration: 0.3),
@@ -184,104 +208,5 @@ struct PlaceNoticeScreen: View {
             reduceMotion || voiceOverEnabled ? nil
                 : .easeOut(duration: 0.3).delay(Double(index) * 0.15),
             value: showsPoints)
-    }
-}
-
-/// The checkpoint's task menu — `51:201` ("Detail Quest"). A menu, not the tasks themselves: every
-/// row continues into the existing checkpoint screen, where `TaskCard` already carries the answer
-/// field, the save, and the skip (`FR-TASK-02`). This screen's own job is narrower — name what is
-/// waiting, in the order it is waiting in — so it does not duplicate that machinery.
-struct CheckpointDetailScreen: View {
-    @Environment(\.hisploraPalette) private var palette
-
-    let language: ContentLanguage
-    let placeName: String
-    let tasks: [ContentTask]
-    let taskPrompts: [String: String]
-    let onContinue: () -> Void
-    let onBack: () -> Void
-
-    var body: some View {
-        HisploraStage(ground: \.brownStone) {
-            VStack(spacing: 0) {
-                HStack {
-                    HisploraBackButton(
-                        accessibilityLabel: UIStrings.string(.storyRevealBack, language),
-                        action: onBack)
-                    Spacer()
-                }
-                .overlay {
-                    Text(placeName)
-                        .font(KultaraTypography.font(.questTitle))
-                        .foregroundStyle(palette.inkCream.color)
-                        .lineLimit(1)
-                        .accessibilityAddTraits(.isHeader)
-                }
-                .padding(.horizontal, KultaraMetrics.lg)
-                .padding(.top, KultaraMetrics.lg)
-                ScrollView {
-                    rows
-                        .padding(.vertical, KultaraMetrics.lg)
-                        .padding(.horizontal, KultaraMetrics.lg)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                HStack {
-                    Spacer()
-                    HisploraNextButton(
-                        accessibilityLabel: UIStrings.string(.checkpointDetailContinue, language),
-                        action: onContinue)
-                }
-                .padding(.horizontal, KultaraMetrics.lg)
-                .padding(.bottom, KultaraMetrics.lg)
-            }
-        }
-    }
-
-    private var rows: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            ForEach(Array(tasks.enumerated()), id: \.element.id) { offset, task in
-                if offset > 0 {
-                    Rectangle()
-                        .fill(palette.inkDark.color.opacity(0.2))
-                        .frame(height: KultaraMetrics.hairline)
-                        .accessibilityHidden(true)
-                }
-                row(task)
-            }
-        }
-        .padding(KultaraMetrics.lg)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.paperCream.color, in: RoundedRectangle(cornerRadius: KultaraMetrics.sm))
-    }
-
-    private func row(_ task: ContentTask) -> some View {
-        Button(action: onContinue) {
-            HStack(spacing: KultaraMetrics.md) {
-                VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
-                    Text(taskTypeLabel(task.type))
-                        .font(.system(size: 17, weight: .bold))
-                        .foregroundStyle(palette.brownDeep.color)
-                    Text(taskPrompts[task.id] ?? "")
-                        .font(.system(size: 13, weight: .light))
-                        .foregroundStyle(palette.inkBody.color)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-                Image(systemName: "chevron.forward")
-                    .foregroundStyle(palette.brownDeep.color)
-            }
-            .frame(minHeight: KultaraMetrics.minimumTapTarget)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityElement(children: .combine)
-    }
-
-    private func taskTypeLabel(_ type: TaskType) -> String {
-        switch type {
-        case .reflection: UIStrings.string(.taskTypeReflection, language)
-        case .photo: UIStrings.string(.taskTypePhoto, language)
-        case .question: UIStrings.string(.taskTypeQuestion, language)
-        }
     }
 }

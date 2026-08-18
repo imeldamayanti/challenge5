@@ -39,6 +39,11 @@ so the next import is not another archaeology exercise.
 | `paperCream` | `#EEE7D2` | the typewriter sheet on `81:588`; the clue card |
 | `paperWarm` | `#EADBC7` | the sketch pages of Story Reveal |
 | `paperLight` | `#F4EADD` | Location Checking |
+| `paperTicket` | `#EFEBD7` | the quest-row ticket on `452:3132` |
+| `inkTicket` | `#34312E` | that row's title |
+| `trackWell` | `#8D7870` | the well of the segmented task bar, `452:3138` |
+| `mapGround` | `#DFCDB5` | ground: the site-map screen `452:3028` — the one paper ground in the flow |
+| `mapMarker` | `#B44934` | the marker dots on the site plan, `452:3032`–`3034` |
 | `inkCream` | `#FDF2DE` | headings on the brown grounds |
 | `inkDusty` | `#D0B5AE` | muted leads on the brown grounds — **moved, see below** |
 | `inkDark` | `#1D1D1D` | headings on paper |
@@ -83,7 +88,8 @@ it cannot quietly start carrying text.
 
 ## Deviations from the frames
 
-Five, all recorded rather than argued.
+Nine, all recorded rather than argued. The last four came from `452:3132`, `447:1880` and
+`452:3028` on 2026-08-17.
 
 1. **`inkDusty` was lightened.** As drawn it is `#AA9B8E`, which measures 3.34:1 on `brownStone` —
    it carries the lead paragraph under the cutscene's title, so it is held to body text.
@@ -112,20 +118,54 @@ Five, all recorded rather than argued.
    sheet grows with the reader's text size while the machine stays the size it is
    (`KultaraTypewriter`).
 
+6. **The task bar's unfilled segments lost their wash.** `452:3139`–`3141` fill the unfilled
+   segments with 29% `#EEE7D7` over the well, which measures **2.25:1** against a filled segment —
+   so the one thing the bar communicates, which activities are done, would be the thing failing
+   contrast. Unwashed, a filled segment against the bare well is 3.36:1.
+   `HisploraThemeTests.theUnfilledProgressSegmentLostItsWashSoTheBarsStateIsReadable` holds both
+   halves, so restoring the wash fails the suite and says why.
+
+7. **The task bar's outline is `buttonRing`, not the drawn `#9F8E88`.** As drawn it is **2.87:1** on
+   `brownStone` — under WCAG 1.4.11. Rather than add a sixth token that cannot pass anything, the
+   bar borrows the ring the pill already uses (3.29:1). No new value; a reused one.
+
+8. **The "Take Photo" pill's outline is `brownMid`, not the drawn `#CAB7B0`.** `447:1900` is the one
+   control on that screen, its fill is 45% white over a cream sheet — within a shade of the paper,
+   about 1.06:1 — and the drawn outline measures **1.61:1** against the sheet's lightest sampled
+   interior (`#F3F1E5`). So the control would have no discernible boundary at all. `brownMid` is
+   7.22:1 there and is already the ink the place name above it is set in, so the pill reads as part
+   of the sheet rather than as a new colour.
+
+9. **`inkMuted` is not used on `mapGround`.** It measures **4.39:1** there — a tenth under body
+   text — so the site plan's citation is set in `inkBody` (6.28:1) and the pair is deliberately
+   absent from `contrastPairs`.
+   `HisploraThemeTests.theSiteMapScreenAvoidsTheMutedInkBecauseItMissesByATenth` records that as a
+   threshold call rather than an oversight.
+
 ## Assets shipped from the file
 
 | Asset | Where | Note |
 |---|---|---|
 | `portrait-frame.png` | `DesignSystem/Resources/Images` | the gilded oval, laid over the picture |
 | `typewriter.png` | `DesignSystem/Resources/Images` | the machine, cropped from the photograph at 47% height so the drawn sheet joins it |
+| `quest-parchment.png` | `DesignSystem/Resources/Images` | `447:1886`, the sheet the task is printed on |
+| `quest-scroll.png` | `DesignSystem/Resources/Images` | the rolled scroll — a list row's icon at 48, and the map hint's glyph at 32, tilted 41.6° |
+| `story-divider.png` | `DesignSystem/Resources/Images` | `447:1887`'s flourish, **converted to an alpha mask** — see below |
 | `SpecialElite-Regular.ttf` | `DesignSystem/Resources/Fonts` | Apache 2.0, licence shipped beside it |
+
+**`story-divider.png` is not the frame's pixels.** Figma exports that node with the containing
+frame's `#808080` backdrop baked in, so the file as exported is a solid grey bar with a faint
+`#AA9B8E` flourish inside it — and that is exactly how it rendered on device before it was caught.
+The coverage was lifted out of the red channel (170 against 128, the widest separation of the
+three) into alpha, leaving white ink `HisploraOrnamentDivider` tints with `brownMid`. Worth knowing
+for the next vector pulled out of this file: check the exported PNG's corner pixel before shipping it.
 
 Both images are generated art exported from the design file (`ChatGPT Image Aug 10 …` and
 `ChatGPT Image Aug 13 …`). They depict objects and claim nothing, so they are a licence question to
 answer rather than an editorial one — recorded here and in the component headers so it stays
 answerable.
 
-**Three assets in the file were deliberately not shipped.** They are not oversights:
+**Five assets in the file were deliberately not shipped.** They are not oversights:
 
 - **The Google Maps screenshots** on `89:1402` and `223:2004`, and the traced street map derived
   from them. They are a third party's map imagery under that party's terms, and `FR-MAP-01`
@@ -133,6 +173,85 @@ answerable.
   static route image per quest (`route.previewImageAsset`) is the supported way to show a map here.
 - **The Apple system icons** in the permission-dialog mock. iOS draws that dialog itself.
 - **The AI-generated portrait** of I Gusti Ngurah Made Agung — see below.
+- **The place notice's plate**, `293:1630` on `293:1613` — see the next section.
+- **The circular portrait** `447:1905` puts beside `447:1880`'s title. It is the same generated
+  likeness of I Gusti Ngurah Made Agung; `TaskDetailScreen` frames the quest's own hero image in
+  that circle instead, and draws nothing when the quest ships no hero.
+
+### The plate on `293:1613`, and what the code draws instead
+
+`293:1630` is a stock wedding-invitation plate. Exported, it carries a dozen real individuals' and
+businesses' names engraved across its middle; in Figma the designer laid three opaque rectangles
+(`293:1631`–`1633`) over them rather than removing them. Shipping the file — whole or patched — would
+put third parties' names and somebody else's licensed engraving in every copy of the app, so it is
+out, and no amount of cropping changes that.
+
+What replaced it went through three passes, and the first two are worth recording because they are the
+failure modes of drawing ornament in code:
+
+1. **Silhouette only.** Cream fill, one inset rule, scooped corners. On device it read as a blank
+   cream ticket beside the mock-up — which is the state the user rejected.
+2. **Stroked centre lines.** Stems, hooks and hung arcs at 0.9–2.2 points. It read as wire: a pair of
+   antennae flanking the portrait, then a scatter of pins. Bare centre lines do not read as carving.
+3. **What ships now.** Every limb is a tapered ribbon with two edges, filled and then outlined; leaves
+   are closed teardrops whose belly is held to a third of their own length (asked for less, they
+   render as blades and the spray reads as wheat); volutes are spirals sampled 40 times a turn, not
+   8 (at 8 the eye is a visible hexagon). Plus four corner flourishes, a pendant sized to the lobe it
+   sits in, and a quatrefoil watermark at 26-point pitch and 3.8% ink.
+
+**Every dimension of the shape is measured, not styled.** `HisploraPlaqueMetrics` holds the numbers
+and `PlaqueGeometryTests` asserts them, read off the exported plate's alpha coverage (402 × 675,
+sitting at y = 94 on the 874-point frame): straight sides at x = 24…381, sheet top at y = 44 and
+bottom at y = 616, a head lobe rising to y ≈ 8, a pendant lobe falling to y ≈ 660, and corner arcs
+centred **on** the corner point — a scoop, radius 36. A conventional inset rounded corner misses three
+of the five measured edge samples by more than 20 points, which is why the test checks the wrong
+answer as well as the right one.
+
+**The gilded oval straddles the plate's head.** `320:2485` draws it at y = 125 while the sheet starts
+at 138, so 13 points of gold overlap the cream — reproduced, because centring it politely below the
+edge is a different design. It is an overlay on the panel rather than its first row, since a row
+inside the panel cannot hang past it.
+
+**What is still not the mock-up: the ornament's density.** The drawn spray is a delicate laurel; the
+stock plate is a dense damask. Closing that gap needs artwork this project owns — commissioned,
+licensed, or generated for it. The seam for that is already in place: `HisploraPlaqueArtwork` prefers
+`Resources/Images/plaque-engraving.png`, clipped to the same silhouette, and falls back to the drawn
+spray whenever the file is absent (as it is today). Dropping the file in is the whole change; no sizes
+or layout move.
+
+### `452:3028`'s site plan is content, not chrome — and that is the whole decision
+
+The plan ships. What changed is *where* it ships from, and it is the one structural decision the three
+2026-08-17 screens forced.
+
+Every other image in the table above is chrome: a frame, a machine, a blank sheet, a flourish. They
+depict objects and assert nothing, which is why they live in `DesignSystem/Resources/Images` and
+travel with the theme. `452:3031` is different. It is a plan of **Puri Agung Pemecutan** annotated
+with "171 meters", "158 meters", an entrance gate and an exit gate — claims about a real place, of
+exactly the kind `FR-CP-05` holds to a source. Baking it into the design system would also bake a
+named place into the presentation layer, which `AD-4` and `FR-RUN-06` rule out on their own.
+
+So it is authored content with a citation:
+
+```
+Place.siteMap : { asset, aspectRatio, sourceRef }
+```
+
+`sourceRef` indexes the Place's own `sources`, the same way `LoreBlock.sourceRefs` does, and
+`PlaceSiteMapScreen` prints that citation under the drawing — which the frame does not. Two validator
+rules cover it: **V14** that the asset exists, **V3** that the citation resolves. Both are in
+`SiteMapValidationTests`, and both prove violating content is *rejected*.
+
+Today's citation begins `BELUM DIVERIFIKASI` and says in as many words that the drawing is a generated
+illustration rather than a survey, so the screen tells the truth about it.
+`ShippedSiteMapTests.theShippedPlansCitationSaysItIsUnverified` fails if that stops being true.
+Replacing the drawing with a real surveyed plan is a content change and nothing else: a new file, a
+new source entry, a `contentBundleVersion` bump.
+
+**What is not drawn:** `452:3032`–`3034`'s three marker dots. They are not authored anywhere, and
+inventing coordinates for them would be the app asserting where three things stand inside a real puri
+— the precise claim the citation exists to qualify. `SiteMapPresentation.markers` ships empty and the
+view renders whatever the content eventually carries.
 
 ## What the frames draw that the code does not, and why
 
@@ -230,6 +349,9 @@ the checkpoint screen still displays both; what changed is that the reveal scree
 | `187:954` | Story Reveal 2 |
 | `187:1053` | Story Reveal 3 |
 | `187:1103` | Transition |
+| `452:3132` | Quest 1/3 — the checkpoint's task list |
+| `447:1880` | Quest_Filled — one task on its parchment sheet |
+| `452:3028` | Site Map — the drawn plan of a place's grounds |
 | `1:92` | Typography (template) |
 | `1:632` | Colors (template) |
 
@@ -242,9 +364,25 @@ table, which is the reason the table exists.
 
 ## Seen rendering
 
+**`452:3132`, `447:1880` and `452:3028` were verified on iPhone 17 / iOS 26.5 on 2026-08-17**,
+walked in one pass from a fresh install: splash → onboarding (Skip) → login wireframe (Skip for
+now) → quest card → story preview → safety notice → location rationale → permission → cutscene
+intro (the scratch reveal needs real drag paths) → cutscene portrait → story reveal → place notice
+→ **All Quest** → **the task sheet** → **the site plan**, pinched to zoom and closed back to the
+sheet. Screenshots are in `docs/screenshots/m9-*.png`. The grey-bar divider bug above was found
+on that pass and nowhere else — no test could have seen it.
+
+A resumed walk lands on `.atCheckpoint` and skips all three, so reaching them from a desk means a
+fresh install (`xcrun simctl uninstall com.umar.hisplora`) rather than relaunching.
+
 `81:588`, `98:1588` and `187:866` were verified on iPhone 17 / iOS 26.5 on 2026-08-14 — the first
-time the cutscene screens had been seen at all. The run reaches them from a desk by setting the
-simulator's location to the first checkpoint rather than by the debug toggle:
+time the cutscene screens had been seen at all. **`293:1613` was verified the same way on 2026-08-17**,
+also for the first time: the place notice at Puri Agung Pemecutan, reached in one pass — splash →
+onboarding (Skip) → login wireframe (Skip for now) → quest card → story preview → `FR-START-04a`
+safety notice → location rationale → permission → cutscene portrait (the scratch reveal needs a real
+drag path, not taps) → story reveal → place notice. It is what drove the plate rewrite above. The run
+reaches these screens from a desk by setting the simulator's location to the first checkpoint rather
+than by the debug toggle:
 
 ```bash
 xcrun simctl location <udid> set -8.6595,115.2077

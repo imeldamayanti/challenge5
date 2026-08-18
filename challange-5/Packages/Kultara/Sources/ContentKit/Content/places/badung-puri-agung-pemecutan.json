@@ -24,13 +24,41 @@
       "en": "Visiting hours have not been confirmed with the management. A puri is a residence and a ceremonial site, and may be closed without notice. Ask at the gate before entering."
     },
     "weekly": [
-      { "weekday": 1, "open": "08:00", "close": "17:00" },
-      { "weekday": 2, "open": "08:00", "close": "17:00" },
-      { "weekday": 3, "open": "08:00", "close": "17:00" },
-      { "weekday": 4, "open": "08:00", "close": "17:00" },
-      { "weekday": 5, "open": "08:00", "close": "17:00" },
-      { "weekday": 6, "open": "08:00", "close": "17:00" },
-      { "weekday": 7, "open": "08:00", "close": "17:00" }
+      {
+        "weekday": 1,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 2,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 3,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 4,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 5,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 6,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 7,
+        "open": "08:00",
+        "close": "17:00"
+      }
     ]
   },
   "dressCode": {
@@ -79,11 +107,21 @@
       "kind": "documented",
       "citation": "BELUM DIVERIFIKASI — Konsep catus patha dan tata ruang inti kota lama Badung (perlu sumber pustaka yang dapat dibuka)",
       "url": null
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Denah tapak Puri Agung Pemecutan. Gambar ini ilustrasi hasil generasi, bukan survei: jarak, jumlah bangunan dan posisi gerbang di dalamnya belum diukur di lapangan dan belum dicocokkan dengan sumber pustaka mana pun.",
+      "url": null
     }
   ],
   "consentRecordId": "badung-puri-agung-pemecutan",
   "mapPoint": {
     "x": 0.398,
     "y": 0.618
+  },
+  "siteMap": {
+    "asset": "places/badung-puri-agung-pemecutan/site-map.png",
+    "aspectRatio": 1.1247,
+    "sourceRef": 2
   }
 }

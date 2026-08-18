@@ -34,7 +34,7 @@ struct QuestRunView: View {
     private var isOnStoryFlow: Bool {
         switch model.stage {
         case .storyPreview, .awaitingArrival, .cutsceneIntro, .cutscenePortrait,
-             .storyReveal, .placeNotice, .checkpointDetail, .transition:
+             .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .transition:
             true
         case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
             false
@@ -95,6 +95,7 @@ struct QuestRunView: View {
         case .storyReveal: storyReveal
         case .placeNotice: placeNotice
         case .checkpointDetail: checkpointDetail
+        case .taskDetail: taskDetail
         case .transition: transition
         case .atCheckpoint: checkpointScreen
         case .finished: finishedScreen
@@ -181,11 +182,60 @@ struct QuestRunView: View {
                 placeName: checkpoint.placeName,
                 tasks: checkpoint.tasks,
                 taskPrompts: checkpoint.taskPrompts,
+                resolutions: resolutions(for: checkpoint),
+                // `452:3142` fills the stamp with a generated temple sketch. The quest's own hero
+                // image goes in instead — content with provenance, rather than a picture introduced
+                // here (`FR-CP-05`), the same substitution `PlaceNoticeScreen` makes.
+                stampImageURL: model.cutsceneImageURL,
+                onSelectTask: { model.openTaskDetail(taskID: $0.id) },
                 onContinue: { model.advanceFromCheckpointDetail() },
                 onBack: { model.retreatFromStoryStage() })
         } else {
             EmptyView()
         }
+    }
+
+    @ViewBuilder private var taskDetail: some View {
+        if let checkpoint = model.checkpoint, let task = model.detailTask {
+            TaskDetailScreen(
+                language: language,
+                questTitle: model.questTitle,
+                placeName: checkpoint.placeName,
+                task: task,
+                prompt: checkpoint.taskPrompts[task.id] ?? "",
+                resolution: model.resolution(for: task),
+                completedTasks: model.resolvedTaskCount,
+                totalTasks: model.taskCount,
+                portraitURL: model.cutsceneImageURL,
+                hasSiteMap: checkpoint.siteMap != nil,
+                // The sheet names what is waiting; the answer field, the save and the skip are on the
+                // checkpoint screen (`TaskCard`, `FR-TASK-02`), which is where this continues to.
+                onPrimaryAction: { model.advanceFromCheckpointDetail() },
+                onOpenSiteMap: { model.presentSiteMap() },
+                onBack: { model.retreatFromStoryStage() })
+                // A cover rather than a stage: the plan is glanced at and dismissed back to the same
+                // task, so backing out of it must not be ambiguous with backing out of the task.
+                .fullScreenCover(
+                    isPresented: Binding(get: { model.isPresentingSiteMap },
+                                         set: { if !$0 { model.dismissSiteMap() } })
+                ) {
+                    PlaceSiteMapScreen(
+                        language: language,
+                        placeName: checkpoint.placeName,
+                        siteMap: checkpoint.siteMap,
+                        onClose: { model.dismissSiteMap() })
+                }
+        } else {
+            EmptyView()
+        }
+    }
+
+    /// This checkpoint's resolved tasks, keyed by task id — what fills the segmented bar and picks
+    /// each row's trailing glyph.
+    private func resolutions(for checkpoint: CheckpointPresentation) -> [String: TaskResult] {
+        Dictionary(uniqueKeysWithValues: checkpoint.tasks.compactMap { task in
+            model.resolution(for: task).map { (task.id, $0) }
+        })
     }
 
     private var transition: some View {
@@ -224,7 +274,7 @@ struct QuestRunView: View {
                 .buttonStyle(.seal)
             }
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
     }
 
@@ -247,7 +297,7 @@ struct QuestRunView: View {
                 .buttonStyle(.seal)
             }
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
     }
 
@@ -583,7 +633,7 @@ struct QuestRunView: View {
                     abandonButton
                 }
                 .padding(KultaraMetrics.lg)
-                .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+                .kultaraFloatingTabBarClearance()
             }
         } else {
             EmptyView()

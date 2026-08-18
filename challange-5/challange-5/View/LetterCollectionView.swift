@@ -37,7 +37,7 @@ struct LetterCollectionView: View {
                     places(presentation)
                 }
                 .padding(KultaraMetrics.lg)
-                .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+                .kultaraFloatingTabBarClearance()
             } else {
                 KultaraCard {
                     Text(UIStrings.string(.sideQuestNearbyEmpty, language))
