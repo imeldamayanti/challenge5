@@ -13,6 +13,13 @@ import UIStringsKit
 /// they are already standing at.
 struct QuestRunView: View {
     @Environment(\.kultaraPalette) private var palette
+    /// `223:2004` draws a back arrow and a "Back to Homepage" text button. Both pop this screen;
+    /// they do not abandon the walk — the draft Run stays on disk and the quest list resumes it.
+    /// Abandoning is a separate, confirmed control (`FR-RUN-04`).
+    @Environment(\.dismiss) private var dismiss
+    /// `FR-MAP-04`'s handoff. `openURL` rather than `MKMapItem`, because `import MapKit` is banned
+    /// in this target (`FR-MAP-01`, `PermissionCallBoundaryTests`).
+    @Environment(\.openURL) private var openURL
     @Bindable private var model: QuestRunViewModel
 
     init(model: QuestRunViewModel) {
@@ -27,7 +34,7 @@ struct QuestRunView: View {
     private var isOnStoryFlow: Bool {
         switch model.stage {
         case .storyPreview, .awaitingArrival, .cutsceneIntro, .cutscenePortrait,
-             .storyReveal, .placeNotice, .checkpointDetail, .transition:
+             .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .transition:
             true
         case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
             false
@@ -88,6 +95,7 @@ struct QuestRunView: View {
         case .storyReveal: storyReveal
         case .placeNotice: placeNotice
         case .checkpointDetail: checkpointDetail
+        case .taskDetail: taskDetail
         case .transition: transition
         case .atCheckpoint: checkpointScreen
         case .finished: finishedScreen
@@ -115,6 +123,7 @@ struct QuestRunView: View {
     private var cutsceneIntro: some View {
         CutsceneIntroScreen(
             language: language,
+            questTitle: model.questTitle,
             portraitURL: model.cutsceneImageURL,
             portraitLabel: model.questTitle,
             onAdvance: { model.advanceFromCutsceneIntro() },
@@ -137,6 +146,10 @@ struct QuestRunView: View {
         StoryRevealScreen(
             language: language,
             text: model.storyRevealText,
+            // `447:1878` centres the quest's own title over the picture, and `293:1652` ends its
+            // lead on the place being walked to. Both come from content (`AD-4`, `FR-RUN-06`).
+            title: model.questTitle,
+            placeName: model.currentPlaceName,
             // The content tree ships no per-place illustration, so this stays nil — the screen
             // falls back to its own packaged art (`StoryIllustrationMetrics`). See the note atop
             // `StoryRevealScreen`.
@@ -169,6 +182,12 @@ struct QuestRunView: View {
                 placeName: checkpoint.placeName,
                 tasks: checkpoint.tasks,
                 taskPrompts: checkpoint.taskPrompts,
+                resolutions: resolutions(for: checkpoint),
+                // `452:3142` fills the stamp with a generated temple sketch. The quest's own hero
+                // image goes in instead — content with provenance, rather than a picture introduced
+                // here (`FR-CP-05`), the same substitution `PlaceNoticeScreen` makes.
+                stampImageURL: model.cutsceneImageURL,
+                onSelectTask: { model.openTaskDetail(taskID: $0.id) },
                 onContinue: { model.advanceFromCheckpointDetail() },
                 onBack: { model.retreatFromStoryStage() })
         } else {
@@ -176,13 +195,56 @@ struct QuestRunView: View {
         }
     }
 
+    @ViewBuilder private var taskDetail: some View {
+        if let checkpoint = model.checkpoint, let task = model.detailTask {
+            TaskDetailScreen(
+                language: language,
+                questTitle: model.questTitle,
+                placeName: checkpoint.placeName,
+                task: task,
+                prompt: checkpoint.taskPrompts[task.id] ?? "",
+                resolution: model.resolution(for: task),
+                completedTasks: model.resolvedTaskCount,
+                totalTasks: model.taskCount,
+                portraitURL: model.cutsceneImageURL,
+                hasSiteMap: checkpoint.siteMap != nil,
+                // The sheet names what is waiting; the answer field, the save and the skip are on the
+                // checkpoint screen (`TaskCard`, `FR-TASK-02`), which is where this continues to.
+                onPrimaryAction: { model.advanceFromCheckpointDetail() },
+                onOpenSiteMap: { model.presentSiteMap() },
+                onBack: { model.retreatFromStoryStage() })
+                // A cover rather than a stage: the plan is glanced at and dismissed back to the same
+                // task, so backing out of it must not be ambiguous with backing out of the task.
+                .fullScreenCover(
+                    isPresented: Binding(get: { model.isPresentingSiteMap },
+                                         set: { if !$0 { model.dismissSiteMap() } })
+                ) {
+                    PlaceSiteMapScreen(
+                        language: language,
+                        placeName: checkpoint.placeName,
+                        siteMap: checkpoint.siteMap,
+                        onClose: { model.dismissSiteMap() })
+                }
+        } else {
+            EmptyView()
+        }
+    }
+
+    /// This checkpoint's resolved tasks, keyed by task id — what fills the segmented bar and picks
+    /// each row's trailing glyph.
+    private func resolutions(for checkpoint: CheckpointPresentation) -> [String: TaskResult] {
+        Dictionary(uniqueKeysWithValues: checkpoint.tasks.compactMap { task in
+            model.resolution(for: task).map { (task.id, $0) }
+        })
+    }
+
     private var transition: some View {
+        // `293:1595` draws a sealed scroll and two words. The quest name, the route map and the
+        // five-second timer `187:1103` carried are gone with that frame — see the note on
+        // `StoryTransitionScreen` for where each of them still lives.
         StoryTransitionScreen(
             language: language,
-            questName: model.questTitle,
             placeName: model.currentPlaceName,
-            route: model.routeMap,
-            totalCheckpoints: model.totalCheckpoints,
             onContinue: { model.advanceFromTransition() })
     }
 
@@ -212,7 +274,7 @@ struct QuestRunView: View {
                 .buttonStyle(.seal)
             }
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
     }
 
@@ -235,54 +297,79 @@ struct QuestRunView: View {
                 .buttonStyle(.seal)
             }
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
     }
 
     // MARK: Arrival
 
-    /// The arrival screen, on the Hisplora direction — frames `81:617`, `89:1402` and `223:2004`,
-    /// which are the three states this screen already had.
+    /// The arrival screen, rebuilt to match frame `223:2004` ("Not Quite There") element for
+    /// element: back arrow, title, lead, the map slot, and the two actions. Nothing else.
     ///
-    /// The frames' heading and ground are the design's; the clue, the manual override and the
-    /// abandon control are not on any of them and are here anyway, because `FR-CP-03`,
-    /// `FR-START-10` and `FR-RUN-04` require them. Order follows Phase 1: the status first, because
-    /// QA landed on this screen without noticing it was doing anything at all.
+    /// **This screen no longer draws four things three P0 requirements ask for**, and that is a
+    /// product decision taken on 2026-08-17, not an oversight. The frame carries no clue
+    /// (`FR-CP-03`), no distance or fix quality (`FR-ARR-05`), no manual override
+    /// (`FR-START-10`) and no abandon control (`FR-RUN-04`); the instruction was that the screen
+    /// match the frame exactly, so the requirement yields here rather than the design. The
+    /// consequence worth naming: with the override gone, a walker whose GPS never resolves — inside
+    /// a covered market, which is the case `FR-START-10` was written for — has no way to reach the
+    /// checkpoint at all. `manualOverride`, `manualOverrideSheet`, `arrivalNumbers` and
+    /// `LocationClueCard` are all still built and still wired to the view model; restoring any of
+    /// them is putting its line back in this stack.
+    ///
+    /// The spacings below are the frame's own gaps at default text size, so on an iPhone 17 this
+    /// lays out pixel for pixel. It is a `ScrollView` rather than absolute placement because a
+    /// layout that only works at one size fails `NFR-A11Y-04` at AX5 — at large sizes it scrolls
+    /// instead of clipping.
     private var arrivalScreen: some View {
-        HisploraStage(ground: \.brownMid) {
+        HisploraStage(ground: \.brownStone) {
             ScrollView {
-                VStack(spacing: KultaraMetrics.xl) {
-                    // `FR-CP-08` — checkpoints reached out of total, never a distance.
-                    Text(model.stepText)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(hisplora.inkDusty.color)
-                        .textCase(.uppercase)
-                        .tracking(1.5)
+                VStack(spacing: 0) {
+                    // The glyph is drawn at `20, 82`, 28 × 24 — 20 points below the status bar.
+                    // The row is 44 tall because the tap target is (`NFR-A11Y-06`), so the padding
+                    // is 13 rather than 20: it is the *glyph* that has to land at 82, not the box
+                    // around it.
+                    HStack {
+                        HisploraBackButton(
+                            accessibilityLabel: UIStrings.string(.locationNotThereBack, language),
+                            size: 24
+                        ) { dismiss() }
+                        Spacer(minLength: 0)
+                    }
+                    .padding(.top, 13)
+
+                    Spacer(minLength: 40)
                     LocationStateHeading(state: model.locationState, language: language)
-                    if model.locationState == .checking {
-                        LocationWaitingDetail(
-                            language: language,
-                            elapsedText: model.searchingElapsedText,
-                            countdownText: model.manualOverrideCountdownText,
-                            progress: model.manualOverrideProgress)
-                    }
-                    arrivalNumbers
+
+                    // The frame's `Maps` rectangle at `20, 328`, 362 × 218.89. Held aside for now:
+                    // what fills it is `RunRouteMapView`, the drawn canvas (`FR-MAP-01` rules out
+                    // the Google Maps imagery the frame pastes in).
+                    // The frame's gap is 100, measured off a lead it draws on one line. SF Pro Text
+                    // is set a touch wider than the SF Pro Display the frame specifies, so the same
+                    // sentence wraps to two here and 59 is what puts the map back at the drawn 328.
+                    Spacer(minLength: 59)
                     routeMap
-                    LocationClueCard(
-                        language: language,
-                        clue: model.clueToCurrentCheckpoint
-                            ?? UIStrings.string(.arrivalNoClue, language))
-                    if model.arrival == .permissionDenied {
-                        SystemSettingsLink(language: language)
-                    }
-                    manualOverride
-                    abandonButton
+                        .frame(height: 218.89)
+
+                    Spacer(minLength: 24)
                 }
-                .padding(.vertical, KultaraMetrics.xl)
-                .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+                // 20 each side, which is what leaves the frame's 362-point content column on a
+                // 402-point screen.
+                .padding(.horizontal, 20)
+                .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .padding(.horizontal, KultaraMetrics.lg)
+            // Pinned rather than stacked after a 163-point gap, and that is deliberate: the frame
+            // puts the actions at a fixed distance from the home indicator, so anchoring them there
+            // keeps them where they are drawn no matter how many lines the lead above wraps to.
+            .safeAreaInset(edge: .bottom) {
+                VStack(spacing: 18) {
+                    navigateThereButton
+                    backToHomeButton
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 30)
+            }
         }
     }
 
@@ -416,6 +503,40 @@ struct QuestRunView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
+    /// `FR-MAP-04` — the frame's "Navigate There" pill, handing off to Apple Maps walking
+    /// directions for the checkpoint the walk is waiting at.
+    ///
+    /// Two things the frame does not say, and both are requirements rather than taste. The arrow
+    /// glyph and the accessibility hint are what make this "presented as leaving the app"; and the
+    /// control disappears when there is no resolvable place, because a pill that opens nothing is
+    /// worse on a walk than no pill. Nothing else on this screen needs it — the clue, the drawn
+    /// route, the distance and the manual override all work with the radio off (`AD-3`).
+    @ViewBuilder private var navigateThereButton: some View {
+        if let url = model.externalMapsURL {
+            Button {
+                openURL(url)
+            } label: {
+                // The frame draws the label alone, so the arrow glyph that used to sit beside it
+                // is gone and the accessibility hint is now the only thing saying this leaves the
+                // app. `FR-MAP-04` asks for the handoff to be presented as such; the hint carries
+                // that for VoiceOver, and sighted walkers get Apple Maps' own back-to-Hisplora
+                // chip instead.
+                Text(UIStrings.string(.locationNavigateThere, language))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .buttonStyle(.hisploraLightPill)
+            .accessibilityHint(UIStrings.string(.locationNavigateThereHint, language))
+        }
+    }
+
+    /// The frame's quieter second action. It leaves the *screen*, not the walk: the draft Run is
+    /// already on disk and the quest list resumes it. `FR-RUN-04`'s abandon is the control below,
+    /// and it is confirmed — this one is not, because nothing is lost.
+    private var backToHomeButton: some View {
+        Button(UIStrings.string(.locationNotThereBack, language)) { dismiss() }
+            .buttonStyle(.hisploraPlain(ink: \.inkOnButton))
+    }
+
     /// `FR-START-10` — always visible, always at readable weight, and always a real control.
     ///
     /// It used to be a line of muted caption text until 60 s had passed, which is the least
@@ -512,7 +633,7 @@ struct QuestRunView: View {
                     abandonButton
                 }
                 .padding(KultaraMetrics.lg)
-                .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+                .kultaraFloatingTabBarClearance()
             }
         } else {
             EmptyView()

@@ -126,3 +126,50 @@ Added to the PRD's acceptance list (`s7`):
 - **The 20-region budget is shared and not observable.** `RegionBudget` decides what to register;
   nothing tells the user that a place they walked past was not being watched. If collections grow past
   a single region, this needs a product answer, not a bigger cap.
+
+## 7. Verification — executed 2026-08-15
+
+**Package suites: 337 tests, 38 suites, all passing** (`swift test`), including the six suites this
+table names — `ProximityTests`, `SideQuestEngineTests`, `SideQuestStoreTests`, `ContentValidatorTests`,
+`BundledContentRepositoryTests`, `ImportBoundaryTests` — plus `UIStringsKitTests` (`s4` §8's guard) and
+`HisploraThemeTests`. **Content validator: 28 rules pass**, 1 quest / 5 places / 5 sidequests /
+1 collection, 3.4 MB.
+
+**`PermissionCallBoundaryTests`, added by this pass** (`challange-5UITests`, since the app target has
+no other place for it — `§1`'s warning that this suite "cannot pass by finding nothing" is honoured:
+each assertion requires its call site to still exist). Confines `requestWhenInUseAuthorization()` and
+`startUpdatingLocation()` to `LocationService.swift`, and `requestAlwaysAuthorization()` and
+`startMonitoring(for:)` to `SideQuestProximityService.swift` (`s3`) — the extension `§1` asked for.
+Also asserts nothing sets `allowsBackgroundLocationUpdates` and that `project.pbxproj` declares no
+`UIBackgroundModes` key. **6/6 passing**, confirmed both in isolation and inside a full-target run.
+
+**`SideQuestFlowUITests`, added by this pass** — the XCUITest row `§1`'s table names and nothing
+previously filled: walks `sq-badung-puri-agung-pemecutan` end to end (nearby list → notice → the
+`FR-ARR-01` gate via **Simulate arrival anywhere**, set through the launch-argument `UserDefaults`
+domain rather than a live toggle tap → story → quiz → letter → collection), and separately confirms
+re-opening a completed sidequest replays its stored outcome without a second award (`FR-SIDE-05`).
+**2/2 passing**, confirmed repeatably in isolation.
+
+**A real, pre-existing bug found and fixed along the way.** `DiscoveryFlowUITests` assumed each test
+method got a clean sandbox; `app.launch()` only starts a fresh *process*, and a Run started by one
+test method was still on disk for the next, so `startOrResumeRun` resumed a draft instead of opening
+the Story Preview a later test expected — 4 of that suite's 5 tests failed the first time the full
+target was run back to back in this session, order-dependently, and none of it was this feature's
+code. Fixed by resetting local data (Settings → "Delete all local data") at the start of every
+`launch()`, in both suites — which doubles as an extra `FR-SET-02` reachability check on every run.
+
+**Not fully green.** `DiscoveryFlowUITests.testTheWholeFlowSurvivesTheLargestDynamicTypeSize`
+intermittently fails at the largest accessibility content size: the Profile tab's hit-test appears to
+race the tab bar's own layout pass at that size, landing the reset helper's tap on the wrong tab.
+Waiting for the button to exist before tapping, a retry, and a longer timeout at that content size
+narrowed it but did not close it — it is pre-existing (present before this pass touched the file) and
+orthogonal to sidequest content. This machine also could not sustain more than one simulator clone
+reliably: `xcodebuild test` on the full target repeatedly spun up 3 concurrent clones despite
+`-disable-concurrent-testing`, and under that load a test process would occasionally fail to launch
+at all (`0.000s`, `Simulator device failed to launch … RequestDenied`) — every suite in this pass
+passed cleanly and repeatably when run alone or serially; the flake did not reproduce in isolation.
+
+**Not attempted — blocked on what `§4` and `§5` need.** The device walk-through (`§4`) needs a
+physical phone; nothing in this environment can drive one. The release gates (`§5`) are consent,
+citation, coordinate-verification and field-testing work that `s5`'s own scoping already declined to
+fabricate — see `s5`'s five-place decision — and stay open for the same reason.

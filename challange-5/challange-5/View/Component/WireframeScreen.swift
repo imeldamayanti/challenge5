@@ -41,7 +41,7 @@ struct WireframeScreen<Existing: View, Actions: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
         .background(palette.paper.color)
     }

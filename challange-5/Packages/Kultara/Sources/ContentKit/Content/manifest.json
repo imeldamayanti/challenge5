@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentBundleVersion": "2026.09.0",
+  "contentBundleVersion": "2026.09.2",
   "languages": [
     "id",
     "en"
@@ -15,8 +15,16 @@
   "quests": [
     "badung-empat-wajah"
   ],
-  "sideQuests": [],
-  "collections": [],
+  "sideQuests": [
+    "sq-badung-catur-muka",
+    "sq-badung-puri-agung-pemecutan",
+    "sq-badung-pura-maospahit",
+    "sq-badung-pasar-kumbasari",
+    "sq-badung-museum-bali"
+  ],
+  "collections": [
+    "badung-jejak"
+  ],
   "regionMap": {
     "asset": "maps/bali-illustrated.png",
     "aspectRatio": 0.4626

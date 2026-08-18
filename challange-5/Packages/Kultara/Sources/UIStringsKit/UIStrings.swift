@@ -202,24 +202,65 @@ public enum UIStrings {
             id: "Kamu belum berada di tempat yang tepat. Mendekatlah untuk memulai ceritanya.",
             en: "You're not at the right place yet. Get closer to begin the story."),
         .locationNotThereBack: LocalizedText(id: "Kembali ke beranda", en: "Back to Homepage"),
+        // `FR-MAP-04`. The label is the frame's; the hint is what makes it "presented as leaving
+        // the app", which is the half of that requirement a label alone cannot carry.
+        .locationNavigateThere: LocalizedText(id: "Arahkan ke sana", en: "Navigate There"),
+        .locationNavigateThereHint: LocalizedText(
+            id: "Membuka Apple Maps di luar aplikasi untuk rute berjalan kaki.",
+            en: "Opens Apple Maps outside this app for walking directions."),
         .cutsceneLegendTitle: LocalizedText(
             id: "Sebuah legenda akan menuntun perjalananmu",
             en: "A Legend Will Guide Your Journey"),
         .cutsceneSwipeHint: LocalizedText(
             id: "Geser bingkai foto untuk membuka legendanya",
             en: "Swipe photo frame to reveal the legends"),
+        // The way past the rub for anyone the rub does not work for — VoiceOver, Reduce Motion, or
+        // simply not discovering an undrawn gesture. It says what it does rather than "Next",
+        // because it is the same act as the swipe and not a way around it.
+        .cutsceneRevealAction: LocalizedText(
+            id: "Buka legendanya", en: "Reveal the legend"),
         .cutsceneStartAction: LocalizedText(id: "Mulai perjalanan", en: "Start the Journey"),
         .storyRevealPager: LocalizedText(
             id: "Halaman %1$d dari %2$d", en: "Page %1$d of %2$d"),
         .storyRevealNext: LocalizedText(id: "Berikutnya", en: "Next"),
         .storyRevealBack: LocalizedText(id: "Sebelumnya", en: "Back"),
         .storyRevealSkip: LocalizedText(id: "Lewati cerita", en: "Skip the story"),
+        .storyRevealJourneyLead: LocalizedText(
+            id: "Perjalananmu dimulai di", en: "Your journey begins at"),
         .transitionSteppingInto: LocalizedText(
             id: "Melangkah ke titik pertama %@", en: "Stepping into the first place of %@"),
         .transitionContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .transitionTapToReveal: LocalizedText(id: "Ketuk untuk membuka", en: "Tap to reveal"),
         .placeNoticeBeforeExplore: LocalizedText(
             id: "Sebelum menjelajah:", en: "Before you explore:"),
         .checkpointDetailContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .checkpointDetailAllTasks: LocalizedText(id: "Semua Kegiatan", en: "All Quest"),
+        .checkpointDetailContinueToNext: LocalizedText(
+            id: "Lanjut ke titik berikutnya", en: "Continue to Next Location"),
+        .checkpointDetailStampLabel: LocalizedText(
+            id: "Stempel titik ini", en: "This checkpoint's stamp"),
+        .checkpointDetailProgressLabel: LocalizedText(
+            id: "%1$d dari %2$d kegiatan selesai", en: "%1$d of %2$d activities done"),
+        .checkpointDetailTaskDone: LocalizedText(id: "Selesai", en: "Done"),
+        .checkpointDetailTaskOpen: LocalizedText(id: "Belum dikerjakan", en: "Not done yet"),
+
+        .taskDetailTakePhoto: LocalizedText(id: "Ambil Foto", en: "Take Photo"),
+        .taskDetailAnswerAction: LocalizedText(id: "Jawab di titik ini", en: "Answer at the stop"),
+        .taskDetailSeeMap: LocalizedText(id: "Ketuk untuk lihat peta", en: "Tap to see the map"),
+        .taskDetailSeeMapHint: LocalizedText(
+            id: "Membuka denah tapak tempat ini.",
+            en: "Opens the drawn plan of this place's grounds."),
+        .siteMapClose: LocalizedText(id: "Tutup denah", en: "Close the plan"),
+        .siteMapGestureHint: LocalizedText(
+            id: "Cubit untuk memperbesar, geser untuk menjelajah",
+            en: "Pinch to zoom, drag to explore"),
+        .siteMapAccessibility: LocalizedText(
+            id: "Denah tapak %1$@, dengan %2$d titik bertanda.",
+            en: "Site plan of %1$@, with %2$d marked points."),
+        .siteMapSourceHeading: LocalizedText(id: "Sumber denah", en: "Plan source"),
+        .siteMapUnavailable: LocalizedText(
+            id: "Tempat ini belum punya denah tapak di versi konten ini.",
+            en: "This place ships no site plan in this content version."),
 
         .runMapHeading: LocalizedText(id: "Rute", en: "The route"),
         .runMapAccessibility: LocalizedText(
@@ -330,9 +371,6 @@ public enum UIStrings {
         .sideQuestPhotoPrompt: LocalizedText(id: "Ambil satu foto", en: "Take one photograph"),
         .sideQuestPhotoTake: LocalizedText(id: "Buka kamera", en: "Open the camera"),
         .sideQuestPhotoChoose: LocalizedText(id: "Pilih dari galeri", en: "Choose from the library"),
-        .sideQuestPhotoNotInThisBuild: LocalizedText(
-            id: "Tantangan foto belum ada di versi ini. Hurufnya tetap kamu dapat tanpa foto.",
-            en: "Photo challenges are not in this build yet. The letter is yours without one."),
         .sideQuestLetterAwarded: LocalizedText(id: "Huruf didapat", en: "Letter earned"),
         .sideQuestLetterProgress: LocalizedText(id: "%1$d dari %2$d huruf", en: "%1$d of %2$d letters"),
         .sideQuestCollectionOpen: LocalizedText(id: "Lihat koleksinya", en: "See the collection"),

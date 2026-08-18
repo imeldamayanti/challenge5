@@ -70,9 +70,25 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 375 tests / 44 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
-| `xcodebuild test -only-testing:challange-5Tests` | 110 tests / 11 suites — view models, presentation, UI strings, host linkage | Yes |
+| `swift test` (from `Packages/Kultara`) | 425 tests / 52 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `xcodebuild test -only-testing:challange-5Tests` | 127 tests / 13 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
+
+**Two `swift test` failures are pre-existing on this branch and are not yours.** They were red at
+`09baa2f` and neither is in a file the Figma port touched:
+
+- `PlaqueGeometryTests.theCornerIsAScoopArcedAboutTheCornerPointItself` — 2 issues, the plate's corner
+  geometry in `PlaquePanel.swift`.
+- `PermissionCallBoundaryTests.theAppUsesNoBackgroundLocationAndNoTrackingPrompt` — `SideQuestProximityService.swift`
+  calls `requestAlwaysAuthorization` and `startMonitoring(for:)`, which that guard bans. A real
+  finding about the sidequest proximity work, unrelated to the run flow.
+
+`FloatingTabBarClearanceTests` was a **third** pre-existing break of a different kind: the test was
+committed without the `KultaraMetrics` API it exercises, so the whole package suite failed to compile
+and no test could run. The missing half is now there — `floatingTabBarContentHeight` and
+`floatingTabBarClearance(labelScale:)`, plus a `.kultaraFloatingTabBarClearance()` modifier the ten
+scrolling screens now use instead of the fixed 88. That closes the `NFR-A11Y-02`/`NFR-A11Y-06` bug
+CLAUDE.md's "Reachable, not comfortable" note was about.
 
 `ImportBoundaryTests` and `PermissionCallBoundaryTests` live in `ContentKitTests` and **link
 nothing** — they scan source text under both the package and the app target, walking out from
@@ -314,7 +330,9 @@ Still unguarded:
 
 ## Two visual directions, split at a screen boundary
 
-The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → transition.
+The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task list → task sheet → site plan** → transition.
+
+The last three landed 2026-08-17 from Figma `452:3132` ("Quest 1/3"), `447:1880` ("Quest_Filled") and `452:3028` ("Site Map"): `CheckpointDetailScreen` (restyled from the earlier `51:201`), the new `TaskDetailScreen`, and the new `PlaceSiteMapScreen`. `452:3028` is the **one story-flow screen on paper rather than brown** — `mapGround`, its own token — because a plan is a document. Five new palette tokens, four new New York type roles, and four recorded deviations came with them; `docs/hisplora-tokens.md` has all of it.
 
 Two rules keep that from rotting:
 
@@ -380,6 +398,24 @@ auto-advancing and the login carrying a "Skip for now".
   highest-priority two: Catur Muka's seed coordinate is in the **wrong quadrant** (~293 m out, right
   neighbourhood), and Museum Bali's `entryCost: 0` renders as "Gratis"/"Free" for a museum that
   sells a ticket.
+- **The shipped site plan is a generated illustration, and the screen says so.** `Place.siteMap`
+  (`{ asset, aspectRatio, sourceRef }`) is new as of `contentBundleVersion` **2026.09.2**, and
+  `badung-puri-agung-pemecutan` is the only Place that carries one. The drawing annotates a real puri
+  with "171 meters", "158 meters", an entrance gate and an exit gate — none of it surveyed — so it
+  ships as content with a third `sources` entry beginning `BELUM DIVERIFIKASI`, which
+  `PlaceSiteMapScreen` prints under the plan. V14 checks the asset, V3 checks that the citation
+  resolves. Replacing it with a real survey is a content change and nothing else. The frame's three
+  marker dots are **not** drawn: nothing authors them, and inventing coordinates would be the app
+  asserting where three things stand inside a real puri.
+- **Photo capture is still not built, and `447:1880` does not pretend otherwise.** The frame draws
+  "Take Photo" as the task sheet's one action; only checkpoint 4 (`badung-catur-muka`) has a `photo`
+  task, so the label follows `ContentTask.type` and the sheet hands over to the checkpoint screen
+  where `TaskCard` owns the answer, the save and the skip. A photo task still lands on the
+  `taskPhotoNotInThisBuild` note.
+- **`452:3132` renders one task row and one progress segment, not the frame's three.** The frame is
+  titled "Quest 1/3" and invents three tasks ("The Iron Statue", "The Ancient Script", "The Whip
+  Bearer") that exist nowhere in the content tree; the shipped checkpoints carry exactly one task
+  each. The bar counts the run's own tasks (`AD-4`).
 - **Consent for those five places is a self-grant, not a grant.** D1-b: every `consent/badung-*.json`
   names the project team as `grantingBody`, scoped to inclusion and naming, for a non-public academic
   prototype. None of the five sites has been approached. The signatory fields are still literal
@@ -396,4 +432,4 @@ auto-advancing and the login carrying a "Skip for now".
 - `Support/UIStrings.swift:338` still describes the content as "data contoh dengan tempat fiktif".
   That string is now wrong and needs a product decision, not a content edit.
 - **`FR-CP-05` has an undocumented exception, and it is still open.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**, which lists it as outstanding with no owner named (§10). It needs an amendment or a signed exception with an owner. `FR-START-04`'s comparable exception *was* signed on 2026-08-16 (owner af); this one was not, and the two are not a package.
-- The story flow has been seen rendering on iPhone 17 / iOS 26.5 (story preview, both cutscenes, story reveal). The "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP; drive arrival with `xcrun simctl location <udid> set -8.6595,115.2077` instead — the start checkpoint of `badung-empat-wajah` (Puri Agung Pemecutan — an unverified seed coordinate), with `ArrivalEvaluator` unmodified. The transition screen is still unseen.
+- The story flow has been seen rendering on iPhone 17 / iOS 26.5: story preview, both cutscenes, story reveal, place notice, and — on 2026-08-17 — the task list, the task sheet and the site plan (screenshots in `docs/screenshots/m9-*.png`). The "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP; drive arrival with `xcrun simctl location <udid> set -8.6595,115.2077` instead — the start checkpoint of `badung-empat-wajah` (Puri Agung Pemecutan — an unverified seed coordinate), with `ArrivalEvaluator` unmodified. **A resumed walk lands on `.atCheckpoint` and skips every story stage**, so reaching them from a desk needs a fresh install (`xcrun simctl uninstall com.umar.hisplora`), not a relaunch. The transition screen is still unseen.

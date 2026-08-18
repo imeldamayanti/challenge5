@@ -31,7 +31,7 @@ struct QuestPreviewView: View {
                 startNotice
             }
             .padding(KultaraMetrics.lg)
-            .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
+            .kultaraFloatingTabBarClearance()
         }
         .background(palette.paper.color)
         .navigationTitle(model.title)

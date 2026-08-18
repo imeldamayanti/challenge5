@@ -16,6 +16,11 @@ final class SettingsViewModel {
     private let locationAuthorization: any LocationAuthorizationReporting
     private let eraser: any LocalDataEraser
     private let storage: any StorageUsageReporting
+    private let proximityMonitor: any ProximityMonitoring
+    /// Bumped after every toggle and every async permission check, so the `@Observable` machinery
+    /// has a tracked property to notice — `proximityMonitor` itself is a plain reference, and
+    /// reading through it does not register as a dependency on its own.
+    private(set) var nearbyAlertsRevision = 0
 
     var onLanguageChange: ((ContentLanguage) -> Void)?
 
@@ -25,7 +30,8 @@ final class SettingsViewModel {
         language: ContentLanguage,
         locationAuthorization: any LocationAuthorizationReporting,
         eraser: any LocalDataEraser,
-        storage: any StorageUsageReporting
+        storage: any StorageUsageReporting,
+        proximityMonitor: any ProximityMonitoring
     ) {
         self.repository = repository
         self.store = store
@@ -33,6 +39,7 @@ final class SettingsViewModel {
         self.locationAuthorization = locationAuthorization
         self.eraser = eraser
         self.storage = storage
+        self.proximityMonitor = proximityMonitor
     }
 
     private var formatter: ContentFormatter { ContentFormatter(language: language) }
@@ -75,6 +82,70 @@ final class SettingsViewModel {
     /// other reason to have it.
     var systemSettingsURL: URL? { URL(string: "app-settings:") }
     var systemSettingsURLIsMissing: Bool { systemSettingsURL == nil }
+
+    // MARK: Nearby alerts — FR-PROX-03, s3
+
+    var nearbyAlertsHeading: String { string(.settingsNearbyAlertsHeading) }
+    var nearbyAlertsToggleTitle: String { string(.settingsNearbyAlertsToggle) }
+    /// Shown unconditionally, before the toggle is ever touched — this text *is* `FR-PROX-03`'s
+    /// in-app explanation; there is no separate screen.
+    var nearbyAlertsExplanation: String { string(.settingsNearbyAlertsExplanation) }
+
+    var nearbyAlertsEnabled: Bool {
+        _ = nearbyAlertsRevision
+        return proximityMonitor.isEnabled
+    }
+
+    /// Non-nil once the toggle is on and iOS has settled on something short of `Always` —
+    /// `When In Use`, denied, or restricted (`s3` §3). `nil` while a fresh request is still in
+    /// flight, so the warning does not flash the instant the toggle is tapped.
+    var nearbyAlertsNeedsAlwaysText: String? {
+        _ = nearbyAlertsRevision
+        guard proximityMonitor.isEnabled else { return nil }
+        switch proximityMonitor.authorization {
+        case .whenInUse, .denied, .restricted: return string(.settingsNearbyAlertsNeedsAlways)
+        case .always, .notRequested: return nil
+        }
+    }
+
+    /// Non-nil once `Always` is granted but notifications are not — regions would register for
+    /// nothing without them (`s3` §3).
+    var nearbyAlertsNeedsNotificationsText: String? {
+        _ = nearbyAlertsRevision
+        guard proximityMonitor.isEnabled,
+              proximityMonitor.authorization == .always,
+              !proximityMonitor.notificationsAuthorized
+        else { return nil }
+        return string(.settingsNearbyAlertsNeedsNotifications)
+    }
+
+    func setNearbyAlertsEnabled(_ newValue: Bool) {
+        if newValue {
+            proximityMonitor.enable()
+        } else {
+            proximityMonitor.disable()
+        }
+        nearbyAlertsRevision += 1
+    }
+
+    /// Called from the screen's `onAppear` — permission state changes out from under the app
+    /// (a trip to system Settings and back), and there is no push channel for it.
+    func refreshNearbyAlertsStatus() {
+        proximityMonitor.refreshNotificationStatus { [weak self] in self?.nearbyAlertsRevision += 1 }
+    }
+
+    #if DEBUG
+    /// "Simulate passing a place" (`s3` §8) — every sidequest in the discovery set, oldest-content
+    /// order, the same list the nearby browse path uses.
+    var devSideQuestOptions: [(id: String, title: String)] {
+        ((try? repository.sideQuests(suppressingSideQuestIDs: [], suppressingPlaceIDs: [])) ?? [])
+            .map { (id: $0.id, title: $0.title.value(for: language)) }
+    }
+
+    func simulateSideQuestPassing(_ sideQuestID: String) {
+        proximityMonitor.simulateEntry(sideQuestID: sideQuestID)
+    }
+    #endif
 
     // MARK: Storage — FR-SET-01
 

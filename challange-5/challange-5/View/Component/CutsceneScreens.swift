@@ -19,25 +19,51 @@ import UIStringsKit
 /// without this file changing. Until then the frame carries the quest's own hero image, which is
 /// content with provenance behind it.
 
-/// `98:1588` — "A Legend Will Guide Your Journey", the framed image, and the hint to continue.
+/// `98:1588` — "A Legend Will Guide Your Journey", the covered frame, and the hint that says how
+/// to uncover it.
+///
+/// **The interaction is the screen.** The frame opens obscured, the walker rubs it clear
+/// (`223:1987` is that same frame with the picture showing), and when enough of it is gone the
+/// flow moves itself on to `187:866`. Nothing is tapped in the drawn design; the picture coming
+/// out from under the hand *is* the transition.
+///
+/// Three things the frame does not draw and this screen has anyway, all of them requirements:
+///
+/// - Under Reduce Motion or VoiceOver the picture is uncovered from the first frame, because a rub
+///   is not an animation anyone can opt out of and it is not a control a screen reader can find
+///   (`NFR-A11Y-04`, `NFR-A11Y-05`).
+/// - After ten seconds without a finished reveal, the explicit action appears. A gesture with no
+///   drawn control is a dead end for whoever does not try it, and this flow has no other way past
+///   this screen.
+/// - The quest's own title sits in the header, as `447:1870` draws it — from content, never the
+///   name the frame bakes in (`AD-4`, `FR-RUN-06`).
 struct CutsceneIntroScreen: View {
     @Environment(\.hisploraPalette) private var palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     let language: ContentLanguage
+    /// The quest's title, for the header. Content, not a literal.
+    let questTitle: String
     let portraitURL: URL?
     let portraitLabel: String
     let onAdvance: () -> Void
     let onBack: () -> Void
 
+    /// How long the screen waits before drawing the way past the gesture.
+    private static let explicitActionAppearsAfter = Duration.seconds(10)
+
+    @State private var hasAdvanced = false
+    @State private var showsExplicitAction = false
+
+    /// The rub is skipped outright for the same two settings `HisploraScratchReveal` reads, so the
+    /// action has to be there from the start rather than after the wait.
+    private var rubIsAvailable: Bool { !(reduceMotion || voiceOverEnabled) }
+
     var body: some View {
         HisploraStage(ground: \.brownStone) {
             VStack(spacing: 0) {
-                HStack {
-                    HisploraBackButton(
-                        accessibilityLabel: UIStrings.string(.storyRevealBack, language),
-                        action: onBack)
-                    Spacer()
-                }
+                header
                 ScrollView {
                     VStack(spacing: KultaraMetrics.xl) {
                         Text(UIStrings.string(.cutsceneLegendTitle, language))
@@ -46,7 +72,7 @@ struct CutsceneIntroScreen: View {
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
                             .accessibilityAddTraits(.isHeader)
-                        HisploraFramedImage(url: portraitURL, label: portraitLabel)
+                        revealableFrame
                             .padding(.horizontal, KultaraMetrics.xl)
                         Text(UIStrings.string(.cutsceneSwipeHint, language))
                             .font(.system(size: 15))
@@ -58,20 +84,70 @@ struct CutsceneIntroScreen: View {
                     .padding(.bottom, KultaraMetrics.lg)
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                // The frame says "swipe photo frame to reveal". A swipe is offered, but it is never
-                // the only way forward — a gesture with no visible control is a dead end for anyone
-                // who does not discover it, and for VoiceOver it is not a control at all.
-                Button(UIStrings.string(.storyRevealNext, language), action: onAdvance)
-                    .buttonStyle(.hisploraPill)
+                if showsExplicitAction || !rubIsAvailable {
+                    Button(UIStrings.string(.cutsceneRevealAction, language), action: advanceOnce)
+                        .buttonStyle(.hisploraPill)
+                        .transition(.opacity)
+                }
             }
             .padding(KultaraMetrics.lg)
-            .contentShape(Rectangle())
-            .gesture(
-                DragGesture(minimumDistance: 24)
-                    .onEnded { value in
-                        if value.translation.width < -24 { onAdvance() }
-                    })
+            .animation(.easeInOut(duration: 0.25), value: showsExplicitAction)
+            .task {
+                try? await Task.sleep(for: Self.explicitActionAppearsAfter)
+                showsExplicitAction = true
+            }
         }
+    }
+
+    /// `447:1870` and `187:1093` — the quest's name centred, the back chevron over it on the left.
+    /// A `ZStack` rather than a three-column `HStack`, so a long title stays centred on the screen
+    /// instead of being pushed off it by the chevron's width.
+    private var header: some View {
+        ZStack {
+            Text(questTitle)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(palette.inkCream.color)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, KultaraMetrics.minimumTapTarget)
+                .accessibilityAddTraits(.isHeader)
+            HStack {
+                HisploraBackButton(
+                    accessibilityLabel: UIStrings.string(.storyRevealBack, language),
+                    action: onBack)
+                Spacer()
+            }
+        }
+    }
+
+    /// The gilded frame with the picture under a cover. The reveal wraps only the *picture*, not
+    /// the ornament: rubbing the carved gold away would say the frame is what is being uncovered.
+    private var revealableFrame: some View {
+        KultaraPortraitFrame(accessibilityLabel: portraitLabel) {
+            HisploraScratchReveal(onComplete: advanceAfterReveal) {
+                HisploraPortraitContent(url: portraitURL)
+            }
+        }
+        // The reveal is a gesture on a picture, and VoiceOver reaches it as the button below.
+        .accessibilityHint(UIStrings.string(.cutsceneSwipeHint, language))
+    }
+
+    /// A beat after the last stroke, so the picture is seen whole before the screen changes. The
+    /// walker rubbed it clear; showing them nothing of what they uncovered wastes the moment.
+    private func advanceAfterReveal() {
+        Task { @MainActor in
+            try? await Task.sleep(for: .milliseconds(650))
+            advanceOnce()
+        }
+    }
+
+    /// The rub finishing and the button being tapped are the same act, and both can happen — the
+    /// button is on screen while the frame is still rubbable. Advancing twice would skip `187:866`
+    /// entirely.
+    private func advanceOnce() {
+        guard !hasAdvanced else { return }
+        hasAdvanced = true
+        onAdvance()
     }
 }
 
@@ -146,15 +222,26 @@ struct HisploraFramedImage: View {
 
     var body: some View {
         KultaraPortraitFrame(accessibilityLabel: label) {
-            if let url, let image = BundledImage.load(url) {
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                // No picture is a legitimate state, not an error: the sample content ships no
-                // portrait, and the frame is still the design's object.
-                Rectangle().fill(Color.black.opacity(0.18))
-            }
+            HisploraPortraitContent(url: url)
+        }
+    }
+}
+
+/// What goes *inside* the frame's opening, on its own so the cutscene can wrap it in the reveal
+/// while every other screen sets it straight into the frame.
+struct HisploraPortraitContent: View {
+    let url: URL?
+
+    var body: some View {
+        if let url, let image = BundledImage.load(url) {
+            image
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        } else {
+            // No picture is a legitimate state, not an error: the sample content ships no
+            // portrait, and the frame is still the design's object. The reveal over an empty
+            // opening is a wash lifting off a flat ground — undramatic, but not broken.
+            Rectangle().fill(Color.black.opacity(0.18))
         }
     }
 }

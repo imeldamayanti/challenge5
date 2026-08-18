@@ -24,12 +24,14 @@ struct KultaraRootView: View {
     /// observable — it is a protocol with a file behind it — and a counter is a smaller thing to
     /// own than an observation layer this milestone would use in exactly one place.
     @State private var journalRevision = 0
-    /// Which sidequest to present, set by the nearby list today and by the notification delegate
-    /// once `s3` exists, and cleared when the flow closes.
+    /// Which sidequest to present, set by the nearby list, by a notification tap, and by a
+    /// foreground region entry (`s3`). Owned by `challange_5App` and handed down, because the
+    /// notification delegate and `SystemProximityMonitor.onSideQuestNearby` both have to reach it
+    /// from outside this view's hierarchy.
     ///
     /// A full-screen cover over whatever tab is showing, because a sidequest arrives from *outside*
     /// the navigation stacks — a notification tap has no stack to push onto (PRD §5.15).
-    @State private var pendingSideQuestID: String?
+    private let router: SideQuestRouter
     /// The collection reached from the Journal tab, or from the letter screen.
     @State private var collectionDestination: String?
     /// Whether the Profile tab has pushed App preferences. A boolean rather than an item, because
@@ -59,8 +61,9 @@ struct KultaraRootView: View {
     /// two taps away.
     private enum Tab: String { case quests, journal, profile }
 
-    init(environment: KultaraEnvironment) {
+    init(environment: KultaraEnvironment, router: SideQuestRouter) {
         self.environment = environment
+        self.router = router
         _language = State(initialValue: LanguageResolver.resolve(
             override: environment.preferences.preferredLanguage))
         _showsOnboarding = State(initialValue: OnboardingGate.shouldPresentOnboarding(
@@ -128,9 +131,9 @@ struct KultaraRootView: View {
         Binding(
             get: {
                 guard runDestination == nil, journalRunDestination == nil else { return nil }
-                return pendingSideQuestID.map(SideQuestDestination.init)
+                return router.pendingSideQuestID.map(SideQuestDestination.init)
             },
-            set: { if $0 == nil { pendingSideQuestID = nil } })
+            set: { if $0 == nil { router.pendingSideQuestID = nil } })
     }
 
     private struct SideQuestDestination: Identifiable, Hashable {
@@ -176,7 +179,7 @@ struct KultaraRootView: View {
                 makeLocationProvider: environment.makeLocationProvider,
                 onSelect: { startOrResumeRun(questID: $0) },
                 onOpenRun: openRun,
-                onOpenSideQuest: { pendingSideQuestID = $0 })
+                onOpenSideQuest: { router.pendingSideQuestID = $0 })
                 .navigationDestination(item: $runDestination) { destination in
                     runScreen(destination)
                 }
@@ -198,20 +201,28 @@ struct KultaraRootView: View {
                 engine: environment.sideQuestEngine,
                 repository: environment.repository,
                 locationProvider: environment.makeLocationProvider(),
+                photoStore: environment.photoStore,
                 sideQuestID: sideQuestID,
                 language: language)
         } content: { model in
             KultaraThemeProvider {
                 SideQuestFlowView(
                     model: model,
-                    onFinish: { pendingSideQuestID = nil },
+                    onFinish: { router.pendingSideQuestID = nil },
                     onOpenCollection: { collectionID in
-                        pendingSideQuestID = nil
+                        router.pendingSideQuestID = nil
                         tab = Tab.journal.rawValue
                         collectionDestination = collectionID
                     })
             }
-            .onDisappear { sideQuestRevision += 1 }
+            .onDisappear {
+                sideQuestRevision += 1
+                // `system-design.md` §6.2 — a completed sidequest deregisters its own region
+                // (`FR-PROX-12` equivalent) and the budget it frees may seat another candidate.
+                // Cheap and idempotent, so this runs on every close rather than only a completed
+                // one.
+                environment.proximityMonitor.refreshRegions()
+            }
         }
     }
 
@@ -274,7 +285,7 @@ struct KultaraRootView: View {
                     language: language,
                     // `FR-SIDE-07` — an unearned slot opens its sidequest from here, without
                     // waiting for a notification.
-                    onOpenSideQuest: { pendingSideQuestID = $0 })
+                    onOpenSideQuest: { router.pendingSideQuestID = $0 })
             }
         }
     }
@@ -340,7 +351,13 @@ struct KultaraRootView: View {
                 discardingExistingDraft: destination.discardingExistingDraft)
         } content: { model in
             KultaraThemeProvider { QuestRunView(model: model) }
-                .onDisappear { journalRevision += 1 }
+                .onDisappear {
+                    journalRevision += 1
+                    // `system-design.md` §6.2 — a completed quest deregisters its start region;
+                    // cheap and idempotent, so this runs on every close rather than only a
+                    // completed one.
+                    environment.proximityMonitor.refreshRegions()
+                }
         }
     }
 
@@ -350,14 +367,17 @@ struct KultaraRootView: View {
             store: environment.preferences,
             language: language,
             locationAuthorization: environment.locationAuthorization,
-            // `FR-SET-02` — Runs *and* sidequest records. The two are separate aggregates
-            // (`FR-SIDE-01`), so the eraser has to name both or a collection survives "delete all
-            // local data".
+            // `FR-SET-02` — Runs, sidequest records, proximity alert rows, *and* photo files. Four
+            // separate aggregates (`FR-SIDE-01`, `s3` §2, `s4` §7), so the eraser has to name all
+            // four or something survives "delete all local data".
             eraser: RunAndPreferencesDataEraser(
                 store: environment.runStore,
                 sideQuestStore: environment.sideQuestStore,
+                proximityMonitor: environment.proximityMonitor,
+                photoStore: environment.photoStore,
                 preferences: environment.preferences),
-            storage: environment.storage)
+            storage: environment.storage,
+            proximityMonitor: environment.proximityMonitor)
         model.onLanguageChange = { language = $0 }
         return KultaraThemeProvider { SettingsView(model: model) }
     }

@@ -255,6 +255,33 @@ public enum ContentValidator {
                 place.loreStandalone, sourceCount: place.sources.count,
                 path: path, label: "loreStandalone"))
 
+            // V14 and V3, over the site plan — the drawing on `452:3028`.
+            //
+            // Two checks rather than one, because a site plan can fail in two unrelated ways. V14 is
+            // the ordinary "referenced asset exists" rule: the screen presents the plan as the
+            // authority on where the gates are, and a missing file leaves a walker standing at a
+            // wall with an empty frame. V3 is the one that matters more — a plan asserts the layout
+            // of a real place, which `FR-CP-05` holds to the same standard as a sentence of lore, so
+            // the citation index has to resolve. An out-of-range ref would render as no citation at
+            // all, which is precisely the unsourced claim the rule exists to forbid.
+            if let siteMap = place.siteMap {
+                if !assets.exists(siteMap.asset) {
+                    findings.append(ValidationFinding(
+                        rule: .v14, path: path,
+                        message: "Site map asset \"\(siteMap.asset)\" does not exist."))
+                }
+                if siteMap.sourceRef < 0 || siteMap.sourceRef >= place.sources.count {
+                    findings.append(ValidationFinding(
+                        rule: .v3, path: path,
+                        message: "siteMap cites source index \(siteMap.sourceRef); the Place has \(place.sources.count) source(s)."))
+                }
+                if siteMap.aspectRatio <= 0 {
+                    findings.append(ValidationFinding(
+                        rule: .v14, path: path,
+                        message: "siteMap aspectRatio is \(siteMap.aspectRatio); must be greater than zero."))
+                }
+            }
+
             // V13 — FR-ARR-07
             if !(30...250).contains(place.arrivalRadiusM) {
                 findings.append(ValidationFinding(

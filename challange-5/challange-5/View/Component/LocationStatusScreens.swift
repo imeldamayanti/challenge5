@@ -38,15 +38,19 @@ struct LocationStateHeading: View {
     let language: ContentLanguage
 
     var body: some View {
+        // 12 points between the two, as `223:2004` sets them; the tracking is the frame's as well
+        // — −0.8 on the 40-point serif, −0.45 on the 15-point lead.
         VStack(spacing: KultaraMetrics.md) {
             Text(UIStrings.string(titleKey, language))
                 .font(KultaraTypography.font(.questTitleLarge))
+                .tracking(-0.8)
                 .foregroundStyle(palette.inkCream.color)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
             Text(UIStrings.string(bodyKey, language))
                 .font(.system(size: 15))
+                .tracking(-0.45)
                 .foregroundStyle(palette.inkDusty.color)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)

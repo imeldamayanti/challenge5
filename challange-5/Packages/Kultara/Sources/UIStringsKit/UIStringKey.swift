@@ -126,19 +126,62 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case locationNotThereTitle
     case locationNotThereBody
     case locationNotThereBack
+    case locationNavigateThere
+    case locationNavigateThereHint
     case cutsceneLegendTitle
     case cutsceneSwipeHint
+    case cutsceneRevealAction
     case cutsceneStartAction
     case storyRevealPager
     case storyRevealNext
     case storyRevealBack
     case storyRevealSkip
+    /// `293:1643` — the sentence the place name closes, and the words the marker loop rings. Two
+    /// halves rather than one string because the second half is content (`AD-4`): the lead is the
+    /// app's, the place is the quest's.
+    case storyRevealJourneyLead
     case transitionSteppingInto
     case transitionContinue
-    // The place notice — `50:137` ("Quest") — and the checkpoint's task menu — `51:201`
-    // ("Detail Quest").
+    /// `293:1595` — the only words on the transition screen.
+    case transitionTapToReveal
+    // The place notice — `50:137` ("Quest") — and the checkpoint's task menu — `452:3132`
+    // ("Quest 1/3"), which replaced the earlier `51:201` ("Detail Quest") treatment.
     case placeNoticeBeforeExplore
     case checkpointDetailContinue
+    /// `452:3174` — the heading over the task list.
+    case checkpointDetailAllTasks
+    /// `452:3194` — the one action at the foot of the task list. It leaves this checkpoint's list
+    /// for the walk to the next place; it does not skip anything (`AD-2`).
+    case checkpointDetailContinueToNext
+    /// `452:3142` — what the stamp over the progress bar is.
+    case checkpointDetailStampLabel
+    /// `452:3138` — the segmented bar, read out. `%1$d` resolved of `%2$d`.
+    case checkpointDetailProgressLabel
+    /// The state each row's trailing glyph carries: `checkmark.seal.fill` or `chevron.forward`.
+    case checkpointDetailTaskDone
+    case checkpointDetailTaskOpen
+
+    // The task sheet — `447:1880` ("Quest_Filled") — and the site plan it opens — `452:3028`
+    // ("Site Map").
+    /// `447:1900` — the frame's own label, offered only where the task is a photo task.
+    case taskDetailTakePhoto
+    /// What the primary control reads for a written task, which is what the shipped content
+    /// actually carries at four of five checkpoints.
+    case taskDetailAnswerAction
+    /// `447:1910` — the hint under the small scroll at the foot of the sheet.
+    case taskDetailSeeMap
+    case taskDetailSeeMapHint
+    /// `452:3050`'s screen, closed.
+    case siteMapClose
+    /// `452:3038` — the gesture hint.
+    case siteMapGestureHint
+    /// Read out in place of the plan itself: how many marked points it carries.
+    case siteMapAccessibility
+    /// The plan's citation, printed under it. `FR-CP-05`: a drawn plan asserts a layout, so its
+    /// provenance is on the screen rather than in a file.
+    case siteMapSourceHeading
+    /// Shown when the Place ships no plan. Not an error — most Places never will.
+    case siteMapUnavailable
     case arrivalClueHeading
     case arrivalNoClue
     case arrivalOutOfSequence
@@ -209,7 +252,6 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case sideQuestPhotoPrompt
     case sideQuestPhotoTake
     case sideQuestPhotoChoose
-    case sideQuestPhotoNotInThisBuild
     case sideQuestLetterAwarded
     case sideQuestLetterProgress
     case sideQuestCollectionOpen

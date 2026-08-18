@@ -142,6 +142,34 @@ public struct AccessibilityInfo: Codable, Sendable, Equatable, Hashable {
     }
 }
 
+/// The drawn plan of a single Place's grounds — the "Site Map" screen (`452:3028`).
+///
+/// **It carries a `sourceRef`, and that is the whole reason this is a struct rather than a bare
+/// asset path.** A site plan is not decoration: it asserts where the gates are, how the courtyards
+/// divide, and — where the drawing is annotated — how many metres across the walls stand. Those are
+/// claims about a real place, so `FR-CP-05` applies to them exactly as it applies to a `LoreBlock`,
+/// and the index points into the owning Place's `sources` the same way `LoreBlock.sourceRefs` does.
+/// The site-map screen renders that citation under the drawing, so a plan whose citation still
+/// begins `BELUM DIVERIFIKASI` says so on the screen rather than in a plan file nobody opens.
+///
+/// It lives on `Place` rather than on `Quest` because the grounds belong to the place, not to the
+/// walk across it: two quests visiting the same puri show the same plan.
+public struct PlaceSiteMap: Codable, Sendable, Equatable, Hashable {
+    /// Path within the content bundle's `assets/`, checked by validator rule V14.
+    public let asset: String
+    /// Width ÷ height of the image, so the screen reserves the right space before decoding it —
+    /// the same reason `RegionMapAsset` carries one.
+    public let aspectRatio: Double
+    /// Index into the owning Place's `sources`, checked by validator rule V3.
+    public let sourceRef: Int
+
+    public init(asset: String, aspectRatio: Double, sourceRef: Int) {
+        self.asset = asset
+        self.aspectRatio = aspectRatio
+        self.sourceRef = sourceRef
+    }
+}
+
 public struct Place: Codable, Sendable, Equatable, Identifiable {
     public let id: String
     /// `NFR-I18N-04` — a Place name renders in its official local form in both languages.
@@ -163,6 +191,9 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
     public let consentRecordId: String
     /// Position on the region map, when content ships one (validator rule V17).
     public let mapPoint: MapPoint?
+    /// The drawn plan of these grounds, when content ships one. Optional because most Places will
+    /// never have one — a market floor and a road junction are not buildings with a plan.
+    public let siteMap: PlaceSiteMap?
 
     public init(
         id: String,
@@ -181,7 +212,8 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         loreStandalone: [LoreBlock] = [],
         sources: [Source],
         consentRecordId: String,
-        mapPoint: MapPoint? = nil
+        mapPoint: MapPoint? = nil,
+        siteMap: PlaceSiteMap? = nil
     ) {
         self.id = id
         self.nameOfficial = nameOfficial
@@ -200,6 +232,7 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         self.sources = sources
         self.consentRecordId = consentRecordId
         self.mapPoint = mapPoint
+        self.siteMap = siteMap
     }
 
     public init(from decoder: any Decoder) throws {
@@ -221,6 +254,7 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         sources = try c.decode([Source].self, forKey: .sources)
         consentRecordId = try c.decode(String.self, forKey: .consentRecordId)
         mapPoint = try c.decodeIfPresent(MapPoint.self, forKey: .mapPoint)
+        siteMap = try c.decodeIfPresent(PlaceSiteMap.self, forKey: .siteMap)
     }
 }
 

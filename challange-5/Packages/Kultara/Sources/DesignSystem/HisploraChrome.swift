@@ -69,17 +69,61 @@ public struct HisploraPillButtonStyle: ButtonStyle {
     }
 }
 
-/// The quieter second action — "Back to Homepage" on `223:2004`, which the design draws as bare
-/// text under the pill.
-public struct HisploraPlainButtonStyle: ButtonStyle {
+/// The inverse pill, as `223:2004` draws it: a white capsule with near-black type.
+///
+/// The dark pill above and this one are the same control in two frames, and the difference is not
+/// decoration — `223:2004` is on `brownStone`, where a white fill is the higher-contrast of the
+/// two. It needs no ring: white on `brownStone` measures far past the 3:1 WCAG 1.4.11 wants for a
+/// control's boundary, which is the whole reason the dark pill needs one and this does not.
+///
+/// The metrics are the frame's: 17 points of vertical padding around a 17-point label at 1.4 line
+/// height, which is what makes the drawn 58-point height, and −0.51 tracking as SF Pro is set
+/// there.
+public struct HisploraLightPillButtonStyle: ButtonStyle {
     @Environment(\.hisploraPalette) private var palette
+    @Environment(\.isEnabled) private var isEnabled
 
     public init() {}
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .font(.system(size: 17, weight: .medium))
-            .foregroundStyle(palette.inkCream.color)
+            .tracking(-0.51)
+            .foregroundStyle(palette.buttonFill.color)
+            .multilineTextAlignment(.center)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 17)
+            .frame(maxWidth: .infinity)
+            // 58 as drawn. A floor rather than a fixed height: SwiftUI's line box for a 17-point
+            // label is a little shorter than the 1.4 leading Figma sets, and at accessibility sizes
+            // the label has to be allowed to make the capsule taller instead of being clipped.
+            .frame(minHeight: 58)
+            .background(palette.inkOnButton.color, in: Capsule())
+            .opacity(configuration.isPressed ? 0.85 : 1)
+            .opacity(isEnabled ? 1 : 0.5)
+    }
+}
+
+/// The quieter second action — "Back to Homepage" on `223:2004`, which the design draws as bare
+/// text under the pill.
+///
+/// `ink` exists because that frame sets the label pure white while the rest of the story flow sets
+/// it `inkCream`. Both are measured against the brown grounds; the caller picks which frame it is
+/// reproducing rather than the two quietly drifting apart.
+public struct HisploraPlainButtonStyle: ButtonStyle {
+    @Environment(\.hisploraPalette) private var palette
+
+    private let ink: KeyPath<HisploraPalette, SRGBColor>
+
+    public init(ink: KeyPath<HisploraPalette, SRGBColor> = \.inkCream) {
+        self.ink = ink
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 17, weight: .medium))
+            .tracking(-0.51)
+            .foregroundStyle(palette[keyPath: ink].color)
             .frame(maxWidth: .infinity)
             .frame(minHeight: KultaraMetrics.minimumTapTarget)
             .contentShape(Rectangle())
@@ -91,8 +135,19 @@ public extension ButtonStyle where Self == HisploraPillButtonStyle {
     static var hisploraPill: HisploraPillButtonStyle { HisploraPillButtonStyle() }
 }
 
+public extension ButtonStyle where Self == HisploraLightPillButtonStyle {
+    static var hisploraLightPill: HisploraLightPillButtonStyle { HisploraLightPillButtonStyle() }
+}
+
 public extension ButtonStyle where Self == HisploraPlainButtonStyle {
     static var hisploraPlain: HisploraPlainButtonStyle { HisploraPlainButtonStyle() }
+
+    /// `223:2004`'s "Back to Homepage" — pure white rather than the flow's cream.
+    static func hisploraPlain(
+        ink: KeyPath<HisploraPalette, SRGBColor>
+    ) -> HisploraPlainButtonStyle {
+        HisploraPlainButtonStyle(ink: ink)
+    }
 }
 
 /// The back chevron every frame carries at the top left. The caller supplies the label, because
@@ -102,22 +157,28 @@ public struct HisploraBackButton: View {
 
     private let accessibilityLabel: String
     private let ink: KeyPath<HisploraPalette, SRGBColor>
+    private let size: CGFloat
     private let action: () -> Void
 
+    /// `size` is the glyph, not the control: the tap target stays 44 either way
+    /// (`NFR-A11Y-06`). `223:2004` draws it at 24; the earlier story frames draw it smaller, which
+    /// is why 20 remains the default rather than being changed under them.
     public init(
         accessibilityLabel: String,
         ink: KeyPath<HisploraPalette, SRGBColor> = \.inkCream,
+        size: CGFloat = 20,
         action: @escaping () -> Void
     ) {
         self.accessibilityLabel = accessibilityLabel
         self.ink = ink
+        self.size = size
         self.action = action
     }
 
     public var body: some View {
         Button(action: action) {
             Image(systemName: "arrow.backward")
-                .font(.system(size: 20, weight: .regular))
+                .font(.system(size: size, weight: .regular))
                 .foregroundStyle(palette[keyPath: ink].color)
                 .kultaraTapTarget()
         }
