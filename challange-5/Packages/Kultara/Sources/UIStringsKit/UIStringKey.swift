@@ -235,6 +235,39 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case settingsNearbyAlertsNeedsAlways
     case settingsNearbyAlertsNeedsNotifications
 
+    // The floating tab bar. Journal and Profile used to borrow their names from
+    // `WireframeCatalog`, which was fine while they *were* wireframes; both are built screens now
+    // and a built screen's name belongs in the string table with every other one.
+    case tabJournal
+    case tabProfile
+
+    // Journal — the Sealed Letters screen (Figma `332:1607`)
+    case journalSealedHeading
+    case journalUnsealAction
+    case journalSealedEmptyTitle
+    case journalSealedEmptyBody
+    /// The swipe the carousel affords, said in words as well as drawn as a nudge — a wiggle is
+    /// not something VoiceOver can read (`NFR-A11Y-05`).
+    case journalSwipeHint
+    case journalCollectionsAction
+
+    // Profile — the Explorer's Card (Figma `547:2724`)
+    case profileHeading
+    /// What the card is headed with. There is no account in this build and no name to print, so
+    /// the card names the reader by what they are rather than inventing one (`FR-ONB-01`).
+    case profileExplorerName
+    case profileExplorerNameNote
+    case profileStatQuests
+    case profileStatStamps
+    case profileStatBadges
+    case profileTabQuests
+    case profileTabStamps
+    case profileTabBadges
+    case profileActivityComplete
+    case profileQuestsEmpty
+    case profileStampsEmpty
+    case profileBadgesEmpty
+
     // Developer build only
     case devHeading
     case devSimulateArrivalTitle

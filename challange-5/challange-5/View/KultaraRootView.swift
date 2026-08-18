@@ -32,6 +32,9 @@ struct KultaraRootView: View {
     @State private var pendingSideQuestID: String?
     /// The collection reached from the Journal tab, or from the letter screen.
     @State private var collectionDestination: String?
+    /// Whether the Profile tab has pushed App preferences. A boolean rather than an item, because
+    /// there is exactly one preferences screen and nothing to identify.
+    @State private var showsPreferences = false
     /// Bumped when a sidequest record changes, so the collection and the nearby list are rebuilt
     /// for the same reason `journalRevision` exists.
     @State private var sideQuestRevision = 0
@@ -152,10 +155,10 @@ struct KultaraRootView: View {
                     title: UIStrings.string(.questListTitle, language),
                     symbolName: "map"),
          KultaraTab(id: Tab.journal.rawValue,
-                    title: WireframeCatalog.journal.title.value(for: language),
+                    title: UIStrings.string(.tabJournal, language),
                     symbolName: "book"),
          KultaraTab(id: Tab.profile.rawValue,
-                    title: WireframeCatalog.profile.title.value(for: language),
+                    title: UIStrings.string(.tabProfile, language),
                     symbolName: "person.crop.circle")]
     }
 
@@ -212,28 +215,41 @@ struct KultaraRootView: View {
         }
     }
 
-    /// Home → Journal → visited places → trip summary. The visited places are real; the screens
-    /// hung off them are wireframes.
+    /// Home → Journal, which is now "Sealed Letters" (Figma `332:1607`) rather than a wireframe:
+    /// a shelf of envelopes, one per walk, that open onto the walk itself.
+    ///
+    /// The Journal's own navigation bar is hidden. The shelf is a Hisplora surface drawn edge to
+    /// edge on a brown ground, the same rule `QuestRunView.isOnStoryFlow` follows — museum chrome
+    /// over that ground is the contrast bug `RunRouteMapView.showsChrome` exists to prevent.
     private var journalStack: some View {
         NavigationStack {
-            JournalWireframeView(
-                language: language,
-                journal: journal,
-                collections: collectionIDs,
-                onOpenRun: { runID in
-                    guard let run = (try? environment.runStore.run(id: runID)) ?? nil else { return }
-                    journalRunDestination = RunDestination(
-                        questID: run.questID, existingRunID: run.id, discardingExistingDraft: false)
-                },
-                onOpenCollection: { collectionDestination = $0 })
-                .navigationDestination(item: $journalRunDestination) { destination in
-                    runScreen(destination)
-                }
-                // `FR-SIDE-08` — the collection lives in the Journal tab, which is a catalogue
-                // surface and therefore museum rather than Hisplora.
-                .navigationDestination(item: $collectionDestination) { collectionID in
-                    collectionScreen(collectionID)
-                }
+            ScreenHost {
+                SealedLettersViewModel(
+                    store: environment.runStore,
+                    repository: environment.repository,
+                    language: language)
+            } content: { model in
+                SealedLettersView(
+                    model: model,
+                    language: language,
+                    collections: collectionIDs,
+                    onOpenRun: { runID in
+                        guard let run = (try? environment.runStore.run(id: runID)) ?? nil else { return }
+                        journalRunDestination = RunDestination(
+                            questID: run.questID, existingRunID: run.id,
+                            discardingExistingDraft: false)
+                    },
+                    onOpenCollection: { collectionDestination = $0 })
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(item: $journalRunDestination) { destination in
+                runScreen(destination)
+            }
+            // `FR-SIDE-08` — the collection lives in the Journal tab. It stays museum: it is a
+            // catalogue, and the seam between the two directions falls between whole screens.
+            .navigationDestination(item: $collectionDestination) { collectionID in
+                collectionScreen(collectionID)
+            }
         }
     }
 
@@ -263,10 +279,26 @@ struct KultaraRootView: View {
         }
     }
 
-    /// Home → Profile → Account settings → App preferences.
+    /// Home → Profile, which is now the Explorer's Card (Figma `547:2724`) rather than a
+    /// wireframe. The chart's "Account settings" node between it and App preferences is gone with
+    /// its wireframe: the card is a real screen and the design gives it one control, which goes
+    /// straight to the preferences that exist.
     private var profileStack: some View {
         NavigationStack {
-            ProfileWireframeView(language: language) { settingsDestination }
+            ScreenHost {
+                ExplorerCardViewModel(
+                    runStore: environment.runStore,
+                    sideQuestStore: environment.sideQuestStore,
+                    repository: environment.repository,
+                    language: language)
+            } content: { model in
+                ExplorerCardView(
+                    model: model,
+                    language: language,
+                    onOpenPreferences: { showsPreferences = true })
+            }
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $showsPreferences) { settingsDestination }
         }
     }
 

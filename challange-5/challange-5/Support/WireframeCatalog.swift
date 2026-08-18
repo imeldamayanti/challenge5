@@ -82,20 +82,6 @@ enum WireframeCatalog {
 
     // MARK: Journal branch
 
-    static let journal = WireframeSpec(
-        title: LocalizedText(id: "Journal", en: "Journal"),
-        purpose: LocalizedText(
-            id: "Daftar tempat yang sudah dikunjungi, pintu masuk ke ringkasan tiap perjalanan.",
-            en: "The list of visited places, and the way into each trip's summary."),
-        blocks: [
-            LocalizedText(id: "Filter dan urutan (tanggal, wilayah)", en: "Filter and sort (date, region)"),
-            LocalizedText(id: "Peta tempat yang sudah dikunjungi", en: "Map of visited places"),
-            LocalizedText(id: "Stempel dan lencana terkumpul", en: "Collected stamps and badges"),
-        ],
-        flowNote: LocalizedText(
-            id: "Perjalanan yang sudah selesai di bawah ini nyata — dibaca dari catatan perjalananmu sendiri. Yang belum ada adalah filter, peta, dan koleksi stempel.",
-            en: "The finished walks below are real — read from your own run records. What is missing is the filtering, the map, and the stamp collection."))
-
     static let createJournal = WireframeSpec(
         title: LocalizedText(id: "Create Journal", en: "Create Journal"),
         purpose: LocalizedText(
@@ -158,33 +144,13 @@ enum WireframeCatalog {
             en: "The \"no\" branch of the share question ends here. What the recommendation is based on has not been decided — region, theme, or simply what has not been walked yet."))
 
     // MARK: Profile branch
-
-    static let profile = WireframeSpec(
-        title: LocalizedText(id: "Profil", en: "Profile"),
-        purpose: LocalizedText(
-            id: "Akun, pengaturan, dan apa yang sudah terkumpul.",
-            en: "The account, the settings, and what has been collected."),
-        blocks: [
-            LocalizedText(id: "Foto dan nama tampilan", en: "Avatar and display name"),
-            LocalizedText(id: "Jumlah perjalanan, stempel, lencana", en: "Walk, stamp and badge counts"),
-        ],
-        flowNote: LocalizedText(
-            id: "Home → Profile → Account settings → App preferences. Preferensi aplikasi di bawah ini sudah jalan; bagian akun menunggu keputusan yang sama dengan Login.",
-            en: "Home → Profile → Account settings → App preferences. The app preferences below are real; the account part waits on the same decision as Login."))
-
-    static let accountSettings = WireframeSpec(
-        title: LocalizedText(id: "Account settings", en: "Account settings"),
-        purpose: LocalizedText(
-            id: "Mengubah data akun.",
-            en: "Change the account's own details."),
-        blocks: [
-            LocalizedText(id: "Ubah nama tampilan dan email", en: "Change display name and email"),
-            LocalizedText(id: "Ubah kata sandi", en: "Change password"),
-            LocalizedText(id: "Keluar dan hapus akun", en: "Sign out and delete account"),
-        ],
-        flowNote: LocalizedText(
-            id: "Menghapus data di perangkat sudah bisa dilakukan sekarang, di App preferences. Menghapus akun butuh akun dulu.",
-            en: "Deleting the data on this device already works today, in App preferences. Deleting an account needs an account first."))
+    //
+    // `profile` and `accountSettings` were drawings of the Profile tab and the account screen
+    // behind it. `profile` is **deleted** in the commit that shipped `ExplorerCardView` — this
+    // file's own rule. `accountSettings` went with it rather than outliving it: it was reachable
+    // only from `profile`, and the Explorer's Card that replaces it carries one control, to the
+    // App preferences that are real. An account screen still needs the decision Login needs, and
+    // when that decision is taken the node comes back with its own entry point.
 
     // MARK: Passing-by notification branch
     //

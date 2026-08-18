@@ -40,6 +40,15 @@ public enum KultaraTypography {
         case typedSheet
         /// The two figures ruled beneath it: the distance and the duration.
         case typedFigure
+        /// A short serif label set at reading size — a badge's name under its wax seal, an
+        /// envelope's title on its pocket (`547:2955`, `511:1428`).
+        ///
+        /// It exists because the frames name these objects in the serif at body size, and the
+        /// table had no such role: every serif role above is a title cut at 22 points or more, and
+        /// `sectionHeading` is italic. Setting a badge name in `questTitle` would print a 24-point
+        /// title in a two-column grid; setting it in `body` would drop the face the frames name
+        /// things in. One role, one decision, as the rest of this table works.
+        case editorialLabel
 
         public var textStyle: Font.TextStyle {
             switch self {
@@ -56,6 +65,7 @@ public enum KultaraTypography {
             case .storyDisplay: .largeTitle
             case .typedSheet: .footnote
             case .typedFigure: .title3
+            case .editorialLabel: .body
             }
         }
 
@@ -63,7 +73,7 @@ public enum KultaraTypography {
             switch self {
             // The display serif ships in one weight, and asking SwiftUI to synthesise a bolder one
             // smears the modulation that is the reason for using it.
-            case .questTitleLarge, .questTitle, .sectionHeading: .regular
+            case .questTitleLarge, .questTitle, .sectionHeading, .editorialLabel: .regular
             case .eyebrow, .buttonLabel: .semibold
             case .chipLabel: .medium
             case .body, .lore, .metadata, .caption: .regular
@@ -82,7 +92,7 @@ public enum KultaraTypography {
         /// sizes turns into extra wrapping, which is precisely what `NFR-A11Y-01` is about.
         public var face: KultaraFace {
             switch self {
-            case .questTitleLarge, .questTitle, .sectionHeading: .serif
+            case .questTitleLarge, .questTitle, .sectionHeading, .editorialLabel: .serif
             case .storyDisplay: .displaySerif
             case .typedSheet, .typedFigure: .typewriter
             default: .sans
@@ -108,6 +118,9 @@ public enum KultaraTypography {
             case .questTitle: 24
             case .sectionHeading: 22
             case .storyDisplay: 38
+            // The frames set these at 17. One point over, for the x-height reason above — beside
+            // a 17 pt sans stat the serif otherwise reads a size smaller than it is.
+            case .editorialLabel: 18
             // The frame types the sheet at 8.5 pt, because on the frame the sheet is a small
             // object inside a photograph. Reproduced literally it is unreadable, so the sheet is
             // set at a size a person can read and scales from there (`NFR-A11Y-01`). Deviation
@@ -125,7 +138,7 @@ public enum KultaraTypography {
             case .eyebrow: 2
             case .chipLabel, .caption: 0.5
             case .buttonLabel, .metadata: 0.3
-            case .questTitleLarge, .questTitle, .sectionHeading, .body, .lore: 0
+            case .questTitleLarge, .questTitle, .sectionHeading, .editorialLabel, .body, .lore: 0
             // The frames track the display down (-0.76 at 38 pt) and the typed sheet in slightly.
             case .storyDisplay: -0.76
             case .typedSheet, .typedFigure: -0.34

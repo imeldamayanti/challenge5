@@ -426,6 +426,45 @@ public enum UIStrings {
             id: "Kalau ada fakta yang salah, atau kalau kamu mewakili pengelola sebuah tempat dan tidak ingin tempat itu ada di sini, beri tahu kami. Perbaikan pada versi ini memerlukan rilis aplikasi baru, jadi perkiraan waktunya beberapa hari, bukan beberapa jam.",
             en: "If a fact is wrong, or if you speak for the community that cares for a place and do not want it included, tell us. In this build a correction needs an app release, so the honest turnaround is days, not hours."),
         .settingsContentVersion: LocalizedText(id: "Versi konten", en: "Content version"),
+        // MARK: The tab bar
+        .tabJournal: LocalizedText(id: "Jurnal", en: "Journal"),
+        .tabProfile: LocalizedText(id: "Profil", en: "Profile"),
+
+        // MARK: Journal — Sealed Letters
+        .journalSealedHeading: LocalizedText(id: "Surat Tersegel", en: "Sealed Letters"),
+        .journalUnsealAction: LocalizedText(id: "Buka Segelnya", en: "Unseal the Journey"),
+        .journalSealedEmptyTitle: LocalizedText(
+            id: "Belum ada surat", en: "No letters yet"),
+        .journalSealedEmptyBody: LocalizedText(
+            id: "Setiap perjalanan yang kamu mulai disimpan di sini sebagai satu surat. Selesaikan satu rute, lalu kembali untuk membukanya.",
+            en: "Every walk you start is kept here as a letter. Finish a route, then come back and open it."),
+        .journalSwipeHint: LocalizedText(
+            id: "Geser untuk surat lainnya", en: "Swipe for other letters"),
+        .journalCollectionsAction: LocalizedText(id: "Koleksi huruf", en: "Letter collections"),
+
+        // MARK: Profile — the Explorer's Card
+        .profileHeading: LocalizedText(id: "Kartu Penjelajah", en: "Explorer’s Card"),
+        .profileExplorerName: LocalizedText(id: "Penjelajah", en: "Explorer"),
+        .profileExplorerNameNote: LocalizedText(
+            id: "Versi ini tidak memakai akun, jadi kartu ini tidak menyimpan nama.",
+            en: "This build has no accounts, so the card holds no name."),
+        .profileStatQuests: LocalizedText(id: "Perjalanan", en: "Quests"),
+        .profileStatStamps: LocalizedText(id: "Stempel", en: "Stamps"),
+        .profileStatBadges: LocalizedText(id: "Lencana", en: "Badges"),
+        .profileTabQuests: LocalizedText(id: "Perjalanan", en: "Quests"),
+        .profileTabStamps: LocalizedText(id: "Stempel", en: "Stamps"),
+        .profileTabBadges: LocalizedText(id: "Lencana", en: "Badges"),
+        .profileActivityComplete: LocalizedText(id: "Selesai", en: "Completed"),
+        .profileQuestsEmpty: LocalizedText(
+            id: "Kegiatan yang kamu selesaikan di sepanjang rute muncul di sini.",
+            en: "Activities you finish along a route show up here."),
+        .profileStampsEmpty: LocalizedText(
+            id: "Setiap titik yang kamu capai memberi satu stempel.",
+            en: "Every checkpoint you reach gives one stamp."),
+        .profileBadgesEmpty: LocalizedText(
+            id: "Lencana diberikan saat sebuah perjalanan selesai seluruhnya.",
+            en: "A badge is given when a whole walk is finished."),
+
         .settingsPlaceholderContentNotice: LocalizedText(
             id: "Konten pada versi ini adalah data contoh dengan tempat fiktif. Belum divalidasi di lapangan dan belum untuk dipakai berjalan.",
             en: "The content in this build is example data with fictional places. It has not been field-validated and is not yet something to walk."),

@@ -78,50 +78,6 @@ struct AuthWireframeView: View {
 
 // MARK: - Journal branch
 
-/// Home → Journal → visited places. The finished walks in it are real; everything around them is a
-/// box.
-struct JournalWireframeView: View {
-    let language: ContentLanguage
-    let journal: RunJournalSummary
-    /// The letter collections, which are a real screen rather than a box (`FR-SIDE-08`). Empty
-    /// until `s5` authors one.
-    var collections: [(id: String, title: String)] = []
-    let onOpenRun: (UUID) -> Void
-    var onOpenCollection: (String) -> Void = { _ in }
-
-    var body: some View {
-        WireframeScreen(WireframeCatalog.journal, language: language) {
-            VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
-                // Not a wireframe block: the collection screen exists, so the Journal links
-                // straight into it rather than drawing a box for it.
-                ForEach(collections, id: \.id) { collection in
-                    Button(collection.title) { onOpenCollection(collection.id) }
-                        .buttonStyle(.ruled)
-                }
-                if let active = journal.activeRun {
-                    JournalEntryCard(
-                        heading: UIStrings.string(.homeActiveRunHeading, language),
-                        entry: active,
-                        actionTitle: UIStrings.string(.homeActiveRunAction, language),
-                        language: language,
-                        action: { onOpenRun(active.id) })
-                }
-                ForEach(journal.completed) { entry in
-                    JournalEntryCard(
-                        heading: UIStrings.string(.summaryHeading, language),
-                        entry: entry,
-                        actionTitle: UIStrings.string(.summaryOpenAction, language),
-                        language: language,
-                        action: { onOpenRun(entry.id) })
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        } actions: {
-            EmptyView()
-        }
-    }
-}
-
 /// Completion screen → Create Journal → Save Journal → Trip Summary.
 struct CreateJournalWireframeView: View {
     let language: ContentLanguage
@@ -164,52 +120,6 @@ struct TripSummaryWireframeView: View {
                 .buttonStyle(.ruled)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
-// MARK: - Profile branch
-
-/// Home → Profile → Account settings → App preferences. The last of those four is a screen that
-/// exists, so the profile links straight into it rather than drawing a box for it.
-struct ProfileWireframeView<Preferences: View>: View {
-    let language: ContentLanguage
-    let preferences: () -> Preferences
-
-    var body: some View {
-        WireframeScreen(WireframeCatalog.profile, language: language) {
-            VStack(spacing: KultaraMetrics.md) {
-                NavigationLink {
-                    AccountSettingsWireframeView(language: language, preferences: preferences)
-                } label: {
-                    Text(WireframeCatalog.accountSettings.title.value(for: language))
-                }
-                .buttonStyle(.ruled)
-
-                NavigationLink {
-                    preferences()
-                } label: {
-                    Text(UIStrings.string(.settingsTitle, language))
-                }
-                .buttonStyle(.seal)
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-}
-
-struct AccountSettingsWireframeView<Preferences: View>: View {
-    let language: ContentLanguage
-    let preferences: () -> Preferences
-
-    var body: some View {
-        WireframeScreen(WireframeCatalog.accountSettings, language: language) {
-            NavigationLink {
-                preferences()
-            } label: {
-                Text(UIStrings.string(.settingsTitle, language))
-            }
-            .buttonStyle(.seal)
         }
     }
 }
