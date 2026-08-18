@@ -151,8 +151,14 @@ public enum KultaraTypography {
             // object inside a photograph. Reproduced literally it is unreadable, so the sheet is
             // set at a size a person can read and scales from there (`NFR-A11Y-01`). Deviation
             // recorded in `docs/hisplora-tokens.md`.
-            case .typedSheet: 14
-            case .typedFigure: 20
+            //
+            // 12 pt is the floor of that deviation, not a new value pulled from the frame: the
+            // page is now a fixed window over a machine that does not move, so the passage has to
+            // fit one sheet. `TypewriterTests.theSheetIsSetLargerThanTheFrameDrawsIt` holds the
+            // floor; going under it re-opens the readability failure the deviation exists to
+            // prevent.
+            case .typedSheet: 12
+            case .typedFigure: 17
             default: 17
             }
         }
@@ -213,7 +219,7 @@ public enum KultaraTypography {
             case .storyDisplay: -3
             case .storySection, .storyTaskTitle, .storyPlaceMark, .storyBarTitle: -1
             // 1.4 line height on the frame's sheet, which at this size is a few points of air.
-            case .typedSheet: 5
+            case .typedSheet: 3
             default: 0
             }
         }

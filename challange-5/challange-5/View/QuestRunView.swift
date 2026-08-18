@@ -135,8 +135,13 @@ struct QuestRunView: View {
             language: language,
             portraitURL: model.cutsceneImageURL,
             portraitLabel: model.questTitle,
-            title: model.questTitle,
-            subtitle: model.currentPlaceName,
+            // The quest's name goes in the bar, as `447:1870` draws it; the name under the picture
+            // is the picture's *subject*. The frame's subject is a person the content tree does not
+            // hold, so the place being walked to stands in — it is what the hero image shows. The
+            // two must not both be the quest's title: `187:866` would then print it twice.
+            questTitle: model.questTitle,
+            title: model.currentPlaceName,
+            subtitle: nil,
             hook: model.hookText,
             onStart: { model.advanceFromCutscenePortrait() },
             onBack: { model.retreatFromStoryStage() })

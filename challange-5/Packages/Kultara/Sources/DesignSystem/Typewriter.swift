@@ -22,6 +22,7 @@ import SwiftUI
 /// wants nothing above the page uses `init(sheet:)` and gets the layout it had.
 public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
     @Environment(\.hisploraPalette) private var palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private let crest: Crest
     private let hasCrest: Bool
@@ -30,6 +31,23 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
     /// How tall the crest came out. Read back so the overlap can be a *proportion* of it rather
     /// than a point value that only holds at one text size and one screen width.
     @State private var crestHeight: CGFloat = 0
+
+    /// How tall the paper came out, and whether it has fed in yet. The machine is the fixed object
+    /// on this screen and the paper is the moving one, so the rise is measured off the page rather
+    /// than off a point value that would only be right at one text size.
+    @State private var paperHeight: CGFloat = 0
+    @State private var hasRisen = false
+
+    /// The height of the window the page lives in — the space left once the machine has taken its
+    /// own. Read back so a short page can rest on the roller instead of floating above it.
+    @State private var windowHeight: CGFloat = 0
+
+    /// How large the photograph came out. The roller line and the paper's centre are both fixed
+    /// proportions of the image, so the two places that have to meet it — how far the page reaches
+    /// down into the machine, and where its centre falls — are measured off this rather than
+    /// guessed in points.
+    @State private var machineHeight: CGFloat = 0
+    @State private var machineWidth: CGFloat = 0
 
     /// No accessibility label: the machine is decoration and is hidden, and the sheet is real text
     /// that names itself. A label here would make VoiceOver read the furniture before the story.
@@ -48,24 +66,104 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
     }
 
     public var body: some View {
-        // No `GeometryReader`. It has no intrinsic height, so a stack inside one cannot be sized by
-        // its own content — the sheet grows with the reader's text size, and the machine has to be
-        // pushed down by exactly that much. `containerRelativeFrame` gives the sheet its width as a
-        // fraction without taking the height away from the content.
+        // The machine is furniture bolted to the floor: it keeps its intrinsic height at the foot
+        // of the stack, and everything that gives or takes space is above it. The page is the only
+        // moving part — it feeds in on appear, and if it is taller than the window left for it, it
+        // scrolls *inside* that window instead of pushing the machine off the screen.
+        //
+        // Still no `GeometryReader` around the stack: it has no intrinsic height, so a stack inside
+        // one cannot be sized by its own content. `containerRelativeFrame` gives the sheet its
+        // width as a fraction without taking the height away from the content.
         VStack(spacing: 0) {
-            // Drawn first, so the paper draws over it. That is the order the frame has: the
-            // ornament's lower half is behind the sheet, not in front of it.
+            // Outside the scroll view, and drawn before it, so it stays where it is put while the
+            // page moves past it — the crest is an object standing on the desk, not something
+            // printed on the paper. Its negative bottom padding pulls the window up over its lower
+            // half, which is the overlap `35:431` draws.
             crestBlock
-            sheet
-                .padding(.horizontal, KultaraMetrics.lg)
-                .padding(.vertical, KultaraMetrics.lg)
-                .containerRelativeFrame(.horizontal, alignment: .center) { width, _ in
-                    width * TypewriterMetrics.paperWidthFraction
+            ScrollView(.vertical) {
+                page
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.size.height, initial: true) { _, height in
+                                paperHeight = height
+                                rise()
+                            }
+                    }
                 }
-                .background(paper)
+                // Offset, not padding: the rise must not change what the scroll view thinks the
+                // page measures, or feeding the paper in would jog the scroll position.
+                .offset(y: riseOffset)
+                // One frame at the resting position before the height is known would read as the
+                // page blinking into place and then rising, which is the opposite of the motion.
+                .opacity(paperWidth != nil && (paperHeight > 0 || reduceMotion) ? 1 : 0)
+                // A page shorter than its window rests on the roller rather than floating at the
+                // top of it. Written as a minimum height against the *window* — not
+                // `defaultScrollAnchor`, which needs macOS 15 and would take the package's floor
+                // up with it — so a page longer than the window still opens at its first line.
+                .frame(maxWidth: .infinity, minHeight: windowHeight, alignment: .bottom)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .background {
+                GeometryReader { proxy in
+                    Color.clear
+                        .onChange(of: proxy.size.height, initial: true) { _, height in
+                            windowHeight = height
+                        }
+                }
+            }
+            .clipped()
+            // Pulled down over the machine's own paper stub, and drawn above it, so the sheet runs
+            // into the roller instead of stopping at a seam above it. The inset is a proportion of
+            // the photograph's height — the stub ends and the platen begins at y 105 of 573 — so it
+            // holds at every width the machine is drawn at.
+            .padding(.bottom, -machineHeight * TypewriterMetrics.rollerInsetFraction)
+            .zIndex(1)
             machine
         }
         .frame(maxWidth: .infinity)
+    }
+
+    /// The sheet itself, cut to the width of the paper standing in the photograph's roller and
+    /// nudged onto its centre — the machine is photographed a few pixels off-centre, and a sheet
+    /// centred on the *screen* meets it with a step down one edge.
+    private var page: some View {
+        sheet
+            .padding(.top, TypewriterMetrics.paperTopMargin)
+            .padding(.bottom, TypewriterMetrics.paperBottomMargin)
+            .padding(.horizontal, TypewriterMetrics.paperSideMargin)
+            // Measured off the machine, not off the container. The two are not the same width —
+            // the stage insets the typewriter — and a sheet cut to a fraction of the *screen*
+            // overhangs the paper it is supposed to be by exactly that inset.
+            .frame(width: paperWidth ?? 0)
+            .offset(x: machineWidth * TypewriterMetrics.paperCentreOffsetFraction)
+            .background(paper)
+    }
+
+    /// The sheet's width: the width of the paper standing in the photograph's roller. `nil` until
+    /// the machine has been measured, which is one frame, and the page is held invisible for it.
+    private var paperWidth: CGFloat? {
+        machineWidth > 0 ? machineWidth * TypewriterMetrics.paperWidthFraction : nil
+    }
+
+    /// How far below its resting place the page currently sits. Its own height, so it starts
+    /// wholly out of sight behind the machine and arrives level — a sheet fed through a roller,
+    /// not a card sliding in from off-screen.
+    private var riseOffset: CGFloat {
+        guard !reduceMotion, !hasRisen else { return 0 }
+        return paperHeight
+    }
+
+    /// Feed the page in, once, and never under Reduce Motion — there the paper is simply already
+    /// in the machine (`NFR-A11Y-05`). Nothing here gates content: the hook is legible at every
+    /// point of the animation and complete before it starts.
+    private func rise() {
+        guard !hasRisen, paperHeight > 0 else { return }
+        guard !reduceMotion else {
+            hasRisen = true
+            return
+        }
+        withAnimation(.easeOut(duration: TypewriterMetrics.riseDuration)) { hasRisen = true }
     }
 
     /// The crest, sized against the container the way the sheet is, then pulled down into the paper
@@ -78,6 +176,12 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
     @ViewBuilder private var crestBlock: some View {
         if hasCrest {
             crest
+                // Against the container, not against the measured machine. Feeding a measured
+                // width back into a child of the same stack is a loop: with nothing measured yet
+                // the crest takes its intrinsic width, that widens the stack, the wider stack
+                // widens the machine, and the new measurement resizes the crest. It span the CPU
+                // at 100% and froze the screen. Only the sheet — which sits inside a scroll view
+                // and cannot widen anything — is sized off the photograph.
                 .containerRelativeFrame(.horizontal, alignment: .center) { width, _ in
                     width * TypewriterMetrics.crestWidthFraction
                 }
@@ -112,9 +216,27 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
 
     @ViewBuilder private var machine: some View {
         if let image = TypewriterMetrics.machineImage {
+            // Whole, and never cropped. It was cropped from the bottom for a while to buy the page
+            // room, and a typewriter with its front lip off the screen reads as a mistake rather
+            // than as a close crop. The room comes from the overlap instead: the sheet now runs
+            // down over the machine's own paper stub, so those points are spent twice.
             image
                 .resizable()
                 .aspectRatio(contentMode: .fit)
+                .background {
+                    GeometryReader { proxy in
+                        Color.clear
+                            .onChange(of: proxy.size, initial: true) { _, size in
+                                machineWidth = size.width
+                                machineHeight = size.height
+                            }
+                    }
+                }
+                // The photograph carries about 9% of its own height as empty space under the
+                // machine's feet. Most of that is given back to the page — the layout cannot see
+                // that those points are blank, and a page that clips its own figures to hold empty
+                // pixels is the wrong trade. What is left is the clearance over the action.
+                .padding(.bottom, -machineHeight * TypewriterMetrics.machineFootReclaimed)
                 .accessibilityHidden(true)
         } else {
             // A missing photograph must not take the hook with it — the same rule the portrait
@@ -126,25 +248,109 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
 
 public enum TypewriterMetrics {
 
-    /// How wide the sheet is against the machine, measured off the photograph: the paper spans
-    /// roughly 0.17…0.86 of the image's width, and the frame's own text column sits inside that.
-    public static let paperWidthFraction: CGFloat = 0.66
+    /// How wide the sheet is against the machine — the width of the paper actually standing in the
+    /// photograph's roller, sampled off `typewriter.png` (720 × 573): it spans x 143…593, so 451 of
+    /// 720. The drawn sheet and the photographed one are the same sheet, and any other number puts
+    /// a step down one edge of it.
+    public static let paperWidthFraction: CGFloat = 451.0 / 720.0
     public static let paperCornerRadius: CGFloat = 6
 
-    /// How wide the crest is against the same container, from `35:431`: the framed portrait is
-    /// drawn 180 pt wide over a machine photographed 302.4 pt wide. Narrower than the paper, which
-    /// is what makes it read as standing *on* the page rather than as a header above it.
-    public static let crestWidthFraction: CGFloat = 180.0 / 302.376
+    /// The margins typed onto the sheet. The top one is the deep one, because it is the head of a
+    /// page: text starting a hair under the paper's edge reads as a label, not as something typed
+    /// into a machine. The bottom is shallow — the page continues into the roller rather than
+    /// ending, so a deep margin there is just a gap before the platen.
+    ///
+    /// **These four values and the three below are the whole geometry of the sheet.** Its size is
+    /// `paperWidthFraction` (× the machine's width) and its height is whatever the margins plus the
+    /// content come to; where it sits is `paperCentreOffsetFraction` across and
+    /// `rollerInsetFraction` down.
+    public static let paperTopMargin: CGFloat = 28
+    public static let paperBottomMargin: CGFloat = 10
+    public static let paperSideMargin: CGFloat = 12
+
+    /// The photographed paper's centre is x 368 of 720 — eight pixels right of the image's own
+    /// centre. A sheet centred on the screen therefore meets it off by that much, so the drawn one
+    /// is nudged the same way.
+    public static let paperCentreOffsetFraction: CGFloat = (368.0 - 360.0) / 720.0
+
+    /// Where the photograph's own paper stub ends and the platen begins: y 105 of 573. The drawn
+    /// sheet is pulled down by this much of the machine's height and drawn over it, so the page
+    /// runs into the roller rather than stopping at a seam above it.
+    public static let rollerInsetFraction: CGFloat = 105.0 / 573.0
+
+    /// The transparent margin under the machine's feet — the art ends at y 523 of 573. It is the
+    /// clearance between the machine and the action below, which is why nothing adds padding there.
+    public static let machineTransparentFootFraction: CGFloat = (573.0 - 523.0) / 573.0
+
+    /// How much of that margin is given back to the page. Two thirds: the rest is the gap that
+    /// keeps the machine from growing out of the action below it.
+    public static let machineFootReclaimed: CGFloat = machineTransparentFootFraction * 2.0 / 3.0
+
+    /// How wide the crest is against the same container. `35:431` draws the framed portrait 180 pt
+    /// wide over a machine photographed 302.4 pt wide; it is drawn at 150 here, because the crest's
+    /// height is what it costs — every point of frame above the page is a point the page does not
+    /// have, and the page has a sheet's worth of hook and two figures to hold. Still narrower than
+    /// the paper, which is what makes it read as standing *on* the page rather than as a header
+    /// above it.
+    public static let crestWidthFraction: CGFloat = 150.0 / 302.376
 
     /// How much of the crest is behind the paper. On `35:431` the frame is drawn from y 226.5 to
     /// y 451.5 and the sheet's top edge falls at y ≈ 325, so a little over half of it is hidden.
     /// Held as a proportion rather than as points because the sheet's own top moves with the
     /// reader's text size, and a fixed offset would slide off it at the first size up.
-    public static let crestOverlapFraction: CGFloat = (451.5 - 325.0) / 224.93
+    /// Deepened from the frame's own 0.56 on 2026-08-18: the machine is drawn whole now, and the
+    /// height it takes back has to come from somewhere the page can spare it. The crest still
+    /// stands above the paper — this is the proportion hidden, not the object shrunk.
+    public static let crestOverlapFraction: CGFloat = 0.70
     /// The photograph's paper reads `#E4D8CC` at the join against the token's `#EEE7D2` — about a
     /// 4.5% shade, applied as a short gradient rather than as a hard edge.
     static let joinShade: CGFloat = 0.045
     static let joinHeight: CGFloat = 28
+
+    /// How long the page takes to feed in. Long enough to read as paper moving through a roller,
+    /// short enough that it is over before the first typed character lands.
+    public static let riseDuration: Double = 0.55
+
+    /// How much of the screen the machine is allowed to take, top-cropped.
+    ///
+    /// Uncropped the photograph is about a third of a 402 × 874 screen, and the window left over
+    /// for the page is then shorter than a full sheet — the distance and the duration end up behind
+    /// the roller, which is the one thing on the page that must not be hidden. The roller, the
+    /// carriage and most of the keyboard are above this line; what leaves the frame is the front
+    /// lip.
+
+
+    /// How much text one sheet holds.
+    ///
+    /// The machine no longer moves, so the page is a window rather than a column that can grow
+    /// without limit — a passage that overruns it becomes a scroll inside a photograph, which is
+    /// neither the frame's picture nor a good read. Content longer than this is trimmed for
+    /// display only: nothing is edited, and every screen that shows the whole passage still does.
+    public static let maximumSheetCharacters = 300
+
+    /// A tail this short after the last paragraph break is dropped rather than kept — two or three
+    /// words of a paragraph that goes nowhere read as damage, not as an ending.
+    static let orphanParagraphCharacters = 48
+
+    /// The passage as it is typed onto the sheet, cut to `maximumSheetCharacters`.
+    ///
+    /// Pure, so the rule is testable without a running view. The cut falls on a word boundary and
+    /// takes an ellipsis, because a page that stops mid-word reads as a bug rather than as a
+    /// deliberate ending — and if it lands a few words into a fresh paragraph, that stub goes too.
+    public static func sheetText(_ text: String) -> String {
+        guard text.count > maximumSheetCharacters else { return text }
+        let head = text.prefix(maximumSheetCharacters - 1)
+        var body = head.lastIndex(where: \.isWhitespace).map { head[..<$0] } ?? head
+        if let paragraph = body.range(of: "\n\n", options: .backwards),
+           body[paragraph.upperBound...].count <= orphanParagraphCharacters {
+            body = body[..<paragraph.lowerBound]
+        }
+        let trimmed = body.trimmingCharacters(in: .whitespacesAndNewlines)
+        // A cut that happens to land on a full stop needs no ellipsis: the page ends on a sentence,
+        // and "kept.…" reads as a typing fault rather than as a passage continuing elsewhere.
+        guard let last = trimmed.last, !".!?…".contains(last) else { return trimmed }
+        return trimmed + "…"
+    }
 
     static let machineImage: Image? = {
         #if canImport(UIKit)

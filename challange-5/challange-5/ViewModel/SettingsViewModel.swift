@@ -145,6 +145,10 @@ final class SettingsViewModel {
     func simulateSideQuestPassing(_ sideQuestID: String) {
         proximityMonitor.simulateEntry(sideQuestID: sideQuestID)
     }
+
+    func fireHardcodedTestNotification() {
+        proximityMonitor.fireHardcodedTestNotification()
+    }
     #endif
 
     // MARK: Storage — FR-SET-01
