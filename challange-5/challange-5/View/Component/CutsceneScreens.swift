@@ -152,16 +152,25 @@ struct CutsceneIntroScreen: View {
 }
 
 /// `187:866` — the subject named, with the quest's hook beneath it and the action to begin.
+///
+/// **Two titles, and they are not the same title.** The quest's name sits in the top bar, as it
+/// does on `447:1870` and `187:1093` — the page had a bare back chevron and no name on it, which
+/// left this the one story stage a reader could land on without being told which walk they were
+/// starting. `title` below the picture stays what the frame uses it for: the *subject* of the
+/// portrait. The call site must not pass the quest's name to both, or the page prints it twice.
 struct CutscenePortraitScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
     let language: ContentLanguage
     let portraitURL: URL?
     let portraitLabel: String
-    /// The quest's title, from content. Never a baked-in name (`AD-4`).
+    /// The quest's title, centred in the top bar. Content, never a literal (`AD-4`, `FR-RUN-06`).
+    let questTitle: String
+    /// The subject of the portrait, from content. Never a baked-in name (`AD-4`).
     let title: String
     let subtitle: String?
-    /// `quest.hookLore`, already resolved to the run's language.
+    /// `quest.hookLore`, already resolved to the run's language. Cut to `CutsceneLeadMetrics` for
+    /// display: the frame draws a lead here, not the passage.
     let hook: String
     let onStart: () -> Void
     let onBack: () -> Void
@@ -169,12 +178,7 @@ struct CutscenePortraitScreen: View {
     var body: some View {
         HisploraStage(ground: \.brownStone) {
             VStack(spacing: 0) {
-                HStack {
-                    HisploraBackButton(
-                        accessibilityLabel: UIStrings.string(.storyRevealBack, language),
-                        action: onBack)
-                    Spacer()
-                }
+                header
                 ScrollView {
                     VStack(spacing: KultaraMetrics.lg) {
                         HisploraFramedImage(url: portraitURL, label: portraitLabel)
@@ -194,7 +198,7 @@ struct CutscenePortraitScreen: View {
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }
-                        Text(hook)
+                        Text(CutsceneLeadMetrics.leadText(hook))
                             .font(.system(size: 15))
                             .foregroundStyle(palette.inkDusty.color)
                             .multilineTextAlignment(.center)
@@ -209,6 +213,27 @@ struct CutscenePortraitScreen: View {
                     .buttonStyle(.hisploraPill)
             }
             .padding(KultaraMetrics.lg)
+        }
+    }
+
+    /// The same bar `CutsceneIntroScreen` carries — the quest's name centred, the back chevron over
+    /// it on the left. A `ZStack` rather than a three-column `HStack`, so a long title stays centred
+    /// on the screen instead of being pushed off it by the chevron's width.
+    private var header: some View {
+        ZStack {
+            Text(questTitle)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(palette.inkCream.color)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, KultaraMetrics.minimumTapTarget)
+                .accessibilityAddTraits(.isHeader)
+            HStack {
+                HisploraBackButton(
+                    accessibilityLabel: UIStrings.string(.storyRevealBack, language),
+                    action: onBack)
+                Spacer()
+            }
         }
     }
 }

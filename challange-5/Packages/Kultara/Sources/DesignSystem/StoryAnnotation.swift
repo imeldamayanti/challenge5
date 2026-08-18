@@ -88,8 +88,10 @@ public struct HisploraMarkedPhrase: View {
     private let isMarked: Bool
 
     /// How far past the phrase's own box the loop is drawn. The design rings a 17-point line with a
-    /// 31-point mark, so the loop stands roughly 6 points clear of the type on every side.
-    private static let bleed: CGFloat = 6
+    /// 31-point mark, which is about 6 points clear of the type; 8 is that plus the two the loop
+    /// needs to read *as* a loop on a phone, where its left and right ends are two hairlines and
+    /// the type is set right up against them.
+    private static let bleed: CGFloat = 8
 
     public init(_ phrase: String, font: Font = .system(size: 17), isMarked: Bool) {
         self.phrase = phrase
@@ -109,11 +111,16 @@ public struct HisploraMarkedPhrase: View {
     private var mark: some View {
         // `-1` on the x axis: `293:1650` is drawn mirrored, so the loop's open tail falls on the
         // right of the phrase as the frame has it rather than on the left.
+        // The mask goes on **before** the bleed, and that order is the difference between a loop
+        // and a smudge. Masked afterwards, the sweep's `GeometryReader` measures the phrase's own
+        // box rather than the bled one, and the 8 points at each end — which is exactly where the
+        // loop turns — are cut off: what reaches the screen is the top and bottom arcs alone,
+        // reading as two stray pen strokes above and below the words.
         HisploraHighlightMark()
             .fill(palette.highlight.color)
             .scaleEffect(x: -1, y: 1, anchor: .center)
-            .padding(-Self.bleed)
             .mask(alignment: .leading) { sweep }
+            .padding(-Self.bleed)
             .accessibilityHidden(true)
     }
 

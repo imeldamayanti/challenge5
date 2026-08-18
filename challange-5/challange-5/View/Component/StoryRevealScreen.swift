@@ -150,7 +150,9 @@ struct StoryRevealScreen: View {
     private var passage: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
             if let placeName {
-                VStack(alignment: .leading, spacing: 0) {
+                // `sm`, not zero. The marker loop is drawn 8 points clear of the phrase on every
+                // side, so a lead set hard against it is a lead with a pen stroke through it.
+                VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
                     // Types itself in, character by character, which — because `Text` wraps and
                     // this reveals left to right — reads as line by line, per the designer's note.
                     HisploraTypewriterText(
@@ -170,8 +172,11 @@ struct StoryRevealScreen: View {
                 }
             }
             if reveal >= .passage {
+                // Cut to one paragraph, as `293:1643` sets it. Display only — the lore is
+                // untouched, and the labelled treatment below shows every claim whole because a
+                // trimmed claim is a claim without its citation (`FR-CP-05`).
                 HisploraTypewriterText(
-                    text,
+                    StoryPassageMetrics.passageText(text),
                     font: .system(size: 17),
                     onComplete: { advance(to: .marked) })
             }
