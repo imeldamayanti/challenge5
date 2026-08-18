@@ -61,6 +61,9 @@ public struct KultaraThemeProvider<Content: View>: View {
                         .opacity(KultaraPaperTexture.grainOpacity)
                         .allowsHitTesting(false)
                         .accessibilityHidden(true)
+                    // The speckle every ground in the app now carries, including the dark
+                    // appearance the cream artwork above deliberately has no variant for.
+                    KultaraSpeckleField(over: palette.paper)
                 }
                 .ignoresSafeArea()
             }

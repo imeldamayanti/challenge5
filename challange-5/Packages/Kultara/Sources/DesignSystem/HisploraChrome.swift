@@ -38,7 +38,9 @@ public struct HisploraStage<Content: View>: View {
         return content
             .environment(\.hisploraPalette, palette)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(palette[keyPath: ground].color.ignoresSafeArea())
+            // Token first, speckle over it — `Speckle.swift` explains why that ordering is what
+            // keeps `HisploraThemeTests`' measured pairs describing what is actually on screen.
+            .kultaraSpeckledGround(palette[keyPath: ground])
     }
 }
 
