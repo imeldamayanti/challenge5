@@ -30,7 +30,10 @@ struct challange_5App: App {
     private func configureProximity(_ environment: KultaraEnvironment) {
         notificationDelegate.onTap = { sideQuestID in router.pendingSideQuestID = sideQuestID }
         UNUserNotificationCenter.current().delegate = notificationDelegate
-        SideQuestNotificationCategory.register()
+        // `FR-ONB-05` — the app's language, not the device's; mirrors the resolve call in
+        // `SideQuestProximityService.handleRegionEntered`.
+        let language = LanguageResolver.resolve(override: environment.preferences.preferredLanguage)
+        SideQuestNotificationCategory.register(language: language)
         environment.proximityMonitor.onSideQuestNearby = { sideQuestID in
             router.pendingSideQuestID = sideQuestID
         }

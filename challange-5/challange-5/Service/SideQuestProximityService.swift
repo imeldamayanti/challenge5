@@ -3,6 +3,7 @@ import CoreLocation
 import Foundation
 import RunEngine
 import UIKit
+import UIStringsKit
 import UserNotifications
 
 /// The background half of `AD-1`'s location split — region monitoring plus the notification it
@@ -308,9 +309,15 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             // `userInfo` carries the id and nothing else — no coordinates in a payload (`FR-PROX-15`).
             content.userInfo = ["sideQuestID": sideQuestID]
             content.sound = .default
-            // `FR-WATCH-07` — additive: a plain system-rendered notification tolerates a category
-            // identifier it has no registered actions for, so this changes nothing observable on a
-            // phone with no paired watch (`FR-WATCH-08`, `s9` §6).
+            // `FR-WATCH-07` — the phone now registers `SideQuestNotificationCategory` (with its
+            // "Open in App" action) unconditionally at launch via `configureProximity`, so an
+            // expanded v1 notification *does* show that action button now, watch or no watch. That
+            // is still `FR-WATCH-08`-compliant: the requirement is that v1 behavior not depend on a
+            // watch companion being present, and it doesn't — the action shows the same way either
+            // way. What changed is a deliberate, always-present addition: Phase A (`s9` §5) directs
+            // registering the category and its action unconditionally as groundwork for Phase B's
+            // `WKNotificationScene`, and a small "Open in App" affordance on the v1 notification is
+            // the visible side effect of that groundwork, not a bug.
             content.categoryIdentifier = SideQuestNotificationCategory.identifier
             // Local file only, no network fetch (`AD-3`). Every current sidequest has
             // `heroImageAsset == nil`, so this branch is correct-but-unexercised today.
@@ -465,10 +472,13 @@ enum SideQuestNotificationCategory {
     static let identifier = "sidequest-nearby"
     static let openInAppActionIdentifier = "OPEN_IN_APP"
 
-    static func register() {
+    /// `language` follows the same `LanguageResolver.resolve(override:)` call the rest of this
+    /// screen's strings go through (`FR-ONB-05`) — the action title is user-facing, so it belongs
+    /// in the ID/EN table like everything else in this flow (`NFR-I18N-01/02`), not a literal.
+    static func register(language: ContentLanguage) {
         let openInApp = UNNotificationAction(
             identifier: openInAppActionIdentifier,
-            title: "Open in App",
+            title: UIStrings.string(.sideQuestNotificationOpenInApp, language),
             options: [.foreground])
         let category = UNNotificationCategory(
             identifier: identifier,
