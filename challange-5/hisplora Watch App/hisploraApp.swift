@@ -18,6 +18,9 @@ struct hisplora_Watch_AppApp: App {
         WindowGroup {
             ContentView()
         }
+        WKNotificationScene(
+            controller: SideQuestNotificationController.self,
+            category: WatchSideQuestNotificationCategory.identifier)
     }
 }
 
@@ -28,13 +31,12 @@ struct hisplora_Watch_AppApp: App {
 /// identical to the phone copy; a mismatch here would leave this registration
 /// disagreeing with what the phone's notification requests carry.
 ///
-/// Whether this registration is load-bearing for Phase B is an open question, not a settled fact:
-/// for a *forwarded* notification (the mechanism until Phase B builds a real watch-native
-/// scheduling path), the action set the watch shows may come from the iPhone's category
-/// registration rather than this one, in which case this copy could stay inert even once
-/// `WKNotificationScene` exists. `s9` §3 already flags the exact `WKNotificationScene`/dynamic-
-/// interface API surface as unverified for the installed watchOS 26 SDK — resolve this there
-/// before Phase B is built, rather than assuming either direction here.
+/// Scene binding for the custom long-look is a **static `Scene` declaration** — the
+/// `WKNotificationScene` registered in `hisplora_Watch_AppApp.body` — matched against the forwarded
+/// notification's `categoryIdentifier`, independent of either side's `setNotificationCategories`
+/// call. Both this registration and the phone's (Phase A, `SideQuestProximityService.swift`) stay
+/// necessary for the action set each side renders, but neither one is what makes the custom long-look
+/// card appear; the `WKNotificationScene` declaration is.
 enum WatchSideQuestNotificationCategory {
     static let identifier = "sidequest-nearby"
     static let openInAppActionIdentifier = "OPEN_IN_APP"
