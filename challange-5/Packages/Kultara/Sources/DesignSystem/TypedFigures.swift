@@ -48,7 +48,10 @@ public struct KultaraTypedFigures: View {
     }
 
     private var row: some View {
-        HStack(spacing: KultaraMetrics.lg) {
+        // `md`, not `lg`: the sheet is cut to the width of the paper in the typewriter's roller,
+        // and at `lg` the pair falls to `column` there — which is twice as tall and pushes the
+        // second figure off the page.
+        HStack(spacing: KultaraMetrics.md) {
             ForEach(Array(figures.enumerated()), id: \.element.id) { index, figure in
                 if index > 0 {
                     // Not `Divider()`: that is a horizontal hairline in the separator colour, and

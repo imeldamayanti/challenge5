@@ -113,10 +113,67 @@ Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `44
 5. **The typed sheet is set at a readable size.** The frame types the hook at 8.5 pt, because on
    the frame the sheet is a small object inside a photograph. Reproduced literally it is
    unreadable at the default text size and off the paper at the first size above it. `typedSheet`
-   is 14 pt scaling from `.footnote`, and the composition changed with it: the photograph is
-   cropped to the *machine*, the paper is drawn in code above it, and the two are stacked, so the
-   sheet grows with the reader's text size while the machine stays the size it is
-   (`KultaraTypewriter`).
+   is **12 pt** scaling from `.footnote` — down from 14 on 2026-08-18, and 12 is the floor
+   `TypewriterTests.theSheetIsSetLargerThanTheFrameDrawsIt` holds — and the composition changed
+   with it: the photograph is cropped to the *machine*, the paper is drawn in code above it, and
+   the two are stacked (`KultaraTypewriter`).
+
+5a. **The machine does not move, and the page does.** Until 2026-08-18 the whole stack sat in one
+    scroll view, so a page taller than the screen carried the photograph up with it — the object
+    the screen is a picture of slid about. Now the title and the machine are fixed, and the scroll
+    view is *inside* `KultaraTypewriter`, around the paper alone. Two costs, both deliberate:
+
+    - ~~The machine is cropped from the top.~~ **Reverted the same day.** A typewriter with its
+      front lip off the screen reads as a mistake, not as a close crop. The machine is drawn whole,
+      and the height it takes back comes from the page **overlapping it**: the sheet is pulled down
+      over the machine's own paper stub by `rollerInsetFraction` (y 105 of the photograph's 573)
+      and drawn above it, so the page runs into the roller instead of stopping at a seam. Two
+      thirds of the photograph's transparent foot (y 523…573) is reclaimed the same way — the
+      layout cannot see that those points are blank.
+    - The crest is drawn **150 pt wide against `35:431`'s 180**, and **0.70 of it is behind the
+      paper against the frame's 0.56** — its height is space the page does not get.
+    - The typewriter takes the **full width** of the stage, not an inset column. The sheet is cut to
+      the paper in the roller, so every point off the machine comes off the page twice; at the
+      inset width the pair "Distance | Total time" fell to two stacked rows, which costs more
+      height than the wider machine ever did. `KultaraTypedFigures`' row gap went `lg` → `md` for
+      the same reason.
+
+5c. **Everything about the sheet's geometry is one block of constants.** `TypewriterMetrics` in
+    `DesignSystem/Typewriter.swift`: `paperWidthFraction` and the three margins are its size,
+    `paperCentreOffsetFraction` and `rollerInsetFraction` are where it sits, and the two `crest*`
+    fractions are the object standing on it. The top margin is the deep one (28 pt against the
+    bottom's 10) because it is the head of a page — text starting a hair under the paper's edge
+    reads as a label rather than as something typed into a machine.
+
+5d. **The sheet is the width of the paper in the photograph, and is sized off the machine.**
+    `typewriter.png` is 720 × 573 and its paper spans x 143…593 — `paperWidthFraction` is that
+    451/720, and `paperCentreOffsetFraction` nudges the drawn sheet the 8 px the photographed one
+    sits right of centre. It is measured against the **machine**, not the container: those two are
+    not the same width, and a fraction of the *screen* overhangs the paper by the stage's inset.
+
+    Only the sheet is sized that way, and only because it lives inside the scroll view and cannot
+    widen anything. Feeding the same measurement into the crest — a sibling in the same stack —
+    spun a layout loop: with nothing measured the crest took its intrinsic width, that widened the
+    stack, the wider stack widened the machine, and the new measurement resized the crest. It held
+    the CPU at 100% and froze the screen.
+
+    The crest itself sits **outside** that scroll view, above it, with the negative bottom padding
+    pulling the window up over its lower half. It is an object standing on the desk, not something
+    printed on the page: it holds still while the paper feeds in and while a long page scrolls, and
+    the text disappears behind it rather than carrying it up the screen. The machine then takes
+    `machineLift` (20 pt) of clearance over the action, so it reads as standing on a desk rather
+    than growing out of the button.
+
+    At AX3 and above the page no longer fits and scrolls inside its window; the machine and the
+    action stay where they are, which is what `NFR-A11Y-04` wanted from the old full-page scroll
+    without moving the furniture.
+
+5b. **The hook is cut to 300 characters on this screen.** A window rather than a growing column
+    means a passage that overruns it becomes a scroll inside a photograph.
+    `TypewriterMetrics.sheetText` cuts on a word boundary, drops a stub paragraph left at the cut
+    (the shipped hook used to end on an orphaned "At the…"), and adds an ellipsis only where the
+    page does not already end on a full stop. **Display only** — `hookLore` is untouched, and the
+    whole passage is what the run's other screens and every snapshot still carry.
 
 6. **The task bar's unfilled segments lost their wash.** `452:3139`–`3141` fill the unfilled
    segments with 29% `#EEE7D7` over the well, which measures **2.25:1** against a filled segment —

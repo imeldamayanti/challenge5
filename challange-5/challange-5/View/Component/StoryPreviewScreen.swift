@@ -47,23 +47,27 @@ struct StoryPreviewScreen: View {
                         action: onBack)
                     Spacer()
                 }
-                ScrollView {
-                    VStack(spacing: KultaraMetrics.xl) {
-                        Text(title)
-                            .kultaraFont(.storyDisplay)
-                            .foregroundStyle(palette.inkCream.color)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityAddTraits(.isHeader)
-                        // The machine sits three-quarters of the way across the frame, not edge to
-                        // edge — it is an object photographed on a ground, and a full-bleed one
-                        // stops reading as one.
-                        KultaraTypewriter { crest } sheet: { sheet }
-                            .padding(.horizontal, KultaraMetrics.xl)
-                    }
-                    .padding(.vertical, KultaraMetrics.lg)
+                // Not a scroll view. The machine is the one thing on this screen that must not
+                // move, and a scroll around the whole stack is what was moving it: the page and the
+                // photograph travelled together. The title and the machine are fixed here, and the
+                // scrolling — when a long page or a large text size needs any — happens inside
+                // `KultaraTypewriter`, on the paper alone.
+                VStack(spacing: KultaraMetrics.sm) {
+                    Text(title)
+                        .kultaraFont(.storyDisplay)
+                        .foregroundStyle(palette.inkCream.color)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    // Given the width of the screen, less the stage's own margin. The sheet is cut
+                    // to the width of the paper in the machine's roller, so every point taken off
+                    // the machine is taken off the page twice over — and a column narrow enough to
+                    // break "Distance | Total time" into two stacked rows costs more height than
+                    // the wider machine ever did.
+                    KultaraTypewriter { crest } sheet: { sheet }
                 }
-                .scrollBounceBehavior(.basedOnSize)
+                .padding(.vertical, KultaraMetrics.xs)
+                .frame(maxHeight: .infinity, alignment: .top)
                 Button(UIStrings.string(.storyPreviewReady, language), action: onReady)
                     .buttonStyle(.hisploraPill)
             }
@@ -89,11 +93,16 @@ struct StoryPreviewScreen: View {
 
     /// What is typed on the page: the hook, and the two named figures ruled off beneath it.
     private var sheet: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
+        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
             // Typed in, because the screen's whole conceit is a page coming out of a machine. The
             // reveal stops itself under Reduce Motion and VoiceOver, and a tap finishes it.
+            //
+            // Cut to one sheet. The page is now a fixed window over a machine that does not move,
+            // so a hook longer than it fits would turn the photograph into a scroll view. This
+            // trims the *display* only — `hookLore` is untouched, and the passage is not shown
+            // anywhere else on this screen for the cut to disagree with.
             HisploraTypewriterText(
-                hook,
+                TypewriterMetrics.sheetText(hook),
                 font: KultaraTypography.font(.typedSheet),
                 ink: \.inkDark,
                 lineSpacing: KultaraTypography.Role.typedSheet.lineSpacing)
