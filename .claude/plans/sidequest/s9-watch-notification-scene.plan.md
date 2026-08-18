@@ -1,8 +1,8 @@
 # S9 — Watch notification scene: target, content, and the long-look card
 
-**Status: blocked on `s8`.** `s8-watch-prd-amendment.plan.md` is proposed, not accepted. Target
-scaffolding (already done, see below) is inert and may proceed; everything past it waits for a named
-owner to accept, amend, or reject `s8`'s requirement block, same gate `s1`–`s6` sit behind `s7`.
+**Status: `s8` accepted (owner imelda, 2026-08-18).** `s8-watch-prd-amendment.plan.md`'s requirement
+block (`FR-WATCH-04`…`08`) is accepted into scope, so the gate `s1`–`s6` sit behind `s7` is now
+satisfied here too. See this plan's own Execution section below for how far Phase B has since gone.
 
 ## What builds it
 
@@ -110,7 +110,8 @@ notification decision logic (`ProximityGate`), never the rendered watch UI.
 | **A** — icon + category plumbing | §2, §5's category registration, `postNotification` additive fields | builds and installs on both targets, short-look shows correct icon/title/body |
 | **B** — long-look scene | §3, §4's placeholder asset | card renders on a physical watch, Open in App wakes the iPhone |
 
-Both phases are `s8`-gated in full — nothing here ships ahead of the amendment being accepted.
+Both phases were `s8`-gated in full — nothing here shipped ahead of the amendment being accepted,
+and `s8` is now accepted (owner imelda, 2026-08-18).
 
 ## Execution — 2026-08-18
 
@@ -118,9 +119,13 @@ Both phases are `s8`-gated in full — nothing here ships ahead of the amendment
 and `s10`'s resolved design. `s11-long-look-card.plan.md` carried the implementation as two tasks:
 
 - **Task 1** — `SideQuestLongLookView.swift` (the SwiftUI card: image slot, synopsis text,
-  `FR-WATCH-06` flat-palette placeholder fallback). Commits `a196571` (the view) and `e2a872e` (a
-  fix-forward on the same task: `imageSlotSize` had shipped `private`, which would have made the
-  synthesized memberwise init uncallable from Task 2's file — corrected to `internal`).
+  `FR-WATCH-06` flat-palette placeholder fallback). Commit `a196571` (the view). A task reviewer
+  then raised a concern that `imageSlotSize`'s `private` access would demote the synthesized
+  memberwise init to `private` too, making it uncallable from Task 2's file — commit `e2a872e`
+  widened it to `internal` on that basis. That claim turned out to apply only to a stored property
+  declared *without* a default value; `imageSlotSize` has one (`= 64`), so the memberwise init was
+  never affected and the original `private` was correct all along. The property has been reverted
+  back to `private` (see Finding 3 of the whole-branch review that caught this).
 - **Task 2** — `SideQuestNotificationController.swift` (hosts the view, resolves `synopsis` and
   `heroImage` from the delivered `UNNotification` in `didReceive(_:)`, with the best-effort
   security-scoped attachment read `s10` flagged as watchOS-unreliable) and the
