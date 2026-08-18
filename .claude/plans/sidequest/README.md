@@ -41,6 +41,10 @@ never part of a Run, never blocks one, and never changes one.
 | `s5-content-authoring.plan.md` | the places, their consent, their citations, the phrase |
 | `s6-testing-and-acceptance.plan.md` | the test matrix and the acceptance gates |
 | `s7-prd-amendment.md` | the `FR-SIDE-*` requirement block to add to the PRD |
+| `s8-watch-prd-amendment.plan.md` | the `FR-WATCH-04`…`08` requirement block for a v2 watch companion's branded proximity/sidequest card — not `FR-WATCH-03`, which is a different feature |
+| `s9-watch-notification-scene.plan.md` | the `hisplora Watch App` target, the Notification Scene, the image-placeholder decision, and the Open-in-App handoff |
+| `s10-long-look-card-design.md` | resolves `s9`'s own Phase B (§3/§4) — the `WKNotificationScene`/`WKUserNotificationHostingController` API verified against Apple's current docs, the flat-palette placeholder choice, why `DesignSystem` isn't linked into the watch target, and the security-scoped attachment-read caveat |
+| `s11-long-look-card.plan.md` | the implementation plan for `s10` — `SideQuestLongLookView`, `SideQuestNotificationController`, and the `WKNotificationScene` registration |
 
 ## Phasing
 
@@ -61,3 +65,9 @@ content tree stands in until it lands.
 **Phase B depends on nothing from C.** That ordering is deliberate: the notification is the part
 that needs `Always` location, a physical device and a field walk to verify, and hanging the whole
 feature off it would leave nothing demonstrable until the very end.
+
+| **F** — watch notification card | `s9`, gated by `s8` | short-look shows the right icon/title/body and long-look renders on a physical Apple Watch, Open in App wakes the paired iPhone |
+
+**Phase F depends on C**, not on A/B/D/E — it dresses up the notification `s3` already produces and
+adds nothing to the content model, so it can start as soon as `s3` posts a real notification and does
+not wait on sidequest content authoring (`s5`) at all.

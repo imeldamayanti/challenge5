@@ -1,8 +1,10 @@
-# S9 Phase B — Watch Notification Scene: design
+# S10 — Long-look card: design
 
-**Status:** approved by product owner (in-chat brainstorming, 2026-08-18), ready for `writing-plans`.
-**Scope:** `.claude/plans/sidequest/s9-watch-notification-scene.plan.md` §3 ("Long-look — the Notification
-Scene") and §4 ("The image slot"), Phase B in that plan's phasing table. Builds on Phase A, already
+**Status:** approved by product owner (in-chat brainstorming, 2026-08-18). Implementation plan is
+`s11-long-look-card.plan.md`.
+**Scope:** resolves `s9-watch-notification-scene.plan.md` §3 ("Long-look — the Notification
+Scene") and §4 ("The image slot") — `s9`'s own Phase B, still gated by `s8` same as the rest of `s9`.
+Builds on `s9` Phase A, already
 shipped (`fb5421a..2ffd8ef` plus a final-review fix wave `91a2ffa..16f657f` on the `notification`
 branch): the watch app icon, the shared `"sidequest-nearby"` `UNNotificationCategory` with its "Open
 in App" `UNNotificationAction`, registered at launch on both targets, and `postNotification`'s
