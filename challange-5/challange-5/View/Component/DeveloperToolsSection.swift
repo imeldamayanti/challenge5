@@ -88,6 +88,20 @@ struct DeveloperToolsSection: View {
                 .kultaraFont(.metadata)
                 .foregroundStyle(palette.warning.color)
                 .fixedSize(horizontal: false, vertical: true)
+
+            KultaraRule()
+
+            // A pure OS-pipeline diagnostic: fixed content, no sidequest, no ProximityGate, no
+            // location authorization. If this doesn't show up either, the cause is outside this
+            // app entirely — iOS Settings → Notifications for this app.
+            Button {
+                model.fireHardcodedTestNotification()
+            } label: {
+                Text("Kirim notifikasi test (hardcode)")
+                    .kultaraFont(.buttonLabel)
+                    .foregroundStyle(palette.seal.color)
+                    .frame(minHeight: KultaraMetrics.minimumTapTarget)
+            }
         }
     }
 }
