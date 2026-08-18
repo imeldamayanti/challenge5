@@ -51,33 +51,6 @@ public struct HisploraStamp<Picture: View>: View {
     }
 }
 
-/// The perforated silhouette: a rectangle with half-circle bites along all four edges.
-///
-/// Even-odd rather than subtracting circles one at a time, which is what the exported vector does
-/// and is also the only way the bites read as bites when the fill is translucent.
-public struct HisploraStampShape: Shape {
-    public init() {}
-
-    public func path(in rect: CGRect) -> Path {
-        var path = Path(rect)
-        let scale = min(rect.width / HisploraStampMetrics.designSize.width,
-                        rect.height / HisploraStampMetrics.designSize.height)
-        let radius = HisploraStampMetrics.notchRadius * scale
-        let pitch = HisploraStampMetrics.notchPitch * scale
-        guard radius > 0, pitch > 0 else { return path }
-
-        for centre in HisploraStampMetrics.notchCentres(in: rect, pitch: pitch) {
-            path.addEllipse(in: CGRect(x: centre.x - radius, y: centre.y - radius,
-                                       width: radius * 2, height: radius * 2))
-        }
-        return path
-    }
-
-    /// Every caller has to fill this even-odd, or the notches render as bumps. Exposed as a value so
-    /// there is one spelling of it rather than three sites remembering the flag.
-    public static let fillStyle = FillStyle(eoFill: true)
-}
-
 /// The stamp's numbers, read off `452:3142`'s exported vector, and the layout of the bar it sits on.
 ///
 /// Kept out of the views because a generic type cannot hold stored statics, and because these are

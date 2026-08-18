@@ -20,6 +20,9 @@ public struct HisploraStampShape: Shape {
     /// a fine dotted line rather than a perforation. Holding the count constant is what makes the
     /// two read as the same object at two sizes.
     public static let teethAcross: CGFloat = 14
+    /// The perforated ring is cut with an even-odd fill so the inner circles subtract from the
+    /// rectangle instead of adding bumps in the wrong direction.
+    public static let fillStyle = FillStyle(eoFill: true)
 
     private let teethAcross: CGFloat
 
