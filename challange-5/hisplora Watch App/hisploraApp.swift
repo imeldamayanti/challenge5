@@ -10,13 +10,24 @@ import UserNotifications
 
 @main
 struct hisplora_Watch_AppApp: App {
+    /// Held here rather than constructed inline: `UNUserNotificationCenter.current().delegate` is
+    /// `weak`, so a delegate nothing retains is one the system drops without saying so. The phone
+    /// target documents the same pattern in `challange_5App.swift`; this follows it.
+    @State private var notificationDelegate = SideQuestWatchNotificationDelegate()
+    /// The sidequest a tap opened, or `nil` for the idle screen.
+    @State private var openedCard: OpenedSideQuestCard?
+
     init() {
         WatchSideQuestNotificationCategory.register()
     }
 
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            ContentView(openedCard: openedCard)
+                .onAppear {
+                    notificationDelegate.onTap = { openedCard = $0 }
+                    UNUserNotificationCenter.current().delegate = notificationDelegate
+                }
         }
         WKNotificationScene(
             controller: SideQuestNotificationController.self,

@@ -438,26 +438,26 @@ git commit -m "feat(watch): resolve the tapped sidequest from the notification r
 - Modify: `challange-5/hisplora Watch App/hisploraApp.swift`
 - Modify: `challange-5/hisplora Watch App/ContentView.swift`
 
-- [ ] **Step 1: Hold the delegate in `@State`**
+- [x] **Step 1: Hold the delegate in `@State`**
 
 `UNUserNotificationCenter.current().delegate` is `weak`; anything not retained is silently dropped.
 The phone target already documents this pattern in `challange_5App.swift` — follow it exactly:
 `@State private var notificationDelegate = ...`, assigned inside `.onAppear`, alongside
 `@State private var openedCard: OpenedSideQuestCard?`.
 
-- [ ] **Step 2: `ContentView` renders `SideQuestWatchCardView`, not `SideQuestLongLookView`**
+- [x] **Step 2: `ContentView` renders `SideQuestWatchCardView`, not `SideQuestLongLookView`**
 
 **This is the one place this plan diverges from `s12`'s text**, which reused the long-look view here
 so the two surfaces would match. Decision 2 reverses that. The `nil` branch keeps the existing
 placeholder, with its copy updated from "The watch experience isn't built yet" to something that
 tells the walker what to do — the screen is no longer unbuilt.
 
-- [ ] **Step 3: Build both schemes**
+- [x] **Step 3: Build both schemes**
 
 The app scheme build is what proves the watch target links cleanly as an embedded dependency rather
 than only standalone.
 
-- [ ] **Step 4: Verify all four `#Preview`s, then commit**
+- [x] **Step 4: Verify all four `#Preview`s, then commit**
 
 ```bash
 git commit -m "feat(watch): open the tapped sidequest's card instead of the placeholder"
