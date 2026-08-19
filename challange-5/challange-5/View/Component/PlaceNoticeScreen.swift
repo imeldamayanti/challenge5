@@ -8,15 +8,16 @@ import UIStringsKit
 /// only at a sacred Place (`checkpoint.isSacred`, the same gate `checkpointScreen`'s inline notice
 /// already used). The task menu that always follows it is `CheckpointDetailScreen`.
 ///
-/// **The plaque is drawn, not shipped, and that is a licence decision rather than an omission.**
-/// `293:1630` — the ornate cream plate the whole screen is printed on — is a stock
-/// wedding-invitation plate. Exported, it carries a dozen real people's and businesses' names
-/// engraved across its middle; the frame hides them behind three opaque rectangles rather than
-/// removing them. Shipping that file would put those names, and somebody else's licensed
-/// engraving, inside every copy of the app. `HisploraPlaquePanel` reproduces the plate's
-/// silhouette, its cream and its inset rule in code instead. What is lost is the engraved crown at
-/// its head, the corner flourishes, and the small glyph on its lower edge — recorded on that type,
-/// and droppable in behind the panel if a licensed ornament is ever commissioned.
+/// **The plaque is now the frame's own artwork, with the names taken out of it.** `293:1630` — and
+/// `625:4377`, the same plate on the frame this screen was last worked from — is a stock
+/// wedding-invitation plate. Exported, it carries about two dozen real people's and businesses'
+/// names engraved across its middle; the frame hides them behind three opaque rectangles rather
+/// than removing them, so shipping the file as it stands would put those names inside every copy of
+/// the app. `plaque-plate.png` is that file with the names erased from the pixels, and
+/// `HisploraPlaquePanel` draws it in place of the code-drawn plate — which stays, as the fallback
+/// and as what this screen returns to if a commissioned ornament ever replaces the picture. The
+/// engraved crown, the corner flourishes and the small glyph on the lower edge are back; the
+/// licence on that engraving is still somebody else's and is not settled by erasing the names.
 ///
 /// **The portrait is the frame's own.** `320:2487` exports byte for byte as the gilded oval already
 /// packaged with the design system, so this screen is `KultaraPortraitFrame` via
@@ -53,6 +54,16 @@ struct PlaceNoticeScreen: View {
     /// description, then (only at a sacred Place) the dress-code and photo-policy rules.
     @State private var showsPoints = false
 
+    /// Set on the first layout, which is what the plate and the button fade up from. The screen is
+    /// arrived at from the story reveal, and cutting straight to a full plate reads as a jump; a
+    /// half-second rise reads as the plate being set down. Decoration, and nothing waits on it —
+    /// under Reduce Motion the value still flips, it simply flips without an animation, so the
+    /// screen is complete on the first frame rather than fading in slowly (`NFR-A11Y-05`).
+    @State private var plateIsSet = false
+
+    /// Long enough to read as a movement, short enough that nobody taps through it.
+    private static let settleDuration: Double = 0.5
+
     /// The frame's margins, in its own 402-point terms.
     ///
     /// `margin` is the 20 to the screen's edge the pill and the back arrow both keep. The rest are
@@ -86,6 +97,11 @@ struct PlaceNoticeScreen: View {
             ZStack(alignment: .top) {
                 ScrollView {
                     plaque
+                        .opacity(plateIsSet ? 1 : 0)
+                        .offset(y: plateIsSet ? 0 : 14)
+                        .animation(
+                            reduceMotion ? nil : .easeOut(duration: Self.settleDuration),
+                            value: plateIsSet)
                         .padding(.horizontal, Self.plaqueInset)
                         // The plate's head lobe tips at y ≈ 105 of 874 — measured, not the
                         // `293:1630` node's own 94, because that PNG carries transparent margin above
@@ -99,6 +115,7 @@ struct PlaceNoticeScreen: View {
                 .safeAreaInset(edge: .bottom) { acknowledgeButton }
                 backBar
             }
+            .onAppear { plateIsSet = true }
         }
     }
 

@@ -43,7 +43,7 @@ struct QuestRunView: View {
 
     var body: some View {
         content
-            .background(palette.paper.color)
+            .kultaraSpeckledGround(palette.paper)
             .navigationTitle(isOnStoryFlow ? "" : model.quest.title.value(for: language))
             .kultaraInlineNavigationTitle()
             .toolbar(isOnStoryFlow ? .hidden : .visible, for: .navigationBar)

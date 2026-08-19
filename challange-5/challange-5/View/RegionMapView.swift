@@ -92,7 +92,7 @@ struct RegionMapView: View {
                 content = filledSize(in: newViewport)
             }
         }
-        .background(palette.photoScrim.color)
+        .kultaraSpeckledGround(palette.photoScrim)
         .ignoresSafeArea()
         .overlay(alignment: .topLeading) { closeButton }
         // Deliberately no `accessibilityLabel` on this container: naming it turns the whole map

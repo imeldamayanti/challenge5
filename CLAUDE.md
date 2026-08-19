@@ -337,7 +337,7 @@ Still unguarded:
 
 ## Two visual directions, split at a screen boundary
 
-The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task list → task sheet → site plan** → transition.
+The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task list → task sheet → site plan** → transition — and, since 2026-08-18, **onboarding**, which is now the first Hisplora surface the app shows and is reached before the museum theme is ever seen.
 
 The last three landed 2026-08-17 from Figma `452:3132` ("Quest 1/3"), `447:1880` ("Quest_Filled") and `452:3028` ("Site Map"): `CheckpointDetailScreen` (restyled from the earlier `51:201`), the new `TaskDetailScreen`, and the new `PlaceSiteMapScreen`. `452:3028` is the **one story-flow screen on paper rather than brown** — `mapGround`, its own token — because a plan is a document. Five new palette tokens, four new New York type roles, and four recorded deviations came with them; `docs/hisplora-tokens.md` has all of it.
 
@@ -345,6 +345,15 @@ Two rules keep that from rotting:
 
 - **The seam falls between screens, never inside one.** A half-restyled screen is not survivable; a boundary between two whole screens is. `QuestRunView.isOnStoryFlow` is the switch, and it also hides the museum navigation bar on those stages.
 - **Museum-inked components must not be dropped onto a Hisplora ground.** They are measured against paper. `RunRouteMapView` takes `showsChrome:` for exactly this reason — its heading is `palette.seal`, which falls to about 2:1 on brown. This shipped as a real contrast bug before it was caught on device.
+
+Onboarding came from `523:1946`, `523:1973` and `523:1999` on 2026-08-18: four screens rather than
+the frames' three, because `FR-ONB-03`'s pocket-the-phone screen is a P0 MUST that none of the three
+carries and `FR-ONB-02` allows four. It is the second of the four and the one screen drawn with a
+symbol rather than an export. One palette token (`trackDim`), one type role (`onboardingDisplay`) and
+three illustrations came with it. **The three PNGs are 1× and want replacing**: the 3× export
+composites the frame's own cream fill behind the art, and the only transparent form the Figma tool
+returns is a contents-only render it will not upscale. A hand export from Figma at 3× is a drop-in —
+same names, same boxes.
 
 `docs/hisplora-tokens.md` records where each token was sampled, every measured ratio, and — importantly — the frames' content that was deliberately **not** built: the AI-generated portrait of a named historical figure (a `FR-CP-05` claim with no source or consent record), the external-maps handoff (`AD-3`), and the map screenshot (`FR-MAP-01`).
 

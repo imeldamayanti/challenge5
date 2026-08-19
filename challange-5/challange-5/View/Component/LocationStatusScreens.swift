@@ -138,7 +138,7 @@ struct LocationClueCard: View {
         }
         .padding(KultaraMetrics.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.paperCream.color)
+        .kultaraSpeckledGround(palette.paperCream)
         .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.xs))
     }
 }
