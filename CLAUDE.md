@@ -337,7 +337,7 @@ Still unguarded:
 
 ## Two visual directions, split at a screen boundary
 
-The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task list → task sheet → site plan** → transition — and, since 2026-08-18, **onboarding**, which is now the first Hisplora surface the app shows and is reached before the museum theme is ever seen.
+The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task sheet → task list → site plan** → transition — and, since 2026-08-18, **onboarding**, which is now the first Hisplora surface the app shows and is reached before the museum theme is ever seen.
 
 The last three landed 2026-08-17 from Figma `452:3132` ("Quest 1/3"), `447:1880` ("Quest_Filled") and `452:3028` ("Site Map"): `CheckpointDetailScreen` (restyled from the earlier `51:201`), the new `TaskDetailScreen`, and the new `PlaceSiteMapScreen`. `452:3028` is the **one story-flow screen on paper rather than brown** — `mapGround`, its own token — because a plan is a document. Five new palette tokens, four new New York type roles, and four recorded deviations came with them; `docs/hisplora-tokens.md` has all of it.
 
@@ -423,11 +423,23 @@ auto-advancing and the login carrying a "Skip for now".
   resolves. Replacing it with a real survey is a content change and nothing else. The frame's three
   marker dots are **not** drawn: nothing authors them, and inventing coordinates would be the app
   asserting where three things stand inside a real puri.
+- **The task sheet comes before the task list, and it is where a task is answered.** `1:4592` →
+  `1:4711` → `1:4904` on the New Hisplora board: the place notice hands over to the checkpoint's
+  **first** task, and the menu is what the walker reaches after resolving it. So `TaskDetailScreen`
+  carries the answer field, the save and the skip (`FR-TASK-02`) — a screen the walk opens on and
+  cannot resolve would be a dead end. Both controls call `QuestRunViewModel.saveTask`/`skipTask`, the
+  same pair `TaskCard` calls on the museum checkpoint screen, so there is one writer of a
+  `TaskResult` and two ways to reach it. `TaskCard` stays: a resumed walk lands on `.atCheckpoint`
+  and never sees the story stages, and `FR-TASK-07`'s closing reflection is answered there.
+  `stageBeforeTaskDetail` remembers which way the sheet was entered so backing out is not ambiguous;
+  forwards it always lands on the menu, whose `checkpointDetailContinueToNext` is the one way out of
+  the checkpoint. Nothing here gates progression (`AD-2`) — the skip is on the same screen, and an
+  empty field saves as a skip.
 - **Photo capture is still not built, and `447:1880` does not pretend otherwise.** The frame draws
   "Take Photo" as the task sheet's one action; only checkpoint 4 (`badung-catur-muka`) has a `photo`
-  task, so the label follows `ContentTask.type` and the sheet hands over to the checkpoint screen
-  where `TaskCard` owns the answer, the save and the skip. A photo task still lands on the
-  `taskPhotoNotInThisBuild` note.
+  task, so the pill is drawn where the frame draws it and **disabled**, over the
+  `taskPhotoNotInThisBuild` note, with the skip beneath it as what resolves such a task. A pill that
+  navigated instead of capturing would be a control that cannot do what it says.
 - **`452:3132` renders one task row and one progress segment, not the frame's three.** The frame is
   titled "Quest 1/3" and invents three tasks ("The Iron Statue", "The Ancient Script", "The Whip
   Bearer") that exist nowhere in the content tree; the shipped checkpoints carry exactly one task
