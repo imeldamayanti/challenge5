@@ -121,7 +121,11 @@ struct QuestRunView: View {
             durationText: model.routeDurationText,
             portraitURL: model.cutsceneImageURL,
             onReady: { model.advanceFromStoryPreview() },
-            onBack: { model.advanceFromStoryPreview() })
+            // Leaves the screen; it does not advance the walk. It was wired to
+            // `advanceFromStoryPreview()`, which made the chevron a second Ready to Explore — the
+            // one thing a back control must not be. The draft Run stays on disk and the quest list
+            // resumes it, which is what every other back control on this flow does.
+            onBack: { dismiss() })
     }
 
     /// `1:4458` — the fix confirmed on its own screen before the story starts. The arrival is

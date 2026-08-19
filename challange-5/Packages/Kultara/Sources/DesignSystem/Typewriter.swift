@@ -113,10 +113,11 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
                 }
             }
             .clipped()
-            // Pulled down over the machine's own paper stub, and drawn above it, so the sheet runs
-            // into the roller instead of stopping at a seam above it. The inset is a proportion of
-            // the photograph's height — the stub ends and the platen begins at y 105 of 573 — so it
-            // holds at every width the machine is drawn at.
+            // Pulled down onto the photographed paper, and drawn above it, so the two are one
+            // sheet rather than two meeting at a seam. The inset is a proportion of the
+            // photograph's height — it lands inside the flat field at rows 0…62 of 573, where the
+            // photographed paper is exactly the colour the drawn one is filled with — so it holds
+            // at every size the machine is drawn at.
             .padding(.bottom, -machineHeight * TypewriterMetrics.rollerInsetFraction)
             .zIndex(1)
             machine
@@ -136,8 +137,13 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
             // the stage insets the typewriter — and a sheet cut to a fraction of the *screen*
             // overhangs the paper it is supposed to be by exactly that inset.
             .frame(width: paperWidth ?? 0)
-            .offset(x: machineWidth * TypewriterMetrics.paperCentreOffsetFraction)
             .background(paper)
+            // After the background, not before it. `.offset` shifts what it is applied to and
+            // leaves the layout frame where it was, and `.background` places its content in that
+            // *unshifted* frame — so with the offset on the inside the typed text moved onto the
+            // photograph's centre line while the sheet it is typed on stayed on the screen's, and
+            // the page sat about 4 pt left of the paper in the roller with its own margins uneven.
+            .offset(x: machineWidth * TypewriterMetrics.paperCentreOffsetFraction)
     }
 
     /// The sheet's width: the width of the paper standing in the photograph's roller. `nil` until
@@ -197,18 +203,16 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
         }
     }
 
-    /// The sheet: the paper's own cream, closing into the tone the photograph's paper actually has
-    /// where the two meet, so the join reads as one sheet in changing light rather than as two
-    /// rectangles. The darker end is the photograph's `#E4D8CC`, reached by shading the token
-    /// rather than by adding a second paper colour nothing else would use.
+    /// The sheet: the photograph's own paper tone, flat.
+    ///
+    /// No shading at the foot any more. There used to be a short black gradient there, faking the
+    /// falloff the photographed paper has as it runs into the machine — necessary while the drawn
+    /// sheet was a different cream that had to be talked into meeting a different one. It is the
+    /// same cream now, and the sheet hands over inside the photograph's *flat* field, so the
+    /// falloff below the join is the photograph's own. Painting a second one on top of it only
+    /// darkened the page twice.
     private var paper: some View {
-        palette.paperCream.color
-            .overlay(alignment: .bottom) {
-                LinearGradient(
-                    colors: [.clear, .black.opacity(TypewriterMetrics.joinShade)],
-                    startPoint: .top, endPoint: .bottom)
-                    .frame(height: TypewriterMetrics.joinHeight)
-            }
+        TypewriterMetrics.paperTone.color
             .clipShape(UnevenRoundedRectangle(
                 topLeadingRadius: TypewriterMetrics.paperCornerRadius,
                 topTrailingRadius: TypewriterMetrics.paperCornerRadius))
@@ -249,10 +253,10 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
 public enum TypewriterMetrics {
 
     /// How wide the sheet is against the machine — the width of the paper actually standing in the
-    /// photograph's roller, sampled off `typewriter.png` (720 × 573): it spans x 143…593, so 451 of
-    /// 720. The drawn sheet and the photographed one are the same sheet, and any other number puts
+    /// photograph's roller, sampled off `typewriter.png` (720 × 573): its lit edges fall at x 143
+    /// and x 594, so 452 of 720. The drawn sheet and the photographed one are the same sheet, and any other number puts
     /// a step down one edge of it.
-    public static let paperWidthFraction: CGFloat = 451.0 / 720.0
+    public static let paperWidthFraction: CGFloat = 452.0 / 720.0
     public static let paperCornerRadius: CGFloat = 6
 
     /// The margins typed onto the sheet. The top one is the deep one, because it is the head of a
@@ -268,15 +272,26 @@ public enum TypewriterMetrics {
     public static let paperBottomMargin: CGFloat = 10
     public static let paperSideMargin: CGFloat = 12
 
-    /// The photographed paper's centre is x 368 of 720 — eight pixels right of the image's own
-    /// centre. A sheet centred on the screen therefore meets it off by that much, so the drawn one
-    /// is nudged the same way.
-    public static let paperCentreOffsetFraction: CGFloat = (368.0 - 360.0) / 720.0
+    /// The photographed paper's centre is x 368.5 of 720 — eight and a half pixels right of the
+    /// image's own centre. A sheet centred on the screen therefore meets it off by that much, so
+    /// the drawn one is nudged the same way.
+    public static let paperCentreOffsetFraction: CGFloat = (368.5 - 360.0) / 720.0
 
-    /// Where the photograph's own paper stub ends and the platen begins: y 105 of 573. The drawn
-    /// sheet is pulled down by this much of the machine's height and drawn over it, so the page
-    /// runs into the roller rather than stopping at a seam above it.
-    public static let rollerInsetFraction: CGFloat = 105.0 / 573.0
+    /// Where the drawn sheet hands over to the photographed one: inside the photograph's flat
+    /// field, which runs from row 0 to row 62 of 573 without moving a level. The drawn sheet is
+    /// pulled down by this much of the machine's height and drawn over it, so the two meet at a
+    /// row where they are the same colour — the seam is invisible because there is nothing to see,
+    /// not because something is drawn over it. Below the join the paper shades into the machine's
+    /// paper guide (rows 63…88) in the photograph's own light.
+    ///
+    /// Landing inside a 62-row flat field rather than on one exact row is the point: the sheet's
+    /// bottom moves a little with the text size and the screen, and anywhere in that band the join
+    /// still disappears.
+    ///
+    /// It was 105, which is *past* the guide and into the lit strip below it — so a band of
+    /// photographed paper stood under the drawn sheet, in a different cream, which is what read as
+    /// two sheets rather than one.
+    public static let rollerInsetFraction: CGFloat = 62.0 / 573.0
 
     /// The transparent margin under the machine's feet — the art ends at y 523 of 573. It is the
     /// clearance between the machine and the action below, which is why nothing adds padding there.
@@ -302,10 +317,21 @@ public enum TypewriterMetrics {
     /// height it takes back has to come from somewhere the page can spare it. The crest still
     /// stands above the paper — this is the proportion hidden, not the object shrunk.
     public static let crestOverlapFraction: CGFloat = 0.70
-    /// The photograph's paper reads `#E4D8CC` at the join against the token's `#EEE7D2` — about a
-    /// 4.5% shade, applied as a short gradient rather than as a hard edge.
-    static let joinShade: CGFloat = 0.045
-    static let joinHeight: CGFloat = 28
+    /// The photograph's own paper, and what the drawn sheet is filled with. Sampled as the mean of
+    /// the flat field in `typewriter.png` — x 165…575, y 5…60 — which reads `#E4D8CD` and does not
+    /// move by a level anywhere from row 0 to row 62.
+    ///
+    /// The file carries no colour profile, so its bytes *are* sRGB and this is the number the
+    /// screen shows. (Reading it through a converting API answers `#E9DFD6`, which is a
+    /// measurement of the conversion rather than of the picture.)
+    ///
+    /// Deliberately not `paperCream`. The token is `#EEE7D2` — ten levels lighter and a step
+    /// yellower: close enough to look like the obvious token to reach for, and far enough that the
+    /// drawn half of the sheet and the photographed half read as two different papers. Every other
+    /// Hisplora surface keeps the token; this one is matching a photograph, so it matches the
+    /// photograph. `TypewriterTests` re-samples the file and fails if the two drift apart.
+    public static let paperTone = SRGBColor(hex: "#E4D8CD")
+
 
     /// How long the page takes to feed in. Long enough to read as paper moving through a roller,
     /// short enough that it is over before the first typed character lands.
@@ -326,7 +352,7 @@ public enum TypewriterMetrics {
     /// without limit — a passage that overruns it becomes a scroll inside a photograph, which is
     /// neither the frame's picture nor a good read. Content longer than this is trimmed for
     /// display only: nothing is edited, and every screen that shows the whole passage still does.
-    public static let maximumSheetCharacters = 300
+    public static let maximumSheetCharacters = 210
 
     /// A tail this short after the last paragraph break is dropped rather than kept — two or three
     /// words of a paragraph that goes nowhere read as damage, not as an ending.

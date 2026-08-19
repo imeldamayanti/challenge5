@@ -427,6 +427,41 @@ The drawings depict real places, so the rule `PortraitFrame.swift` sets out appl
 a licence question and the words under it are the editorial one. Nothing is captioned from the
 artwork — every stamp's name and region come from the Run's own snapshots.
 
+### The story preview's sheet is the photograph's paper, not `paperCream`
+
+`typewriter.png` (720 × 573, **no colour profile** — its bytes are sRGB) is half of the sheet on the
+story preview: the drawn page sits on top of the photographed one and the two have to be the same
+piece of paper. They were not. The drawn half was `paperCream` `#EEE7D2`; the photographed half is
+`#E4D8CD`, the mean of the flat field at x 165…575, y 5…60, which does not move a level anywhere
+from row 0 to row 62. Ten levels apart, and on screen it read as two sheets in two creams.
+
+`TypewriterMetrics.paperTone` is that sampled `#E4D8CD`, and it is **not** a palette token. Every
+other Hisplora surface keeps `paperCream`; this one is matching a photograph rather than carrying
+the design's cream, and adding a near-duplicate to the palette would leave the next author choosing
+between two creams with no rule for which. The two inks the sheet is typed in are measured against
+it directly instead — `inkDark` 12.5:1, `inkMuted` 4.7:1 — in `TypewriterTests`, which also
+re-samples the file so a re-export fails rather than drifting.
+
+Sampling it through a converting reader (`NSBitmapImageRep` → sRGB) answers `#E9DFD6`. That is a
+measurement of the conversion, not of the picture, and it is the number an untagged PNG will hand
+anyone who checks this the easy way.
+
+Three geometry values were re-read off the same file at the same time. The paper's lit edges are at
+x 143 and x 594, so the sheet is 452/720 of the machine and its centre is 8.5 px right of the
+image's own — both already right to within half a pixel. Where the drawn sheet *ends* was not: it
+was pulled down 105/573, which is past the machine's paper guide (rows 88…102) and into the lit
+strip below it, so a band of photographed paper stood under the drawn sheet in the wrong cream. It
+now ends at 62/573, inside the flat field, where the two halves are the same colour and the join has
+nothing to show. The short black gradient that used to fake a falloff at the foot of the page went
+with it: below the join the shading is the photograph's own.
+
+Two consequences worth knowing. The `.offset` that nudges the sheet onto the photograph's centre
+line had to move *after* `.background` — `.offset` leaves the layout frame where it was and
+`.background` fills that unshifted frame, so the typed text was sitting about 4 pt off the sheet it
+was typed on. And the shallower join costs the page some room, so `maximumSheetCharacters` came down
+from 300 to 210: at 300 the distance and the duration were pushed behind the roller, which is the
+one thing on that page that must not be hidden.
+
 ### The plate on `293:1613`, and what the code draws instead
 
 `293:1630` is a stock wedding-invitation plate. Exported, it carries a dozen real individuals' and
