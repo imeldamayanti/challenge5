@@ -92,16 +92,18 @@ struct QuestRunTests {
 
     /// Arrival no longer lands on the checkpoint screen directly. M8's story flow puts the Hisplora
     /// stages between them — cutscene intro and portrait on the first arrival, then the paged story
-    /// reveal, a place notice at a sacred Place (`FR-TASK-05`), the checkpoint detail, and the
-    /// transition. Walking them is what a walker does, and asserting the walk *terminates* at
+    /// reveal, the transition, a place notice at a sacred Place (`FR-TASK-05`), and the checkpoint
+    /// detail. Walking them is what a walker does, and asserting the walk *terminates* at
     /// `.atCheckpoint` is a stronger guard than asserting arrival lands there: it also catches a
     /// story stage that loops or never hands over.
     @discardableResult
     private func walkTheStoryStages(_ harness: Harness) -> Bool {
         // Bounded rather than `while`: a stage that returns itself would otherwise hang the suite
-        // instead of failing it. Six stages is the longest legal path; eight gives it room.
-        for _ in 0..<8 {
+        // instead of failing it. Seven stages is the longest legal path — `1:4458`'s arrival
+        // confirmation added one — and ten gives it room.
+        for _ in 0..<10 {
             switch harness.model.stage {
+            case .locationVerified: harness.model.advanceFromLocationVerified()
             case .cutsceneIntro: harness.model.advanceFromCutsceneIntro()
             case .cutscenePortrait: harness.model.advanceFromCutscenePortrait()
             case .storyReveal: harness.model.advanceFromStoryReveal()
@@ -228,6 +230,35 @@ struct QuestRunTests {
         // NFR-BAT-04 — nothing keeps sampling once there is nothing to detect.
         #expect(!harness.provider.isSampling)
         #expect(try harness.store.activeRun(questID: harness.quest.id)?.id == run.id)
+    }
+
+    /// `1:4458` — arrival lands on its own confirmation screen, and the cutscene is what its
+    /// Continue reaches. Before this stage existed the walk went from the arrival screen to the
+    /// cutscene in one step and `LocationState.verified` was drawn by nothing a walker could see.
+    @Test func aGoodFixConfirmsTheLocationBeforeTheStoryStarts() throws {
+        let harness = try harness()
+        openArrival(harness)
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+
+        #expect(harness.model.stage == .locationVerified)
+        harness.model.advanceFromLocationVerified()
+        #expect(harness.model.stage == .cutsceneIntro)
+    }
+
+    /// The second checkpoint confirms arrival too — the cutscene is once per walk, the
+    /// confirmation is once per arrival — and its Continue reaches the story reveal instead.
+    @Test func alaterArrivalConfirmsTheLocationAndThenGoesStraightToTheStory() throws {
+        let harness = try harness()
+        openArrival(harness)
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+        #expect(walkTheStoryStages(harness), "Story stages did not terminate at .atCheckpoint")
+
+        harness.model.advance()
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+
+        #expect(harness.model.stage == .locationVerified)
+        harness.model.advanceFromLocationVerified()
+        #expect(harness.model.stage == .storyReveal)
     }
 
     @Test func theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources() throws {

@@ -33,7 +33,7 @@ struct QuestRunView: View {
     /// underneath it, so on those stages it goes away entirely.
     private var isOnStoryFlow: Bool {
         switch model.stage {
-        case .storyPreview, .awaitingArrival, .cutsceneIntro, .cutscenePortrait,
+        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
              .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .transition:
             true
         case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
@@ -90,6 +90,7 @@ struct QuestRunView: View {
         case .safetyNotice: safetyNotice
         case .locationNotice: locationNotice
         case .awaitingArrival: arrivalScreen
+        case .locationVerified: locationVerified
         case .cutsceneIntro: cutsceneIntro
         case .cutscenePortrait: cutscenePortrait
         case .storyReveal: storyReveal
@@ -118,6 +119,18 @@ struct QuestRunView: View {
             portraitURL: model.cutsceneImageURL,
             onReady: { model.advanceFromStoryPreview() },
             onBack: { model.advanceFromStoryPreview() })
+    }
+
+    /// `1:4458` — the fix confirmed on its own screen before the story starts. The arrival is
+    /// already recorded when this draws; the back chevron leaves the screen rather than undoing it,
+    /// which is what every other back control on this flow does.
+    private var locationVerified: some View {
+        LocationVerifiedScreen(
+            language: language,
+            questTitle: model.questTitle,
+            onContinue: { model.advanceFromLocationVerified() },
+            onBack: { dismiss() },
+            map: { routeMap })
     }
 
     private var cutsceneIntro: some View {

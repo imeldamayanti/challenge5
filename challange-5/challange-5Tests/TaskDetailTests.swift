@@ -41,9 +41,11 @@ struct TaskDetailTests {
         // Bounded rather than `while`: a stage that returns itself should fail the suite, not hang it.
         for _ in 0..<8 where model.stage != .checkpointDetail {
             switch model.stage {
+            case .locationVerified: model.advanceFromLocationVerified()
             case .cutsceneIntro: model.advanceFromCutsceneIntro()
             case .cutscenePortrait: model.advanceFromCutscenePortrait()
             case .storyReveal: model.advanceFromStoryReveal()
+            case .transition: model.advanceFromTransition()
             case .placeNotice: model.advanceFromPlaceNotice()
             default: break
             }
@@ -199,12 +201,13 @@ struct TaskDetailTests {
 
         let harness = try atTaskList()
         harness.model.advanceFromCheckpointDetail()
-        harness.model.advanceFromTransition()
         harness.model.advance()
         harness.provider.emit(offsetMetres: 5, accuracy: 10)
         for _ in 0..<8 where harness.model.stage != .checkpointDetail {
             switch harness.model.stage {
+            case .locationVerified: harness.model.advanceFromLocationVerified()
             case .storyReveal: harness.model.advanceFromStoryReveal()
+            case .transition: harness.model.advanceFromTransition()
             case .placeNotice: harness.model.advanceFromPlaceNotice()
             default: break
             }
@@ -226,11 +229,10 @@ struct TaskDetailTests {
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
 
-        // What `onPrimaryAction` calls.
+        // What `onPrimaryAction` calls. The transition has already been walked by then — it now
+        // closes the story rather than the task menu — so this lands on the checkpoint directly.
         harness.model.advanceFromCheckpointDetail()
 
-        #expect(harness.model.stage == .transition)
-        harness.model.advanceFromTransition()
         #expect(harness.model.stage == .atCheckpoint)
     }
 

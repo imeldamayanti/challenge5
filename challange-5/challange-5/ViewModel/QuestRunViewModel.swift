@@ -17,6 +17,12 @@ final class QuestRunViewModel {
         /// `FR-START-02` — the plain-language explanation that precedes the system prompt.
         case locationNotice
         case awaitingArrival
+        /// `1:4458` ("Location Verified" on the New Hisplora board) — the fix landed, inside the
+        /// radius and precise enough, and the walk says so on its own screen before the story
+        /// starts. `LocationState.verified` was drawn before this stage existed, but only ever in
+        /// passing: `record` recorded the arrival and moved straight to the cutscene, so the state
+        /// was reachable for a frame and no walker saw it.
+        case locationVerified
         /// The Hisplora cutscene — the quest's hook and a framed image, shown once at the first
         /// arrival of a walk. A presentation of `hookLore`, not a new content type: see
         /// `CutsceneScreens.swift`.
@@ -24,7 +30,8 @@ final class QuestRunViewModel {
         case cutscenePortrait
         /// The lore reveal — one passage, joined from every `LoreBlock` at the checkpoint.
         case storyReveal
-        /// `50:137` — the sacred-Place notice, before the task menu. Only reached when
+        /// `1:4592` ("Quest" on the New Hisplora board, `50:137` before it) — the sacred-Place
+        /// notice, reached from the transition and before the task menu. Only reached when
         /// `checkpoint.isSacred`; every other checkpoint's story goes straight to `checkpointDetail`.
         case placeNotice
         /// `452:3132` ("Quest 1/3") — what is waiting at this checkpoint, named before it is
@@ -37,7 +44,9 @@ final class QuestRunViewModel {
         /// filtered (`FR-TASK-06` drops a photo task at a Place where photography is prohibited), so
         /// an index into the list would point at a different task depending on the Place.
         case taskDetail(taskID: String)
-        /// The place name, before the checkpoint proper.
+        /// `1:4586` ("Transition") — the sealed scroll between the story and the walk. It closes
+        /// the reveal and opens the checkpoint's own screens, so it sits between `storyReveal` and
+        /// `placeNotice`/`checkpointDetail`, not after the task menu.
         case transition
         case atCheckpoint
         case finished
@@ -77,6 +86,11 @@ final class QuestRunViewModel {
     var isPresentingManualOverride: Bool { sampling.isPresentingManualOverride }
     /// The cutscene is shown once per walk, not once per checkpoint.
     private var hasShownCutscene = false
+    /// What `locationVerified`'s Continue hands over to. Decided at arrival, while `currentIndex`
+    /// still names the checkpoint just reached, rather than re-derived when the walker taps — the
+    /// walk moves on between those two moments only if something else advances it, and a stored
+    /// answer cannot disagree with the one the arrival took.
+    private var stageAfterArrivalConfirmed: Stage = .storyReveal
     /// `FR-START-09` — the named presence confirmation, shown only at the start checkpoint.
     private(set) var isConfirmingPresence = false
     private(set) var isConfirmingAbandon = false
@@ -371,10 +385,12 @@ final class QuestRunViewModel {
         // transition, then the checkpoint itself.
         if !hasShownCutscene && currentIndex == 0 {
             hasShownCutscene = true
-            stage = .cutsceneIntro
+            stageAfterArrivalConfirmed = .cutsceneIntro
         } else {
-            stage = .storyReveal
+            stageAfterArrivalConfirmed = .storyReveal
         }
+        // `1:4458` — arrival is confirmed on its own screen before any of that.
+        stage = .locationVerified
 
         if let run, let checkpoint {
             self.run = (try? engine.markLoreOpened(
@@ -384,21 +400,28 @@ final class QuestRunViewModel {
 
     // MARK: The Hisplora story stages
 
+    /// `1:4458`'s Continue — into the cutscene on the walk's first arrival, into the story reveal
+    /// at every other checkpoint.
+    func advanceFromLocationVerified() { stage = stageAfterArrivalConfirmed }
+
     func advanceFromCutsceneIntro() { stage = .cutscenePortrait }
 
     func advanceFromCutscenePortrait() { stage = .storyReveal }
 
+    /// The sealed scroll closes the story and opens the walk — `1:4856` → `1:4586` → `1:4592` on
+    /// the New Hisplora board. The transition is the seam between the two halves of a checkpoint,
+    /// so it sits here rather than after the task menu.
+    func advanceFromStoryReveal() { stage = .transition }
+
     /// A sacred Place explains itself before the task menu (`FR-TASK-05`'s rule, moved one screen
     /// earlier); every other checkpoint goes straight to the menu.
-    func advanceFromStoryReveal() {
+    func advanceFromTransition() {
         stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .checkpointDetail
     }
 
     func advanceFromPlaceNotice() { stage = .checkpointDetail }
 
-    func advanceFromCheckpointDetail() { stage = .transition }
-
-    func advanceFromTransition() { stage = .atCheckpoint }
+    func advanceFromCheckpointDetail() { stage = .atCheckpoint }
 
     /// Opening one task's own sheet (`452:3145` → `447:1880`).
     ///
@@ -449,8 +472,9 @@ final class QuestRunViewModel {
         switch stage {
         case .cutscenePortrait: stage = .cutsceneIntro
         case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .cutscenePortrait : .storyReveal
-        case .placeNotice: stage = .storyReveal
-        case .checkpointDetail: stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .storyReveal
+        case .transition: stage = .storyReveal
+        case .placeNotice: stage = .transition
+        case .checkpointDetail: stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .transition
         case .taskDetail: stage = .checkpointDetail
         default: break
         }
