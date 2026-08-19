@@ -304,20 +304,20 @@ git commit -m "feat(watch): render the long-look card as 91:176's radar motif"
 **Files:**
 - Create: `challange-5/hisplora Watch App/Assets.xcassets/OrnateFrame.imageset/OrnateFrame.png`
 
-- [ ] **Step 1: Export node `91:186` from Figma**
+- [x] **Step 1: Export node `91:186` from Figma**
 
 `ChatGPT Image Aug 13, 2026 at 09_35_01 AM 1`, 99×116 in frame units. Export at @2x and @3x if the
 tooling offers it; the existing `Contents.json` declares a single `1x` entry and will need updating to
 match whatever is produced.
 
-- [ ] **Step 2: Confirm what the exported PNG actually contains**
+- [x] **Step 2: Confirm what the exported PNG actually contains**
 
 Open it and check the alpha channel — the claim this plan inherited (border only, transparent oval
 cutout, no portrait baked in) has **never been verified against a real file**. If the export turns out
 to carry a face or a figure, stop: that is an unsourced likeness and `FR-WATCH-06` blocks it, and the
 gold-frame screen needs a different treatment. Record what you find either way.
 
-- [ ] **Step 3: Update `Contents.json` for the scales actually exported, then commit**
+- [x] **Step 3: Update `Contents.json` for the scales actually exported, then commit**
 
 ```bash
 git add "challange-5/hisplora Watch App/Assets.xcassets/OrnateFrame.imageset"
