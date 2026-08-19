@@ -21,12 +21,13 @@ import UIStringsKit
 /// circle instead, exactly as `PlaceNoticeScreen` and the cutscenes do, and draws nothing at all when
 /// the quest ships no hero.
 ///
-/// **"Take Photo" appears only where the task is a photo task, and it is disabled.** `447:1900`
-/// draws it as the sheet's one action, but the shipped content carries a photo task at exactly one
-/// of five checkpoints; four carry a written reflection or a question. Photo capture is still not
-/// built for quest tasks, so the pill is drawn where the frame draws it, disabled, over the note
-/// that says why — a control that navigated instead of capturing would be a control that cannot do
-/// what it says. The skip beneath it is what resolves such a task (`FR-TASK-02`, `AD-2`).
+/// **"Take Photo" appears only where the task is a photo task, and it now opens a camera.** `447:1900`
+/// draws it as the sheet's one action, and `1:4681` is the screen behind it; the shipped content
+/// carries a photo task at exactly one of five checkpoints, and `FR-TASK-06` drops even that one
+/// where photography is prohibited. Once a photograph has been taken the sheet becomes `1:4827`
+/// ("Quest_Filled" holding an image): the pill gives way to an 88-point thumbnail with a cross on its
+/// shoulder, and a white Submit pill replaces the map hint at the foot of the screen. The skip stays
+/// available in both states (`FR-TASK-02`, `AD-2`) — the walk is never blocked on hardware.
 struct TaskDetailScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -47,6 +48,13 @@ struct TaskDetailScreen: View {
     let completedTasks: Int
     let totalTasks: Int
     let portraitURL: URL?
+    /// The photograph just taken for this task, before it is submitted — `1:4850`'s 88-point
+    /// thumbnail. Nil on a written task, and on a photo task the walker has not shot yet.
+    let photoDraft: Image?
+    /// Whether this device can offer the camera at all. False on the Simulator and where access has
+    /// been refused, which turns the pill into the note that says so rather than a control that
+    /// opens a black screen.
+    let isCameraAvailable: Bool
     /// Nil when the Place ships no plan, which hides the map hint rather than offering one that opens
     /// an empty screen.
     let hasSiteMap: Bool
@@ -55,6 +63,11 @@ struct TaskDetailScreen: View {
     let onSave: () -> Void
     /// `FR-TASK-02` — the explicit, non-apologetic skip. Same weight as saving, same destination.
     let onSkip: () -> Void
+    /// `447:1900` — opens `1:4681`.
+    let onTakePhoto: () -> Void
+    /// `1:4852` — discards the photograph and re-offers the camera. Nothing is written until Submit,
+    /// so this removes a draft rather than editing a record.
+    let onRemovePhoto: () -> Void
     /// Leaving an already-resolved sheet forwards.
     let onContinue: () -> Void
     let onOpenSiteMap: () -> Void
@@ -80,8 +93,21 @@ struct TaskDetailScreen: View {
                 .frame(maxWidth: .infinity)
             }
             .scrollBounceBehavior(.basedOnSize)
-            .safeAreaInset(edge: .bottom) { mapHint }
+            // `1:4827` replaces the map hint with Submit once a photograph is waiting. One inset,
+            // not two stacked: the frame draws a single control at that distance from the home
+            // indicator, and a hint under a primary action reads as a second action.
+            .safeAreaInset(edge: .bottom) {
+                if photoDraft != nil { submitBar } else { mapHint }
+            }
         }
+    }
+
+    /// `1:4854` — the white capsule across the foot of the filled sheet.
+    private var submitBar: some View {
+        Button(UIStrings.string(.taskPhotoSubmit, language), action: onSave)
+            .buttonStyle(.hisploraLightPill)
+            .padding(.horizontal, Self.margin)
+            .padding(.bottom, 30)
     }
 
     /// The back arrow, the quest title centred over it, and the framed hero in the trailing corner.
@@ -184,27 +210,15 @@ struct TaskDetailScreen: View {
         }
     }
 
-    /// The three shapes the foot of the sheet takes: resolved, a written task waiting for an answer,
-    /// or a photo task this build cannot capture.
+    /// The shapes the foot of the sheet takes: resolved, a photo task in one of its three states, or
+    /// a written task waiting for an answer.
     @ViewBuilder private var answerSection: some View {
         if let resolution {
             resolutionNote(resolution)
             Spacer(minLength: KultaraMetrics.lg)
             pill(title: UIStrings.string(.checkpointDetailContinue, language), action: onContinue)
         } else if task.type == .photo {
-            pill(title: UIStrings.string(.taskDetailTakePhoto, language),
-                 systemImage: "camera.fill",
-                 action: {})
-                .disabled(true)
-                .opacity(0.5)
-            Spacer(minLength: KultaraMetrics.md)
-            Text(UIStrings.string(.taskPhotoNotInThisBuild, language))
-                .font(.system(size: 13))
-                .foregroundStyle(palette.inkMuted.color)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: KultaraMetrics.lg)
-            pill(title: UIStrings.string(.taskSkipAction, language), action: onSkip)
+            photoSection
         } else {
             answerField
             Spacer(minLength: KultaraMetrics.lg)
@@ -217,6 +231,84 @@ struct TaskDetailScreen: View {
                 .foregroundStyle(palette.brownMid.color)
                 .frame(minHeight: KultaraMetrics.minimumTapTarget)
         }
+    }
+
+    /// A photo task, in whichever of its three states it is in: a photograph waiting to be
+    /// submitted (`1:4827`), the camera on offer (`447:1900`), or a device that cannot open one.
+    ///
+    /// The skip is present in all three. `AD-2` means a task gates nothing, and a photo task is the
+    /// one kind that can fail for a reason the walker has no control over — a locked-down device, a
+    /// refused permission, a temple that forbids photography. None of those may end a walk.
+    @ViewBuilder private var photoSection: some View {
+        if let photoDraft {
+            photoThumbnail(photoDraft)
+            Spacer(minLength: KultaraMetrics.md)
+            Text(UIStrings.string(.taskPhotoSavedNote, language))
+                .font(.system(size: 13))
+                .foregroundStyle(palette.inkMuted.color)
+                .multilineTextAlignment(.center)
+            // Submit is pinned at the foot of the screen, as `1:4854` draws it. The skip stays on
+            // the sheet so the two are not competing for the same corner of the eye.
+            Spacer(minLength: KultaraMetrics.md)
+            Button(UIStrings.string(.taskSkipAction, language), action: onSkip)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(palette.brownMid.color)
+                .frame(minHeight: KultaraMetrics.minimumTapTarget)
+        } else if isCameraAvailable {
+            pill(title: UIStrings.string(.taskDetailTakePhoto, language),
+                 systemImage: "camera.fill",
+                 action: onTakePhoto)
+            Spacer(minLength: KultaraMetrics.md)
+            Button(UIStrings.string(.taskSkipAction, language), action: onSkip)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(palette.brownMid.color)
+                .frame(minHeight: KultaraMetrics.minimumTapTarget)
+        } else {
+            Text(UIStrings.string(.cameraUnavailable, language))
+                .font(.system(size: 13))
+                .foregroundStyle(palette.inkMuted.color)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: KultaraMetrics.lg)
+            pill(title: UIStrings.string(.taskSkipAction, language), action: onSkip)
+        }
+    }
+
+    /// `1:4850` — an 88-point white plate with the photograph in it, and `1:4852`'s cross sitting on
+    /// its top-trailing shoulder.
+    ///
+    /// The cross is a control of its own rather than a corner of the plate, so it carries the
+    /// minimum tap target under a 24-point badge (`NFR-A11Y-06`) — which is why it is a `Button` with
+    /// a larger `contentShape` than the circle it draws.
+    private func photoThumbnail(_ image: Image) -> some View {
+        image
+            .resizable()
+            .scaledToFill()
+            .frame(width: 88, height: 88)
+            .clipShape(RoundedRectangle(cornerRadius: 8.213))
+            .overlay(RoundedRectangle(cornerRadius: 8.213)
+                .stroke(palette.buttonRing.color, lineWidth: KultaraMetrics.hairline))
+            .accessibilityLabel(UIStrings.string(.taskPhotoThumbnail, language))
+            .overlay(alignment: .topTrailing) {
+                Button(action: onRemovePhoto) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 11, weight: .bold))
+                        .foregroundStyle(palette.buttonFill.color)
+                        .frame(width: 24, height: 24)
+                        .background(palette.inkOnButton.color, in: Circle())
+                        .overlay(Circle().stroke(palette.buttonRing.color,
+                                                 lineWidth: KultaraMetrics.hairline))
+                        .frame(width: KultaraMetrics.minimumTapTarget,
+                               height: KultaraMetrics.minimumTapTarget)
+                        .contentShape(Circle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(UIStrings.string(.taskPhotoRemove, language))
+                // The badge straddles the plate's corner as `1:4852` sets it, 7 points proud of the
+                // top edge and 10 outside the trailing one.
+                .offset(x: KultaraMetrics.minimumTapTarget / 2 - 2,
+                        y: -KultaraMetrics.minimumTapTarget / 2 + 5)
+            }
     }
 
     /// The field itself, sunk into the sheet on `paperTicket` — the one paper token measured against

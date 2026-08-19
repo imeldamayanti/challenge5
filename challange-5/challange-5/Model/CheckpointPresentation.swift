@@ -17,6 +17,15 @@ struct CheckpointPresentation: Sendable, Equatable, Identifiable {
     let dressCodeText: String
     let photoPolicyText: String
     let claims: [LoreClaimPresentation]
+    /// The same `Place.loreStandalone` as `placeDescription`, but as labelled claims rather than
+    /// joined prose — what `QuestExplanationScreen` (`1:4609`) prints, with the accuracy label and
+    /// the citation `FR-CP-05` asks for.
+    ///
+    /// Both forms are carried because the two screens want different things: the place notice sets
+    /// the description as a paragraph of scene-setting before a walker steps in, and the explanation
+    /// screen presents the same sentences as sourced claims after a task. That the words are
+    /// identical is a content gap, not a rendering one — see the note on `QuestExplanationScreen`.
+    let standaloneClaims: [LoreClaimPresentation]
     let clueToNext: String?
     let tasks: [ContentTask]
     let taskPrompts: [String: String]
