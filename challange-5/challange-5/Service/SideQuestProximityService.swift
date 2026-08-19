@@ -1,9 +1,17 @@
 import ContentKit
 import CoreLocation
 import Foundation
+import os
 import RunEngine
 import UIKit
+import UIStringsKit
 import UserNotifications
+
+/// Tracing goes through `Logger`, never `print` (`s14` D5). The bug this tracing exists for — "the
+/// notification never arrives during a real walk" — happens on a wrist far from a Mac, and `print`
+/// is visible only while Xcode's debugger is attached, i.e. in exactly the situation that is *not*
+/// being debugged. `.debug` costs nothing until someone streams or collects it.
+private let log = Logger(subsystem: "com.umar.hisplora", category: "proximity")
 
 /// The background half of `AD-1`'s location split — region monitoring plus the notification it
 /// produces, for the sidequests a walker has not yet completed (`s3`).
@@ -186,9 +194,13 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             let request = UNNotificationRequest(
                 identifier: "dev-hardcoded-test", content: content, trigger: nil)
             UNUserNotificationCenter.current().add(request) { addError in
-                if let error { print("[dev] notification auth error: \(error)") }
-                if let addError { print("[dev] notification add error: \(addError)") }
-                print("[dev] notification authorized: \(granted), request added")
+                if let error {
+                    log.error("dev test auth failed: \(error.localizedDescription, privacy: .public)")
+                }
+                if let addError {
+                    log.error("dev test add(request) failed: \(addError.localizedDescription, privacy: .public)")
+                }
+                log.debug("dev test notification authorized: \(granted, privacy: .public), request added")
             }
         }
     }
@@ -237,7 +249,12 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
     /// "show me the notification" request — making it depend on the same slow, often-never-granted
     /// `Always` upgrade iOS does in its own time would defeat the point of having it.
     private func handleRegionEntered(identifier: String, forceNotification: Bool = false) {
-        guard forceNotification || (isEnabled && authorization == .always) else { return }
+        log.debug("region entered: \(identifier, privacy: .public), forced: \(forceNotification, privacy: .public)")
+        log.debug("gate: enabled=\(self.isEnabled, privacy: .public) auth=\(String(describing: self.authorization), privacy: .public)")
+        guard forceNotification || (isEnabled && authorization == .always) else {
+            log.debug("stopped: isEnabled/authorization gate failed for \(identifier, privacy: .public)")
+            return
+        }
 
         // `forceNotification` also skips the whole `ProximityGate` decision — active Run, already
         // completed, quiet hours, cooldown, daily cap. Those are meaningful for a real region event;
@@ -252,12 +269,25 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
                 targetID: identifier, now: now(), calendar: calendar, alerts: alerts,
                 hasActiveRun: hasActiveRun, isTargetCompleted: isCompleted,
                 limits: Self.limits(for: identifier))
-            guard decision.isAllowed else { return }
+            log.debug("gate \(identifier, privacy: .public): allowed=\(decision.isAllowed, privacy: .public) activeRun=\(hasActiveRun, privacy: .public) completed=\(isCompleted, privacy: .public)")
+            guard decision.isAllowed else {
+                log.debug("stopped: ProximityGate rejected \(identifier, privacy: .public)")
+                return
+            }
         }
 
+        // `place` is looked up only to confirm the sidequest's place still exists in content; its
+        // name is no longer read. The title comes from `sideQuest.title`, because the notification
+        // announces a *sidequest* — and the place is already the notification's subject matter, so
+        // titling it with the place name and then describing the place in the body said the same
+        // thing twice and told the walker nothing new. (`s14` Phase 0; the earlier comment here
+        // credited "`s9`'s notification-copy revision", a decision that exists in no plan.)
         guard let sideQuest = ((try? repository.sideQuest(id: identifier)) ?? nil),
-              let place = ((try? repository.place(id: sideQuest.placeId)) ?? nil)
-        else { return }
+              ((try? repository.place(id: sideQuest.placeId)) ?? nil) != nil
+        else {
+            log.error("stopped: content has no sideQuest/place for \(identifier, privacy: .public)")
+            return
+        }
 
         // `NFR-PRIV-09` — recorded whether or not the walker ever sees it, because the row exists
         // to hold the rate limit, not to log an interaction.
@@ -267,23 +297,37 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         let language = LanguageResolver.resolve(override: preferences.preferredLanguage)
 
         if UIApplication.shared.applicationState == .active && !forceNotification {
+            // No OS notification is posted on this branch, so there is nothing to mirror to a watch.
+            log.debug("app active -> in-app sheet for \(identifier, privacy: .public)")
             onSideQuestNearby?(identifier)
         } else {
+            log.debug("posting OS notification for \(identifier, privacy: .public)")
             postNotification(
                 sideQuestID: identifier,
-                title: place.nameOfficial.value(for: language),
-                body: sideQuest.synopsis.value(for: language))
+                title: sideQuest.title.value(for: language),
+                body: sideQuest.synopsis.value(for: language),
+                heroImageAsset: sideQuest.heroImageAsset)
         }
     }
 
     #if DEBUG
-    /// A minute-scale cooldown for the local `park23` dev test target only, so "Simulate passing a
-    /// place" — or repeatedly leaving and re-entering the real 50 m radius — can be tapped over and
-    /// over while iterating on the flow. Every other target, real or test, keeps `Limits()`'s normal
-    /// 24 h cooldown and 3-per-day cap (`FR-PROX-09`) — this never loosens rate limiting for content
-    /// that ships.
+    /// The `sidequest-test` collection's dev test targets — real, walkable stand-in coordinates
+    /// carrying reused story content, tracked in `docs/consent/*-prototype-note.md`. Every one of
+    /// them gets the same loosened rate limit below, not just `sq-park23`.
+    private static let devTestSideQuestIDs: Set<String> = [
+        "sq-park23", "sq-citra-minang", "sq-mahen-living",
+        "sq-bebek-tepi-sawah", "sq-sovereign-bali-hotel", "sq-taman-ngurah-rai",
+    ]
+
+    /// No quiet hours for these dev targets — "no time limit" — and no daily cap, so passing any of
+    /// them fires a notification whenever it happens, not just up to three times a day or only
+    /// between 07:00 and 22:00. The 60 s per-target cooldown stays: it is what keeps a single pass
+    /// (or a "Simulate passing a place" tap) to exactly one notification instead of one per GPS
+    /// update while lingering in the radius, without reintroducing the 24 h real-content cooldown.
+    /// Every other target, real or test, keeps `Limits()`'s normal 24 h cooldown and 3-per-day cap
+    /// (`FR-PROX-09`) — this never loosens rate limiting for content that ships.
     private static func limits(for targetID: String) -> ProximityGate.Limits {
-        guard targetID == "sq-park23" else { return ProximityGate.Limits() }
+        guard devTestSideQuestIDs.contains(targetID) else { return ProximityGate.Limits() }
         return ProximityGate.Limits(
             quietFrom: TimeOfDay(hour: 0, minute: 0), quietUntil: TimeOfDay(hour: 0, minute: 0),
             perTargetCooldown: 60, maxPerDay: .max)
@@ -292,23 +336,54 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
     private static func limits(for targetID: String) -> ProximityGate.Limits { ProximityGate.Limits() }
     #endif
 
-    private func postNotification(sideQuestID: String, title: String, body: String) {
+    private func postNotification(
+        sideQuestID: String, title: String, body: String, heroImageAsset: String?
+    ) {
         // `requestAuthorization` only shows a dialog the first time a decision hasn't been made;
         // once granted or denied it just reports that back. Asking here — rather than trusting
         // `enable()` already ran it — means the debug "simulate passing a place" button (which
         // skips the location-authorization gate entirely, `forceNotification`) still gets a real
         // chance at notification permission even when `Always` location was never granted.
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { _, _ in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [repository] granted, authError in
+            if !granted || authError != nil {
+                let reason = authError?.localizedDescription ?? "no error reported"
+                log.error("notification authorization denied for \(sideQuestID, privacy: .public): \(reason, privacy: .public)")
+            } else {
+                log.debug("notification authorization granted for \(sideQuestID, privacy: .public)")
+            }
             let content = UNMutableNotificationContent()
             content.title = title
             content.body = body
             // `userInfo` carries the id and nothing else — no coordinates in a payload (`FR-PROX-15`).
             content.userInfo = ["sideQuestID": sideQuestID]
             content.sound = .default
+            // `FR-WATCH-07` — the phone now registers `SideQuestNotificationCategory` (with its
+            // "Open in App" action) unconditionally at launch via `configureProximity`, so an
+            // expanded v1 notification *does* show that action button now, watch or no watch. That
+            // is still `FR-WATCH-08`-compliant: the requirement is that v1 behavior not depend on a
+            // watch companion being present, and it doesn't — the action shows the same way either
+            // way. What changed is a deliberate, always-present addition: Phase A (`s9` §5) directs
+            // registering the category and its action unconditionally as groundwork for Phase B's
+            // `WKNotificationScene`, and a small "Open in App" affordance on the v1 notification is
+            // the visible side effect of that groundwork, not a bug.
+            content.categoryIdentifier = SideQuestNotificationCategory.identifier
+            // Local file only, no network fetch (`AD-3`). Every current sidequest has
+            // `heroImageAsset == nil`, so this branch is correct-but-unexercised today.
+            if let heroImageAsset,
+               let url = try? repository.assetURL(heroImageAsset),
+               let attachment = try? UNNotificationAttachment(identifier: "hero", url: url) {
+                content.attachments = [attachment]
+            }
             // `trigger: nil` — delivered immediately, this is a live region-entry event, not a
             // scheduled reminder.
             let request = UNNotificationRequest(identifier: sideQuestID, content: content, trigger: nil)
-            UNUserNotificationCenter.current().add(request)
+            UNUserNotificationCenter.current().add(request) { addError in
+                if let addError {
+                    log.error("add(request) failed for \(sideQuestID, privacy: .public): \(addError.localizedDescription, privacy: .public)")
+                } else {
+                    log.debug("add(request) succeeded for \(sideQuestID, privacy: .public), category=\(SideQuestNotificationCategory.identifier, privacy: .public)")
+                }
+            }
         }
     }
 
@@ -437,6 +512,34 @@ final class FileProximityAlertStore: ProximityAlertStore {
     private func write() throws {
         let data = try encoder.encode(cache)
         try data.write(to: url, options: .atomic)
+    }
+}
+
+// MARK: - Notification category
+
+/// `FR-WATCH-07` — a shared category identifier the phone always sets and both
+/// targets register at launch, so a v2 watch companion's long-look (not built
+/// yet, `s9` Phase B) has an "Open in App" action to bind to. Additive only:
+/// `FR-WATCH-08` requires nothing here to change `postNotification`'s call
+/// shape for a phone with no paired watch.
+enum SideQuestNotificationCategory {
+    static let identifier = "sidequest-nearby"
+    static let openInAppActionIdentifier = "OPEN_IN_APP"
+
+    /// `language` follows the same `LanguageResolver.resolve(override:)` call the rest of this
+    /// screen's strings go through (`FR-ONB-05`) — the action title is user-facing, so it belongs
+    /// in the ID/EN table like everything else in this flow (`NFR-I18N-01/02`), not a literal.
+    static func register(language: ContentLanguage) {
+        let openInApp = UNNotificationAction(
+            identifier: openInAppActionIdentifier,
+            title: UIStrings.string(.sideQuestNotificationOpenInApp, language),
+            options: [.foreground])
+        let category = UNNotificationCategory(
+            identifier: identifier,
+            actions: [openInApp],
+            intentIdentifiers: [],
+            options: [])
+        UNUserNotificationCenter.current().setNotificationCategories([category])
     }
 }
 

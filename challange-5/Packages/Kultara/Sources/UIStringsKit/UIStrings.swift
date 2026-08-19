@@ -556,5 +556,8 @@ public enum UIStrings {
         .settingsPlaceholderContentNotice: LocalizedText(
             id: "Konten pada versi ini adalah data contoh dengan tempat fiktif. Belum divalidasi di lapangan dan belum untuk dipakai berjalan.",
             en: "The content in this build is example data with fictional places. It has not been field-validated and is not yet something to walk."),
+
+        // MARK: Sidequest proximity notifications — FR-WATCH-07
+        .sideQuestNotificationOpenInApp: LocalizedText(id: "Buka di Aplikasi", en: "Open in App"),
     ]
 }

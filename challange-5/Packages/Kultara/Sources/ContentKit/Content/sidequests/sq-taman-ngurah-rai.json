@@ -1,13 +1,13 @@
 {
-  "id": "sq-park23",
-  "placeId": "park23",
+  "id": "sq-taman-ngurah-rai",
+  "placeId": "taman-ngurah-rai",
   "title": {
     "id": "Empat Arah (uji coba)",
     "en": "Four Directions (test)"
   },
   "synopsis": {
-    "id": "Kamu di medan perang. Kisah terakhir Badung.",
-    "en": "You're on a battlefield. The last tale of Badung."
+    "id": "SQ taman Fakta unik: dulu tempat ini adalah kawasan berair. Ada cerita di baliknya. Mau tahu lebih lanjut?",
+    "en": "Funfact this place back then is a water place. And there's some story behind it. Do you want know more?"
   },
   "lore": [
     {

@@ -24,12 +24,16 @@ struct challange_5App: App {
     }
 
     /// `system-design.md` §6.2 — `registerRegions()` runs on launch, and the notification delegate
-    /// has to be in place before any tap can arrive. Both are idempotent, so re-running this on a
-    /// later `onAppear` (a scene reactivation) costs nothing.
+    /// has to be in place before any tap can arrive. All of these are idempotent, so re-running this
+    /// on a later `onAppear` (a scene reactivation) costs nothing.
     @MainActor
     private func configureProximity(_ environment: KultaraEnvironment) {
         notificationDelegate.onTap = { sideQuestID in router.pendingSideQuestID = sideQuestID }
         UNUserNotificationCenter.current().delegate = notificationDelegate
+        // `FR-ONB-05` — the app's language, not the device's; mirrors the resolve call in
+        // `SideQuestProximityService.handleRegionEntered`.
+        let language = LanguageResolver.resolve(override: environment.preferences.preferredLanguage)
+        SideQuestNotificationCategory.register(language: language)
         environment.proximityMonitor.onSideQuestNearby = { sideQuestID in
             router.pendingSideQuestID = sideQuestID
         }

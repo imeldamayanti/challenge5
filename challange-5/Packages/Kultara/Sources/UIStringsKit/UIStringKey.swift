@@ -406,4 +406,9 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case settingsReportBody
     case settingsContentVersion
     case settingsPlaceholderContentNotice
+
+    // Sidequest proximity notifications — FR-WATCH-07
+    /// The "Open in App" action title on the `sidequest-nearby` notification category, registered
+    /// by `SideQuestNotificationCategory.register(language:)` in the phone target.
+    case sideQuestNotificationOpenInApp
 }

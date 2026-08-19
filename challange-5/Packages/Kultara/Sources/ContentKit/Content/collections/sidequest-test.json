@@ -1,7 +1,7 @@
 {
   "id": "sidequest-test",
   "region": "Denpasar",
-  "phrase": "T",
+  "phrase": "TWMBSN",
   "title": {
     "id": "Uji Coba Sidequest",
     "en": "Sidequest Test"
@@ -12,6 +12,11 @@
   },
   "badgeId": "badge-sidequest-test",
   "slots": [
-    { "index": 0, "letter": "T", "sideQuestId": "sq-park23" }
+    { "index": 0, "letter": "T", "sideQuestId": "sq-park23" },
+    { "index": 1, "letter": "W", "sideQuestId": "sq-citra-minang" },
+    { "index": 2, "letter": "M", "sideQuestId": "sq-mahen-living" },
+    { "index": 3, "letter": "B", "sideQuestId": "sq-bebek-tepi-sawah" },
+    { "index": 4, "letter": "S", "sideQuestId": "sq-sovereign-bali-hotel" },
+    { "index": 5, "letter": "N", "sideQuestId": "sq-taman-ngurah-rai" }
   ]
 }
