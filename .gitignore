@@ -24,6 +24,8 @@ Package.resolved
 # Local editor / project metadata
 .remember/
 **/.remember/
+.worktrees/
+.superpowers/
 .idea/
 **/.idea/
 .vscode/
