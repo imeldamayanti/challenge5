@@ -276,9 +276,12 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             }
         }
 
-        // `place` is looked up only to confirm the sidequest's place still exists in content —
-        // the notification's title now comes from `sideQuest.title` itself (content-driven, not
-        // the place name), see `s9`'s notification-copy revision.
+        // `place` is looked up only to confirm the sidequest's place still exists in content; its
+        // name is no longer read. The title comes from `sideQuest.title`, because the notification
+        // announces a *sidequest* — and the place is already the notification's subject matter, so
+        // titling it with the place name and then describing the place in the body said the same
+        // thing twice and told the walker nothing new. (`s14` Phase 0; the earlier comment here
+        // credited "`s9`'s notification-copy revision", a decision that exists in no plan.)
         guard let sideQuest = ((try? repository.sideQuest(id: identifier)) ?? nil),
               ((try? repository.place(id: sideQuest.placeId)) ?? nil) != nil
         else {
