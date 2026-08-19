@@ -42,10 +42,15 @@ enum WatchSideQuestNotificationCategory {
     static let openInAppActionIdentifier = "OPEN_IN_APP"
 
     static func register() {
+        // `.foreground` here would launch *this* (the watch) app, since the long-look card is
+        // hosted locally by `WKNotificationScene` — the button is meant to wake the iPhone, not
+        // the watch. Leaving this action's options empty lets the tap relay back to the phone's
+        // own `SideQuestNotificationCategory` registration (`SideQuestProximityService.swift`),
+        // which does carry `.foreground` for exactly that phone-side launch.
         let openInApp = UNNotificationAction(
             identifier: openInAppActionIdentifier,
             title: "Open in App",
-            options: [.foreground])
+            options: [])
         let category = UNNotificationCategory(
             identifier: identifier,
             actions: [openInApp],

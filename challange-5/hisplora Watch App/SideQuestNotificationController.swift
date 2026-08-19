@@ -21,6 +21,11 @@ final class SideQuestNotificationController: WKUserNotificationHostingController
     }
 
     override func didReceive(_ notification: UNNotification) {
+        #if DEBUG
+        print("[watch-notif] didReceive: category=\(notification.request.content.categoryIdentifier), "
+            + "title=\(notification.request.content.title), attachments="
+            + "\(notification.request.content.attachments.count)")
+        #endif
         synopsis = notification.request.content.body
         heroImage = Self.loadHeroImage(from: notification.request.content.attachments)
     }

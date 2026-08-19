@@ -238,7 +238,16 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
     /// "show me the notification" request — making it depend on the same slow, often-never-granted
     /// `Always` upgrade iOS does in its own time would defeat the point of having it.
     private func handleRegionEntered(identifier: String, forceNotification: Bool = false) {
-        guard forceNotification || (isEnabled && authorization == .always) else { return }
+        #if DEBUG
+        print("[proximity] region entered: \(identifier), forceNotification: \(forceNotification), "
+            + "isEnabled: \(isEnabled), authorization: \(authorization)")
+        #endif
+        guard forceNotification || (isEnabled && authorization == .always) else {
+            #if DEBUG
+            print("[proximity] STOPPED: isEnabled/authorization gate failed for \(identifier)")
+            #endif
+            return
+        }
 
         // `forceNotification` also skips the whole `ProximityGate` decision — active Run, already
         // completed, quiet hours, cooldown, daily cap. Those are meaningful for a real region event;
@@ -253,12 +262,29 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
                 targetID: identifier, now: now(), calendar: calendar, alerts: alerts,
                 hasActiveRun: hasActiveRun, isTargetCompleted: isCompleted,
                 limits: Self.limits(for: identifier))
-            guard decision.isAllowed else { return }
+            #if DEBUG
+            print("[proximity] ProximityGate.decide for \(identifier): isAllowed=\(decision.isAllowed), "
+                + "hasActiveRun=\(hasActiveRun), isCompleted=\(isCompleted)")
+            #endif
+            guard decision.isAllowed else {
+                #if DEBUG
+                print("[proximity] STOPPED: ProximityGate rejected \(identifier)")
+                #endif
+                return
+            }
         }
 
+        // `place` is looked up only to confirm the sidequest's place still exists in content —
+        // the notification's title now comes from `sideQuest.title` itself (content-driven, not
+        // the place name), see `s9`'s notification-copy revision.
         guard let sideQuest = ((try? repository.sideQuest(id: identifier)) ?? nil),
-              let place = ((try? repository.place(id: sideQuest.placeId)) ?? nil)
-        else { return }
+              ((try? repository.place(id: sideQuest.placeId)) ?? nil) != nil
+        else {
+            #if DEBUG
+            print("[proximity] STOPPED: repository could not resolve sideQuest/place for \(identifier)")
+            #endif
+            return
+        }
 
         // `NFR-PRIV-09` — recorded whether or not the walker ever sees it, because the row exists
         // to hold the rate limit, not to log an interaction.
@@ -268,11 +294,18 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         let language = LanguageResolver.resolve(override: preferences.preferredLanguage)
 
         if UIApplication.shared.applicationState == .active && !forceNotification {
+            #if DEBUG
+            print("[proximity] app active -> in-app sheet for \(identifier), no OS notification "
+                + "posted (so nothing can mirror to watch)")
+            #endif
             onSideQuestNearby?(identifier)
         } else {
+            #if DEBUG
+            print("[proximity] posting OS notification for \(identifier)")
+            #endif
             postNotification(
                 sideQuestID: identifier,
-                title: place.nameOfficial.value(for: language),
+                title: sideQuest.title.value(for: language),
                 body: sideQuest.synopsis.value(for: language),
                 heroImageAsset: sideQuest.heroImageAsset)
         }
@@ -312,7 +345,11 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         // `enable()` already ran it — means the debug "simulate passing a place" button (which
         // skips the location-authorization gate entirely, `forceNotification`) still gets a real
         // chance at notification permission even when `Always` location was never granted.
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [repository] _, _ in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [repository] granted, authError in
+            #if DEBUG
+            print("[proximity] requestAuthorization for \(sideQuestID): granted=\(granted), "
+                + "error=\(authError?.localizedDescription ?? "nil")")
+            #endif
             let content = UNMutableNotificationContent()
             content.title = title
             content.body = body
@@ -339,7 +376,16 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             // `trigger: nil` — delivered immediately, this is a live region-entry event, not a
             // scheduled reminder.
             let request = UNNotificationRequest(identifier: sideQuestID, content: content, trigger: nil)
-            UNUserNotificationCenter.current().add(request)
+            UNUserNotificationCenter.current().add(request) { addError in
+                #if DEBUG
+                if let addError {
+                    print("[proximity] add(request) FAILED for \(sideQuestID): \(addError.localizedDescription)")
+                } else {
+                    print("[proximity] add(request) succeeded for \(sideQuestID), categoryIdentifier=" +
+                        "\(SideQuestNotificationCategory.identifier) — check the paired Watch now")
+                }
+                #endif
+            }
         }
     }
 
