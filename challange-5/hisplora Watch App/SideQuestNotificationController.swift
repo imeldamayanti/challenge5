@@ -7,6 +7,11 @@ import SwiftUI
 import UIKit
 import UserNotifications
 import WatchKit
+import os
+
+/// Same reasoning as the phone side (`s14` D5): a notification that never arrives on a real walk
+/// cannot be debugged with `print`, which only exists while Xcode is attached.
+private let log = Logger(subsystem: "com.umar.hisplora", category: "watch-notif")
 
 /// `s9` Phase B, `FR-WATCH-05` — hosts `SideQuestLongLookView` for the `"sidequest-nearby"` category,
 /// registered as a `WKNotificationScene` in `hisploraApp.swift`. `didReceive(_:)` resolves everything
@@ -21,13 +26,10 @@ final class SideQuestNotificationController: WKUserNotificationHostingController
     }
 
     override func didReceive(_ notification: UNNotification) {
-        #if DEBUG
-        print("[watch-notif] didReceive: category=\(notification.request.content.categoryIdentifier), "
-            + "title=\(notification.request.content.title), attachments="
-            + "\(notification.request.content.attachments.count)")
-        #endif
-        synopsis = notification.request.content.body
-        heroImage = Self.loadHeroImage(from: notification.request.content.attachments)
+        let content = notification.request.content
+        log.debug("didReceive category=\(content.categoryIdentifier, privacy: .public) attachments=\(content.attachments.count, privacy: .public)")
+        synopsis = content.body
+        heroImage = Self.loadHeroImage(from: content.attachments)
     }
 
     /// Best-effort only. `UNNotificationAttachment.url` is a security-scoped URL, and

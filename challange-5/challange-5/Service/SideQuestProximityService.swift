@@ -1,10 +1,17 @@
 import ContentKit
 import CoreLocation
 import Foundation
+import os
 import RunEngine
 import UIKit
 import UIStringsKit
 import UserNotifications
+
+/// Tracing goes through `Logger`, never `print` (`s14` D5). The bug this tracing exists for — "the
+/// notification never arrives during a real walk" — happens on a wrist far from a Mac, and `print`
+/// is visible only while Xcode's debugger is attached, i.e. in exactly the situation that is *not*
+/// being debugged. `.debug` costs nothing until someone streams or collects it.
+private let log = Logger(subsystem: "com.umar.hisplora", category: "proximity")
 
 /// The background half of `AD-1`'s location split — region monitoring plus the notification it
 /// produces, for the sidequests a walker has not yet completed (`s3`).
@@ -187,9 +194,13 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             let request = UNNotificationRequest(
                 identifier: "dev-hardcoded-test", content: content, trigger: nil)
             UNUserNotificationCenter.current().add(request) { addError in
-                if let error { print("[dev] notification auth error: \(error)") }
-                if let addError { print("[dev] notification add error: \(addError)") }
-                print("[dev] notification authorized: \(granted), request added")
+                if let error {
+                    log.error("dev test auth failed: \(error.localizedDescription, privacy: .public)")
+                }
+                if let addError {
+                    log.error("dev test add(request) failed: \(addError.localizedDescription, privacy: .public)")
+                }
+                log.debug("dev test notification authorized: \(granted, privacy: .public), request added")
             }
         }
     }
@@ -238,14 +249,10 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
     /// "show me the notification" request — making it depend on the same slow, often-never-granted
     /// `Always` upgrade iOS does in its own time would defeat the point of having it.
     private func handleRegionEntered(identifier: String, forceNotification: Bool = false) {
-        #if DEBUG
-        print("[proximity] region entered: \(identifier), forceNotification: \(forceNotification), "
-            + "isEnabled: \(isEnabled), authorization: \(authorization)")
-        #endif
+        log.debug("region entered: \(identifier, privacy: .public), forced: \(forceNotification, privacy: .public)")
+        log.debug("gate: enabled=\(self.isEnabled, privacy: .public) auth=\(String(describing: self.authorization), privacy: .public)")
         guard forceNotification || (isEnabled && authorization == .always) else {
-            #if DEBUG
-            print("[proximity] STOPPED: isEnabled/authorization gate failed for \(identifier)")
-            #endif
+            log.debug("stopped: isEnabled/authorization gate failed for \(identifier, privacy: .public)")
             return
         }
 
@@ -262,14 +269,9 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
                 targetID: identifier, now: now(), calendar: calendar, alerts: alerts,
                 hasActiveRun: hasActiveRun, isTargetCompleted: isCompleted,
                 limits: Self.limits(for: identifier))
-            #if DEBUG
-            print("[proximity] ProximityGate.decide for \(identifier): isAllowed=\(decision.isAllowed), "
-                + "hasActiveRun=\(hasActiveRun), isCompleted=\(isCompleted)")
-            #endif
+            log.debug("gate \(identifier, privacy: .public): allowed=\(decision.isAllowed, privacy: .public) activeRun=\(hasActiveRun, privacy: .public) completed=\(isCompleted, privacy: .public)")
             guard decision.isAllowed else {
-                #if DEBUG
-                print("[proximity] STOPPED: ProximityGate rejected \(identifier)")
-                #endif
+                log.debug("stopped: ProximityGate rejected \(identifier, privacy: .public)")
                 return
             }
         }
@@ -280,9 +282,7 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         guard let sideQuest = ((try? repository.sideQuest(id: identifier)) ?? nil),
               ((try? repository.place(id: sideQuest.placeId)) ?? nil) != nil
         else {
-            #if DEBUG
-            print("[proximity] STOPPED: repository could not resolve sideQuest/place for \(identifier)")
-            #endif
+            log.error("stopped: content has no sideQuest/place for \(identifier, privacy: .public)")
             return
         }
 
@@ -294,15 +294,11 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         let language = LanguageResolver.resolve(override: preferences.preferredLanguage)
 
         if UIApplication.shared.applicationState == .active && !forceNotification {
-            #if DEBUG
-            print("[proximity] app active -> in-app sheet for \(identifier), no OS notification "
-                + "posted (so nothing can mirror to watch)")
-            #endif
+            // No OS notification is posted on this branch, so there is nothing to mirror to a watch.
+            log.debug("app active -> in-app sheet for \(identifier, privacy: .public)")
             onSideQuestNearby?(identifier)
         } else {
-            #if DEBUG
-            print("[proximity] posting OS notification for \(identifier)")
-            #endif
+            log.debug("posting OS notification for \(identifier, privacy: .public)")
             postNotification(
                 sideQuestID: identifier,
                 title: sideQuest.title.value(for: language),
@@ -346,10 +342,12 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         // skips the location-authorization gate entirely, `forceNotification`) still gets a real
         // chance at notification permission even when `Always` location was never granted.
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [repository] granted, authError in
-            #if DEBUG
-            print("[proximity] requestAuthorization for \(sideQuestID): granted=\(granted), "
-                + "error=\(authError?.localizedDescription ?? "nil")")
-            #endif
+            if !granted || authError != nil {
+                let reason = authError?.localizedDescription ?? "no error reported"
+                log.error("notification authorization denied for \(sideQuestID, privacy: .public): \(reason, privacy: .public)")
+            } else {
+                log.debug("notification authorization granted for \(sideQuestID, privacy: .public)")
+            }
             let content = UNMutableNotificationContent()
             content.title = title
             content.body = body
@@ -377,14 +375,11 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             // scheduled reminder.
             let request = UNNotificationRequest(identifier: sideQuestID, content: content, trigger: nil)
             UNUserNotificationCenter.current().add(request) { addError in
-                #if DEBUG
                 if let addError {
-                    print("[proximity] add(request) FAILED for \(sideQuestID): \(addError.localizedDescription)")
+                    log.error("add(request) failed for \(sideQuestID, privacy: .public): \(addError.localizedDescription, privacy: .public)")
                 } else {
-                    print("[proximity] add(request) succeeded for \(sideQuestID), categoryIdentifier=" +
-                        "\(SideQuestNotificationCategory.identifier) — check the paired Watch now")
+                    log.debug("add(request) succeeded for \(sideQuestID, privacy: .public), category=\(SideQuestNotificationCategory.identifier, privacy: .public)")
                 }
-                #endif
             }
         }
     }
