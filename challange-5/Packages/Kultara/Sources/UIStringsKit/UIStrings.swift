@@ -255,6 +255,48 @@ public enum UIStrings {
         .taskDetailSeeMapHint: LocalizedText(
             id: "Membuka denah tapak tempat ini.",
             en: "Opens the drawn plan of this place's grounds."),
+
+        // MARK: The camera, and the sheet holding a photograph
+        .cameraTitle: LocalizedText(id: "Kamera", en: "Camera"),
+        .cameraClose: LocalizedText(id: "Tutup kamera", en: "Close the camera"),
+        .cameraShutter: LocalizedText(id: "Ambil foto", en: "Take the photo"),
+        .cameraFlashOn: LocalizedText(id: "Nyalakan lampu kilat", en: "Turn the flash on"),
+        .cameraFlashOff: LocalizedText(id: "Matikan lampu kilat", en: "Turn the flash off"),
+        .cameraZoomIn: LocalizedText(id: "Perbesar ke 2x", en: "Zoom to 2x"),
+        .cameraZoomOut: LocalizedText(id: "Kembali ke 1x", en: "Back to 1x"),
+        .cameraUnavailable: LocalizedText(
+            id: "Perangkat ini tidak punya kamera yang bisa dipakai. Kegiatan ini tetap bisa dilewati.",
+            en: "This device has no camera available. This activity can still be skipped."),
+        .cameraDenied: LocalizedText(
+            id: "Akses kamera ditolak, jadi foto tidak bisa diambil. Kamu bisa mengizinkannya lewat Pengaturan, atau lewati kegiatan ini.",
+            en: "Camera access is off, so no photo can be taken. You can allow it in Settings, or skip this activity."),
+        .taskPhotoRemove: LocalizedText(id: "Hapus foto", en: "Remove the photo"),
+        .taskPhotoSubmit: LocalizedText(id: "Kirim", en: "Submit"),
+        .taskPhotoThumbnail: LocalizedText(id: "Foto yang kamu ambil", en: "The photo you took"),
+        .taskPhotoSavedNote: LocalizedText(
+            id: "Foto tersimpan di perangkat ini", en: "Photo saved on this device"),
+
+        // MARK: The story behind a task, and the stamp
+        .questExplanationLead: LocalizedText(
+            id: "Ada satu hal yang ingin kuceritakan…", en: "Let me tell you something…"),
+        .questExplanationContinue: LocalizedText(
+            id: "Ketuk untuk lanjut", en: "Tap to Continue"),
+        .questExplanationBack: LocalizedText(id: "Kembali", en: "Back"),
+        .stampAwardHeading: LocalizedText(
+            id: "Satu keping ceritanya kamu buka lagi.",
+            en: "You’ve uncovered another piece of the story."),
+        .stampAwardCaption: LocalizedText(
+            id: "Stempel jejak %1$d dari %2$d", en: "Trace Stamp %1$d of %2$d"),
+        .stampAwardBody: LocalizedText(
+            id: "Masih ada kegiatan lain di tempat ini. Kerjakan untuk menggali lebih dalam, atau lanjut ke titik berikutnya.",
+            en: "There are more quests waiting here. Complete them to deepen your discovery, or continue to the next location."),
+        .stampAwardBodyAllDone: LocalizedText(
+            id: "Semua kegiatan di tempat ini sudah kamu kerjakan. Lanjut ke titik berikutnya kalau sudah siap.",
+            en: "You have worked through everything at this place. Continue to the next location when you are ready."),
+        .stampAwardNextLocation: LocalizedText(
+            id: "Titik berikutnya", en: "Next Location"),
+        .stampAwardMoreQuests: LocalizedText(
+            id: "Kegiatan lain (%d)", en: "More Quests (%d)"),
         .siteMapClose: LocalizedText(id: "Tutup denah", en: "Close the plan"),
         .siteMapGestureHint: LocalizedText(
             id: "Cubit untuk memperbesar, geser untuk menjelajah",

@@ -392,7 +392,11 @@ struct KultaraRootView: View {
                 questID: destination.questID,
                 language: language,
                 existingRun: existing,
-                discardingExistingDraft: destination.discardingExistingDraft)
+                discardingExistingDraft: destination.discardingExistingDraft,
+                // `1:4827`'s photograph. The same store the sidequest photo challenge writes to and
+                // the same one "delete all local data" empties (`FR-SET-02`), so a quest photo is
+                // not a fourth aggregate the eraser would have to learn about.
+                photoStore: environment.photoStore)
         } content: { model in
             KultaraThemeProvider { QuestRunView(model: model) }
                 .onDisappear {

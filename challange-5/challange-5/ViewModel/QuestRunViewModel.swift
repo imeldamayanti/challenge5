@@ -1,7 +1,9 @@
+import AVFoundation
 import ContentKit
 import DesignSystem
 import Foundation
 import RunEngine
+import UIKit
 import UIStringsKit
 
 @MainActor
@@ -50,6 +52,21 @@ final class QuestRunViewModel {
         /// filtered (`FR-TASK-06` drops a photo task at a Place where photography is prohibited), so
         /// an index into the list would point at a different task depending on the Place.
         case taskDetail(taskID: String)
+        /// `1:4609` ("Explanation per Quest") — the story behind the task just resolved, on the
+        /// ornate plate, reached from `taskDetail` whichever way that task was resolved.
+        ///
+        /// **Reached on a skip as well as on an answer, deliberately.** `AD-2` and `FR-TASK-02` make
+        /// the two resolutions the same kind of outcome; withholding the story from a walker who
+        /// skipped would turn "offered without apology" into a penalty. It carries the task id for
+        /// the same reason `taskDetail` does — the presentation's task list is filtered
+        /// (`FR-TASK-06`), so an index would name a different task at a different Place.
+        case questExplanation(taskID: String)
+        /// `1:4641` ("Quest") — the checkpoint's stamp, shown after the story.
+        ///
+        /// **Presented here, awarded on arrival.** `FR-CP-07` grants the stamp in
+        /// `RunEngine.applyArrival`, before any task exists; this stage writes nothing and only shows
+        /// the walker what they are already holding.
+        case stampAward(taskID: String)
         /// `1:4586` ("Transition") — the sealed scroll between the story and the walk. It closes
         /// the reveal and opens the checkpoint's own screens, so it sits between `storyReveal` and
         /// `placeNotice`/`checkpointDetail`, not after the task menu.
@@ -67,6 +84,14 @@ final class QuestRunViewModel {
     private let engine: RunEngine
     private let repository: any ContentRepository
     private let preferences: any AppPreferencesStore
+    /// Where a photo task's photograph is written (`1:4827`). Optional because a Run does not need
+    /// one to be walked: with no store the camera is simply not offered, and every photo task is
+    /// still resolvable by skipping (`AD-2`).
+    private let photoStore: (any PhotoStore)?
+    /// Whether this device has a camera at all. Injected rather than read here so the rule is a value
+    /// a test can set — the Simulator has none, and a screen that offers a control the hardware
+    /// cannot honour is worse on a walk than one that says so.
+    private let hasCameraHardware: Bool
     /// `FR-ARR-01`…`FR-ARR-05`, `FR-START-10`, `NFR-BAT-04`, extracted so this view model and
     /// `SideQuestFlowViewModel` cannot drift apart about what arrival means.
     let sampling: ArrivalSampling
@@ -105,6 +130,16 @@ final class QuestRunViewModel {
     /// Task answers being typed, keyed by task id. Not persisted until saved — `FR-RUN-01` is about
     /// completed actions, and a half-typed sentence is not one.
     var taskDrafts: [String: String] = [:]
+    /// Photographs taken but not yet submitted, keyed by task id — the same argument as `taskDrafts`
+    /// one type up. Held in memory rather than written on capture: `1:4852`'s cross discards the
+    /// shot, and a file written at the shutter and discarded a second later is an orphan in the
+    /// walker's Documents directory that nothing would ever collect. `PhotoStore` is called from
+    /// `saveTask`, once.
+    private var photoDrafts: [String: UIImage] = [:]
+    /// Whether `1:4681` is over the task sheet. A cover rather than a stage, for the same reason the
+    /// site plan is one: the camera is opened and dismissed back to the same task, and putting it in
+    /// `Stage` would make backing out of it ambiguous with backing out of the task.
+    private(set) var isPresentingCamera = false
 
     /// The authored walking line (`FR-MAP-02`). Read once at construction: it is content, so it
     /// cannot change under a walk in progress, and a nil here means the quest ships no geometry
@@ -125,12 +160,21 @@ final class QuestRunViewModel {
         language: ContentLanguage,
         existingRun: Run? = nil,
         discardingExistingDraft: Bool = false,
-        manualOverrideDelay: Duration = .seconds(60)
+        manualOverrideDelay: Duration = .seconds(60),
+        photoStore: (any PhotoStore)? = nil,
+        // `AVCaptureDevice`, not `UIImagePickerController.isSourceTypeAvailable(.camera)`, and the
+        // difference is visible: the Simulator answers `true` to the picker's question and has no
+        // capture device, so the sheet offered a camera and the camera screen then had to explain
+        // there was none. This is the same question `CameraSession.start()` asks, so the two screens
+        // cannot disagree about whether a photograph is possible.
+        hasCameraHardware: Bool = AVCaptureDevice.default(for: .video) != nil
     ) {
         guard let quest = (try? repository.quest(id: questID)) ?? nil else { return nil }
         self.engine = engine
         self.repository = repository
         self.preferences = preferences
+        self.photoStore = photoStore
+        self.hasCameraHardware = hasCameraHardware
         self.sampling = ArrivalSampling(
             locationProvider: locationProvider,
             language: language,
@@ -459,25 +503,107 @@ final class QuestRunViewModel {
         stage = .taskDetail(taskID: taskID)
     }
 
-    /// Leaving the sheet forwards — always onto the menu, whichever way the sheet was entered.
-    /// The menu is the checkpoint's hub: `checkpointDetailContinueToNext` is the one way out of it.
+    /// Leaving the sheet forwards without resolving anything — an already-answered task being
+    /// re-read. It lands on the menu, which is the checkpoint's hub:
+    /// `checkpointDetailContinueToNext` is the one way out of it.
     func advanceFromTaskDetail() { stage = .checkpointDetail }
 
-    /// Saving an answer from the sheet, then moving on to the menu.
+    /// Saving an answer from the sheet, then into the story behind it.
     ///
     /// `saveTask` falls back to a skip on an empty draft, so the walk never stalls on a sheet whose
     /// field was left blank — `AD-2` means a task gates nothing, and that has to stay true of the
     /// screen the walk now opens on.
     func saveTaskFromDetail(_ task: ContentTask) {
         saveTask(task)
-        advanceFromTaskDetail()
+        stage = .questExplanation(taskID: task.id)
     }
 
-    /// `FR-TASK-02`'s skip, from the sheet. Same weight as saving and the same destination.
+    /// `FR-TASK-02`'s skip, from the sheet. Same weight as saving and the same destination — the
+    /// story follows a skip too, because withholding it would make the skip a penalty.
     func skipTaskFromDetail(_ task: ContentTask) {
         skipTask(task)
-        advanceFromTaskDetail()
+        stage = .questExplanation(taskID: task.id)
     }
+
+    // MARK: The story behind a task — `1:4609` — and the stamp — `1:4641`
+
+    /// `1:4613`'s tap.
+    func advanceFromQuestExplanation() {
+        guard case .questExplanation(let taskID) = stage else { return }
+        stage = .stampAward(taskID: taskID)
+    }
+
+    /// `1:4654` — back to this checkpoint's task menu.
+    func stampAwardMoreQuests() { stage = .checkpointDetail }
+
+    /// `15:2798` — on towards the next place. The same exit `checkpointDetailContinueToNext` takes,
+    /// so there is one way off a checkpoint and two controls that reach it.
+    func stampAwardNextLocation() { stage = .atCheckpoint }
+
+    /// The claims `1:4609` prints — the Place's own `loreStandalone`, with the accuracy label and the
+    /// citations `FR-CP-05` asks for. Empty when the Place authors none, which the screen renders as
+    /// the lead alone rather than as an error.
+    var explanationClaims: [LoreClaimPresentation] { checkpoint?.standaloneClaims ?? [] }
+
+    /// Which of this walk's stamps the checkpoint just reached franked, counting from one.
+    ///
+    /// From `orderIndex` rather than from `run.awards.count`: the awards array also holds the badge
+    /// at the final checkpoint (`FR-DONE-02`), and counting it would print "5 of 5" one stop early.
+    var stampNumber: Int { (checkpoint?.orderIndex ?? 0) + 1 }
+
+    var stampTotal: Int { totalCheckpoints }
+
+    /// `1:4654`'s count — how many tasks at this checkpoint are still unresolved. Zero hides the
+    /// control rather than offering nothing.
+    var unresolvedTaskCount: Int { taskCount - resolvedTaskCount }
+
+    /// The drawing franked into `1:4647`, tiered by how many quests through this place the walker has
+    /// *finished* (`HisploraStampArtwork`). A walk in progress has not finished, so a first-time
+    /// walker sees the first drawing here and the same one in the Journal afterwards.
+    ///
+    /// **This walk is passed in alongside the finished ones, and it has to be.** The resolver builds
+    /// its stamp → place table from the quests of the runs it is given, and counts visits only from
+    /// the ones that are `.completed`. Handing it the finished runs alone means a first-time walker's
+    /// quest is in no table at all, and the window comes back empty — which is the honest fallback for
+    /// a place the design never drew, and the wrong answer for a place it did. Adding the active run
+    /// contributes the mapping and no visits, and `HisploraStampArtwork.tier` floors at 1.
+    var stampArtworkName: String? {
+        guard let run, let stampID = orderedCheckpoints
+            .first(where: { $0.orderIndex == currentIndex })?.stampId
+        else { return nil }
+        let finished = (try? engine.completedRuns()) ?? []
+        return StampArtworkResolver(runs: finished + [run], repository: repository)
+            .artworkName(questID: run.questID, stampSourceID: stampID)
+    }
+
+    // MARK: The camera — `1:4681`
+
+    /// Whether the camera can be offered at all: a device with one, and somewhere to write what it
+    /// takes. False turns `1:4827`'s pill into the note that says why (`AD-2` — the task is still
+    /// resolvable either way).
+    var isCameraAvailable: Bool { hasCameraHardware && photoStore != nil }
+
+    func presentCamera() {
+        guard isCameraAvailable, case .taskDetail = stage else { return }
+        isPresentingCamera = true
+    }
+
+    func dismissCamera() { isPresentingCamera = false }
+
+    /// The shutter's result. Held as a draft rather than written — `1:4852`'s cross discards it, and
+    /// `saveTask` is the one place a file is ever created.
+    func capturedPhoto(_ image: UIImage) {
+        guard case .taskDetail(let taskID) = stage else { return }
+        photoDrafts[taskID] = image
+        isPresentingCamera = false
+    }
+
+    /// `1:4852` — discard the shot and re-offer the camera.
+    func removePhotoDraft(_ task: ContentTask) { photoDrafts[task.id] = nil }
+
+    /// The photograph waiting on this task's sheet. A `UIImage` rather than a SwiftUI `Image`
+    /// because a view model in this target does not import SwiftUI; the view wraps it.
+    func photoDraft(for task: ContentTask) -> UIImage? { photoDrafts[task.id] }
 
     /// The task the `taskDetail` stage is showing, or nil on every other stage.
     var detailTask: ContentTask? {
@@ -530,6 +656,11 @@ final class QuestRunViewModel {
                 stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .transition
             }
         case .taskDetail: stage = stageBeforeTaskDetail
+        // Backing out of the story returns to the task it belongs to, which by then is resolved —
+        // so the sheet draws its saved answer and a plain Continue rather than the field again
+        // (`FR-TASK-07`: the walker may want to re-read what they wrote).
+        case .questExplanation(let taskID): stage = .taskDetail(taskID: taskID)
+        case .stampAward(let taskID): stage = .questExplanation(taskID: taskID)
         default: break
         }
     }
@@ -613,22 +744,51 @@ final class QuestRunViewModel {
 
     // MARK: Tasks — AD-2, FR-TASK-01/02/07
 
+    /// Saving a task, whichever kind it is.
+    ///
+    /// A photo task saves the photograph and a written one saves the words; either way an *empty*
+    /// answer is recorded as a skip rather than as an answer to nothing, which is what keeps a
+    /// blank sheet from stalling a walk (`AD-2`).
+    ///
+    /// The photograph reaches disk here and nowhere else. `PhotoStore.save` downscales it and
+    /// returns a path relative to the app container — never absolute, because an absolute path
+    /// resolves to nothing after a restore from backup and the walker's photographs appear to have
+    /// vanished (`NFR-REL-05`). A store that throws leaves the draft where it is and says so, rather
+    /// than recording a result that points at a file that was never written.
     func saveTask(_ task: ContentTask) {
+        if task.type == .photo {
+            guard let image = photoDrafts[task.id], let photoStore else { return skipTask(task) }
+            do {
+                let path = try photoStore.save(image, recordID: UUID())
+                write(task: task, skipped: false, text: nil, photoRelativePath: path)
+                photoDrafts[task.id] = nil
+            } catch {
+                message = String(describing: error)
+            }
+            return
+        }
         let text = taskDrafts[task.id]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         guard !text.isEmpty else { return skipTask(task) }
         write(task: task, skipped: false, text: text)
     }
 
     func skipTask(_ task: ContentTask) {
+        photoDrafts[task.id] = nil
         write(task: task, skipped: true, text: nil)
     }
 
-    private func write(task: ContentTask, skipped: Bool, text: String?) {
+    private func write(
+        task: ContentTask,
+        skipped: Bool,
+        text: String?,
+        photoRelativePath: String? = nil
+    ) {
         guard let run, let checkpoint else { return }
         do {
             self.run = try engine.recordTaskResult(
                 runID: run.id, checkpointID: checkpoint.id,
-                taskID: task.id, skipped: skipped, text: text)
+                taskID: task.id, skipped: skipped, text: text,
+                photoRelativePath: photoRelativePath)
         } catch let error as RunEngineError {
             message = describe(error)
         } catch {
@@ -689,20 +849,23 @@ final class QuestRunViewModel {
         let place = place(for: checkpoint)
         let formatter = ContentFormatter(language: language)
 
-        let claims = checkpoint.loreSegment.enumerated().map { offset, block in
-            LoreClaimPresentation(
-                id: offset,
-                block: LoreBlockPresentation(
+        func presentedClaims(from blocks: [LoreBlock]) -> [LoreClaimPresentation] {
+            blocks.enumerated().map { offset, block in
+                LoreClaimPresentation(
                     id: offset,
-                    text: block.text.value(for: language),
-                    accuracyLabel: formatter.accuracyLabel(block.accuracy),
-                    appearance: block.accuracy == .documented ? .documented : .oral,
-                    ink: block.accuracy == .documented ? .documented : .oral),
-                citations: block.sourceRefs.compactMap { ref in
-                    guard let place, place.sources.indices.contains(ref) else { return nil }
-                    return place.sources[ref].citation
-                })
+                    block: LoreBlockPresentation(
+                        id: offset,
+                        text: block.text.value(for: language),
+                        accuracyLabel: formatter.accuracyLabel(block.accuracy),
+                        appearance: block.accuracy == .documented ? .documented : .oral,
+                        ink: block.accuracy == .documented ? .documented : .oral),
+                    citations: block.sourceRefs.compactMap { ref in
+                        guard let place, place.sources.indices.contains(ref) else { return nil }
+                        return place.sources[ref].citation
+                    })
+            }
         }
+        let claims = presentedClaims(from: checkpoint.loreSegment)
 
         // `FR-TASK-06` — a photo task at a Place where photography is prohibited is not offered at
         // all. The validator rejects such content (V9); this is the runtime half of the same rule,
@@ -722,6 +885,7 @@ final class QuestRunViewModel {
             dressCodeText: place?.dressCode.value(for: language) ?? "",
             photoPolicyText: place.map { formatter.photoPolicy($0.photoPolicy.level) } ?? "",
             claims: claims,
+            standaloneClaims: presentedClaims(from: place?.loreStandalone ?? []),
             clueToNext: checkpoint.clueToNext?.value(for: language),
             tasks: tasks,
             taskPrompts: Dictionary(

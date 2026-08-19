@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A native iOS app (SwiftUI, iOS 18.0) for story-led cultural heritage walking quests in Bali. Users walk a fixed-order route of physical checkpoints, unlock narrative lore at each one, and finish with a shareable recap.
 
-Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. Photo tasks, the share card, the recall survey and proximity alerts are not built. Telemetry and the kill-switch are **half** built: the server side is deployed and the client kits (`TelemetryKit`, `GovernanceKit`) exist and are tested, but nothing in the app calls either — see `.claude/plans/supabase/c1-client-phase0.plan.md` §6. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
+Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. The share card, the recall survey and proximity alerts are not built; photo tasks are, as of 2026-08-19. Telemetry and the kill-switch are **half** built: the server side is deployed and the client kits (`TelemetryKit`, `GovernanceKit`) exist and are tested, but nothing in the app calls either — see `.claude/plans/supabase/c1-client-phase0.plan.md` §6. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
 
 Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — **is done**: 110 tests in `challange-5Tests`, all passing, plus the two source-scanning guards in the package. `.claude/plans/supabase/b0`–`b3` built and deployed a Supabase backend, and `.claude/plans/supabase/c1-client-phase0.plan.md` added the kill-switch publisher, `GovernanceKit` and `TelemetryKit` — **none of which the app calls yet**, deliberately.
 
@@ -359,6 +359,14 @@ composites the frame's own cream fill behind the art, and the only transparent f
 returns is a contents-only render it will not upscale. A hand export from Figma at 3× is a drop-in —
 same names, same boxes.
 
+On 2026-08-19 the run flow gained four more from the same board: `1:4681` (the camera), `1:4827`
+(the task sheet holding a photograph), `1:4609` (the story behind a task) and `1:4641` (the stamp).
+They introduced **no new palette tokens, no new type roles and no new packaged art** — the plate
+`1:4616` draws on is `plaque-plate.png`, already shipped for `293:1630`, and the stamp is
+`HisploraStampCard` at the size `1:4647` sets it. The camera is the one screen on neither visual
+direction: it is a full-bleed preview under a translucent black bar, which is the system camera's
+own language rather than this app's.
+
 `docs/hisplora-tokens.md` records where each token was sampled, every measured ratio, and — importantly — the frames' content that was deliberately **not** built: the AI-generated portrait of a named historical figure (a `FR-CP-05` claim with no source or consent record), the external-maps handoff (`AD-3`), and the map screenshot (`FR-MAP-01`).
 
 ## Content
@@ -467,11 +475,50 @@ auto-advancing and the login carrying a "Skip for now".
   forwards it always lands on the menu, whose `checkpointDetailContinueToNext` is the one way out of
   the checkpoint. Nothing here gates progression (`AD-2`) — the skip is on the same screen, and an
   empty field saves as a skip.
-- **Photo capture is still not built, and `447:1880` does not pretend otherwise.** The frame draws
-  "Take Photo" as the task sheet's one action; only checkpoint 4 (`badung-catur-muka`) has a `photo`
-  task, so the pill is drawn where the frame draws it and **disabled**, over the
-  `taskPhotoNotInThisBuild` note, with the skip beneath it as what resolves such a task. A pill that
-  navigated instead of capturing would be a control that cannot do what it says.
+- **Photo capture ships now, and it owns the capture session rather than borrowing the picker.**
+  `1:4681` ("Camera") is `View/Component/QuestPhotoCaptureScreen.swift` over
+  `Service/CameraSession.swift` — `AVCaptureSession` + `AVCapturePhotoOutput`, because the frame
+  draws its own chrome (titled dark bar with a cross, a 2× badge, a ringed shutter, a flash toggle)
+  and `UIImagePickerController` will not let a caller replace Apple's. The sidequest challenge still
+  uses the picker (`CameraCaptureView`); that flow has no frame of its own. `1:4827`
+  ("Quest_Filled" holding an image) is the same `TaskDetailScreen` in its filled state: an 88-point
+  thumbnail with `1:4852`'s cross on its shoulder, and a white Submit pill replacing the map hint.
+  Only checkpoint 4 (`badung-catur-muka`) has a `photo` task, and `FR-TASK-06` still drops even that
+  one where photography is prohibited.
+  Three things about it are load-bearing:
+  - **`INFOPLIST_KEY_NSCameraUsageDescription` was missing from both build configurations** and is
+    now in `project.pbxproj`. Without it the sidequest picker would have crashed the app on launch;
+    that was a live bug, not a new requirement.
+  - **The photograph is a draft until Submit.** `QuestRunViewModel.photoDrafts` holds the `UIImage`
+    in memory and `saveTask` is the one caller of `PhotoStore.save` — `1:4852`'s cross discards the
+    shot, and a file written at the shutter and discarded a second later is an orphan in the
+    walker's Documents directory that nothing would ever collect. `RunEngine.recordTaskResult` now
+    takes `photoRelativePath`, which finally fills the `TaskResult` field that shipped unused.
+  - **Whether a camera exists is asked as `AVCaptureDevice.default(for: .video) != nil`**, not as
+    `UIImagePickerController.isSourceTypeAvailable(.camera)`. The Simulator answers `true` to the
+    picker's question and has no capture device, so the sheet offered a camera the camera screen
+    then had to apologise for. Both screens now ask the same question. On a device with none, the
+    sheet says so and the skip is what resolves the task (`AD-2`).
+- **Two screens now sit between resolving a task and the task menu.** `1:4609` ("Explanation per
+  Quest") is the story behind the task, and `1:4641` ("Quest") is the stamp; `taskDetail` →
+  `questExplanation` → `stampAward` → `checkpointDetail`/`atCheckpoint`. Four things worth knowing:
+  - **It is reached on a skip as well as on an answer.** `AD-2` and `FR-TASK-02` make the two
+    resolutions the same kind of outcome; withholding the story from a walker who skipped would turn
+    "offered without apology" into a penalty.
+  - **`1:4616` is the same stock plate `293:1630` already is**, names baked in and all — so
+    `QuestExplanationScreen` reuses `HisploraPlaquePanel` and `plaque-plate.png` rather than shipping
+    a second copy of the same picture. Do not re-export it.
+  - **The explanation renders `Place.loreStandalone`, and at a sacred Place that is the same text
+    `PlaceNoticeScreen` already printed.** `ContentTask` has no explanation field; adding one is a
+    schema change, a validator rule, a `contentBundleVersion` bump and five newly authored sourced
+    passages, which is a content decision with an owner. It carries the accuracy label and the
+    citation the frame does not, because the Story Reveal's `FR-CP-05` exception is still unsigned
+    and `s0` D6 forbids extending one by inference.
+  - **The stamp is presented there, not granted there.** `FR-CP-07` awards it on arrival in
+    `RunEngine.applyArrival`; `StampAwardScreen` writes nothing. Its artwork comes from
+    `StampArtworkResolver`, which must be handed **the active run alongside the finished ones** —
+    the resolver builds its stamp → place table from the runs it is given, so finished-only means a
+    first-time walker's quest is in no table and the window renders empty.
 - **`452:3132` renders one task row and one progress segment, not the frame's three.** The frame is
   titled "Quest 1/3" and invents three tasks ("The Iron Statue", "The Ancient Script", "The Whip
   Bearer") that exist nowhere in the content tree; the shipped checkpoints carry exactly one task

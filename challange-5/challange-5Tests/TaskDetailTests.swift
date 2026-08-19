@@ -296,10 +296,10 @@ struct TaskDetailTests {
     // MARK: - The sheet writes the result itself
 
     /// The sheet is the first screen of a checkpoint's task half, so it has to be able to finish what
-    /// it opens: saving writes a `TaskResult` and lands on the menu (`1:4711` → `1:4904`). It writes
-    /// through the same `saveTask` the checkpoint screen's `TaskCard` writes through — two ways in,
-    /// one writer.
-    @Test func savingOnTheSheetWritesTheResultAndLandsOnTheMenu() throws {
+    /// it opens: saving writes a `TaskResult` and hands over to the story behind that task
+    /// (`1:4711` → `1:4609`). It writes through the same `saveTask` the checkpoint screen's
+    /// `TaskCard` writes through — two ways in, one writer.
+    @Test func savingOnTheSheetWritesTheResultAndOpensTheStory() throws {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
@@ -307,24 +307,98 @@ struct TaskDetailTests {
 
         harness.model.saveTaskFromDetail(task)
 
-        #expect(harness.model.stage == .checkpointDetail)
+        #expect(harness.model.stage == .questExplanation(taskID: task.id))
         let resolution = try #require(harness.model.resolution(for: task))
         #expect(resolution.skipped == false)
         #expect(resolution.text == "Empat wajah menghadap empat arah.")
     }
 
     /// `FR-TASK-02` and `AD-2` — the skip is offered on the same screen, resolves the task just as
-    /// saving does, and reaches the same place. A walk that could not leave this sheet without
-    /// answering would be a task gating progression.
-    @Test func skippingOnTheSheetResolvesTheTaskAndLandsOnTheMenu() throws {
+    /// saving does, and reaches the same place, story included. A skip that was sent somewhere
+    /// duller than an answer would be the penalty `FR-TASK-02` says the skip must not carry.
+    @Test func skippingOnTheSheetResolvesTheTaskAndOpensTheSameStory() throws {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
 
         harness.model.skipTaskFromDetail(task)
 
-        #expect(harness.model.stage == .checkpointDetail)
+        #expect(harness.model.stage == .questExplanation(taskID: task.id))
         #expect(harness.model.resolution(for: task)?.skipped == true)
+    }
+
+    // MARK: - The story behind a task, and the stamp — `1:4609` → `1:4641`
+
+    /// `1:4613` → `1:4641` → `1:4654`. The three screens are a chain and the last of them is what
+    /// finally reaches the menu the sheet used to reach directly.
+    @Test func theStoryHandsOverToTheStampAndTheStampBackToTheMenu() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+        harness.model.openTaskDetail(taskID: task.id)
+        harness.model.skipTaskFromDetail(task)
+
+        harness.model.advanceFromQuestExplanation()
+        #expect(harness.model.stage == .stampAward(taskID: task.id))
+
+        harness.model.stampAwardMoreQuests()
+        #expect(harness.model.stage == .checkpointDetail)
+    }
+
+    /// `15:2798` — the stamp's other action is the same exit the menu's own is, so a checkpoint has
+    /// one way off it and two controls that reach it.
+    @Test func theStampsOtherActionLeavesTheCheckpointJustAsTheMenuDoes() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+        harness.model.openTaskDetail(taskID: task.id)
+        harness.model.skipTaskFromDetail(task)
+        harness.model.advanceFromQuestExplanation()
+
+        harness.model.stampAwardNextLocation()
+
+        #expect(harness.model.stage == .atCheckpoint)
+    }
+
+    /// Backing out of either new screen returns to the one before it rather than out of the walk —
+    /// the rule every other story stage follows.
+    @Test func backingOutOfTheStoryAndTheStampWalksTheChainInReverse() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+        harness.model.openTaskDetail(taskID: task.id)
+        harness.model.skipTaskFromDetail(task)
+        harness.model.advanceFromQuestExplanation()
+
+        harness.model.retreatFromStoryStage()
+        #expect(harness.model.stage == .questExplanation(taskID: task.id))
+
+        harness.model.retreatFromStoryStage()
+        #expect(harness.model.stage == .taskDetail(taskID: task.id))
+    }
+
+    /// `1:4609` prints the Place's own `loreStandalone`, and it prints it as *claims* — the accuracy
+    /// label and the citation `FR-CP-05` asks for, which the frame itself does not draw. A screen
+    /// that rendered the text without them would be extending an exception the PRD has never signed.
+    @Test func theStoryScreenCarriesThePlacesOwnClaimsWithTheirProvenance() throws {
+        let harness = try atTaskList()
+
+        let claims = harness.model.explanationClaims
+
+        #expect(!claims.isEmpty)
+        #expect(claims.allSatisfy { !$0.block.text.isEmpty })
+        #expect(claims.allSatisfy { !$0.block.accuracyLabel.isEmpty })
+        #expect(claims.contains { !$0.citations.isEmpty })
+    }
+
+    /// `1:4654`'s count is this checkpoint's *unresolved* tasks, so resolving the last one empties it
+    /// and the control goes rather than offering nothing.
+    @Test func theStampsMoreQuestsCountFallsAsTasksAreResolved() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+        let before = harness.model.unresolvedTaskCount
+
+        harness.model.openTaskDetail(taskID: task.id)
+        harness.model.skipTaskFromDetail(task)
+
+        #expect(harness.model.unresolvedTaskCount == before - 1)
     }
 
     /// The menu's own action still leaves the checkpoint for the walk to the next place.
@@ -334,6 +408,60 @@ struct TaskDetailTests {
         harness.model.advanceFromCheckpointDetail()
 
         #expect(harness.model.stage == .atCheckpoint)
+    }
+
+    /// `1:4647`'s window. The drawing is picked from the walker's *finished* walks, and on a first
+    /// walk there are none — so the resolver has to be handed this walk too, or its quest is in no
+    /// stamp → place table at all and the window comes back empty. An empty window is the honest
+    /// state for a place the design never drew; Puri Agung Pemecutan is not one of those.
+    @Test func theStampScreenFranksThePlacesDrawingOnAFirstWalk() throws {
+        let harness = try atTaskList()
+
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
+    }
+
+    /// The caption counts this walk's checkpoints rather than the awards array — that array also holds
+    /// the badge at the final stop (`FR-DONE-02`), and counting it would print the wrong total.
+    @Test func theStampCaptionCountsCheckpointsRatherThanAwards() throws {
+        let harness = try atTaskList()
+
+        #expect(harness.model.stampNumber == 1)
+        #expect(harness.model.stampTotal == harness.quest.checkpoints.count)
+    }
+
+    // MARK: - The camera — `1:4681`
+
+    /// Two things have to be true before the camera is offered: hardware to take the picture, and
+    /// somewhere to write it. Missing either turns `447:1900`'s pill into the note that says so —
+    /// the task is still resolvable by skipping, because `AD-2` means it gates nothing.
+    @Test func theCameraIsOfferedOnlyWithBothHardwareAndSomewhereToWrite() throws {
+        #expect(try model(hasCamera: true, store: InMemoryPhotoStore()).isCameraAvailable)
+        #expect(try !model(hasCamera: false, store: InMemoryPhotoStore()).isCameraAvailable)
+        #expect(try !model(hasCamera: true, store: nil).isCameraAvailable)
+    }
+
+    /// The camera is a cover over the task sheet, not a stage — so it opens from that sheet and from
+    /// nowhere else. Asked for anywhere in the story flow it does nothing, rather than covering a
+    /// screen it cannot return to.
+    @Test func theCameraOpensFromTheTaskSheetAndNowhereElse() throws {
+        let harness = try atTaskList()
+        harness.model.presentCamera()
+        #expect(!harness.model.isPresentingCamera)
+    }
+
+    /// A model at the start of the walk, built with the camera's two dependencies set explicitly.
+    private func model(hasCamera: Bool, store: (any PhotoStore)?) throws -> QuestRunViewModel {
+        let repository = try BundledContentRepository()
+        let quest = try #require(try repository.quests().first)
+        return try #require(QuestRunViewModel(
+            engine: RunEngine(repository: repository, store: InMemoryRunStore()),
+            repository: repository,
+            preferences: InMemoryAppPreferencesStore(safetyNoticeAckedQuestIDs: [quest.id]),
+            locationProvider: FakeLocationProvider(authorization: .whenInUse),
+            questID: quest.id,
+            language: .id,
+            photoStore: store,
+            hasCameraHardware: hasCamera))
     }
 
     /// The only photo task the content ships, and the Place it is at. `FR-TASK-06` drops a photo task
