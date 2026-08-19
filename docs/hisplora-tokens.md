@@ -42,6 +42,7 @@ so the next import is not another archaeology exercise.
 | `paperTicket` | `#EFEBD7` | the quest-row ticket on `452:3132` |
 | `inkTicket` | `#34312E` | that row's title |
 | `trackWell` | `#8D7870` | the well of the segmented task bar, `452:3138` |
+| `trackDim` | `#926954` | the unfilled segment of the onboarding bar, `523:2054`–`2056` — the frame's 25% `inkCream` over `brownMid`, flattened |
 | `mapGround` | `#DFCDB5` | ground: the site-map screen `452:3028` — the one paper ground in the flow |
 | `mapMarker` | `#B44934` | the marker dots on the site plan, `452:3032`–`3034` |
 | `inkCream` | `#FDF2DE` | headings on the brown grounds |
@@ -88,8 +89,9 @@ it cannot quietly start carrying text.
 
 ## Deviations from the frames
 
-Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `447:1880` and
-`452:3028` on 2026-08-17; deviation 10 came from `452:2651` on 2026-08-18.
+Twelve, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `447:1880` and
+`452:3028` on 2026-08-17; deviation 10 came from `452:2651` on 2026-08-18; 11 and 12 came from the
+three onboarding frames on 2026-08-18.
 
 1. **`inkDusty` was lightened.** As drawn it is `#AA9B8E`, which measures 3.34:1 on `brownStone` —
    it carries the lead paragraph under the cutscene's title, so it is held to body text.
@@ -208,6 +210,28 @@ Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `44
     reproduced exactly: leading inset 16, no trailing inset, filled by height so the drawing runs
     off the right edge, opening on its leading edge rather than centred.
 
+11. **Onboarding is four screens, not the frames' three.** `523:1946`, `523:1973` and `523:1999`
+    are Explore / Quest / Collection, and none of them explains that the phone goes in a pocket
+    between checkpoints. `FR-ONB-03` is a P0 MUST and `AD-1` is the safety model of the product, so
+    that screen survives the redesign; `FR-ONB-02` allows four, so nothing had to be traded for it.
+    It is the second of the four — a walker who taps Skip on screen three has still been told — and
+    it is the one screen whose picture is an SF Symbol in a ruled circle rather than an export,
+    because inventing an illustration would make it read as a fourth Figma screen, which it is not.
+    Two screens from the old onboarding were dropped with no requirement behind them: the
+    accuracy-label screen (the labels are on every lore block, where `FR-CP-05` puts them) and the
+    still-in-use screen (dress and photo rules are shown before any task, where `FR-TASK-05` puts
+    them).
+
+12. **The onboarding bar's segments are flexible, and it is a position indicator.** The frames draw
+    three fixed 115-point segments; a fourth screen at that width runs off the row, so the segments
+    are equal and flexible instead. What is *not* changed is which one is lit: `523:1985`–`1987` dim
+    the first **and** third segment on screen two, so the bar marks position rather than filling as
+    it goes, and it is reproduced that way. The unfilled segment's 25% cream over `brownMid` is
+    flattened into `trackDim` rather than left as an alpha, because the suite measures token pairs
+    and a translucency over "whatever is behind it" is not a pair anyone measured; against a filled
+    segment it is 4.33:1. The row carries a spoken "Screen 2 of 4", so the count is never in the
+    shape alone (`NFR-A11Y-05`).
+
 ## Assets shipped from the file
 
 | Asset | Where | Note |
@@ -216,6 +240,9 @@ Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `44
 | `typewriter.png` | `DesignSystem/Resources/Images` | the machine, cropped from the photograph at 47% height so the drawn sheet joins it |
 | `quest-parchment.png` | `DesignSystem/Resources/Images` | `447:1886`, the sheet the task is printed on |
 | `quest-scroll.png` | `DesignSystem/Resources/Images` | the rolled scroll — a list row's icon at 48, and the map hint's glyph at 32, tilted 41.6° |
+| `onboarding-explore.png` | `DesignSystem/Resources/Images` | `670:1692`, the dancers — **1×, wants replacing, see below** |
+| `onboarding-quest.png` | `DesignSystem/Resources/Images` | `670:1694`, three fanned task scrolls — **1×, wants replacing** |
+| `onboarding-collection.png` | `DesignSystem/Resources/Images` | `670:1749`, five stamps under a wax seal — **1×, wants replacing** |
 | `story-divider.png` | `DesignSystem/Resources/Images` | `447:1887`'s flourish, **converted to an alpha mask** — see below |
 | `SpecialElite-Regular.ttf` | `DesignSystem/Resources/Fonts` | Apache 2.0, licence shipped beside it |
 | `<place>-stamp1…3.png` × 5 places | `DesignSystem/Resources/Images` | the fifteen stamp illustrations, composited out of the SVGs at 480 × 519 — see below |
@@ -233,6 +260,16 @@ citation the validator resolves, and an asset catalog in an app target has no su
 places it in a 99 × 116 box against its own 447/558, and **FILL-crops** it rather than stretching —
 `SideQuestWatchCardView` reproduces that with `.scaledToFill()` plus `.clipped()`, so the top and
 bottom of the scrollwork are cut by ~3% exactly as the frame cuts them.
+
+**The three onboarding pictures are 1× and want a hand export.** Same failure mode as the divider
+below, in the other direction: `download_assets` at 3× composites the *frame's* fill behind the art,
+and on these three frames that is a cream sheet — so each picture arrived opaque, sitting on a cream
+card that does not exist in the design (`#FEF8F8` on `523:1946`, `#EEE7D2` on the other two, read out
+of the corner pixel). The only transparent form the tool returns is a contents-only render, which it
+will not upscale past the node's own size. So what ships is 378×277, 353×267 and 321×300 — exactly
+the frames' boxes, shadows included, at 1×, and soft on a 3× screen. A 3× export made from Figma's
+own export panel is a drop-in replacement: same three names, same three boxes, and the fractions in
+`HisploraOnboardingArt` are in points and do not move.
 
 **`story-divider.png` is not the frame's pixels.** Figma exports that node with the containing
 frame's `#808080` backdrop baked in, so the file as exported is a solid grey bar with a faint
@@ -298,6 +335,33 @@ painting the token first and the sheet over it a true composite rather than a su
 grain is **opt-in on `HisploraStage`** and on only where the design shows it; the story-flow frames
 draw the same brown flat.
 
+### The opening runs at half the note's length, and the letter opens in place
+
+Two changes on 2026-08-18, both from watching it rather than from the frames.
+
+**6.4s → 2.9s.** The designer's note asks for a two-to-three second dwell and a slow zoom, and the
+sequence was built to it: 900 / 2500 / 1400 / 1600. That is a title sequence's budget, and this is
+not a title sequence — it is the gate in front of *every* letter a reader opens. It now runs 520 /
+900 / 700 / 780. The beats keep their proportions to each other, and that is what
+`theOpeningKeepsItsShapeAtHalfTheNotesLength` pins instead of the note's literal number: flap
+quickest, zoom outlasting the rise so the page still arrives slowly, dwell the longest thing that
+is not motion. Rebalancing is free; inverting any of those is a different animation.
+
+**The letter is an overlay, not a `fullScreenCover`.** A cover slides up from the bottom — and the
+beat immediately before it is a page zooming *toward* the reader, so the opening ended by throwing
+that page away and sliding a different one in from somewhere else. `KultaraRootView.journalStack`
+now draws `JournalLetterView` in an `.overlay` with an asymmetric transition: in at 1.14× and
+settling, out at 0.97×, over 420ms of `easeOut`. It picks the zoom up where it stopped. The cost is
+that nothing else takes the floating tab bar away, so `hidesTabBar` names `journalLetter` too.
+
+**And the page is full-bleed.** The sheet had a `KultaraMetrics.lg` margin of brown down both
+sides, which reads as a card on a shelf — the exact thing the reader has just left. It now runs
+edge to edge and under the status bar, with its own 76-point top inset keeping the masthead clear
+of the clock and of the close control. That control was a `paperCream` disc sitting on a
+`paperCream` sheet, which at the top of a full-bleed page is an invisible button; it is `brownDeep`
+with `inkCream` on it — 9.63:1, a pairing `HisploraThemeTests` already measures — at a fixed 44
+points rather than padding that happened to add up.
+
 ### The sheet is taller than the envelope, and the opening now admits it
 
 `332:1252`'s page rises out of the pocket. The offsets that did it were fractions of the *card* —
@@ -348,7 +412,9 @@ fifteen times the size of everything the package actually draws. Every SVG now l
 `docs/design-sources/`: the fifteen stamp exports in `stamps/`, which is `.gitignore`d because they
 are re-exportable and enormous, and the two small vector files (`badges-frame.svg`,
 `Rectangle 10.svg`) beside them, which are tracked because they are the record and cost eight
-kilobytes. Nothing in the package loads any of them. **Anything dropped into `Resources/Images`
+kilobytes — three, since `275:2179`'s ground joined them as `home-ground.svg` on 2026-08-19; it
+arrived in `Resources/Images` under Figma's own `Rectangle 10.svg`, which is the name the file
+beside it already had. Nothing in the package loads any of them. **Anything dropped into `Resources/Images`
 ships**, so check what is in it before adding to it.
 
 Two more things the files turned out to say. Several carry **two stacked pattern images** and only
@@ -375,6 +441,41 @@ rather than a field on `Place`, which is a debt to pay the moment content stops 
 The drawings depict real places, so the rule `PortraitFrame.swift` sets out applies: the picture is
 a licence question and the words under it are the editorial one. Nothing is captioned from the
 artwork — every stamp's name and region come from the Run's own snapshots.
+
+### The story preview's sheet is the photograph's paper, not `paperCream`
+
+`typewriter.png` (720 × 573, **no colour profile** — its bytes are sRGB) is half of the sheet on the
+story preview: the drawn page sits on top of the photographed one and the two have to be the same
+piece of paper. They were not. The drawn half was `paperCream` `#EEE7D2`; the photographed half is
+`#E4D8CD`, the mean of the flat field at x 165…575, y 5…60, which does not move a level anywhere
+from row 0 to row 62. Ten levels apart, and on screen it read as two sheets in two creams.
+
+`TypewriterMetrics.paperTone` is that sampled `#E4D8CD`, and it is **not** a palette token. Every
+other Hisplora surface keeps `paperCream`; this one is matching a photograph rather than carrying
+the design's cream, and adding a near-duplicate to the palette would leave the next author choosing
+between two creams with no rule for which. The two inks the sheet is typed in are measured against
+it directly instead — `inkDark` 12.5:1, `inkMuted` 4.7:1 — in `TypewriterTests`, which also
+re-samples the file so a re-export fails rather than drifting.
+
+Sampling it through a converting reader (`NSBitmapImageRep` → sRGB) answers `#E9DFD6`. That is a
+measurement of the conversion, not of the picture, and it is the number an untagged PNG will hand
+anyone who checks this the easy way.
+
+Three geometry values were re-read off the same file at the same time. The paper's lit edges are at
+x 143 and x 594, so the sheet is 452/720 of the machine and its centre is 8.5 px right of the
+image's own — both already right to within half a pixel. Where the drawn sheet *ends* was not: it
+was pulled down 105/573, which is past the machine's paper guide (rows 88…102) and into the lit
+strip below it, so a band of photographed paper stood under the drawn sheet in the wrong cream. It
+now ends at 62/573, inside the flat field, where the two halves are the same colour and the join has
+nothing to show. The short black gradient that used to fake a falloff at the foot of the page went
+with it: below the join the shading is the photograph's own.
+
+Two consequences worth knowing. The `.offset` that nudges the sheet onto the photograph's centre
+line had to move *after* `.background` — `.offset` leaves the layout frame where it was and
+`.background` fills that unshifted frame, so the typed text was sitting about 4 pt off the sheet it
+was typed on. And the shallower join costs the page some room, so `maximumSheetCharacters` came down
+from 300 to 210: at 300 the distance and the duration were pushed behind the roller, which is the
+one thing on that page that must not be hidden.
 
 ### The plate on `293:1613`, and what the code draws instead
 
@@ -417,6 +518,47 @@ licensed, or generated for it. The seam for that is already in place: `HisploraP
 spray whenever the file is absent (as it is today). Dropping the file in is the whole change; no sizes
 or layout move.
 
+#### 2026-08-18: the plate ships as a picture, with the names taken out of it
+
+The user asked for the notice's background to be the plate itself, from `625:4373` — the same screen
+again on a later frame, with the same plate (`625:4377`) under the same three blanking rectangles
+(`625:4378`–`4380`). It now ships as `Resources/Images/plaque-plate.png`, and
+`HisploraPlaquePanel` draws it in place of the shape, the fill, the engraving and the two rules. The
+drawn plate above is **not** deleted: it is the fallback, and it is what the screen returns to if the
+picture is ever replaced or dropped.
+
+**The names are erased from the pixels, and that is a different claim from the licence being clear.**
+The exported file's names sit on flat cream between y 330 and 540; a grayscale morphological closing
+(dilate then erode, radius 3) over that box takes thin dark strokes off a light ground and leaves the
+cream, its gradient and the faint watermark. Verified by re-running the same scan that found the text:
+the only dark run left in the file is the small glyph on the lower lobe. What is *not* settled is the
+engraving's own licence — it is still somebody else's plate, and commissioning or generating a
+replacement is now a one-file swap rather than a rewrite.
+
+**Three-slice, not resize.** Content length varies with Dynamic Type and a plain `.resizable()`
+stretches the crest with the cream. `HisploraPlateArtMetrics` pins the caps at 430 from the top and
+141 from the bottom, leaving the 60-pixel band at y 430…490 — measured to be the one horizontal strip
+of the artwork carrying no ornament at all, only the two edge rules, which run vertically there and so
+extend rather than smear. `PlateArtTests` re-measures that band against the shipped pixels, so an
+artwork swap that puts a flourish there fails rather than ships.
+
+**The picture is placed by its sheet, not by its edges.** The artwork is not centred in its own canvas
+(26 points of margin on the left, 38 on the right) and every column on this screen is measured against
+the sheet's straight sides. `HisploraPlateArtMetrics.frame(forPanel:)` does that arithmetic and
+`PlateArtTests` asserts the result lands on `HisploraPlaqueShape.body(in:)` to within half a point —
+which is what lets the drawn plate and the picture be swapped for one another with no layout moving.
+
+**Contrast, since the ground is now a picture.** `KultaraPaperTexture`'s note — that the contrast suite
+cannot see a picture behind text — applies here in full, so the darkest opaque pixel anywhere text can
+land (`#D3CAAD`, a faint flourish) is measured directly: `inkBody` clears **5.95:1** on it, against
+7.9:1 on the `paperCream` token. Above AA for body text, and a real drop worth knowing about. The
+plate's cream itself samples `#EDE6D1`, one step off `paperCream`'s `#EEE7D2`, so every other ratio
+the theme suite measures still describes what is on screen.
+
+**Motion.** The plate fades and rises 14 points over 0.5 s on appear, and does neither under Reduce
+Motion — where the value still flips, so the screen is complete on the first frame rather than fading
+in slowly. Seen on iPhone 17 / iOS 26.5: `screenshots/m9-place-notice-plate.png`.
+
 ### `452:3028`'s site plan is content, not chrome — and that is the whole decision
 
 The plan ships. What changed is *where* it ships from, and it is the one structural decision the three
@@ -450,6 +592,194 @@ new source entry, a `contentBundleVersion` bump.
 inventing coordinates for them would be the app asserting where three things stand inside a real puri
 — the precise claim the citation exists to qualify. `SiteMapPresentation.markers` ships empty and the
 view renders whatever the content eventually carries.
+
+### `275:2178` and `275:2309` — the Home ground and the illustrated island
+
+Two frames landed on 2026-08-19, and between them they are an asset-and-ground pass rather than a
+new screen: nothing was built that did not already exist, and one measured colour moved.
+
+**The ground, from the export rather than from the codegen.** `get_design_context` reports node
+`275:2179`'s fill as `#F4EADD`, and that is the flattened appearance, not the sheet. The frame's own
+export — `home-ground.svg`, filter `filter0_n_275_2179` — is a **#FDF2DE** stock with a printed
+speckle over it: `feTurbulence` fractal noise, `luminanceToAlpha`, a discrete transfer keeping ten
+of a hundred steps, and an `rgba(147, 130, 97, 0.5)` flood composited back in.
+
+`KultaraPalette.light.paper` is now **#FDF2DE**, the stock, and the speckle is
+`KultaraPaperTexture`, drawn over it — the same split `HisploraGround` documents and for the same
+reason: `KultaraThemeTests` measures token pairs and cannot measure a picture.
+
+Rendering it needed a real SVG renderer (headless Chrome; nothing else on this machine runs SVG
+filters, and no iOS image loader does either). The render has exactly **two** colours — `#FDF2DE`
+and `#C8BAA0` — and `#C8BAA0` is the flood at half alpha over the stock, which is how the coverage
+below is known exactly rather than estimated. `home-ground.png` is that render whole: 1206 × 2622,
+**1.43% speckle**, 98 KB.
+
+It **supersedes `paper-texture.png`**, the museum direction's earlier hand-made grain — a 445 KB
+speckle meant to be attenuated over an arbitrary cream. Keeping both would have left two grounds
+with no rule for which screen got which, so the old one is deleted and `KultaraPaperTexture` is now
+`KultaraGround`, matching `HisploraGround` in shape: an opaque sheet drawn over the token, at full
+opacity, because the design's own alpha is in the pixels. `KultaraGroundTests` therefore stopped
+asserting on opacity, which had become the wrong proxy, and asserts on
+`opacity × speckleCoverage × speckleAlpha` instead — plus that the render's stock still *is* the
+`paper` token, which is what keeps every measured ratio describing the sheet.
+
+The two procedural Hisplora map canvases tiled the old grain at 0.4 with `.multiply`; they now tile
+this sheet the same way. It is 98.6% `#FDF2DE`, so multiplying warms their parchment slightly and
+the speckle lands as a faint dot.
+
+**Ten museum screens were painting the flat token over it, and that is why the catalogue read as
+flat cream while the Journal read as printed paper.** `KultaraThemeProvider` draws paper *and* the
+sheet behind the whole app, but `QuestListView`, `QuestPreviewView`, `SettingsView`,
+`RunSummaryView`, `QuestRunView`, `OnboardingView`, `SideQuestFlowView`, `LetterCollectionView` and
+the two wireframe screens each ended with `.background(palette.paper.color)` — an opaque flat
+colour on top of the speckle. Those grounds are not redundant (a `sheet` or `fullScreenCover` is
+presented outside the provider's tree and would otherwise show the system's), so they were replaced
+rather than removed: `.kultaraGround()` paints the token *and* the sheet. Same colour as before,
+with the printing that was being covered up.
+
+**It replaced the Journal's brown ground too, and the Journal's ink flipped with it.** On
+2026-08-19 the author asked for one ground rather than two, so `hisplora-ground.png` — `547:2953`'s
+`#6E3B26` sheet — and the whole `HisploraGround` type are deleted, and `HisploraStage(grain:)` now
+prints `KultaraGroundSheet(respectsAppearance: false)`. The flag matters: this direction is a fixed
+editorial pairing that does not follow the system appearance, so it asks for the sheet
+unconditionally, where the museum theme keeps the light-only rule.
+
+A cream ground under cream type is not a ground swap, it is an unreadable screen, so the three
+callers that print the sheet — the Sealed Letters shelf, the Explorer's Card, the opened letter —
+moved from `ground: \.brownMid` to a new **`paperSheet`** token (`#FDF2DE`, the render's own stock,
+so what is measured is what is drawn) and their type from `inkCream`/`inkDusty` to
+`inkDark`/`inkMuted`. `HisploraExplorerCard`'s tab row and rule, and `HisploraSealBadge`'s label,
+went with them — they are only ever set on those screens. The ratios improve rather than degrade:
+`inkDark` is 14.18:1 on `paperLight` and **15.26:1** on `paperSheet`, against `inkCream`'s 9.63:1
+on `brownDeep`. `HisploraThemeTests` enumerates the new token like any other, so the four papers
+are measured as four.
+
+The brown tokens are untouched and still carry the story flow, which is where the frames actually
+draw brown.
+
+The ratios went **up**, not down: ink on paper 15.01:1 → **15.26:1**, the hairline 4.06:1 →
+**4.13:1** against a 3:1 requirement. The speckle costs about 1% of each — ink lands at 15.12:1 on
+the sheet as rendered.
+
+**The cards' photographs.** `275:2178` draws four cards over three images: a watercolour candi
+bentar (cards one and three — the frame itself reuses it), a watercolour puri, and a photograph of
+Pura Besakih. The first is now the real quest's `heroImageAsset`; the other three are the
+`dummy-quest-*` imagesets the filler cards already used. Their provenance is unrecorded, exactly as
+`PlaceholderQuestCatalog`'s header already says of the images it replaced: they must not survive
+into anything public.
+
+**The card's caption is now the frame's wash, and that is a recorded loss.** `275:2183` draws one
+89-point block running from black at 80% along its bottom edge to nothing at its top — the
+gradient's `startPoint` is `(0.47, 1)`, so it is drawn upward — with 15 points of horizontal inset,
+none vertical, and 10 between the title and the facts. `PhotoQuestCard` drew that as a fade strip
+above an **opaque** `photoScrim` block instead, so the type only ever landed on a colour
+`PhotoScrimTests` could measure. On 2026-08-19 the author asked for the frame's version and it is
+what ships.
+
+What is lost is precise: the tokens are unchanged and still measured, but this card is no longer
+where they apply. The title sits high in the block, where the wash is weakest, over an arbitrary
+photograph — so `NFR-A11Y-03` is unverified *here* rather than violated in the palette. Two things
+were kept: `.black` is drawn as `palette.photoScrim` so the colour stays a token, and the frame's
+208 and 89 remain `@ScaledMetric` **minimums** rather than heights, so the card still grows instead
+of clipping at the largest content sizes (`NFR-A11Y-01`). Recovering the measurement means an
+opaque band behind the title, which is the thing that was just removed.
+
+**The island.** `275:2309` draws the region map as a wide fantasy chart of Bali — 1469 × 1071,
+landscape, the whole island plus Java's tip, Nusa Penida and Lombok. It replaces the 853 × 1844
+portrait drawing, so `manifest.regionMap.aspectRatio` goes 0.4626 → **1.3716** and
+`contentBundleVersion` to **2026.09.4**.
+
+That aspect flip is the whole reason the map now scrolls in both directions. `RegionMapView` fills
+the viewport, so a 1.37 drawing on a 0.46 screen is drawn 1199 points wide against 402 — the frame's
+own 1198 — and two thirds of it is off-screen at rest. Horizontal panning was already implemented
+and simply had nothing to pan before. Three things did change:
+
+- **The pinch floor is 1 — the fitted height is as far out as the map goes.** It was briefly the
+  whole artwork, letterboxed; the author's decision on 2026-08-19 is that the current height is the
+  limit, so pinching out stops where the drawing still covers the screen and seeing the rest of the
+  island is a pan. `RegionMapArtwork.seaEdge` (#8B9999, sampled from the artwork's own four
+  corners, which agree to within two levels) stays for the moment during a pinch when the live
+  magnification runs ahead of the clamp. Deliberately **not** a palette token: nothing is measured
+  against it.
+- **Returning to fill no longer resets the pan.** On this artwork fill still leaves two thirds of
+  the island off either side, so zeroing it threw the reader back to the middle of the drawing.
+- **The map opens on the quest, not on the artwork's middle.** `openOnThePins` used to centre only
+  when it had zoomed in; with one pin it did nothing and the marker opened half off the right edge.
+  It now centres whenever there are pins at all.
+- **Double tap still cycles fill ↔ 2.5×** and never visits the pinched-out view. That is somewhere
+  a reader asks to go, not somewhere a stray tap should land them.
+
+**The markers.** The frame does not use a pin. It stands a small ink-and-wash building on the
+coast, blows four overlapping puffs of smoke behind it, and writes the quest's name underneath in
+the display serif with a hard outline — which `MapPlaceLabel` already drew. `MapLandmarkFigure`
+composes the first two at the frame's own geometry (a 159 × 87 cluster with an 85 × 61 building at
+(37, −3), so the building's feet are inside the fog and its roof out of the top). Three drawings
+ship; `MapLandmarkCatalog`, in the app target, is the quest-id → drawing table, for the same reason
+`StampArtworkCatalog` is: which illustration a quest gets is a decision the visual direction owns
+and a content update has nothing to say about it. An unlisted quest gets the meru, which is generic
+Balinese architecture and not a picture of somewhere it does not go.
+
+The figure is 120 points across and most of that width is fog at low alpha, so the **pressable area
+stays a 44-point square** (`NFR-A11Y-06`), hung on the building rather than centred on the figure —
+`MapLandmarkFigure.buildingCentreFraction` is published for exactly that. A target the size of the
+drawing would be mostly transparent map, which is the overlap failure the old label-sized target
+had.
+
+**Every `mapPoint` was re-authored.** The old values were placed against the portrait drawing and
+mean nothing on this one. The new ones were fitted to *this illustration's own geometry*: two
+features read off the artwork at known real coordinates (the north coast at Singaraja's longitude,
+the east tip of Karangasem, the Bukit's southern tip) give 960 px per degree of longitude and 1206
+per degree of latitude — the drawing is stretched about 1.24× vertically against true scale, which
+is what makes a real map projection useless here — and the cluster is anchored on where `275:2309`
+itself stands "The Last Traces of Badung". Each resulting point was then **looked at on the
+drawing** before it was written down. That is still authoring, not deriving: the numbers come from
+the picture, and CLAUDE.md's rule about not projecting coordinates onto a stylised coastline is the
+reason the fit is to the illustration rather than to Bali.
+
+The visible correction: `park23`'s `mapPoint` was a copy of Catur Muka's, 9 km from where the place
+actually is. It now sits on the Bukit isthmus.
+
+**What the frame draws that the code does not.** Three markers on `275:2309` name quests that do not
+exist in the content tree — "Where the Gods Come to Dance", "The Serpent's Tidal Shrine", "The
+Mother Temple's Forgotten Vow". The map renders one marker per shipped quest and there is one, so
+it draws one. `275:2178`'s four cards are a different case: three of them ship as
+`PlaceholderQuestCard`, which is drawn like a card, cannot be tapped, and says so — see
+`PlaceholderQuestCatalog`. The frame's two liquid-glass buttons on the map (`rectangle.stack.fill`,
+`wand.and.sparkles`) are also not built: neither has a behaviour behind it, and the screen already
+has its way back.
+
+### `719:3285` — the envelope, redrawn
+
+An asset swap onto geometry that did not move. The frame is 290 × 174 — the same card
+`HisploraEnvelopeMetrics` was already built against — with the same three papers in the same three
+places, so nothing about the opening animation, the pocket mask or the flap hinge changed:
+
+| Frame node | Ships as | Transform |
+|---|---|---|
+| `719:3286` Rectangle 1 | `envelope-inner.png` | `rotate(179.8°)` alone — a true half turn |
+| `719:3287` Rectangle 5 | `envelope-body.png` | `rotate(-179.8°) · scaleY(-1)`, which **nets to a horizontal mirror**, not a half turn |
+| `719:3288` Rectangle 6 | `envelope-flap.png` | the same net mirror, on its own 290 × 120.652 board, with the export's own bleed |
+| `719:3292` + `719:3293` | `wax-seal.png` | the wax at 58 × 53.399 with the emblem struck into it |
+
+**The two transforms are not the same and reading them as the same puts the notch on the wrong
+edge.** Tailwind composes rotate before scale, so `-scale-y-100 rotate-[-179.8deg]` is
+`R(180)·S(1,−1)` = `S(−1,1)` — a mirror. Compositing it as "rotate then flip" instead turns the
+pocket's V notch upside down and stands the flap on its point, which is exactly what the first pass
+produced.
+
+Two numbers moved with the artwork. The wax is **58** wide where it was 54.269, and it is struck at
+`(117, 90)` rather than `(118.28, 92.64)`. It ships on a square 58-point board with the wax centred
+on it — `HisploraWaxSeal` fits a square — so the board's top edge sits 2.3 above the wax's, and
+`sealCentre` carries that.
+
+The emblem is new: a Balinese candi bentar with a figure between the gates, cream on the crimson.
+It is cropped by its own 39.895 box in the frame (129.41% × 115%, offset −15.03% / −6.67%) and that
+crop is baked into the export, because the box is what the design shows.
+
+`envelope-tape.png` survived, which was nearly a mistake: `719:3285` draws no tape and
+`HisploraEnvelope` never draws `tapeImage`, so it looked dead. It is not — `SealedLetterEnvelope`
+uses it to hold the quest's photograph onto the pocket in `511:1464`. Grepping one file was what
+made it look unused.
 
 ## What the frames draw that the code does not, and why
 

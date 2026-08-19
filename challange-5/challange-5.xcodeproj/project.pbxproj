@@ -577,11 +577,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YG7T52597K;
+				DEVELOPMENT_TEAM = DWTZNGA7Y8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hisplora;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Used only when you choose to take a photo for an activity on a quest. Photos stay on this device and are never sent anywhere.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Used to tell you when you walk past a historical place, even when the app is closed. Your location is never sent anywhere.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used only to confirm you have reached a checkpoint on a quest you are walking, and only while the app is open. Your location is never sent anywhere.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -612,11 +613,12 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = YG7T52597K;
+				DEVELOPMENT_TEAM = DWTZNGA7Y8;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hisplora;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Used only when you choose to take a photo for an activity on a quest. Photos stay on this device and are never sent anywhere.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Used to tell you when you walk past a historical place, even when the app is closed. Your location is never sent anywhere.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used only to confirm you have reached a checkpoint on a quest you are walking, and only while the app is open. Your location is never sent anywhere.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;

@@ -18,14 +18,16 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case onboardingSkip
     case onboardingNext
     case onboardingStart
-    case onboardingWelcomeTitle
-    case onboardingWelcomeBody
+    /// The spoken position of the segmented bar (`523:2053`). `%d of %d`.
+    case onboardingProgress
+    case onboardingExploreTitle
+    case onboardingExploreBody
     case onboardingPocketTitle
     case onboardingPocketBody
-    case onboardingAccuracyTitle
-    case onboardingAccuracyBody
-    case onboardingRespectTitle
-    case onboardingRespectBody
+    case onboardingQuestTitle
+    case onboardingQuestBody
+    case onboardingCollectionTitle
+    case onboardingCollectionBody
 
     // Discovery — FR-DISC-02/05
     case questListTitle
@@ -171,6 +173,56 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// `447:1910` — the hint under the small scroll at the foot of the sheet.
     case taskDetailSeeMap
     case taskDetailSeeMapHint
+
+    // The camera — `1:4681` — and the sheet once it holds a photograph — `1:4827`
+    // ("Quest_Filled" with an image in it).
+    /// `1:4690` — the camera screen's own title.
+    case cameraTitle
+    /// `1:4692` — the cross that leaves the camera without taking anything.
+    case cameraClose
+    /// `1:4699` — the shutter, which has no label in the frame and needs one spoken.
+    case cameraShutter
+    /// `1:4702` — the flash control, read out as the state it will move to.
+    case cameraFlashOn
+    case cameraFlashOff
+    /// `1:4697` — the 2× badge, read out as the magnification it will move to.
+    case cameraZoomIn
+    case cameraZoomOut
+    /// No capture device — the Simulator, and an iPad with the camera disabled by policy. Not an
+    /// error: the task is still resolvable, because nothing here gates progression (`AD-2`).
+    case cameraUnavailable
+    /// Camera access refused. Names what is lost and where the switch is, rather than re-asking:
+    /// iOS only ever shows the system prompt once.
+    case cameraDenied
+    /// `1:4852` — the cross on the thumbnail, which discards the photograph and re-offers the
+    /// camera.
+    case taskPhotoRemove
+    /// `1:4855` — the one action on the filled sheet.
+    case taskPhotoSubmit
+    /// Read out in place of the walker's own photograph, which cannot describe itself.
+    case taskPhotoThumbnail
+    /// What the sheet says once a photo task has been resolved with a photograph.
+    case taskPhotoSavedNote
+
+    // The story behind a task — `1:4609` ("Explanation per Quest") — and the stamp it hands over
+    // to — `1:4641` ("Quest").
+    /// `1:4621` — the storyteller's opening, which is the app's words rather than the quest's.
+    case questExplanationLead
+    /// `1:4613` — the whole screen is the control.
+    case questExplanationContinue
+    case questExplanationBack
+    /// `1:4645` — what the walker has just done.
+    case stampAwardHeading
+    /// `1:4648` — which of the walk's stamps this is. `%1$d` of `%2$d`.
+    case stampAwardCaption
+    /// `1:4649` — what is left at this place, and the way on.
+    case stampAwardBody
+    /// The same, for the last task at this checkpoint: nothing is left here.
+    case stampAwardBodyAllDone
+    /// `15:2799` — leaves the checkpoint for the walk to the next place.
+    case stampAwardNextLocation
+    /// `1:4654` — back to this checkpoint's task menu. `%d` is how many are still unresolved.
+    case stampAwardMoreQuests
     /// `452:3050`'s screen, closed.
     case siteMapClose
     /// `452:3038` — the gesture hint.

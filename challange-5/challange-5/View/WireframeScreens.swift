@@ -37,7 +37,7 @@ struct SplashWireframeView: View {
         }
         .padding(KultaraMetrics.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(palette.paper.color)
+        .kultaraSpeckledGround(palette.paper)
         .task {
             // Short, and skippable by the button above — a splash nobody can get past is a splash
             // that makes every later screen slower to reach.

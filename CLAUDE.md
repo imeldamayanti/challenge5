@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A native iOS app (SwiftUI, iOS 18.0) for story-led cultural heritage walking quests in Bali. Users walk a fixed-order route of physical checkpoints, unlock narrative lore at each one, and finish with a shareable recap.
 
-Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. Photo tasks, the share card, the recall survey and proximity alerts are not built. Telemetry and the kill-switch are **half** built: the server side is deployed and the client kits (`TelemetryKit`, `GovernanceKit`) exist and are tested, but nothing in the app calls either — see `.claude/plans/supabase/c1-client-phase0.plan.md` §6. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
+Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. The share card, the recall survey and proximity alerts are not built; photo tasks are, as of 2026-08-19. Telemetry and the kill-switch are **half** built: the server side is deployed and the client kits (`TelemetryKit`, `GovernanceKit`) exist and are tested, but nothing in the app calls either — see `.claude/plans/supabase/c1-client-phase0.plan.md` §6. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
 
 Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — **is done**: 110 tests in `challange-5Tests`, all passing, plus the two source-scanning guards in the package. `.claude/plans/supabase/b0`–`b3` built and deployed a Supabase backend, and `.claude/plans/supabase/c1-client-phase0.plan.md` added the kill-switch publisher, `GovernanceKit` and `TelemetryKit` — **none of which the app calls yet**, deliberately.
 
@@ -70,18 +70,22 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 448 tests / 56 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `swift test` (from `Packages/Kultara`) | 482 tests / 61 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
 | `xcodebuild test -only-testing:challange-5Tests` | 164 tests / 18 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
-**Two `swift test` failures are pre-existing on this branch and are not yours.** They were red at
-`09baa2f` and neither is in a file the Figma port touched:
+**Three `swift test` failures are pre-existing on this branch and are not yours.** None is in a
+file the Figma port touched, and all three reproduce in a clean worktree:
 
 - `PlaqueGeometryTests.theCornerIsAScoopArcedAboutTheCornerPointItself` — 2 issues, the plate's corner
   geometry in `PlaquePanel.swift`.
 - `PermissionCallBoundaryTests.theAppUsesNoBackgroundLocationAndNoTrackingPrompt` — `SideQuestProximityService.swift`
   calls `requestAlwaysAuthorization` and `startMonitoring(for:)`, which that guard bans. A real
   finding about the sidequest proximity work, unrelated to the run flow.
+- `BundledContentRepositoryTests.theBundleShipsFiveSidequestsFillingOneCollection` and
+  `suppressingAPlaceRemovesOnlyItsOwnSidequest` — 4 issues. The bundle grew a sixth place
+  (`park23`), its sidequest and a second collection at `2026.09.3`; the assertions still say five
+  and one. Stale expectations about a content change, not a defect.
 
 `FloatingTabBarClearanceTests` was a **third** pre-existing break of a different kind: the test was
 committed without the `KultaraMetrics` API it exercises, so the whole package suite failed to compile
@@ -287,7 +291,7 @@ These are the places where a reasonable-looking change silently breaks a guarant
 - **`LocalizedText` has no language fallback.** A missing `id` or `en` translation is a decode failure, never a runtime degradation into a mixed-language lore passage (`NFR-I18N-03`).
 - **Validator rules live in `ContentKit`**, shared by the CLI and the runtime loader, so the two cannot disagree about what valid content is. Adding a rule means adding it in one place and adding a test that proves violating content is *rejected* — a test that only confirms valid content passes proves nothing.
 - **Contrast is measured, not reviewed.** `DesignSystem/Contrast.swift` plus `KultaraThemeTests` and `HisploraThemeTests` assert every pair of **both** palettes against WCAG ratios (`NFR-A11Y-03`). A palette exposes `contrastPairs`, and a second test asserts that every token appears in at least one pair — so adding a colour without measuring it fails the suite rather than shipping. Where a sampled design value fails, *the theme yields and the deviation is recorded* (`docs/hisplora-tokens.md` lists the two that moved and why).
-- **`mapPoint` is authored, not derived from `coordinate`.** The region map is a hand-drawn illustration with a stylised coastline; projecting real coordinates onto it puts every pin somewhere wrong while looking precise. The validator checks range, not geography.
+- **`mapPoint` is authored, not derived from `coordinate`.** The region map is a hand-drawn illustration with a stylised coastline; projecting real coordinates onto it puts every pin somewhere wrong while looking precise. The validator checks range, not geography. Since `2026.09.4` the points are fitted to the *illustration's own* geometry — features read off the drawing at known real coordinates give 960 px per degree of longitude and 1206 per degree of latitude, because the picture is stretched about 1.24× vertically against true scale — and every point was looked at on the drawing before it was written down. That is the rule being followed, not bent: a real projection would still be wrong, and swapping the artwork means re-authoring every point again (`docs/hisplora-tokens.md`, `275:2309`).
 - **Tasks never gate progression.** `blocksProgression` must be `false` for all content (`AD-2`, rule V8). Photos are keepsakes; the GPS radius is the gate.
 - **Arrival needs the accuracy check, not just the distance check.** `FR-ARR-01` is two conditions, and the second is the load-bearing one: without `horizontalAccuracy <= radius`, a 500 m cell-tower fix unlocks a 75 m checkpoint from the next neighbourhood. It is also why the manual override is mandatory rather than a nicety (`FR-START-10`) — inside a covered market the accuracy test fails legitimately and often.
 - **A completed Run stays writable for reading and answering.** The final checkpoint completes the walk the instant it is reached (`FR-DONE-01`), while the walker is still standing there with the closing reflection unanswered. `markLoreOpened` and `recordTaskResult` therefore accept `completed` as well as `active`; gating them on `active` makes completion swallow the ending that `FR-TASK-07` requires.
@@ -337,7 +341,7 @@ Still unguarded:
 
 ## Two visual directions, split at a screen boundary
 
-The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task list → task sheet → site plan** → transition.
+The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task sheet → task list → site plan** → transition — and, since 2026-08-18, **onboarding**, which is now the first Hisplora surface the app shows and is reached before the museum theme is ever seen.
 
 The last three landed 2026-08-17 from Figma `452:3132` ("Quest 1/3"), `447:1880` ("Quest_Filled") and `452:3028` ("Site Map"): `CheckpointDetailScreen` (restyled from the earlier `51:201`), the new `TaskDetailScreen`, and the new `PlaceSiteMapScreen`. `452:3028` is the **one story-flow screen on paper rather than brown** — `mapGround`, its own token — because a plan is a document. Five new palette tokens, four new New York type roles, and four recorded deviations came with them; `docs/hisplora-tokens.md` has all of it.
 
@@ -345,6 +349,23 @@ Two rules keep that from rotting:
 
 - **The seam falls between screens, never inside one.** A half-restyled screen is not survivable; a boundary between two whole screens is. `QuestRunView.isOnStoryFlow` is the switch, and it also hides the museum navigation bar on those stages.
 - **Museum-inked components must not be dropped onto a Hisplora ground.** They are measured against paper. `RunRouteMapView` takes `showsChrome:` for exactly this reason — its heading is `palette.seal`, which falls to about 2:1 on brown. This shipped as a real contrast bug before it was caught on device.
+
+Onboarding came from `523:1946`, `523:1973` and `523:1999` on 2026-08-18: four screens rather than
+the frames' three, because `FR-ONB-03`'s pocket-the-phone screen is a P0 MUST that none of the three
+carries and `FR-ONB-02` allows four. It is the second of the four and the one screen drawn with a
+symbol rather than an export. One palette token (`trackDim`), one type role (`onboardingDisplay`) and
+three illustrations came with it. **The three PNGs are 1× and want replacing**: the 3× export
+composites the frame's own cream fill behind the art, and the only transparent form the Figma tool
+returns is a contents-only render it will not upscale. A hand export from Figma at 3× is a drop-in —
+same names, same boxes.
+
+On 2026-08-19 the run flow gained four more from the same board: `1:4681` (the camera), `1:4827`
+(the task sheet holding a photograph), `1:4609` (the story behind a task) and `1:4641` (the stamp).
+They introduced **no new palette tokens, no new type roles and no new packaged art** — the plate
+`1:4616` draws on is `plaque-plate.png`, already shipped for `293:1630`, and the stamp is
+`HisploraStampCard` at the size `1:4647` sets it. The camera is the one screen on neither visual
+direction: it is a full-bleed preview under a translucent black bar, which is the system camera's
+own language rather than this app's.
 
 `docs/hisplora-tokens.md` records where each token was sampled, every measured ratio, and — importantly — the frames' content that was deliberately **not** built: the AI-generated portrait of a named historical figure (a `FR-CP-05` claim with no source or consent record), the external-maps handoff (`AD-3`), and the map screenshot (`FR-MAP-01`).
 
@@ -355,6 +376,23 @@ Authored JSON under `Packages/Kultara/Sources/ContentKit/Content/`. `consent/` i
 Lore is an array of labelled `LoreBlock`s, not prose. Each block carries `accuracy` (`documented` | `oral`) and source references, because `FR-CP-05` requires the epistemic status of each claim to be visible. There is no field for an unlabelled sentence — a writer structurally cannot produce one.
 
 Any change to any content file must bump `contentBundleVersion` in `manifest.json`.
+
+**There is one ground for the whole app.** `275:2179`'s printed sheet (`home-ground.png`,
+`KultaraGround`) is drawn over `KultaraPalette.paper` on every museum screen and over
+`HisploraPalette.paperSheet` on the three Journal screens. It replaced two earlier grounds —
+`paper-texture.png` and `hisplora-ground.png` — and both are deleted. The Journal's type is
+`inkDark`/`inkMuted` accordingly; `inkCream` still belongs to the brown story flow.
+
+A museum screen that needs its own opaque ground — anything reachable as a `sheet` or a
+`fullScreenCover`, which is presented outside the theme provider's tree — uses
+**`.kultaraGround()`**, never `.background(palette.paper.color)`. The flat token is the same colour
+with the sheet's printing painted over it, which is exactly how the catalogue ended up looking
+different from the Journal.
+
+**Never put an SVG in `DesignSystem/Resources/Images`.** `Package.swift` copies that directory
+wholesale, so anything left there ships in every user's app bundle — this is how eighty-nine
+megabytes of base64 stamp exports once rode into the build. Vector sources live in
+`docs/design-sources/`, and the render is what goes in `Resources/Images`.
 
 ## The app-flow chart, and the wireframes standing in for it
 
@@ -405,6 +443,17 @@ auto-advancing and the login carrying a "Skip for now".
   highest-priority two: Catur Muka's seed coordinate is in the **wrong quadrant** (~293 m out, right
   neighbourhood), and Museum Bali's `entryCost: 0` renders as "Gratis"/"Free" for a museum that
   sells a ticket.
+- **The region map is `275:2309`'s wide fantasy island, and it scrolls both ways.** As of
+  `contentBundleVersion` **2026.09.4** `maps/bali-illustrated.png` is a 1469 × 1071 landscape chart
+  (`aspectRatio` 1.3716) in place of the 853 × 1844 portrait one. `RegionMapView` fills the
+  viewport, so it is drawn ~1199 points wide on a 402-point screen — the frame's own layout — which
+  is where the horizontal pan comes from; vertical pan appears above fill, and **fill is the
+  zoom-out limit** — pinching out stops where the drawing still covers the screen, so seeing the
+  rest of the island is a pan, not a zoom. The map opens centred on the pins rather than on the
+  artwork, and returning to fill keeps the pan rather than resetting it. Markers are `275:2309`'s own illustrated
+  buildings standing in fog (`MapLandmarkFigure`, three drawings, quest-id table in
+  `Support/MapLandmarkCatalog.swift`) with a 44-point square target hung on the building — the
+  figure is 120 points wide and mostly transparent fog, so its bounds are not the target.
 - **The shipped site plan is a generated illustration, and the screen says so.** `Place.siteMap`
   (`{ asset, aspectRatio, sourceRef }`) is new as of `contentBundleVersion` **2026.09.2**, and
   `badung-puri-agung-pemecutan` is the only Place that carries one. The drawing annotates a real puri
@@ -414,11 +463,62 @@ auto-advancing and the login carrying a "Skip for now".
   resolves. Replacing it with a real survey is a content change and nothing else. The frame's three
   marker dots are **not** drawn: nothing authors them, and inventing coordinates would be the app
   asserting where three things stand inside a real puri.
-- **Photo capture is still not built, and `447:1880` does not pretend otherwise.** The frame draws
-  "Take Photo" as the task sheet's one action; only checkpoint 4 (`badung-catur-muka`) has a `photo`
-  task, so the label follows `ContentTask.type` and the sheet hands over to the checkpoint screen
-  where `TaskCard` owns the answer, the save and the skip. A photo task still lands on the
-  `taskPhotoNotInThisBuild` note.
+- **The task sheet comes before the task list, and it is where a task is answered.** `1:4592` →
+  `1:4711` → `1:4904` on the New Hisplora board: the place notice hands over to the checkpoint's
+  **first** task, and the menu is what the walker reaches after resolving it. So `TaskDetailScreen`
+  carries the answer field, the save and the skip (`FR-TASK-02`) — a screen the walk opens on and
+  cannot resolve would be a dead end. Both controls call `QuestRunViewModel.saveTask`/`skipTask`, the
+  same pair `TaskCard` calls on the museum checkpoint screen, so there is one writer of a
+  `TaskResult` and two ways to reach it. `TaskCard` stays: a resumed walk lands on `.atCheckpoint`
+  and never sees the story stages, and `FR-TASK-07`'s closing reflection is answered there.
+  `stageBeforeTaskDetail` remembers which way the sheet was entered so backing out is not ambiguous;
+  forwards it always lands on the menu, whose `checkpointDetailContinueToNext` is the one way out of
+  the checkpoint. Nothing here gates progression (`AD-2`) — the skip is on the same screen, and an
+  empty field saves as a skip.
+- **Photo capture ships now, and it owns the capture session rather than borrowing the picker.**
+  `1:4681` ("Camera") is `View/Component/QuestPhotoCaptureScreen.swift` over
+  `Service/CameraSession.swift` — `AVCaptureSession` + `AVCapturePhotoOutput`, because the frame
+  draws its own chrome (titled dark bar with a cross, a 2× badge, a ringed shutter, a flash toggle)
+  and `UIImagePickerController` will not let a caller replace Apple's. The sidequest challenge still
+  uses the picker (`CameraCaptureView`); that flow has no frame of its own. `1:4827`
+  ("Quest_Filled" holding an image) is the same `TaskDetailScreen` in its filled state: an 88-point
+  thumbnail with `1:4852`'s cross on its shoulder, and a white Submit pill replacing the map hint.
+  Only checkpoint 4 (`badung-catur-muka`) has a `photo` task, and `FR-TASK-06` still drops even that
+  one where photography is prohibited.
+  Three things about it are load-bearing:
+  - **`INFOPLIST_KEY_NSCameraUsageDescription` was missing from both build configurations** and is
+    now in `project.pbxproj`. Without it the sidequest picker would have crashed the app on launch;
+    that was a live bug, not a new requirement.
+  - **The photograph is a draft until Submit.** `QuestRunViewModel.photoDrafts` holds the `UIImage`
+    in memory and `saveTask` is the one caller of `PhotoStore.save` — `1:4852`'s cross discards the
+    shot, and a file written at the shutter and discarded a second later is an orphan in the
+    walker's Documents directory that nothing would ever collect. `RunEngine.recordTaskResult` now
+    takes `photoRelativePath`, which finally fills the `TaskResult` field that shipped unused.
+  - **Whether a camera exists is asked as `AVCaptureDevice.default(for: .video) != nil`**, not as
+    `UIImagePickerController.isSourceTypeAvailable(.camera)`. The Simulator answers `true` to the
+    picker's question and has no capture device, so the sheet offered a camera the camera screen
+    then had to apologise for. Both screens now ask the same question. On a device with none, the
+    sheet says so and the skip is what resolves the task (`AD-2`).
+- **Two screens now sit between resolving a task and the task menu.** `1:4609` ("Explanation per
+  Quest") is the story behind the task, and `1:4641` ("Quest") is the stamp; `taskDetail` →
+  `questExplanation` → `stampAward` → `checkpointDetail`/`atCheckpoint`. Four things worth knowing:
+  - **It is reached on a skip as well as on an answer.** `AD-2` and `FR-TASK-02` make the two
+    resolutions the same kind of outcome; withholding the story from a walker who skipped would turn
+    "offered without apology" into a penalty.
+  - **`1:4616` is the same stock plate `293:1630` already is**, names baked in and all — so
+    `QuestExplanationScreen` reuses `HisploraPlaquePanel` and `plaque-plate.png` rather than shipping
+    a second copy of the same picture. Do not re-export it.
+  - **The explanation renders `Place.loreStandalone`, and at a sacred Place that is the same text
+    `PlaceNoticeScreen` already printed.** `ContentTask` has no explanation field; adding one is a
+    schema change, a validator rule, a `contentBundleVersion` bump and five newly authored sourced
+    passages, which is a content decision with an owner. It carries the accuracy label and the
+    citation the frame does not, because the Story Reveal's `FR-CP-05` exception is still unsigned
+    and `s0` D6 forbids extending one by inference.
+  - **The stamp is presented there, not granted there.** `FR-CP-07` awards it on arrival in
+    `RunEngine.applyArrival`; `StampAwardScreen` writes nothing. Its artwork comes from
+    `StampArtworkResolver`, which must be handed **the active run alongside the finished ones** —
+    the resolver builds its stamp → place table from the runs it is given, so finished-only means a
+    first-time walker's quest is in no table and the window renders empty.
 - **`452:3132` renders one task row and one progress segment, not the frame's three.** The frame is
   titled "Quest 1/3" and invents three tasks ("The Iron Statue", "The Ancient Script", "The Whip
   Bearer") that exist nowhere in the content tree; the shipped checkpoints carry exactly one task

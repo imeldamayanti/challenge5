@@ -106,9 +106,11 @@ public struct HisploraSealBadge: View {
         VStack(spacing: KultaraMetrics.sm) {
             HisploraWaxSeal(wax: wax)
                 .frame(maxWidth: .infinity)
+            // `inkDark`, not `inkCream`: the Explorer's Card that sets these badges stands on
+            // `275:2179`'s cream sheet as of 2026-08-19, and a cream label on it is invisible.
             Text(name)
                 .kultaraFont(.editorialLabel)
-                .foregroundStyle(palette.inkCream.color)
+                .foregroundStyle(palette.inkDark.color)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
         }

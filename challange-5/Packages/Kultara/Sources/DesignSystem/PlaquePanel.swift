@@ -8,8 +8,14 @@ import SwiftUI
 /// blank them out). Shipping that file — whole or patched — would put third parties' names and
 /// somebody else's licensed engraving inside every copy of the app.
 ///
-/// So the plate is **drawn**: its silhouette, its cream, its inset rules, and — since the first pass
-/// of this screen read as a blank cream ticket next to the mock-up — its engraving too. The
+/// **That changed on 2026-08-18, halfway.** `plaque-plate.png` now ships the plate as a picture with
+/// the names erased from its pixels, and `HisploraPlaquePanel` prefers it — see
+/// `HisploraPlaqueArtwork.plate`. The names problem is closed; the *licence* on the engraving is not,
+/// and the drawing below is what the app falls back to and what it returns to the moment a
+/// commissioned ornament replaces the file. Nothing here is dead code.
+///
+/// So the plate is also **drawn**: its silhouette, its cream, its inset rules, and — since the first
+/// pass of this screen read as a blank cream ticket next to the mock-up — its engraving too. The
 /// engraving is this project's own vector work rather than a trace of the stock plate: an acanthus
 /// spray at the head, four corner curls, a pendant palmette on the lower lobe, and a faint
 /// quatrefoil field over the whole sheet. It is the same *kind* of ornament in the same places at
@@ -465,6 +471,111 @@ public enum HisploraPlaqueArtwork {
     /// demanded the file would fail until it exists, and one that demanded its absence would fail the
     /// day it arrives.
     public static var isAvailable: Bool { engravingURL != nil }
+
+    /// The **whole plate** as a picture — silhouette, cream, engraving and rules in one — rather than
+    /// an engraving to be laid over the drawn shape. When this resolves, the panel draws it *instead
+    /// of* the shape, the fill and the two rules; when it does not, everything above still runs.
+    ///
+    /// `plaque-plate.png` is `625:4377` with the engraved names taken out. The names are the whole
+    /// reason the plate was drawn rather than shipped: the stock file carries about two dozen real
+    /// people's and businesses' names across its middle, which the Figma frame hides behind three
+    /// opaque rectangles (`625:4378`…`625:4380`) rather than removing. The shipped file has them
+    /// erased from the pixels — a grayscale closing over the band they occupy, which takes thin dark
+    /// strokes off a light ground and leaves the cream and its gradient — so no third party's name is
+    /// inside the app. **The engraving's own licence is a separate question and is not settled by
+    /// this**: it remains somebody else's plate, and replacing it with commissioned or generated
+    /// artwork is a file swap and nothing else.
+    public static let plate: Image? = {
+        #if canImport(UIKit)
+        guard let url = plateURL,
+              let data = try? Data(contentsOf: url),
+              let image = UIImage(data: data)
+        else { return nil }
+        return Image(uiImage: image)
+        #else
+        return nil
+        #endif
+    }()
+
+    static var plateURL: URL? {
+        Bundle.module.url(forResource: "plaque-plate", withExtension: "png", subdirectory: "Images")
+    }
+
+    /// Whether the plate shipped. Asserted by `PlateArtTests`, unlike `isAvailable` above: this one
+    /// is the screen's background, and losing it silently would drop the place notice back to the
+    /// drawn plate with nothing saying so.
+    public static var plateIsAvailable: Bool { plateURL != nil }
+}
+
+/// Where things are inside `plaque-plate.png`, measured off its own pixels rather than read off the
+/// frame. Every number below came from an alpha and luminance scan of the shipped file, which is why
+/// they are odd numbers: the artwork is not centred in its own canvas and its lobes are not equal.
+///
+/// The panel needs three things from the picture, and none of them are guessable:
+///
+/// 1. **Where the straight-sided sheet is.** The panel's own frame *is* the sheet — its callers inset
+///    themselves to it and measure their columns from it — so the picture has to be placed by its
+///    sheet, not by its edges. `sheet` is the alpha-opaque box at full width.
+/// 2. **Which band may be stretched.** Content length varies with Dynamic Type, so the plate has to
+///    grow, and stretching the whole picture stretches the crest with it. `capTop`/`capBottom` leave
+///    a 60-pixel band at y 430…490 as the only stretchy part — the one horizontal strip of this
+///    artwork carrying no ornament at all, just the two edge rules, which are vertical there and so
+///    survive being smeared down the page.
+/// 3. **What the print area's cream actually is.** `printAreaDarkestCream` is the darkest opaque
+///    pixel anywhere text can land. `PlateArtTests` measures `inkBody` against *it* rather than
+///    against `paperCream`, because a picture behind text is exactly what `KultaraPaperTexture`'s
+///    note warns the contrast suite cannot see.
+public enum HisploraPlateArtMetrics {
+
+    /// The artwork's pixel size. Loaded through `UIImage(data:)` it has scale 1, so these are points.
+    public static let pixelSize = CGSize(width: 395, height: 631)
+
+    /// The straight-sided sheet: alpha-opaque from x 26 to x 357, and from y 41 (the body's top edge,
+    /// above which only the scooped corners and the head lobe reach) to y 576.
+    public static let sheet = CGRect(x: 26, y: 41, width: 332, height: 535)
+
+    /// The 3-slice caps. Top and bottom are drawn at their own size and never stretch; everything
+    /// between them is the flat band. Left and right are deliberately **zero** — the plate is drawn
+    /// at one width per screen and stretching it horizontally as a whole is what the frame does too
+    /// (`625:4377` is the 395-pixel file placed 423 wide).
+    public static let capTop: CGFloat = 430
+    public static let capBottom: CGFloat = 141
+
+    /// The darkest opaque pixel in the area text is printed on, `#D3CAAD` — a faint flourish, not the
+    /// cream. The cream itself samples `#EDE6D1`, one step off `paperCream`'s `#EEE7D2`.
+    public static let printAreaDarkestCream = SRGBColor(hex: "#D3CAAD")
+    public static let printAreaCream = SRGBColor(hex: "#EDE6D1")
+
+    /// How far the picture overhangs the sheet on each side, in its own points. The panel adds these
+    /// back to place the file by its sheet.
+    public static var leadingOverhang: CGFloat { sheet.minX }
+    public static var trailingOverhang: CGFloat { pixelSize.width - sheet.maxX }
+    public static var topOverhang: CGFloat { sheet.minY }
+    public static var bottomOverhang: CGFloat { pixelSize.height - sheet.maxY }
+
+    /// Where the picture is drawn, given the panel's own box.
+    ///
+    /// A function rather than four numbers inside the view, because the thing worth guarding is the
+    /// *result*: the picture's sheet has to land on `HisploraPlaqueShape.body(in:)` to within a
+    /// rounding error, or every column measured against the drawn plate silently shifts. `PlateArtTests`
+    /// asserts exactly that, which a `GeometryReader` full of arithmetic could not be made to.
+    ///
+    /// The vertical overhangs are **not** scaled and the horizontal ones are. That asymmetry is the
+    /// three-slice: the caps draw at their own size whatever the width, so the crest is always
+    /// `topOverhang` points above the sheet, while the width scales as a whole.
+    public static func frame(forPanel panel: CGRect) -> CGRect {
+        let sheetRect = HisploraPlaqueShape.body(in: panel)
+        guard sheetRect.width > 0 else { return .zero }
+        let scale = sheetRect.width / sheet.width
+        return CGRect(x: sheetRect.minX - leadingOverhang * scale,
+                      y: sheetRect.minY - topOverhang,
+                      width: pixelSize.width * scale,
+                      height: sheetRect.height + topOverhang + bottomOverhang)
+    }
+
+    /// Whether a picture that tall has room for both caps. Below this the slices would overlap and
+    /// the plate would tear, so the panel resizes it whole instead.
+    public static func canSlice(atHeight height: CGFloat) -> Bool { height >= capTop + capBottom }
 }
 
 /// The plaque with something printed on it: the cut shape filled in the flow's cream, the engraving
@@ -490,12 +601,22 @@ public struct HisploraPlaquePanel<Content: View>: View {
             // is grown past the content rather than the content squeezed into the shape.
             .padding(.top, HisploraPlaqueMetrics.crestHeight + interiorTop)
             .padding(.bottom, HisploraPlaqueMetrics.pendantDepth)
-            .background {
-                HisploraPlaqueShape()
-                    .fill(palette.paperCream.color)
-                    .overlay { engraving }
-                    .overlay { rules }
-            }
+            .background { plate }
+    }
+
+    /// The shipped plate when it is there, the drawn one when it is not.
+    ///
+    /// Both draw into the same box and put the sheet's straight sides in the same place, so nothing
+    /// above this line — no padding, no column, no measured indent — knows which one ran.
+    @ViewBuilder private var plate: some View {
+        if let artwork = HisploraPlaqueArtwork.plate {
+            HisploraPlateArt(artwork: artwork)
+        } else {
+            HisploraPlaqueShape()
+                .fill(palette.paperCream.color)
+                .overlay { engraving }
+                .overlay { rules }
+        }
     }
 
     /// Shipped artwork when it exists, the drawn spray when it does not. The picture is clipped to the
@@ -529,5 +650,60 @@ public struct HisploraPlaquePanel<Content: View>: View {
                 .padding(HisploraPlaqueMetrics.innerRuleInset)
         }
         .accessibilityHidden(true)
+    }
+}
+
+/// The shipped plate, placed by its sheet and stretched only where it has nothing drawn on it.
+///
+/// It is handed the panel's own box — head lobe, sheet, foot lobe — and has to put the picture's
+/// sheet exactly where `HisploraPlaqueShape` would have put its own, because every column and indent
+/// on the screens above is measured against that sheet. So the frame it draws into is the panel's box
+/// grown by the artwork's measured overhangs, offset back by the same amount, rather than the box
+/// itself.
+///
+/// **Three-slice, not resize.** `interiorTop` and Dynamic Type both make the panel taller than the
+/// picture, and a plain `.resizable()` stretches the crest along with the cream — at accessibility
+/// text sizes that is a visibly elongated ornament. `capTop`/`capBottom` pin the crest and the foot at
+/// their own size and put every extra point into the one flat band. The caps are horizontal-only
+/// zero, so the width still scales as a whole, which is what the frame does too.
+///
+/// `.interpolation(.high)` is the rest of the answer: the file is 395 points wide against a 358-point
+/// sheet at 3× on device, so it is always being scaled, and the default interpolation leaves the
+/// engraving's hairlines stepped.
+struct HisploraPlateArt: View {
+    let artwork: Image
+
+    var body: some View {
+        GeometryReader { geometry in
+            // The panel's box is the sheet plus both lobes; the sheet is what the picture is placed
+            // by, and `frame(forPanel:)` is where that arithmetic lives so a test can hold it.
+            let box = HisploraPlateArtMetrics.frame(
+                forPanel: CGRect(origin: .zero, size: geometry.size))
+            image(height: box.height)
+                .frame(width: box.width, height: box.height)
+                .offset(x: box.minX, y: box.minY)
+                .accessibilityHidden(true)
+                .allowsHitTesting(false)
+        }
+    }
+
+    /// Sliced when there is room for the slices, whole when there is not. Below `capTop + capBottom`
+    /// the caps would overlap and the picture would tear; a panel that short is not a case the place
+    /// notice reaches, but a fallback costs one branch and a torn plate costs a screen.
+    @ViewBuilder private func image(height: CGFloat) -> some View {
+        let m = HisploraPlateArtMetrics.self
+        if m.canSlice(atHeight: height) {
+            artwork
+                .resizable(
+                    capInsets: EdgeInsets(top: m.capTop, leading: 0, bottom: m.capBottom, trailing: 0),
+                    resizingMode: .stretch)
+                .interpolation(.high)
+                .antialiased(true)
+        } else {
+            artwork
+                .resizable()
+                .interpolation(.high)
+                .antialiased(true)
+        }
     }
 }

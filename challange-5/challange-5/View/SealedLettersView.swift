@@ -42,7 +42,7 @@ struct SealedLettersView: View {
 
     var body: some View {
         // `547:2953`'s printed ground, the same sheet the Explorer's Card sits on.
-        HisploraStage(ground: \.brownMid, grain: true) {
+        HisploraStage(ground: \.paperSheet, grain: true) {
             VStack(spacing: 0) {
                 header
                 if model.isEmpty {
@@ -66,7 +66,7 @@ struct SealedLettersView: View {
         HStack(alignment: .firstTextBaseline) {
             Text(UIStrings.string(.journalSealedHeading, language))
                 .kultaraFont(.storyDisplay)
-                .foregroundStyle(palette.inkCream.color)
+                .foregroundStyle(palette.inkDark.color)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: KultaraMetrics.sm)
             if let collection = collections.first {
@@ -74,7 +74,7 @@ struct SealedLettersView: View {
                     onOpenCollection(collection.id)
                 }
                 .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(palette.inkCream.color)
+                .foregroundStyle(palette.inkDark.color)
                 .kultaraTapTarget()
             }
         }
@@ -96,7 +96,7 @@ struct SealedLettersView: View {
             VStack(spacing: 0) {
                 Text(model.selectedLetter?.title ?? "")
                     .kultaraFont(.storyDisplay)
-                    .foregroundStyle(palette.inkCream.color)
+                    .foregroundStyle(palette.inkDark.color)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.horizontal, KultaraMetrics.xl)
@@ -107,7 +107,7 @@ struct SealedLettersView: View {
                 if model.showsSwipeHint {
                     Text(UIStrings.string(.journalSwipeHint, language))
                         .kultaraFont(.metadata)
-                        .foregroundStyle(palette.inkDusty.color)
+                        .foregroundStyle(palette.inkMuted.color)
                         .padding(.top, KultaraMetrics.sm)
                 }
             }
@@ -219,10 +219,10 @@ struct SealedLettersView: View {
             .accessibilityHidden(true)
             Text(UIStrings.string(.journalSealedEmptyTitle, language))
                 .kultaraFont(.questTitle)
-                .foregroundStyle(palette.inkCream.color)
+                .foregroundStyle(palette.inkDark.color)
             Text(UIStrings.string(.journalSealedEmptyBody, language))
                 .kultaraFont(.body)
-                .foregroundStyle(palette.inkDusty.color)
+                .foregroundStyle(palette.inkMuted.color)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
             Spacer()

@@ -88,12 +88,14 @@ public enum HisploraStampArtwork {
     }
 }
 
-/// A lock around a dictionary, which is all the cache is.
+/// A lock around a dictionary, which is all the cache is. Internal rather than file-private
+/// because `MapLandmarkArtwork` loads half-megabyte PNGs on the same terms — a map that redecodes
+/// four illustrations on every pan frame is the same scrolling stutter this was written for.
 ///
 /// `Mutex` would say this in one line and is not reachable here: it needs macOS 15 and this package
 /// declares macOS 14 so the pure-logic suites run on this machine (`Package.swift`). `NSLock` costs
 /// a type and is portable to both.
-private final class ArtworkCache: @unchecked Sendable {
+final class ArtworkCache: @unchecked Sendable {
     private let lock = NSLock()
     private var store: [String: Image?] = [:]
 

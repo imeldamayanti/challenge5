@@ -138,7 +138,93 @@ struct LocationClueCard: View {
         }
         .padding(KultaraMetrics.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.paperCream.color)
+        .kultaraSpeckledGround(palette.paperCream)
         .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.xs))
+    }
+}
+
+/// `1:4458` ("Location Verified" on the New Hisplora board) — the screen the walk shows the moment
+/// the fix lands, between the arrival screen and the story.
+///
+/// It is a whole screen rather than another piece of `arrivalScreen` because it is a *stage*: the
+/// arrival has already been recorded when this draws, so the countdown, the override and the two
+/// arrival actions no longer apply to anything. The pieces above stay pieces — `.verified` is still
+/// one of `LocationState`'s cases, and `LocationStateHeading` draws this screen's heading, so the
+/// four states cannot drift into four different typographies.
+///
+/// Two deviations from the frame, both recorded rather than resolved by dropping something:
+///
+/// - **The map is drawn, not photographed.** The frame pastes a street-map screenshot with three
+///   pins on it. `FR-MAP-01`/`FR-OFF-03` rule out map imagery, so what fills the slot is the same
+///   `RunRouteMapView` canvas the arrival screen uses — the caller passes it in, so this file keeps
+///   knowing nothing about routes.
+/// - **The scroll is the packaged parchment**, `HisploraParchmentSheet`. The frame draws a rod-and-
+///   sheet scroll that ships nowhere in this project; the parchment is the same object drawn the
+///   way the design system already draws it, and swapping in a real export is a change to that one
+///   component rather than to this screen.
+struct LocationVerifiedScreen<MapContent: View>: View {
+    @Environment(\.hisploraPalette) private var palette
+
+    let language: ContentLanguage
+    /// The quest's title, for the header. Content, never a literal (`AD-4`, `FR-RUN-06`).
+    let questTitle: String
+    let onContinue: () -> Void
+    /// The frame's back chevron. It leaves the walk's screen; it does not undo the arrival, which
+    /// is already written (`FR-RUN-01`).
+    let onBack: () -> Void
+    @ViewBuilder let map: MapContent
+
+    var body: some View {
+        HisploraStage(ground: \.brownStone) {
+            VStack(spacing: 0) {
+                header
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // The frame sets the heading at y = 156 under a header ending at 108.
+                        Spacer(minLength: 40)
+                        LocationStateHeading(state: .verified, language: language)
+                        // 84 as drawn, between the lead's baseline and the top of the scroll.
+                        Spacer(minLength: 40)
+                        HisploraParchmentSheet { map }
+                        Spacer(minLength: 24)
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .scrollBounceBehavior(.basedOnSize)
+            }
+            // 20 each side, which leaves the frame's 362-point content column on a 402-point screen.
+            .padding(.horizontal, 20)
+            // Pinned rather than stacked, for the reason the arrival screen's actions are: the frame
+            // holds the action a fixed distance off the home indicator however the lead above wraps.
+            .safeAreaInset(edge: .bottom) {
+                Button(UIStrings.string(.locationVerifiedContinue, language), action: onContinue)
+                    .buttonStyle(.hisploraLightPill)
+                    .padding(.horizontal, 20)
+                    .padding(.bottom, 30)
+            }
+        }
+    }
+
+    /// The quest's name centred with the chevron over it on the left — `1:4476`/`1:4477`, the same
+    /// header the cutscene draws, and a `ZStack` for the same reason: a long title stays centred
+    /// instead of being pushed off by the chevron's width.
+    private var header: some View {
+        ZStack {
+            Text(questTitle)
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(palette.inkCream.color)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, KultaraMetrics.minimumTapTarget)
+                .accessibilityAddTraits(.isHeader)
+            HStack {
+                HisploraBackButton(
+                    accessibilityLabel: UIStrings.string(.locationNotThereBack, language),
+                    size: 24,
+                    action: onBack)
+                Spacer(minLength: 0)
+            }
+        }
+        .padding(.top, 13)
     }
 }

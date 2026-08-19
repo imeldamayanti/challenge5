@@ -25,11 +25,11 @@ public struct HisploraStage<Content: View>: View {
     private let grain: Bool
     private let content: Content
 
-    /// - Parameter grain: whether to print `HisploraGround` over the ground — the speckled sheet
-    ///   `547:2953` exports. Opt-in rather than automatic: the story-flow frames draw the same brown
-    ///   flat, and turning the grain on everywhere would be redrawing screens nobody sampled it
-    ///   from. It is on where the design actually shows it, which is the Journal and the Explorer's
-    ///   Card.
+    /// - Parameter grain: whether to print `KultaraGround`'s sheet over the ground. Opt-in rather
+    ///   than automatic: the story-flow frames draw their brown flat, and printing the sheet
+    ///   everywhere would be redrawing screens nobody sampled it from. It is on where the design
+    ///   shows a printed ground, which is the Journal and the Explorer's Card — and since the sheet
+    ///   is cream, those callers pass a cream `ground` to match it.
     public init(
         ground: KeyPath<HisploraPalette, SRGBColor> = \.brownDeep,
         grain: Bool = false,
@@ -46,13 +46,9 @@ public struct HisploraStage<Content: View>: View {
         return content
             .environment(\.hisploraPalette, palette)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background {
-                ZStack {
-                    palette[keyPath: ground].color
-                    if grain { HisploraGroundSheet() }
-                }
-                .ignoresSafeArea()
-            }
+            // Token first, speckle over it — `Speckle.swift` explains why that ordering is what
+            // keeps `HisploraThemeTests`' measured pairs describing what is actually on screen.
+            .kultaraSpeckledGround(palette[keyPath: ground])
     }
 }
 

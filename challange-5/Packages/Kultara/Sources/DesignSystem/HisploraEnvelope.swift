@@ -57,15 +57,21 @@ public struct HisploraEnvelopeSequence: Sendable, Equatable {
         self.rendersImmediately = rendersImmediately
     }
 
+    /// **Halved against the designer's note, deliberately.** The frames ask for a two-to-three
+    /// second dwell and a slow zoom, which read correctly once and then read as a wait: this is the
+    /// gate in front of every letter a reader opens, not a title sequence they see at launch. The
+    /// beats keep their proportions to each other — the flap is still the quickest, the dwell is
+    /// still the longest, the zoom still outlasts the rise — so the opening is the same shape at
+    /// 2.9s that it was at 6.4s. `total` is what any test should assert against, never a literal.
     public func duration(of stage: HisploraEnvelopeStage) -> Duration {
         guard !rendersImmediately else { return .zero }
         switch stage {
         case .sealed: return .zero
-        case .opening: return .milliseconds(900)
-        // The designer's "2 or 3 seconds", taken at the middle.
-        case .dwelling: return .milliseconds(2500)
-        case .rising: return .milliseconds(1400)
-        case .zooming: return .milliseconds(1600)
+        case .opening: return .milliseconds(520)
+        // The designer's "2 or 3 seconds", taken at a beat the reader will sit through repeatedly.
+        case .dwelling: return .milliseconds(900)
+        case .rising: return .milliseconds(700)
+        case .zooming: return .milliseconds(780)
         }
     }
 
@@ -396,10 +402,12 @@ public enum HisploraEnvelopeMetrics {
     /// Where the pocket's lip falls. Below this line the body export is the front of the paper and
     /// is drawn over whatever is coming out; above it, the reader is looking inside.
     public static let pocketTopRatio: CGFloat = 0.56
-    /// The wax, 54.269 wide, centred at (118.28 + 54.269/2, 92.64 + 54.507/2).
-    public static let sealSizeRatio: CGFloat = 54.269 / 290.0
-    public static let sealCentre = CGPoint(x: (118.28 + 54.269 / 2) / 290.0,
-                                           y: (92.64 + 54.507 / 2) / 173.999)
+    /// The wax, 58 wide, struck at (117, 90) and 53.399 tall (`719:3292`). It ships on a square
+    /// 58-point board with the wax centred on it, because `HisploraWaxSeal` fits a square — so the
+    /// board's top edge is 2.3 above the wax's, and that is in the centre below.
+    public static let sealSizeRatio: CGFloat = 58.0 / 290.0
+    public static let sealCentre = CGPoint(x: (117 + 58.0 / 2) / 290.0,
+                                           y: (90 + 53.399 / 2) / 173.999)
     /// The page that comes out is narrower than the pocket that held it.
     public static let pageWidthRatio: CGFloat = 0.62
     /// How deep into the pocket the risen sheet's bottom edge stays, as a fraction of the pocket
@@ -416,6 +424,9 @@ public enum HisploraEnvelopeMetrics {
     public static let bodyImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-body")
     public static let flapImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-flap")
     public static let innerImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-inner")
+    /// The tape survived the `719:3285` redraw. That frame draws the bare envelope and has no tape
+    /// in it, but the tape is not part of the envelope — it holds the quest's photograph onto the
+    /// pocket in `511:1464`, which `SealedLetterEnvelope` still draws.
     public static let tapeImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-tape")
 
     public static var allResourceNames: [String] {

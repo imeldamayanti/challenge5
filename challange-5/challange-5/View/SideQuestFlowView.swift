@@ -149,6 +149,6 @@ struct LocationNoticeScreen: View {
             .padding(KultaraMetrics.lg)
             .kultaraFloatingTabBarClearance()
         }
-        .background(palette.paper.color)
+        .kultaraSpeckledGround(palette.paper)
     }
 }
