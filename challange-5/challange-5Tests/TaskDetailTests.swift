@@ -39,7 +39,7 @@ struct TaskDetailTests {
         provider.emit(offsetMetres: 5, accuracy: 10)
 
         // Bounded rather than `while`: a stage that returns itself should fail the suite, not hang it.
-        for _ in 0..<8 where model.stage != .checkpointDetail {
+        for _ in 0..<9 where model.stage != .checkpointDetail {
             switch model.stage {
             case .locationVerified: model.advanceFromLocationVerified()
             case .cutsceneIntro: model.advanceFromCutsceneIntro()
@@ -47,11 +47,85 @@ struct TaskDetailTests {
             case .storyReveal: model.advanceFromStoryReveal()
             case .transition: model.advanceFromTransition()
             case .placeNotice: model.advanceFromPlaceNotice()
+            // `1:4592` → `1:4711` → `1:4904`: the menu is reached *through* the checkpoint's first
+            // task, so getting to the state `1:4904` draws means passing that sheet.
+            case .taskDetail: model.advanceFromTaskDetail()
             default: break
             }
         }
         try #require(model.stage == .checkpointDetail)
         return Harness(model: model, provider: provider, quest: quest)
+    }
+
+    /// The same walk, stopped at the sacred-Place notice — `1:4592`, the screen before the first
+    /// task. `atTaskList` walks straight past it.
+    private func atPlaceNotice() throws -> Harness {
+        let repository = try BundledContentRepository()
+        let quest = try #require(try repository.quests().first)
+        let provider = FakeLocationProvider(authorization: .whenInUse)
+        let model = try #require(QuestRunViewModel(
+            engine: RunEngine(repository: repository, store: InMemoryRunStore()),
+            repository: repository,
+            preferences: InMemoryAppPreferencesStore(safetyNoticeAckedQuestIDs: [quest.id]),
+            locationProvider: provider,
+            questID: quest.id,
+            language: .id,
+            manualOverrideDelay: .milliseconds(20)))
+
+        model.advanceFromStoryPreview()
+        if model.stage == .awaitingArrival, !provider.isSampling { model.screenAppeared() }
+        provider.emit(offsetMetres: 5, accuracy: 10)
+
+        for _ in 0..<8 where model.stage != .placeNotice {
+            switch model.stage {
+            case .locationVerified: model.advanceFromLocationVerified()
+            case .cutsceneIntro: model.advanceFromCutsceneIntro()
+            case .cutscenePortrait: model.advanceFromCutscenePortrait()
+            case .storyReveal: model.advanceFromStoryReveal()
+            case .transition: model.advanceFromTransition()
+            default: break
+            }
+        }
+        try #require(model.stage == .placeNotice,
+                     "the first stop is a sacred Place, so the notice is on the path")
+        return Harness(model: model, provider: provider, quest: quest)
+    }
+
+    // MARK: - `1:4592` → `1:4711` → `1:4904`
+
+    /// The flow the board draws: the place notice hands over to the checkpoint's **first** task, not
+    /// to the task menu. The menu is what the walker reaches after resolving it.
+    @Test func thePlaceNoticeOpensTheFirstTaskRatherThanTheMenu() throws {
+        let harness = try atPlaceNotice()
+        let first = try #require(harness.model.checkpoint?.tasks.first)
+
+        harness.model.advanceFromPlaceNotice()
+
+        #expect(harness.model.stage == .taskDetail(taskID: first.id))
+        #expect(harness.model.firstTask?.id == first.id)
+    }
+
+    /// Backing out of the first task returns to the notice it was opened from — not to the menu,
+    /// which the walker has not seen yet. The same sheet opened from a row backs out to the menu;
+    /// that is what `stageBeforeTaskDetail` is for.
+    @Test func backingOutOfTheFirstTaskReturnsToTheNoticeItCameFrom() throws {
+        let harness = try atPlaceNotice()
+        harness.model.advanceFromPlaceNotice()
+
+        harness.model.retreatFromStoryStage()
+
+        #expect(harness.model.stage == .placeNotice)
+    }
+
+    /// And backing out of the menu returns to that first task rather than skipping over it back to
+    /// the notice, so the two directions agree about the order of the screens.
+    @Test func backingOutOfTheMenuReturnsToTheFirstTask() throws {
+        let harness = try atTaskList()
+        let first = try #require(harness.model.checkpoint?.tasks.first)
+
+        harness.model.retreatFromStoryStage()
+
+        #expect(harness.model.stage == .taskDetail(taskID: first.id))
     }
 
     // MARK: - `452:3132` → `447:1880`
@@ -203,12 +277,13 @@ struct TaskDetailTests {
         harness.model.advanceFromCheckpointDetail()
         harness.model.advance()
         harness.provider.emit(offsetMetres: 5, accuracy: 10)
-        for _ in 0..<8 where harness.model.stage != .checkpointDetail {
+        for _ in 0..<9 where harness.model.stage != .checkpointDetail {
             switch harness.model.stage {
             case .locationVerified: harness.model.advanceFromLocationVerified()
             case .storyReveal: harness.model.advanceFromStoryReveal()
             case .transition: harness.model.advanceFromTransition()
             case .placeNotice: harness.model.advanceFromPlaceNotice()
+            case .taskDetail: harness.model.advanceFromTaskDetail()
             default: break
             }
         }
@@ -218,19 +293,44 @@ struct TaskDetailTests {
         #expect(!harness.model.isPresentingSiteMap)
     }
 
-    // MARK: - What the sheet's primary control is for
+    // MARK: - The sheet writes the result itself
 
-    /// Photo capture is not built. `447:1900` draws "Take Photo" as the sheet's one action, and the
-    /// shipped content carries a photo task at exactly one of five checkpoints — so the label follows
-    /// the task's type rather than the frame, and the sheet hands over to the checkpoint screen where
-    /// `TaskCard` owns the answer, the save and the skip (`FR-TASK-02`).
-    @Test func theSheetContinuesIntoTheScreenThatActuallyWritesTheResult() throws {
+    /// The sheet is the first screen of a checkpoint's task half, so it has to be able to finish what
+    /// it opens: saving writes a `TaskResult` and lands on the menu (`1:4711` → `1:4904`). It writes
+    /// through the same `saveTask` the checkpoint screen's `TaskCard` writes through — two ways in,
+    /// one writer.
+    @Test func savingOnTheSheetWritesTheResultAndLandsOnTheMenu() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+        harness.model.openTaskDetail(taskID: task.id)
+        harness.model.taskDrafts[task.id] = "Empat wajah menghadap empat arah."
+
+        harness.model.saveTaskFromDetail(task)
+
+        #expect(harness.model.stage == .checkpointDetail)
+        let resolution = try #require(harness.model.resolution(for: task))
+        #expect(resolution.skipped == false)
+        #expect(resolution.text == "Empat wajah menghadap empat arah.")
+    }
+
+    /// `FR-TASK-02` and `AD-2` — the skip is offered on the same screen, resolves the task just as
+    /// saving does, and reaches the same place. A walk that could not leave this sheet without
+    /// answering would be a task gating progression.
+    @Test func skippingOnTheSheetResolvesTheTaskAndLandsOnTheMenu() throws {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
 
-        // What `onPrimaryAction` calls. The transition has already been walked by then — it now
-        // closes the story rather than the task menu — so this lands on the checkpoint directly.
+        harness.model.skipTaskFromDetail(task)
+
+        #expect(harness.model.stage == .checkpointDetail)
+        #expect(harness.model.resolution(for: task)?.skipped == true)
+    }
+
+    /// The menu's own action still leaves the checkpoint for the walk to the next place.
+    @Test func theMenuContinuesIntoTheCheckpointScreen() throws {
+        let harness = try atTaskList()
+
         harness.model.advanceFromCheckpointDetail()
 
         #expect(harness.model.stage == .atCheckpoint)

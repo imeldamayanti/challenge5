@@ -108,6 +108,9 @@ struct QuestRunTests {
             case .cutscenePortrait: harness.model.advanceFromCutscenePortrait()
             case .storyReveal: harness.model.advanceFromStoryReveal()
             case .placeNotice: harness.model.advanceFromPlaceNotice()
+            // The checkpoint's first task now sits between the notice and the menu (`1:4592` →
+            // `1:4711` → `1:4904`), so the walk passes through it on the way to `.atCheckpoint`.
+            case .taskDetail: harness.model.advanceFromTaskDetail()
             case .checkpointDetail: harness.model.advanceFromCheckpointDetail()
             case .transition: harness.model.advanceFromTransition()
             default: return harness.model.stage == .atCheckpoint

@@ -4,8 +4,14 @@ import RunEngine
 import SwiftUI
 import UIStringsKit
 
-/// One task on its own parchment sheet — `447:1880` ("Quest_Filled"), reached from a row on
-/// `CheckpointDetailScreen`.
+/// One task on its own parchment sheet — `1:4711` ("Quest_Filled", `447:1880` before it).
+///
+/// **This is where a task is answered.** The checkpoint's first task opens straight from the place
+/// notice (`1:4592`), before the menu (`1:4904`) exists to be tapped, so the sheet carries the
+/// answer field, the save and the skip rather than handing them to a later screen: a sheet the walk
+/// opens on and cannot resolve would be a dead end. Both controls write through the same
+/// `QuestRunViewModel.saveTask`/`skipTask` the checkpoint screen's `TaskCard` writes through, so
+/// there is still one writer of a `TaskResult` and two ways to reach it.
 ///
 /// **The header portrait is not drawn, and that is the standing decision rather than a new one.**
 /// `447:1905` puts a 39-point circular likeness beside the title. It is the generated portrait of
@@ -15,17 +21,12 @@ import UIStringsKit
 /// circle instead, exactly as `PlaceNoticeScreen` and the cutscenes do, and draws nothing at all when
 /// the quest ships no hero.
 ///
-/// **"Take Photo" appears only where the task is a photo task.** `447:1900` draws it as the sheet's
-/// one action, but the shipped content carries a photo task at exactly one of five checkpoints; four
-/// carry a written reflection or a question. Drawing a camera button over a written task would be a
-/// control that cannot do what it says. Photo capture is still not built in this build — the note
-/// `TaskCard` already carries is what says so — so the camera label is offered and then hands over to
-/// the checkpoint screen like every other task, rather than pretending to open a camera.
-///
-/// **The primary action does not answer the task.** It continues into the checkpoint screen, where
-/// `TaskCard` carries the answer field, the save and the skip (`FR-TASK-02`). Duplicating that
-/// machinery on a parchment sheet would give the app two places that write a `TaskResult`, and
-/// `FR-TASK-07`'s closing reflection is only correct in one of them.
+/// **"Take Photo" appears only where the task is a photo task, and it is disabled.** `447:1900`
+/// draws it as the sheet's one action, but the shipped content carries a photo task at exactly one
+/// of five checkpoints; four carry a written reflection or a question. Photo capture is still not
+/// built for quest tasks, so the pill is drawn where the frame draws it, disabled, over the note
+/// that says why — a control that navigated instead of capturing would be a control that cannot do
+/// what it says. The skip beneath it is what resolves such a task (`FR-TASK-02`, `AD-2`).
 struct TaskDetailScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -35,9 +36,13 @@ struct TaskDetailScreen: View {
     let placeName: String
     let task: ContentTask
     let prompt: String
-    /// Nil until the task has been answered or skipped. Shown as a note on the sheet rather than as a
-    /// disabled action: the walker may want to re-read what they wrote (`FR-TASK-07`).
+    /// Nil until the task has been answered or skipped. Once set, the field and its two controls give
+    /// way to the note and a plain continue: the walker may want to re-read what they wrote
+    /// (`FR-TASK-07`), and re-answering is the checkpoint screen's job, not this sheet's.
     let resolution: TaskResult?
+    /// The answer being typed. Not persisted until saved — `FR-RUN-01` is about completed actions,
+    /// and a half-typed sentence is not one.
+    @Binding var draft: String
     /// How far through this checkpoint's tasks the walker is — `447:1903`'s thin determinate bar.
     let completedTasks: Int
     let totalTasks: Int
@@ -45,7 +50,13 @@ struct TaskDetailScreen: View {
     /// Nil when the Place ships no plan, which hides the map hint rather than offering one that opens
     /// an empty screen.
     let hasSiteMap: Bool
-    let onPrimaryAction: () -> Void
+    /// Writes the draft as this task's answer and moves on. An empty draft saves as a skip
+    /// (`QuestRunViewModel.saveTask`), so the sheet never traps a walk behind a blank field.
+    let onSave: () -> Void
+    /// `FR-TASK-02` — the explicit, non-apologetic skip. Same weight as saving, same destination.
+    let onSkip: () -> Void
+    /// Leaving an already-resolved sheet forwards.
+    let onContinue: () -> Void
     let onOpenSiteMap: () -> Void
     let onBack: () -> Void
 
@@ -167,22 +178,61 @@ struct TaskDetailScreen: View {
                     .fixedSize(horizontal: false, vertical: true)
                 // 521 − 449: the action sits 72 under the instruction.
                 Spacer(minLength: 72)
-                primaryAction
-                if let resolution {
-                    Spacer(minLength: KultaraMetrics.lg)
-                    resolutionNote(resolution)
-                }
-                if task.type == .photo, resolution == nil {
-                    Spacer(minLength: KultaraMetrics.md)
-                    Text(UIStrings.string(.taskPhotoNotInThisBuild, language))
-                        .font(.system(size: 13))
-                        .foregroundStyle(palette.inkMuted.color)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
+                answerSection
             }
             .frame(maxWidth: .infinity)
         }
+    }
+
+    /// The three shapes the foot of the sheet takes: resolved, a written task waiting for an answer,
+    /// or a photo task this build cannot capture.
+    @ViewBuilder private var answerSection: some View {
+        if let resolution {
+            resolutionNote(resolution)
+            Spacer(minLength: KultaraMetrics.lg)
+            pill(title: UIStrings.string(.checkpointDetailContinue, language), action: onContinue)
+        } else if task.type == .photo {
+            pill(title: UIStrings.string(.taskDetailTakePhoto, language),
+                 systemImage: "camera.fill",
+                 action: {})
+                .disabled(true)
+                .opacity(0.5)
+            Spacer(minLength: KultaraMetrics.md)
+            Text(UIStrings.string(.taskPhotoNotInThisBuild, language))
+                .font(.system(size: 13))
+                .foregroundStyle(palette.inkMuted.color)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: KultaraMetrics.lg)
+            pill(title: UIStrings.string(.taskSkipAction, language), action: onSkip)
+        } else {
+            answerField
+            Spacer(minLength: KultaraMetrics.lg)
+            pill(title: UIStrings.string(.taskSaveAction, language), action: onSave)
+            Spacer(minLength: KultaraMetrics.md)
+            // A plain label rather than a second capsule: `FR-TASK-02` asks for a skip that is
+            // offered without apology, not one that competes with saving for the eye.
+            Button(UIStrings.string(.taskSkipAction, language), action: onSkip)
+                .font(.system(size: 15, weight: .medium))
+                .foregroundStyle(palette.brownMid.color)
+                .frame(minHeight: KultaraMetrics.minimumTapTarget)
+        }
+    }
+
+    /// The field itself, sunk into the sheet on `paperTicket` — the one paper token measured against
+    /// `inkBody` and `inkMuted` (`HisploraThemeTests`), which is what the answer and its placeholder
+    /// are set in.
+    private var answerField: some View {
+        TextField(UIStrings.string(.taskAnswerPlaceholder, language), text: $draft, axis: .vertical)
+            .font(.system(size: 15))
+            .foregroundStyle(palette.inkBody.color)
+            .lineLimit(3...8)
+            .textFieldStyle(.plain)
+            .padding(KultaraMetrics.md)
+            .frame(minHeight: KultaraMetrics.minimumTapTarget)
+            .background(palette.paperTicket.color, in: RoundedRectangle(cornerRadius: 12))
+            .overlay(RoundedRectangle(cornerRadius: 12)
+                .stroke(palette.brownMid.color, lineWidth: KultaraMetrics.hairline))
     }
 
     /// `447:1900`'s pill: a 45%-white capsule 220 wide with a near-black label.
@@ -192,17 +242,19 @@ struct TaskDetailScreen: View {
     /// translucent fill gives it nothing either. It is drawn in `brownMid` instead, at 7.22:1: the
     /// same brown the place name above is set in, so the control reads as part of the sheet's own ink
     /// rather than as a new colour. Recorded in `docs/hisplora-tokens.md`.
-    private var primaryAction: some View {
-        Button(action: onPrimaryAction) {
+    private func pill(
+        title: String,
+        systemImage: String? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
             HStack(spacing: 10) {
-                if task.type == .photo {
-                    Image(systemName: "camera.fill")
+                if let systemImage {
+                    Image(systemName: systemImage)
                         .font(.system(size: 18.75, weight: .semibold))
                         .accessibilityHidden(true)
                 }
-                Text(task.type == .photo
-                     ? UIStrings.string(.taskDetailTakePhoto, language)
-                     : UIStrings.string(.taskDetailAnswerAction, language))
+                Text(title)
                     .font(.system(size: 17, weight: .medium))
                     .tracking(-0.51)
                     .fixedSize(horizontal: false, vertical: true)

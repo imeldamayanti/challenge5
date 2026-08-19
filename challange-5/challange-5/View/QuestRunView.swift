@@ -222,13 +222,19 @@ struct QuestRunView: View {
                 task: task,
                 prompt: checkpoint.taskPrompts[task.id] ?? "",
                 resolution: model.resolution(for: task),
+                draft: Binding(
+                    get: { model.taskDrafts[task.id] ?? "" },
+                    set: { model.taskDrafts[task.id] = $0 }),
                 completedTasks: model.resolvedTaskCount,
                 totalTasks: model.taskCount,
                 portraitURL: model.cutsceneImageURL,
                 hasSiteMap: checkpoint.siteMap != nil,
-                // The sheet names what is waiting; the answer field, the save and the skip are on the
-                // checkpoint screen (`TaskCard`, `FR-TASK-02`), which is where this continues to.
-                onPrimaryAction: { model.advanceFromCheckpointDetail() },
+                // Saving and skipping both write through the view model and both land on the task
+                // menu — the sheet is the checkpoint's first screen, so it has to be able to finish
+                // what it opens (`FR-TASK-02`, `AD-2`).
+                onSave: { model.saveTaskFromDetail(task) },
+                onSkip: { model.skipTaskFromDetail(task) },
+                onContinue: { model.advanceFromTaskDetail() },
                 onOpenSiteMap: { model.presentSiteMap() },
                 onBack: { model.retreatFromStoryStage() })
                 // A cover rather than a stage: the plan is glanced at and dismissed back to the same
