@@ -399,7 +399,9 @@ fifteen times the size of everything the package actually draws. Every SVG now l
 `docs/design-sources/`: the fifteen stamp exports in `stamps/`, which is `.gitignore`d because they
 are re-exportable and enormous, and the two small vector files (`badges-frame.svg`,
 `Rectangle 10.svg`) beside them, which are tracked because they are the record and cost eight
-kilobytes. Nothing in the package loads any of them. **Anything dropped into `Resources/Images`
+kilobytes — three, since `275:2179`'s ground joined them as `home-ground.svg` on 2026-08-19; it
+arrived in `Resources/Images` under Figma's own `Rectangle 10.svg`, which is the name the file
+beside it already had. Nothing in the package loads any of them. **Anything dropped into `Resources/Images`
 ships**, so check what is in it before adding to it.
 
 Two more things the files turned out to say. Several carry **two stacked pattern images** and only
@@ -578,6 +580,194 @@ inventing coordinates for them would be the app asserting where three things sta
 — the precise claim the citation exists to qualify. `SiteMapPresentation.markers` ships empty and the
 view renders whatever the content eventually carries.
 
+### `275:2178` and `275:2309` — the Home ground and the illustrated island
+
+Two frames landed on 2026-08-19, and between them they are an asset-and-ground pass rather than a
+new screen: nothing was built that did not already exist, and one measured colour moved.
+
+**The ground, from the export rather than from the codegen.** `get_design_context` reports node
+`275:2179`'s fill as `#F4EADD`, and that is the flattened appearance, not the sheet. The frame's own
+export — `home-ground.svg`, filter `filter0_n_275_2179` — is a **#FDF2DE** stock with a printed
+speckle over it: `feTurbulence` fractal noise, `luminanceToAlpha`, a discrete transfer keeping ten
+of a hundred steps, and an `rgba(147, 130, 97, 0.5)` flood composited back in.
+
+`KultaraPalette.light.paper` is now **#FDF2DE**, the stock, and the speckle is
+`KultaraPaperTexture`, drawn over it — the same split `HisploraGround` documents and for the same
+reason: `KultaraThemeTests` measures token pairs and cannot measure a picture.
+
+Rendering it needed a real SVG renderer (headless Chrome; nothing else on this machine runs SVG
+filters, and no iOS image loader does either). The render has exactly **two** colours — `#FDF2DE`
+and `#C8BAA0` — and `#C8BAA0` is the flood at half alpha over the stock, which is how the coverage
+below is known exactly rather than estimated. `home-ground.png` is that render whole: 1206 × 2622,
+**1.43% speckle**, 98 KB.
+
+It **supersedes `paper-texture.png`**, the museum direction's earlier hand-made grain — a 445 KB
+speckle meant to be attenuated over an arbitrary cream. Keeping both would have left two grounds
+with no rule for which screen got which, so the old one is deleted and `KultaraPaperTexture` is now
+`KultaraGround`, matching `HisploraGround` in shape: an opaque sheet drawn over the token, at full
+opacity, because the design's own alpha is in the pixels. `KultaraGroundTests` therefore stopped
+asserting on opacity, which had become the wrong proxy, and asserts on
+`opacity × speckleCoverage × speckleAlpha` instead — plus that the render's stock still *is* the
+`paper` token, which is what keeps every measured ratio describing the sheet.
+
+The two procedural Hisplora map canvases tiled the old grain at 0.4 with `.multiply`; they now tile
+this sheet the same way. It is 98.6% `#FDF2DE`, so multiplying warms their parchment slightly and
+the speckle lands as a faint dot.
+
+**Ten museum screens were painting the flat token over it, and that is why the catalogue read as
+flat cream while the Journal read as printed paper.** `KultaraThemeProvider` draws paper *and* the
+sheet behind the whole app, but `QuestListView`, `QuestPreviewView`, `SettingsView`,
+`RunSummaryView`, `QuestRunView`, `OnboardingView`, `SideQuestFlowView`, `LetterCollectionView` and
+the two wireframe screens each ended with `.background(palette.paper.color)` — an opaque flat
+colour on top of the speckle. Those grounds are not redundant (a `sheet` or `fullScreenCover` is
+presented outside the provider's tree and would otherwise show the system's), so they were replaced
+rather than removed: `.kultaraGround()` paints the token *and* the sheet. Same colour as before,
+with the printing that was being covered up.
+
+**It replaced the Journal's brown ground too, and the Journal's ink flipped with it.** On
+2026-08-19 the author asked for one ground rather than two, so `hisplora-ground.png` — `547:2953`'s
+`#6E3B26` sheet — and the whole `HisploraGround` type are deleted, and `HisploraStage(grain:)` now
+prints `KultaraGroundSheet(respectsAppearance: false)`. The flag matters: this direction is a fixed
+editorial pairing that does not follow the system appearance, so it asks for the sheet
+unconditionally, where the museum theme keeps the light-only rule.
+
+A cream ground under cream type is not a ground swap, it is an unreadable screen, so the three
+callers that print the sheet — the Sealed Letters shelf, the Explorer's Card, the opened letter —
+moved from `ground: \.brownMid` to a new **`paperSheet`** token (`#FDF2DE`, the render's own stock,
+so what is measured is what is drawn) and their type from `inkCream`/`inkDusty` to
+`inkDark`/`inkMuted`. `HisploraExplorerCard`'s tab row and rule, and `HisploraSealBadge`'s label,
+went with them — they are only ever set on those screens. The ratios improve rather than degrade:
+`inkDark` is 14.18:1 on `paperLight` and **15.26:1** on `paperSheet`, against `inkCream`'s 9.63:1
+on `brownDeep`. `HisploraThemeTests` enumerates the new token like any other, so the four papers
+are measured as four.
+
+The brown tokens are untouched and still carry the story flow, which is where the frames actually
+draw brown.
+
+The ratios went **up**, not down: ink on paper 15.01:1 → **15.26:1**, the hairline 4.06:1 →
+**4.13:1** against a 3:1 requirement. The speckle costs about 1% of each — ink lands at 15.12:1 on
+the sheet as rendered.
+
+**The cards' photographs.** `275:2178` draws four cards over three images: a watercolour candi
+bentar (cards one and three — the frame itself reuses it), a watercolour puri, and a photograph of
+Pura Besakih. The first is now the real quest's `heroImageAsset`; the other three are the
+`dummy-quest-*` imagesets the filler cards already used. Their provenance is unrecorded, exactly as
+`PlaceholderQuestCatalog`'s header already says of the images it replaced: they must not survive
+into anything public.
+
+**The card's caption is now the frame's wash, and that is a recorded loss.** `275:2183` draws one
+89-point block running from black at 80% along its bottom edge to nothing at its top — the
+gradient's `startPoint` is `(0.47, 1)`, so it is drawn upward — with 15 points of horizontal inset,
+none vertical, and 10 between the title and the facts. `PhotoQuestCard` drew that as a fade strip
+above an **opaque** `photoScrim` block instead, so the type only ever landed on a colour
+`PhotoScrimTests` could measure. On 2026-08-19 the author asked for the frame's version and it is
+what ships.
+
+What is lost is precise: the tokens are unchanged and still measured, but this card is no longer
+where they apply. The title sits high in the block, where the wash is weakest, over an arbitrary
+photograph — so `NFR-A11Y-03` is unverified *here* rather than violated in the palette. Two things
+were kept: `.black` is drawn as `palette.photoScrim` so the colour stays a token, and the frame's
+208 and 89 remain `@ScaledMetric` **minimums** rather than heights, so the card still grows instead
+of clipping at the largest content sizes (`NFR-A11Y-01`). Recovering the measurement means an
+opaque band behind the title, which is the thing that was just removed.
+
+**The island.** `275:2309` draws the region map as a wide fantasy chart of Bali — 1469 × 1071,
+landscape, the whole island plus Java's tip, Nusa Penida and Lombok. It replaces the 853 × 1844
+portrait drawing, so `manifest.regionMap.aspectRatio` goes 0.4626 → **1.3716** and
+`contentBundleVersion` to **2026.09.4**.
+
+That aspect flip is the whole reason the map now scrolls in both directions. `RegionMapView` fills
+the viewport, so a 1.37 drawing on a 0.46 screen is drawn 1199 points wide against 402 — the frame's
+own 1198 — and two thirds of it is off-screen at rest. Horizontal panning was already implemented
+and simply had nothing to pan before. Three things did change:
+
+- **The pinch floor is 1 — the fitted height is as far out as the map goes.** It was briefly the
+  whole artwork, letterboxed; the author's decision on 2026-08-19 is that the current height is the
+  limit, so pinching out stops where the drawing still covers the screen and seeing the rest of the
+  island is a pan. `RegionMapArtwork.seaEdge` (#8B9999, sampled from the artwork's own four
+  corners, which agree to within two levels) stays for the moment during a pinch when the live
+  magnification runs ahead of the clamp. Deliberately **not** a palette token: nothing is measured
+  against it.
+- **Returning to fill no longer resets the pan.** On this artwork fill still leaves two thirds of
+  the island off either side, so zeroing it threw the reader back to the middle of the drawing.
+- **The map opens on the quest, not on the artwork's middle.** `openOnThePins` used to centre only
+  when it had zoomed in; with one pin it did nothing and the marker opened half off the right edge.
+  It now centres whenever there are pins at all.
+- **Double tap still cycles fill ↔ 2.5×** and never visits the pinched-out view. That is somewhere
+  a reader asks to go, not somewhere a stray tap should land them.
+
+**The markers.** The frame does not use a pin. It stands a small ink-and-wash building on the
+coast, blows four overlapping puffs of smoke behind it, and writes the quest's name underneath in
+the display serif with a hard outline — which `MapPlaceLabel` already drew. `MapLandmarkFigure`
+composes the first two at the frame's own geometry (a 159 × 87 cluster with an 85 × 61 building at
+(37, −3), so the building's feet are inside the fog and its roof out of the top). Three drawings
+ship; `MapLandmarkCatalog`, in the app target, is the quest-id → drawing table, for the same reason
+`StampArtworkCatalog` is: which illustration a quest gets is a decision the visual direction owns
+and a content update has nothing to say about it. An unlisted quest gets the meru, which is generic
+Balinese architecture and not a picture of somewhere it does not go.
+
+The figure is 120 points across and most of that width is fog at low alpha, so the **pressable area
+stays a 44-point square** (`NFR-A11Y-06`), hung on the building rather than centred on the figure —
+`MapLandmarkFigure.buildingCentreFraction` is published for exactly that. A target the size of the
+drawing would be mostly transparent map, which is the overlap failure the old label-sized target
+had.
+
+**Every `mapPoint` was re-authored.** The old values were placed against the portrait drawing and
+mean nothing on this one. The new ones were fitted to *this illustration's own geometry*: two
+features read off the artwork at known real coordinates (the north coast at Singaraja's longitude,
+the east tip of Karangasem, the Bukit's southern tip) give 960 px per degree of longitude and 1206
+per degree of latitude — the drawing is stretched about 1.24× vertically against true scale, which
+is what makes a real map projection useless here — and the cluster is anchored on where `275:2309`
+itself stands "The Last Traces of Badung". Each resulting point was then **looked at on the
+drawing** before it was written down. That is still authoring, not deriving: the numbers come from
+the picture, and CLAUDE.md's rule about not projecting coordinates onto a stylised coastline is the
+reason the fit is to the illustration rather than to Bali.
+
+The visible correction: `park23`'s `mapPoint` was a copy of Catur Muka's, 9 km from where the place
+actually is. It now sits on the Bukit isthmus.
+
+**What the frame draws that the code does not.** Three markers on `275:2309` name quests that do not
+exist in the content tree — "Where the Gods Come to Dance", "The Serpent's Tidal Shrine", "The
+Mother Temple's Forgotten Vow". The map renders one marker per shipped quest and there is one, so
+it draws one. `275:2178`'s four cards are a different case: three of them ship as
+`PlaceholderQuestCard`, which is drawn like a card, cannot be tapped, and says so — see
+`PlaceholderQuestCatalog`. The frame's two liquid-glass buttons on the map (`rectangle.stack.fill`,
+`wand.and.sparkles`) are also not built: neither has a behaviour behind it, and the screen already
+has its way back.
+
+### `719:3285` — the envelope, redrawn
+
+An asset swap onto geometry that did not move. The frame is 290 × 174 — the same card
+`HisploraEnvelopeMetrics` was already built against — with the same three papers in the same three
+places, so nothing about the opening animation, the pocket mask or the flap hinge changed:
+
+| Frame node | Ships as | Transform |
+|---|---|---|
+| `719:3286` Rectangle 1 | `envelope-inner.png` | `rotate(179.8°)` alone — a true half turn |
+| `719:3287` Rectangle 5 | `envelope-body.png` | `rotate(-179.8°) · scaleY(-1)`, which **nets to a horizontal mirror**, not a half turn |
+| `719:3288` Rectangle 6 | `envelope-flap.png` | the same net mirror, on its own 290 × 120.652 board, with the export's own bleed |
+| `719:3292` + `719:3293` | `wax-seal.png` | the wax at 58 × 53.399 with the emblem struck into it |
+
+**The two transforms are not the same and reading them as the same puts the notch on the wrong
+edge.** Tailwind composes rotate before scale, so `-scale-y-100 rotate-[-179.8deg]` is
+`R(180)·S(1,−1)` = `S(−1,1)` — a mirror. Compositing it as "rotate then flip" instead turns the
+pocket's V notch upside down and stands the flap on its point, which is exactly what the first pass
+produced.
+
+Two numbers moved with the artwork. The wax is **58** wide where it was 54.269, and it is struck at
+`(117, 90)` rather than `(118.28, 92.64)`. It ships on a square 58-point board with the wax centred
+on it — `HisploraWaxSeal` fits a square — so the board's top edge sits 2.3 above the wax's, and
+`sealCentre` carries that.
+
+The emblem is new: a Balinese candi bentar with a figure between the gates, cream on the crimson.
+It is cropped by its own 39.895 box in the frame (129.41% × 115%, offset −15.03% / −6.67%) and that
+crop is baked into the export, because the box is what the design shows.
+
+`envelope-tape.png` survived, which was nearly a mistake: `719:3285` draws no tape and
+`HisploraEnvelope` never draws `tapeImage`, so it looked dead. It is not — `SealedLetterEnvelope`
+uses it to hold the quest's photograph onto the pocket in `511:1464`. Grepping one file was what
+made it look unused.
+
 ## What the frames draw that the code does not, and why
 
 These are requirement conflicts, not omissions.
@@ -678,9 +868,6 @@ the checkpoint screen still displays both; what changed is that the reveal scree
 | `447:1880` | Quest_Filled — one task on its parchment sheet |
 | `452:3028` | Site Map — the drawn plan of a place's grounds |
 | `452:2651` | Site Map, full — the same plan filled, cropped and dragged |
-| `523:1946` | Onboarding 1 — "Explore Beyond The Surface" |
-| `523:1973` | Onboarding 2 — "History Becomes A Quest" |
-| `523:1999` | Onboarding 3 — "Your Story, Your Collection" |
 | `1:92` | Typography (template) |
 | `1:632` | Colors (template) |
 
@@ -711,11 +898,6 @@ screenshots are what show it against the frame.
 
 A resumed walk lands on `.atCheckpoint` and skips all three, so reaching them from a desk means a
 fresh install (`xcrun simctl uninstall com.umar.hisplora`) rather than relaunching.
-
-**`523:1946`, `523:1973` and `523:1999` were verified on iPhone 17 Pro / iOS 26.4 on 2026-08-18**,
-from a fresh install, tapped through all four screens and out into the login wireframe.
-Screenshots are in `docs/screenshots/m10-onboarding-1.png` … `-4.png`. Screen two of the four is the
-pocket-the-phone screen, which is not in Figma — see below.
 
 `81:588`, `98:1588` and `187:866` were verified on iPhone 17 / iOS 26.5 on 2026-08-14 — the first
 time the cutscene screens had been seen at all. **`293:1613` was verified the same way on 2026-08-17**,

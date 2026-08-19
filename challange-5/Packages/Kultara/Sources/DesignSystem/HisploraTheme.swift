@@ -34,6 +34,10 @@ public struct HisploraPalette: Sendable, Equatable {
     public let paperWarm: SRGBColor
     /// Location Checking, the lightest of the three.
     public let paperLight: SRGBColor
+    /// The printed sheet's own stock — `275:2179`'s `#FDF2DE`, the colour `KultaraGround` renders
+    /// over. The Journal and the Explorer's Card stand on it as of 2026-08-19, so it is a ground
+    /// here and not only in the museum palette, and it is measured as one.
+    public let paperSheet: SRGBColor
 
     // Inks on the brown grounds.
     public let inkCream: SRGBColor
@@ -94,6 +98,7 @@ public struct HisploraPalette: Sendable, Equatable {
         paperCream: SRGBColor,
         paperWarm: SRGBColor,
         paperLight: SRGBColor,
+        paperSheet: SRGBColor,
         paperTicket: SRGBColor,
         inkTicket: SRGBColor,
         trackWell: SRGBColor,
@@ -116,6 +121,7 @@ public struct HisploraPalette: Sendable, Equatable {
         self.paperCream = paperCream
         self.paperWarm = paperWarm
         self.paperLight = paperLight
+        self.paperSheet = paperSheet
         self.paperTicket = paperTicket
         self.inkTicket = inkTicket
         self.trackWell = trackWell
@@ -155,6 +161,7 @@ public struct HisploraPalette: Sendable, Equatable {
         paperCream: SRGBColor(hex: "#EEE7D2"),
         paperWarm: SRGBColor(hex: "#EADBC7"),
         paperLight: SRGBColor(hex: "#F4EADD"),
+        paperSheet: SRGBColor(hex: "#FDF2DE"),    // 15.26:1 under inkDark
         paperTicket: SRGBColor(hex: "#EFEBD7"),   // 10.79:1 under inkTicket
         inkTicket: SRGBColor(hex: "#34312E"),
         trackWell: SRGBColor(hex: "#8D7870"),     // 3.36:1 against a filled segment
@@ -203,9 +210,9 @@ public struct HisploraPalette: Sendable, Equatable {
                                       requirement: .bodyText))
         }
 
-        // Type on the three papers.
+        // Type on the four papers.
         for (name, paper) in [("paperCream", paperCream), ("paperWarm", paperWarm),
-                              ("paperLight", paperLight)] {
+                              ("paperLight", paperLight), ("paperSheet", paperSheet)] {
             pairs.append(ContrastPair(label: "inkDark on \(name)",
                                       foreground: inkDark, background: paper,
                                       requirement: .bodyText))

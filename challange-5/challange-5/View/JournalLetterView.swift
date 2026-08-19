@@ -51,7 +51,7 @@ struct JournalLetterView: View {
         // margin reads as a card on a shelf, which is the thing the reader has just left.
         // `HisploraStage` stays the wrapper rather than a hand-rolled `ZStack`: it is what registers
         // the packaged fonts and puts the palette in the environment.
-        HisploraStage(ground: \.brownMid, grain: true) {
+        HisploraStage(ground: \.paperSheet, grain: true) {
             ZStack(alignment: .topTrailing) {
                 ScrollView {
                     sheet

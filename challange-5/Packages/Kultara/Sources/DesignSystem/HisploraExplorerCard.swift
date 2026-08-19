@@ -104,13 +104,13 @@ public struct HisploraTabStrip<Tab: Hashable & Identifiable>: View {
                         VStack(spacing: KultaraMetrics.sm) {
                             Text(title(tab))
                                 .font(.system(size: 17, weight: isSelected ? .semibold : .regular))
-                                .foregroundStyle(palette.inkCream.color)
+                                .foregroundStyle(palette.inkDark.color)
                                 .lineLimit(1)
                                 .minimumScaleFactor(0.7)
                             // 49 × 3.945 in the frame, under the label rather than under the cell.
                             Capsule()
                                 .fill(isSelected
-                                      ? palette.inkCream.color
+                                      ? palette.inkDark.color
                                       : Color.clear)
                                 .frame(width: 49, height: 4)
                         }
@@ -123,7 +123,7 @@ public struct HisploraTabStrip<Tab: Hashable & Identifiable>: View {
                 }
             }
             Rectangle()
-                .fill(palette.inkCream.color.opacity(0.25))
+                .fill(palette.inkDark.color.opacity(0.25))
                 .frame(height: KultaraMetrics.hairline)
         }
     }

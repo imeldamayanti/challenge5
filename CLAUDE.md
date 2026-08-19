@@ -70,18 +70,22 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 448 tests / 56 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `swift test` (from `Packages/Kultara`) | 482 tests / 61 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
 | `xcodebuild test -only-testing:challange-5Tests` | 164 tests / 18 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
-**Two `swift test` failures are pre-existing on this branch and are not yours.** They were red at
-`09baa2f` and neither is in a file the Figma port touched:
+**Three `swift test` failures are pre-existing on this branch and are not yours.** None is in a
+file the Figma port touched, and all three reproduce in a clean worktree:
 
 - `PlaqueGeometryTests.theCornerIsAScoopArcedAboutTheCornerPointItself` — 2 issues, the plate's corner
   geometry in `PlaquePanel.swift`.
 - `PermissionCallBoundaryTests.theAppUsesNoBackgroundLocationAndNoTrackingPrompt` — `SideQuestProximityService.swift`
   calls `requestAlwaysAuthorization` and `startMonitoring(for:)`, which that guard bans. A real
   finding about the sidequest proximity work, unrelated to the run flow.
+- `BundledContentRepositoryTests.theBundleShipsFiveSidequestsFillingOneCollection` and
+  `suppressingAPlaceRemovesOnlyItsOwnSidequest` — 4 issues. The bundle grew a sixth place
+  (`park23`), its sidequest and a second collection at `2026.09.3`; the assertions still say five
+  and one. Stale expectations about a content change, not a defect.
 
 `FloatingTabBarClearanceTests` was a **third** pre-existing break of a different kind: the test was
 committed without the `KultaraMetrics` API it exercises, so the whole package suite failed to compile
@@ -287,7 +291,7 @@ These are the places where a reasonable-looking change silently breaks a guarant
 - **`LocalizedText` has no language fallback.** A missing `id` or `en` translation is a decode failure, never a runtime degradation into a mixed-language lore passage (`NFR-I18N-03`).
 - **Validator rules live in `ContentKit`**, shared by the CLI and the runtime loader, so the two cannot disagree about what valid content is. Adding a rule means adding it in one place and adding a test that proves violating content is *rejected* — a test that only confirms valid content passes proves nothing.
 - **Contrast is measured, not reviewed.** `DesignSystem/Contrast.swift` plus `KultaraThemeTests` and `HisploraThemeTests` assert every pair of **both** palettes against WCAG ratios (`NFR-A11Y-03`). A palette exposes `contrastPairs`, and a second test asserts that every token appears in at least one pair — so adding a colour without measuring it fails the suite rather than shipping. Where a sampled design value fails, *the theme yields and the deviation is recorded* (`docs/hisplora-tokens.md` lists the two that moved and why).
-- **`mapPoint` is authored, not derived from `coordinate`.** The region map is a hand-drawn illustration with a stylised coastline; projecting real coordinates onto it puts every pin somewhere wrong while looking precise. The validator checks range, not geography.
+- **`mapPoint` is authored, not derived from `coordinate`.** The region map is a hand-drawn illustration with a stylised coastline; projecting real coordinates onto it puts every pin somewhere wrong while looking precise. The validator checks range, not geography. Since `2026.09.4` the points are fitted to the *illustration's own* geometry — features read off the drawing at known real coordinates give 960 px per degree of longitude and 1206 per degree of latitude, because the picture is stretched about 1.24× vertically against true scale — and every point was looked at on the drawing before it was written down. That is the rule being followed, not bent: a real projection would still be wrong, and swapping the artwork means re-authoring every point again (`docs/hisplora-tokens.md`, `275:2309`).
 - **Tasks never gate progression.** `blocksProgression` must be `false` for all content (`AD-2`, rule V8). Photos are keepsakes; the GPS radius is the gate.
 - **Arrival needs the accuracy check, not just the distance check.** `FR-ARR-01` is two conditions, and the second is the load-bearing one: without `horizontalAccuracy <= radius`, a 500 m cell-tower fix unlocks a 75 m checkpoint from the next neighbourhood. It is also why the manual override is mandatory rather than a nicety (`FR-START-10`) — inside a covered market the accuracy test fails legitimately and often.
 - **A completed Run stays writable for reading and answering.** The final checkpoint completes the walk the instant it is reached (`FR-DONE-01`), while the walker is still standing there with the closing reflection unanswered. `markLoreOpened` and `recordTaskResult` therefore accept `completed` as well as `active`; gating them on `active` makes completion swallow the ending that `FR-TASK-07` requires.
@@ -373,6 +377,23 @@ Lore is an array of labelled `LoreBlock`s, not prose. Each block carries `accura
 
 Any change to any content file must bump `contentBundleVersion` in `manifest.json`.
 
+**There is one ground for the whole app.** `275:2179`'s printed sheet (`home-ground.png`,
+`KultaraGround`) is drawn over `KultaraPalette.paper` on every museum screen and over
+`HisploraPalette.paperSheet` on the three Journal screens. It replaced two earlier grounds —
+`paper-texture.png` and `hisplora-ground.png` — and both are deleted. The Journal's type is
+`inkDark`/`inkMuted` accordingly; `inkCream` still belongs to the brown story flow.
+
+A museum screen that needs its own opaque ground — anything reachable as a `sheet` or a
+`fullScreenCover`, which is presented outside the theme provider's tree — uses
+**`.kultaraGround()`**, never `.background(palette.paper.color)`. The flat token is the same colour
+with the sheet's printing painted over it, which is exactly how the catalogue ended up looking
+different from the Journal.
+
+**Never put an SVG in `DesignSystem/Resources/Images`.** `Package.swift` copies that directory
+wholesale, so anything left there ships in every user's app bundle — this is how eighty-nine
+megabytes of base64 stamp exports once rode into the build. Vector sources live in
+`docs/design-sources/`, and the render is what goes in `Resources/Images`.
+
 ## The app-flow chart, and the wireframes standing in for it
 
 The team's flow chart draws nodes the app does not have: splash, login/register, a Journal branch
@@ -422,6 +443,17 @@ auto-advancing and the login carrying a "Skip for now".
   highest-priority two: Catur Muka's seed coordinate is in the **wrong quadrant** (~293 m out, right
   neighbourhood), and Museum Bali's `entryCost: 0` renders as "Gratis"/"Free" for a museum that
   sells a ticket.
+- **The region map is `275:2309`'s wide fantasy island, and it scrolls both ways.** As of
+  `contentBundleVersion` **2026.09.4** `maps/bali-illustrated.png` is a 1469 × 1071 landscape chart
+  (`aspectRatio` 1.3716) in place of the 853 × 1844 portrait one. `RegionMapView` fills the
+  viewport, so it is drawn ~1199 points wide on a 402-point screen — the frame's own layout — which
+  is where the horizontal pan comes from; vertical pan appears above fill, and **fill is the
+  zoom-out limit** — pinching out stops where the drawing still covers the screen, so seeing the
+  rest of the island is a pan, not a zoom. The map opens centred on the pins rather than on the
+  artwork, and returning to fill keeps the pan rather than resetting it. Markers are `275:2309`'s own illustrated
+  buildings standing in fog (`MapLandmarkFigure`, three drawings, quest-id table in
+  `Support/MapLandmarkCatalog.swift`) with a 44-point square target hung on the building — the
+  figure is 120 points wide and mostly transparent fog, so its bounds are not the target.
 - **The shipped site plan is a generated illustration, and the screen says so.** `Place.siteMap`
   (`{ asset, aspectRatio, sourceRef }`) is new as of `contentBundleVersion` **2026.09.2**, and
   `badung-puri-agung-pemecutan` is the only Place that carries one. The drawing annotates a real puri

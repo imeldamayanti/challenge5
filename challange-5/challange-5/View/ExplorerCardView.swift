@@ -41,7 +41,7 @@ struct ExplorerCardView: View {
         // `547:2953` prints the card's ground as `brownMid` under a fine white speckle, which is
         // `HisploraGround`. See that file for the measured ratios — the sheet is drawn over the
         // token rather than replacing it, so `HisploraThemeTests` still describes this screen.
-        HisploraStage(ground: \.brownMid, grain: true) {
+        HisploraStage(ground: \.paperSheet, grain: true) {
             VStack(spacing: 0) {
                 header
                 identity
@@ -69,7 +69,7 @@ struct ExplorerCardView: View {
         HStack(alignment: .firstTextBaseline) {
             Text(UIStrings.string(.profileHeading, language))
                 .kultaraFont(.storyDisplay)
-                .foregroundStyle(palette.inkCream.color)
+                .foregroundStyle(palette.inkDark.color)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: KultaraMetrics.sm)
             Button {
@@ -77,7 +77,7 @@ struct ExplorerCardView: View {
             } label: {
                 Image(systemName: "slider.horizontal.3")
                     .font(.system(size: 20))
-                    .foregroundStyle(palette.inkCream.color)
+                    .foregroundStyle(palette.inkDark.color)
                     .kultaraTapTarget()
             }
             .buttonStyle(.plain)
@@ -103,7 +103,7 @@ struct ExplorerCardView: View {
             VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
                 Text(model.presentation.name)
                     .kultaraFont(.questTitle)
-                    .foregroundStyle(palette.inkCream.color)
+                    .foregroundStyle(palette.inkDark.color)
                     .accessibilityHint(UIStrings.string(.profileExplorerNameNote, language))
                 // A flow rather than an `HStack`: at an accessibility size three labels do not fit
                 // across 192 points, and the frame's row becomes a column instead of three
@@ -140,7 +140,7 @@ struct ExplorerCardView: View {
         .lineLimit(1)
         .minimumScaleFactor(0.7)
         .fixedSize(horizontal: true, vertical: false)
-        .foregroundStyle(palette.inkCream.color)
+        .foregroundStyle(palette.inkDark.color)
         .accessibilityElement(children: .combine)
     }
 
@@ -245,7 +245,7 @@ struct ExplorerCardView: View {
     private func empty(_ key: UIStringKey) -> some View {
         Text(UIStrings.string(key, language))
             .kultaraFont(.body)
-            .foregroundStyle(palette.inkDusty.color)
+            .foregroundStyle(palette.inkMuted.color)
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .frame(maxWidth: .infinity)

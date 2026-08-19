@@ -35,6 +35,16 @@ struct RegionMapView: View {
 
     private static let maximumZoom: CGFloat = 6
 
+    /// How far out a pinch may go. **1 — the artwork filling the viewport is as far out as the map
+    /// goes.**
+    ///
+    /// The shipped illustration is a landscape drawing of the whole island shown on a portrait
+    /// screen, so filling crops roughly two thirds of its width; a floor below 1 would show the
+    /// whole island but would letterbox it, and the author's decision on 2026-08-19 was that the
+    /// current height is the limit. Pinching out therefore stops where the drawing still covers
+    /// the screen, and seeing the rest of the island is a pan rather than a zoom.
+    private static let minimumZoom: CGFloat = 1
+
     init(
         model: RegionMapViewModel,
         onSelect: @escaping (String) -> Void,
@@ -47,7 +57,7 @@ struct RegionMapView: View {
 
     var body: some View {
         GeometryReader { proxy in
-            let scale = clampedZoom
+            let scale = min(max(zoom * pinch, Self.minimumZoom), Self.maximumZoom)
             // `.fill`, not `.fit`: the design's map runs to every edge, and the shipped
             // illustration is within a percent of the screen's own aspect ratio, so filling
             // crops almost nothing.
@@ -101,10 +111,6 @@ struct RegionMapView: View {
         // nothing. The markers name themselves.
     }
 
-    private var clampedZoom: CGFloat {
-        min(max(zoom * pinch, 1), Self.maximumZoom)
-    }
-
     /// True while the map is being moved, and for a moment afterwards. Markers do not hit-test in
     /// this state, so a touch that is part of a pan or a pinch cannot become a navigation.
     ///
@@ -131,12 +137,22 @@ struct RegionMapView: View {
     /// which is as wide as its label, so two of them cannot land on top of each other.
     private static let minimumMarkerSeparation: CGFloat = 200
 
-    /// Narrower than the design's, because the design's map has two labels on it and this one has
-    /// as many as the content ships.
-    private static let labelWidth: CGFloat = 130
+    /// Narrower than the design's 202, because the design's map has four labels on it and this one
+    /// has as many as the content ships.
+    private static let labelWidth: CGFloat = 150
+
+    /// The frame draws its landmark clusters at 159 points across. Held here rather than taken as
+    /// the component's default so the two numbers that have to agree — the figure's width and the
+    /// label's — sit next to each other.
+    private static let figureWidth: CGFloat = 120
 
     /// Opens fitted when the pins are spread and on the cluster when they are not, then centres
     /// what it zoomed into. Runs once — a reader who has panned away is not dragged back.
+    ///
+    /// The centring is not conditional on having zoomed in. The shipped illustration is a
+    /// landscape drawing of the whole island shown on a portrait screen, so filling the viewport
+    /// already crops two thirds of its width away — and the middle of Bali is not where the quest
+    /// is. Opening centred on the artwork put the one marker half off the right edge.
     private func openOnThePins(drawnAt size: CGSize, viewport: CGSize) {
         guard !hasOpened else { return }
         hasOpened = true
@@ -145,7 +161,7 @@ struct RegionMapView: View {
             drawnAt: size,
             minimumSeparation: Self.minimumMarkerSeparation,
             maximum: Self.maximumZoom)
-        guard scale > 1 else { return }
+        guard !model.pins.isEmpty else { return }
 
         // Positive offset moves the content right and down, so the centroid's displacement from
         // the middle of the map is negated.
@@ -217,11 +233,15 @@ struct RegionMapView: View {
         MagnifyGesture()
             .updating($pinch) { value, state, _ in state = value.magnification }
             .onEnded { value in
-                let target = min(max(zoom * value.magnification, 1), Self.maximumZoom)
+                let target = min(max(zoom * value.magnification, Self.minimumZoom),
+                                 Self.maximumZoom)
                 let ratio = target / max(zoom, 0.0001)
                 zoom = target
-                if target == 1 {
-                    pan = .zero
+                if target == Self.minimumZoom {
+                    // Back at fill. The pan is *not* reset: on this artwork fill still leaves two
+                    // thirds of the island off either side, so zeroing it would throw the reader
+                    // back to the middle of the drawing rather than leaving them where they were.
+                    commitPan(pan, at: target)
                 } else {
                     commitPan(CGSize(width: pan.width * ratio, height: pan.height * ratio), at: target)
                 }
@@ -241,6 +261,9 @@ struct RegionMapView: View {
                      height: min(max(proposed.height, -limitY), limitY))
     }
 
+    /// Double tap cycles between the design's fitted view and a reading zoom. It does not visit
+    /// the pinched-out whole-island view: that is somewhere the reader asked to go, not somewhere
+    /// a stray double tap should land them.
     private func toggleZoom() {
         withAnimation(.easeInOut(duration: 0.2)) {
             if zoom > 1 {
@@ -280,10 +303,18 @@ struct RegionMapView: View {
     /// navigated. `NFR-A11Y-06` is satisfied by the pin's own 44-point square, and the label is
     /// already `accessibilityHidden` inside `MapPlaceLabel`, so VoiceOver loses nothing.
     private func marker(_ pin: RegionMapPin, labelBelow: Bool) -> some View {
-        VStack(spacing: KultaraMetrics.xs) {
-            if !labelBelow { MapPlaceLabel(pin.title, width: Self.labelWidth) }
+        VStack(spacing: 0) {
+            if !labelBelow {
+                MapPlaceLabel(pin.title, width: Self.labelWidth)
+                    .padding(.bottom, KultaraMetrics.xs)
+            }
             pinSymbol(pin)
-            if labelBelow { MapPlaceLabel(pin.title, width: Self.labelWidth) }
+            if labelBelow {
+                MapPlaceLabel(pin.title, width: Self.labelWidth)
+                    // The frame tucks the name up against the fog rather than spacing it off the
+                    // marker — the label reads as written on the map, not as a caption under a pin.
+                    .padding(.top, -KultaraMetrics.xs)
+            }
         }
         // One element for VoiceOver, named and activatable. The rotor cannot activate a bare
         // `DragGesture`, so the action is declared explicitly rather than inherited from a button.
@@ -298,14 +329,26 @@ struct RegionMapView: View {
     /// began on a pin navigated on lift. Selection needs the touch to have stayed put
     /// (`MapMarkerGesture.isTap`).
     private func pinSymbol(_ pin: RegionMapPin) -> some View {
-        Image(systemName: "mappin.circle.fill")
-            .font(.system(size: 28))
-            .foregroundStyle(palette.sealFill.color)
-            .background(Circle().fill(palette.inkOnSeal.color).padding(3))
-            .shadow(color: palette.photoScrim.color.opacity(0.45), radius: 3, y: 1)
+        MapLandmarkFigure(artwork: MapLandmarkCatalog.artwork(forQuestID: pin.questID),
+                          width: Self.figureWidth)
+            // The pressable area is a 44-point square over the building, not the figure's own
+            // bounds. The figure is 120 points wide and most of that width is fog at low alpha, so
+            // a target the size of the drawing would be mostly transparent map — wide enough that
+            // two adjacent markers' rectangles overlap and a touch on open sea navigates. That is
+            // the same failure the old label-sized target had, and `NFR-A11Y-06` is satisfied by
+            // the square regardless.
+            .overlay { touchTarget(pin) }
+    }
+
+    /// The building sits in the upper third of the figure — 27.5 points down an 87-point cluster —
+    /// so the square is raised off centre to land on the drawing rather than on the fog beneath it.
+    private func touchTarget(_ pin: RegionMapPin) -> some View {
+        let height = MapLandmarkFigure.height(forWidth: Self.figureWidth)
+        return Color.clear
             .frame(width: KultaraMetrics.minimumTapTarget,
                    height: KultaraMetrics.minimumTapTarget)
             .contentShape(Rectangle())
+            .offset(y: MapLandmarkFigure.buildingCentreFraction * height - height / 2)
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in

@@ -4,11 +4,18 @@ import SwiftUI
 /// The photo card the Ngalcer Home frame is built from (`28:76`): one photograph, rounded at 12,
 /// with the title and a row of facts written over its lower edge.
 ///
-/// The text sits on `photoScrim` at full opacity and the gradient above it is decoration, because a
-/// ratio measured against "whatever the photo happens to be" is not a measurement (`NFR-A11Y-03`).
-/// The frame draws the caption as a single 80%-black wash; reproducing that literally would leave
-/// every measured number in `PhotoScrimTests` describing something other than what is on screen, so
-/// the wash is split into a fade and an opaque block and the type only ever lands on the block.
+/// The caption is the frame's own wash: one 89-point block running from `photoScrim` at 80% along
+/// its bottom edge to nothing at its top (`275:2178`, `275:2183` — the gradient's `startPoint` is
+/// `(0.47, 1)`, so it is drawn from the *bottom* up). It replaced a split fade-plus-opaque-block on
+/// 2026-08-19 at the author's instruction.
+///
+/// **That is a deliberate, recorded loss.** A ratio measured against "whatever the photo happens to
+/// be" is not a measurement (`NFR-A11Y-03`), and the split version existed so the type only ever
+/// landed on opaque scrim and `PhotoScrimTests`' numbers described what was on screen. They no
+/// longer do for this card: the title sits high in the block, where the wash is weakest, over an
+/// arbitrary photograph. The tokens are unchanged and still measured — what is gone is the
+/// guarantee that this card is where they apply. `.black` in the frame is drawn as
+/// `palette.photoScrim` so the colour at least stays a token rather than becoming a literal.
 ///
 /// The caption is laid out first and the photograph is its *background*: a background cannot make
 /// its parent smaller, so at the largest accessibility sizes the card grows to fit the words instead
@@ -30,13 +37,18 @@ struct PhotoQuestCard<Facts: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
-            LinearGradient(
-                colors: [palette.photoScrim.color.opacity(0), palette.photoScrim.color],
-                startPoint: .top, endPoint: .bottom)
-                .frame(height: fadeHeight)
-                .accessibilityHidden(true)
             caption
-                .background(palette.photoScrim.color)
+                .frame(minHeight: captionHeight, alignment: .leading)
+                .background {
+                    LinearGradient(
+                        stops: [
+                            .init(color: palette.photoScrim.color.opacity(0.8), location: 0),
+                            .init(color: palette.photoScrim.color.opacity(0), location: 1),
+                        ],
+                        startPoint: UnitPoint(x: 0.47, y: 1),
+                        endPoint: UnitPoint(x: 0.47, y: 0))
+                        .accessibilityHidden(true)
+                }
         }
         .frame(maxWidth: .infinity)
         .frame(minHeight: cardHeight)
@@ -49,7 +61,11 @@ struct PhotoQuestCard<Facts: View>: View {
     /// card at the largest accessibility size is still a card rather than a screen.
     @ScaledMetric(relativeTo: .subheadline)
     private var scaledCardHeight: CGFloat = KultaraMetrics.photoCardMinimumHeight
-    @ScaledMetric(relativeTo: .subheadline) private var fadeHeight: CGFloat = 56
+    /// The frame's 89-point caption block, scaled, and a *minimum* rather than a height for the
+    /// same reason the card's is: at the largest content sizes the words are what decide, and a
+    /// fixed 89 clips them (`NFR-A11Y-01`).
+    @ScaledMetric(relativeTo: .subheadline)
+    private var captionHeight: CGFloat = KultaraMetrics.photoCardCaptionHeight
     private var cardHeight: CGFloat { min(scaledCardHeight, 340) }
 
     @ViewBuilder private var heroLayer: some View {
@@ -66,7 +82,7 @@ struct PhotoQuestCard<Facts: View>: View {
     }
 
     private var caption: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
+        VStack(alignment: .leading, spacing: KultaraMetrics.photoCardCaptionSpacing) {
             Text(title)
                 .kultaraFont(.questTitle)
                 .foregroundStyle(palette.inkOnPhoto.color)
@@ -74,8 +90,9 @@ struct PhotoQuestCard<Facts: View>: View {
 
             facts
         }
-        .padding(.horizontal, KultaraMetrics.lg)
-        .padding(.vertical, KultaraMetrics.md)
+        // The frame's 15 and 0. Vertical padding is zero because the 89-point block is what holds
+        // the words off the card's bottom edge, and adding both would double the inset.
+        .padding(.horizontal, KultaraMetrics.photoCardCaptionInset)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

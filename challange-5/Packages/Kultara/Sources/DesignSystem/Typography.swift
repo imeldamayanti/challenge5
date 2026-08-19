@@ -309,6 +309,18 @@ public enum KultaraMetrics {
     /// A minimum rather than a height — the caption decides how tall the card actually ends up,
     /// so the words are never clipped at an accessibility size (`NFR-A11Y-01`).
     public static let photoCardMinimumHeight: CGFloat = 208
+
+    /// The caption block's own height on that card (`275:2183`: 354×89), and, like the card's, a
+    /// minimum rather than a height.
+    public static let photoCardCaptionHeight: CGFloat = 89
+
+    /// The caption's horizontal inset (`275:2183`, `padding(.horizontal, 15)`). Not `lg`: 15 is the
+    /// frame's number and the spacing scale has no 15 in it, so borrowing 16 would be a silent
+    /// point of drift between the drawing and the screen.
+    public static let photoCardCaptionInset: CGFloat = 15
+
+    /// The gap between the card's title and its row of facts (`275:2183`, `spacing: 10`).
+    public static let photoCardCaptionSpacing: CGFloat = 10
 }
 
 // MARK: - Accuracy chip appearance

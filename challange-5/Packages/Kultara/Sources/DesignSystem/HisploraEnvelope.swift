@@ -402,10 +402,12 @@ public enum HisploraEnvelopeMetrics {
     /// Where the pocket's lip falls. Below this line the body export is the front of the paper and
     /// is drawn over whatever is coming out; above it, the reader is looking inside.
     public static let pocketTopRatio: CGFloat = 0.56
-    /// The wax, 54.269 wide, centred at (118.28 + 54.269/2, 92.64 + 54.507/2).
-    public static let sealSizeRatio: CGFloat = 54.269 / 290.0
-    public static let sealCentre = CGPoint(x: (118.28 + 54.269 / 2) / 290.0,
-                                           y: (92.64 + 54.507 / 2) / 173.999)
+    /// The wax, 58 wide, struck at (117, 90) and 53.399 tall (`719:3292`). It ships on a square
+    /// 58-point board with the wax centred on it, because `HisploraWaxSeal` fits a square — so the
+    /// board's top edge is 2.3 above the wax's, and that is in the centre below.
+    public static let sealSizeRatio: CGFloat = 58.0 / 290.0
+    public static let sealCentre = CGPoint(x: (117 + 58.0 / 2) / 290.0,
+                                           y: (90 + 53.399 / 2) / 173.999)
     /// The page that comes out is narrower than the pocket that held it.
     public static let pageWidthRatio: CGFloat = 0.62
     /// How deep into the pocket the risen sheet's bottom edge stays, as a fraction of the pocket
@@ -422,6 +424,9 @@ public enum HisploraEnvelopeMetrics {
     public static let bodyImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-body")
     public static let flapImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-flap")
     public static let innerImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-inner")
+    /// The tape survived the `719:3285` redraw. That frame draws the bare envelope and has no tape
+    /// in it, but the tape is not part of the envelope — it holds the quest's photograph onto the
+    /// pocket in `511:1464`, which `SealedLetterEnvelope` still draws.
     public static let tapeImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-tape")
 
     public static var allResourceNames: [String] {
