@@ -141,3 +141,29 @@ app and proves the new scene links as a dependency, not just standalone).
 Notification Scene (see this plan's own testing note above) — device verification needs a physical
 iPhone + paired Apple Watch and has not been attempted. Do not read "builds clean" as "the card
 renders correctly"; those are different claims and only the first one is made here.
+
+## Execution — 2026-08-19 (`s14`, what actually shipped)
+
+`s14-watch-two-card-alignment.plan.md` finished Phase B and changed two things this plan assumed.
+
+**The long look is `91:176`'s radar, and the watch app has a second, different card.** §3 and §4 were
+written when there was one design for both surfaces. There are now two, deliberately
+(`s14` D1/D2): `SideQuestLongLookView` renders the radar for the notification, and the new
+`SideQuestWatchCardView` renders `91:182`'s gold frame for the screen a tap opens. They share only
+their `(synopsis, heroImage)` initialiser. §4's image-slot rule (`FR-WATCH-06`) is unchanged and both
+cards implement it — one slot, two states, a flat brand fill wherever no sourced photo exists.
+
+**§5's hand-off does not work, and `FR-WATCH-07` is open.** This plan states the category and action
+wiring satisfies it. They do not: once this target's `WKNotificationScene` claims `"sidequest-nearby"`,
+the watch renders the long look and handles every tap on it, and a `UNNotificationAction`'s options
+are evaluated by the device that handles the tap — the phone's registration never gets a say. `s12`
+established this; `s14` shipped the honest version, which is that "Open in App" foregrounds the
+**watch** app (`options: [.foreground]`, restored in `s14` Task 3.1 after the working tree had
+reverted it to `options: []`, where the tap did nothing at all). The requirement needs a named owner.
+
+**§7's table is still outstanding**, with one row narrowed. Both cards have now been rendered and
+measured on a 46 mm watchOS 26.5 simulator by hosting them in `ContentView`
+(`docs/screenshots/s14-watch-*.png`), which is more than "builds clean" — but it is still not a real
+Notification Scene interaction. A notification pushed with `simctl push` is delivered and its long
+look needs a wrist raise no simulator reproduces, so the long look *in situ* and the tap that
+foregrounds the app remain device-only and unverified.

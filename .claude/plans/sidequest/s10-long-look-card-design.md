@@ -1,5 +1,16 @@
 # S10 — Long-look card: design
 
+
+> **PARTLY SUPERSEDED by `s14-watch-two-card-alignment.plan.md` (2026-08-19).**
+>
+> - Its **Architecture** section stands: no `DesignSystem`/`ContentKit` on the watch, the local
+>   `Color(hex:)`, values resolved once in `didReceive`, the drawn-not-exported placeholder.
+> - Its **Layout** section is superseded. The long look renders Figma `91:176`'s radar, not the gold
+>   frame; the frame moved to the watch app's own screen.
+> - Its claim that **`FR-WATCH-07` is "already satisfied by Phase A's ... action wiring" is false.**
+>   `s12` established that a watch hosting its own `WKNotificationScene` for the category handles every
+>   tap on it, so the action cannot wake the iPhone. The requirement is open and has no owner.
+
 **Status:** approved by product owner (in-chat brainstorming, 2026-08-18). Implementation plan is
 `s11-long-look-card.plan.md`.
 **Scope:** resolves `s9-watch-notification-scene.plan.md` §3 ("Long-look — the Notification

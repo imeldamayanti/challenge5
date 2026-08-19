@@ -469,30 +469,30 @@ git commit -m "feat(watch): open the tapped sidequest's card instead of the plac
 
 ### Task 4.1: Mark what this plan supersedes
 
-- [ ] `s12-watch-open-in-app-handoff.plan.md` and `s13-long-look-radar-redesign.plan.md`: a header note
+- [x] `s12-watch-open-in-app-handoff.plan.md` and `s13-long-look-radar-redesign.plan.md`: a header note
   stating neither was executed and both are superseded by this file, with the reason (the two-card
   split). Their findings stay valuable — `s12`'s hand-off analysis in particular is the reason
   `FR-WATCH-07` is known to be unsatisfiable — so neither file is deleted.
-- [ ] `s10-long-look-card-design.md`: its `FR-WATCH-07` Status claim is false and its Layout section is
+- [x] `s10-long-look-card-design.md`: its `FR-WATCH-07` Status claim is false and its Layout section is
   superseded. Its Architecture section stays accurate.
-- [ ] `s11-long-look-card.plan.md`: Task 1's view code was replaced; the file/task structure stands.
-- [ ] `s9-watch-notification-scene.plan.md`: an execution note recording what actually shipped.
+- [x] `s11-long-look-card.plan.md`: Task 1's view code was replaced; the file/task structure stands.
+- [x] `s9-watch-notification-scene.plan.md`: an execution note recording what actually shipped.
 
 ### Task 4.2: Record three debts that have no owner yet
 
-- [ ] **`FR-WATCH-07` is unresolved.** Needs a named owner to either amend the requirement to describe
+- [x] **`FR-WATCH-07` is unresolved.** Needs a named owner to either amend the requirement to describe
   what was built, or accept dropping the custom long-look so system mirroring can wake the iPhone —
   at the cost of `FR-WATCH-05`. `NSUserActivity` Handoff is an untried third option.
-- [ ] **The watch target has no i18n path.** Every static string in it is a hardcoded English literal:
+- [x] **The watch target has no i18n path.** Every static string in it is a hardcoded English literal:
   "Open in App", "The full story is on your iPhone", the placeholder copy. The synopsis is localised
   because the phone resolved it before posting. `NFR-I18N-01` is not violated by any guard's
   reckoning — no guard scans this target — but it is violated in substance, and adding a second
   language means solving it.
-- [ ] **`OrnateFrame.png` is a generative asset** (`ChatGPT Image Aug 13, 2026...`). Ornamental, no
+- [x] **`OrnateFrame.png` is a generative asset** (`ChatGPT Image Aug 13, 2026...`). Ornamental, no
   likeness — assuming Task 2.1 Step 2 confirms that against the real file. Recorded so that
   `docs/hisplora-tokens.md`'s ledger of what was and was not built from generated frames stays honest.
 
-- [ ] **Commit**
+- [x] **Commit**
 
 ```bash
 git commit -m "docs(sidequest): record s14's two-card split and what it supersedes"
@@ -512,3 +512,92 @@ plan in this series has recorded. Once all phases are committed:
    sidequest — gold frame, oval, tan-to-cream gradient, and the caption line "The full story is on your
    iPhone" as plain text with no button chrome. Not the placeholder, and not the iPhone.
 4. Confirm nobody in the room tries to tap the caption. If they do, Decision 3 did not go far enough.
+
+---
+
+## Execution — 2026-08-19
+
+All four phases executed and committed on `notification`
+(`1f01ab4`, `d2a9500`, `36ae90b`, `6678c6b`, `9778c62`, `7ef5e09`, `2fe2a77`, `53a49e3`).
+
+### Both hard stops cleared, neither by assumption
+
+**The centre symbol is `figure.wave.circle.fill`** — established, not guessed. Two corrections to
+this plan's own account of it:
+
+- The codepoint is **U+10077D, not U+F077D**. SF Symbols live in Plane 16 (U+100000+), which is why
+  the offline search this plan describes came up empty: it was looking for a character that does not
+  exist.
+- The glyph *is* in `SFSymbolsFallback.otf` — number 13796, named `uni10077D.medium`. The font
+  carries the picture but not the symbol name, so the name was recovered by rendering that glyph and
+  shape-matching it against all 8,302 names in CoreGlyphs' `symbol_order.plist`:
+  `figure.wave.circle.fill` at **0.9957** correlation, runner-up 0.8979, and the two renders are
+  identical stroke for stroke. This plan's "leading candidate" was right; it is now measured.
+
+**`OrnateFrame.png` carries no likeness.** It is an ornate gold picture frame — ornament, no face, no
+portrait, no figure. `FR-WATCH-06` does not block it and Phase 2 proceeded.
+
+### One accusation in this plan is wrong
+
+This plan's Context section says `holeWidthFraction: 0.6465` is "a number claiming to be measured off
+a file that has never existed". Measured off the real export now: **0.6398 × 0.6792** against the
+recorded 0.6465 × 0.6846 — within 1%. That measurement was real. The file was never committed, which
+is a different and smaller failure, and Phase 2 fixed it.
+
+What *is* wrong in the old doc comment is narrower: it treats 447/558 = 0.801 as the ratio to lock the
+layout to. Figma places the frame in a 99×116 box (0.853) and **FILL-crops** it — proved by measuring
+the export's inner oval, whose horizontal fraction is preserved and whose vertical fraction grows
+exactly as that crop predicts.
+
+### Six changes the plan did not specify, each forced by a measurement
+
+1. **Disc sizing.** `containerRelativeFrame(.horizontal)` + `.aspectRatio(1, .fit)`, which this plan
+   specifies, let a tight VStack shrink the disc to **44.5%** of the width against the frame's 55%.
+   Both cards now read their width once via `onGeometryChange` and set an explicit square frame.
+   Still fractions of the container — the constraint this plan cared about — just enforced ones.
+2. **Graticule contrast.** Drawn at 0.09 opacity it measured **2.3×** the frame's own contrast on a
+   46 mm simulator. Now 0.05, against a sampled 0.04.
+3. **Caption contrast.** `.foregroundStyle(.secondary)`, which this plan specifies, measured
+   **1.05:1** on the cream ground — `.secondary` resolves against watchOS's dark default. Replaced
+   with the card's ink at 0.65, measured **5.39:1** (`NFR-A11Y-03`).
+4. **Where the ground is painted.** A `ScrollView` clips its content's background, so
+   `.ignoresSafeArea()` inside the card could not reach past the clock's inset and a black band sat
+   across the top. `sideQuestCardGround()` paints it behind the screen instead.
+5. **Idle-screen width.** Without `maxWidth: .infinity` the scroll content was only as wide as its
+   text and the ground inset to match, leaving 25px black bands down each edge.
+6. **Phase 0's premise.** The working tree was already clean — the `print()` calls, the title change
+   and the `options: []` regression were all committed in `8270104 Update UI watch`, not uncommitted.
+   The work was the same; only the framing differed.
+
+### Verified, and not
+
+Rendered and measured on a 46 mm watchOS 26.5 simulator by hosting each card in `ContentView`:
+the radar card in both image states, the gold-frame card in both, and the idle screen —
+`docs/screenshots/s14-watch-long-look-radar.png`, `-gold-frame-card.png`, `-idle-screen.png`.
+Both schemes build clean, the app scheme included, which is what proves the watch target still links
+as an embedded dependency.
+
+**Not verified:** the long look *in situ* and the tap that foregrounds the app. A notification pushed
+with `simctl push` is delivered, but its long look needs a wrist raise no simulator reproduces. The
+device checklist at the foot of this plan is unchanged and still has to be walked by a person.
+
+## Debts this plan leaves with no owner
+
+- **`FR-WATCH-07` is unresolved.** "Open in App ... MUST hand off to the iPhone app ... MUST NOT open
+  a screen inside the watch companion itself" is not satisfiable while this target hosts its own
+  `WKNotificationScene` for the category, and what shipped does the opposite of the second clause. It
+  needs a named owner to either amend the requirement to describe what was built, or accept dropping
+  the custom long look so system mirroring can wake the iPhone — at the cost of `FR-WATCH-05`.
+  `NSUserActivity` Handoff from the running watch app is an untried third option, and a different
+  mechanism from the notification-tap path `s12` ruled out. `FR-START-04a` is the precedent for how
+  one of these gets closed: a signed amendment with an owner and a date.
+- **The watch target has no i18n path.** Every static string in it is a hardcoded English literal —
+  "Open in App", "The full story is on your iPhone", the idle screen's two lines, and both cards'
+  accessibility labels. Only the synopsis is localised, because the phone resolved it before posting.
+  No guard scans this target, so `NFR-I18N-01` is not violated by any test's reckoning; it is
+  violated in substance, and adding a second language means solving it first.
+- **`OrnateFrame.png` is a generative asset** — the layer is named `ChatGPT Image Aug 13, 2026 at
+  09_35_01 AM 1`. Confirmed ornamental with no likeness (above), so it raises no `FR-CP-05` question,
+  but `docs/hisplora-tokens.md`'s ledger of what was and was not built from generated frames should
+  carry it. It is also the only image in the watch target and has no `sourceRef`; content assets
+  under `ContentKit` carry citations, and this one sits outside that system entirely.

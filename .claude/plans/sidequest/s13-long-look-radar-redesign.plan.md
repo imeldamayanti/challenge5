@@ -1,5 +1,19 @@
 # S13 — Long-look card redesign: the "kiri" radar motif replaces the oval gold frame
 
+
+> **SUPERSEDED — never executed (0/11 steps).** Replaced in full by
+> `s14-watch-two-card-alignment.plan.md`, whose Phase 1 is this plan's Task 1 with corrected numbers.
+>
+> Two things it got wrong. Its Task 2 deletes `OrnateFrame.imageset` as unused; the gold frame was
+> instead **moved** to the watch app's own screen (`s14` D2), so the asset is now shipped for the
+> first time rather than retired. And its geometry is off: `slotDiameter: 128` is a fixed point value,
+> about 70% of the content width on a 46 mm watch against the frame's 55%, and it plans a cream
+> `Circle()` with a separate figure on top where the frame's centre is one `.circle.fill` glyph whose
+> cream disc is part of the glyph.
+>
+> Its core call — that the long look is `91:176`'s radar, not the gold frame — was right and is what
+> shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Replace `SideQuestLongLookView`'s entire visual design — currently the oval gold-frame card

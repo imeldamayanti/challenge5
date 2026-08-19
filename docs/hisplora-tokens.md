@@ -220,6 +220,19 @@ Ten, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `44
 | `SpecialElite-Regular.ttf` | `DesignSystem/Resources/Fonts` | Apache 2.0, licence shipped beside it |
 | `<place>-stamp1…3.png` × 5 places | `DesignSystem/Resources/Images` | the fifteen stamp illustrations, composited out of the SVGs at 480 × 519 — see below |
 | `hisplora-ground.png` | `DesignSystem/Resources/Images` | `547:2953` rendered, 804 × 1748 — the printed brown the Journal and the Explorer's Card sit on |
+| `OrnateFrame.png` | `hisplora Watch App/Assets.xcassets` | `91:186`, 447 × 558 with a transparent oval — the **only** image in the watch target, and the only asset here outside `DesignSystem` — see below |
+
+**`OrnateFrame.png` is a generative asset, and it is ornament.** The layer is named `ChatGPT Image
+Aug 13, 2026 at 09_35_01 AM 1`. It was checked against `FR-WATCH-06` before being committed
+(`s14` Phase 2, Task 2.1 Step 2, which exists for exactly this): it is an ornate gold picture frame
+and carries **no face, no portrait and no human likeness**, so it raises none of the unsourced-claim
+question the AI-generated portrait of a named historical figure did — that one is still not built,
+below. Two things about it are worth keeping visible anyway. It is the only image the watch target
+ships, so it is governed by nothing: content assets under `ContentKit` carry a `sourceRef` and a
+citation the validator resolves, and an asset catalog in an app target has no such field. And Figma
+places it in a 99 × 116 box against its own 447/558, and **FILL-crops** it rather than stretching —
+`SideQuestWatchCardView` reproduces that with `.scaledToFill()` plus `.clipped()`, so the top and
+bottom of the scrollwork are cut by ~3% exactly as the frame cuts them.
 
 **`story-divider.png` is not the frame's pixels.** Figma exports that node with the containing
 frame's `#808080` backdrop baked in, so the file as exported is a solid grey bar with a faint

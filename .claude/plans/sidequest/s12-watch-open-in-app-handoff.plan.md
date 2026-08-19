@@ -1,5 +1,19 @@
 # S12 — "Open in App" on the watch: correcting the hand-off claim
 
+
+> **SUPERSEDED — never executed (0/15 steps).** Replaced in full by
+> `s14-watch-two-card-alignment.plan.md`, whose Phase 3 is this plan's Tasks 1–3 with one change.
+>
+> What changed: this plan reuses `SideQuestLongLookView` as the in-app screen "so the notification and
+> the in-app card look identical". The user overturned that on 2026-08-19 — the notification long look
+> keeps Figma `91:176`'s radar and the watch app's own screen gets `91:182`'s gold frame, because a
+> card you glanced at and a screen you navigated to are different places. `s14` Task 3.3 renders the
+> new `SideQuestWatchCardView` instead.
+>
+> **Its analysis stands and is why this file is kept.** The finding that "Open in App" cannot hand off
+> to the iPhone once this target's `WKNotificationScene` claims the category — so `FR-WATCH-07` is not
+> satisfiable as written — is this plan's, and nothing since has contradicted it.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Make the long-look card's "Open in App" action (and a tap on the card itself) actually do

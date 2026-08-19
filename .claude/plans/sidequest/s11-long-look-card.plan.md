@@ -1,5 +1,17 @@
 # S11 — Long-look card implementation plan
 
+
+> **Executed, and Task 1's view code has since been replaced** (`s14` Phase 1, 2026-08-19). The file
+> and task structure this plan established stand — `SideQuestLongLookView.swift` with its
+> `(synopsis, heroImage)` initialiser, hosted by `SideQuestNotificationController` — but the design
+> inside it is now Figma `91:176`'s radar rather than the gold frame.
+>
+> One thing it recorded as measured was not: the doc comment it shipped described scanning
+> `OrnateFrame.png`'s alpha channel, and that file was never committed. The numbers turned out to be
+> right (0.6465 × 0.6846 against 0.6398 × 0.6792 measured off the real export in `s14` Phase 2), so
+> the measurement did happen — but for nine days the repository held a claim nothing in it could
+> support. `s14` Phase 2 commits the asset.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Render a branded long-look card on the paired Apple Watch when a sidequest-nearby
