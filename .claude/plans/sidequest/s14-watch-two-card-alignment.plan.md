@@ -348,13 +348,13 @@ Note the current code's figures for comparison, all of which are wrong: aspect `
 hole `0.6465 × 0.6846`, and a gradient running cream→brown, i.e. **inverted** as well as
 mis-sampled at both stops.
 
-- [ ] **Step 1: Write the view**
+- [x] **Step 1: Write the view**
 
 Same two-state image slot as Phase 1 — a real `heroImage` fills the oval, otherwise the flat
 `#804A34` placeholder — with `Image("OrnateFrame")` composited on top. Size everything through
 `containerRelativeFrame` off the 48.3% figure, so the hole fractions stay correct at any watch size.
 
-- [ ] **Step 2: Add the caption line (Decisions 3 and 4)**
+- [x] **Step 2: Add the caption line (Decisions 3 and 4)**
 
 Below the synopsis:
 
@@ -373,9 +373,9 @@ worse than plain text; a plain `Text` is skipped by the AssistiveTouch cursor au
 exactly the intent. Write the reasoning into the file — the next reader will otherwise "fix" it back
 towards the Figma frame.
 
-- [ ] **Step 3: Build the watch target** (same command as Task 1.1 Step 5)
+- [x] **Step 3: Build the watch target** (same command as Task 1.1 Step 5)
 
-- [ ] **Step 4: Verify both `#Preview`s, then commit**
+- [x] **Step 4: Verify both `#Preview`s, then commit**
 
 ```bash
 git commit -m "feat(watch): add the gold-frame card for the watch app's own screen"
