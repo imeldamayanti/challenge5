@@ -390,14 +390,14 @@ git commit -m "feat(watch): add the gold-frame card for the watch app's own scre
 **Files:**
 - Modify: `challange-5/hisplora Watch App/hisploraApp.swift`
 
-- [ ] **Step 1: Restore `options: [.foreground]` and replace the comment**
+- [x] **Step 1: Restore `options: [.foreground]` and replace the comment**
 
 The comment currently in the working tree asserts a relay to the phone's registration that does not
 exist. `UNNotificationAction` options are evaluated by whichever device handles the tap, and once this
 target's `WKNotificationScene` claims `"sidequest-nearby"`, the watch handles every tap on it — the
 phone's registration never gets a say. Say that, and point at this plan.
 
-- [ ] **Step 2: Commit**
+- [x] **Step 2: Commit**
 
 ```bash
 git commit -m "fix(watch): open-in-app foregrounds the watch, not a nonexistent iPhone relay"

@@ -42,15 +42,20 @@ enum WatchSideQuestNotificationCategory {
     static let openInAppActionIdentifier = "OPEN_IN_APP"
 
     static func register() {
-        // `.foreground` here would launch *this* (the watch) app, since the long-look card is
-        // hosted locally by `WKNotificationScene` — the button is meant to wake the iPhone, not
-        // the watch. Leaving this action's options empty lets the tap relay back to the phone's
-        // own `SideQuestNotificationCategory` registration (`SideQuestProximityService.swift`),
-        // which does carry `.foreground` for exactly that phone-side launch.
+        // `.foreground`, and it launches *this* app — the watch one. There is no relay: a
+        // `UNNotificationAction`'s options are evaluated by whichever device handles the tap, and
+        // once this target's `WKNotificationScene` claims `"sidequest-nearby"` the watch renders
+        // the long look and handles every tap on it. The phone's own registration
+        // (`SideQuestProximityService.swift`), which does carry `.foreground`, never gets a say.
+        //
+        // An earlier comment here claimed the empty option set would "relay back to the phone's own
+        // registration". It does not, and with `options: []` the tap dismissed the notification and
+        // did nothing at all. `s12` established this and `s14` Phase 3 re-applies the fix; waking
+        // the iPhone from here is `FR-WATCH-07`, which stays open and unsatisfiable as written.
         let openInApp = UNNotificationAction(
             identifier: openInAppActionIdentifier,
             title: "Open in App",
-            options: [])
+            options: [.foreground])
         let category = UNNotificationCategory(
             identifier: identifier,
             actions: [openInApp],
