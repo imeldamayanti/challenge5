@@ -40,7 +40,11 @@ final class SideQuestNotificationController: WKUserNotificationHostingController
     /// fallback), not a crash or an empty slot. If the image slot never shows a real photo even once
     /// a sidequest ships `heroImageAsset`, this is why — read the two forum threads before assuming a
     /// bug in this function.
-    private static func loadHeroImage(from attachments: [UNNotificationAttachment]) -> UIImage? {
+    ///
+    /// Internal rather than `private` so `SideQuestWatchNotificationDelegate` can reuse it: the tap
+    /// path has to read the same attachment the long look read, and a second copy of a
+    /// security-scoped read whose failure modes are this specific would drift from this one.
+    static func loadHeroImage(from attachments: [UNNotificationAttachment]) -> UIImage? {
         guard let url = attachments.first?.url else { return nil }
         let didStartAccessing = url.startAccessingSecurityScopedResource()
         defer { if didStartAccessing { url.stopAccessingSecurityScopedResource() } }

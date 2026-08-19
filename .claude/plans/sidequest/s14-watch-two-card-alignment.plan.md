@@ -409,12 +409,12 @@ git commit -m "fix(watch): open-in-app foregrounds the watch, not a nonexistent 
 - Modify: `challange-5/hisplora Watch App/SideQuestNotificationController.swift`
 - Create: `challange-5/hisplora Watch App/SideQuestWatchNotificationDelegate.swift`
 
-- [ ] **Step 1: Widen `loadHeroImage` from `private` to internal**
+- [x] **Step 1: Widen `loadHeroImage` from `private` to internal**
 
 So the delegate reuses the security-scoped attachment read rather than duplicating it. Note in the
 doc comment why it is not `private` any more.
 
-- [ ] **Step 2: Write the delegate**
+- [x] **Step 2: Write the delegate**
 
 `SideQuestWatchNotificationDelegate: NSObject, UNUserNotificationCenterDelegate` with
 `var onTap: (@MainActor (OpenedSideQuestCard) -> Void)?`, resolving
@@ -426,7 +426,7 @@ the watch app is already foregrounded.
 `struct OpenedSideQuestCard { let sideQuestID: String; let synopsis: String; let heroImage: UIImage? }`
 goes in the same file.
 
-- [ ] **Step 3: Build the watch target, then commit**
+- [x] **Step 3: Build the watch target, then commit**
 
 ```bash
 git commit -m "feat(watch): resolve the tapped sidequest from the notification response"
