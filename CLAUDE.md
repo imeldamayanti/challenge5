@@ -64,7 +64,7 @@ The repo root and the Xcode project directory share a name, which is confusing:
     │   │   ├── Components/           5
     │   │   ├── Lore/                 5
     │   │   ├── Strings/              1
-    │   │   └── Wireframe/            3   quarantine — production code read by RunSummaryView, SideQuestNoticeView, PlaceholderQuestCatalog, despite the name
+    │   │   └── Wireframe/            3   quarantine, despite the name — see note below
     │   ├── Services/                 9
     │   └── Assets.xcassets/              unchanged
     ├── challange-5UITests/    XCUITest, the only tests needing a simulator
@@ -74,6 +74,9 @@ The repo root and the Xcode project directory share a name, which is confusing:
                                UIStringsKit, DesignSystem, GovernanceKit,
                                TelemetryKit, content-validator
 ```
+
+`Shared/Wireframe/` is production code, not scaffolding, despite its name — it's read by
+`RunSummaryView`, `SideQuestNoticeView` and `PlaceholderQuestCatalog`.
 
 **The app target now has a unit-test target.** `challange-5Tests` was added by `m7` — hand-written
 `project.pbxproj` objects in an `A0C0C0C0…C0xx` block, with a `PBXFileSystemSynchronizedRootGroup`,
@@ -86,7 +89,7 @@ package target as a pure value runs under `swift test` in milliseconds without a
 arrival countdown (`RunEngine.ManualOverrideSchedule`), the map-marker tap threshold
 (`DesignSystem.MapMarkerGesture`) and the route maths (`RunEngine.RouteProjection`) all went that way
 for good reasons that have not changed. Prefer the package. Use `challange-5Tests` for what genuinely
-needs the app target — SwiftUI-adjacent view models, `Model/` presentation types, `@testable import
+needs the app target — SwiftUI-adjacent view models, `Features/<Name>/` presentation types, `@testable import
 challange_5`.
 
 ### Which suites run where
@@ -246,8 +249,8 @@ A quest starts only inside its first checkpoint's radius (`FR-START-08`), which 
 untestable from a desk. Debug builds carry a switch — **Settings → Developer tools → Simulate arrival
 anywhere** — that reports a position at the next checkpoint. The arrival rule still runs on it: the
 radius and accuracy gate in `ArrivalEvaluator` is unmodified, so what gets exercised is the walker's
-code path with a different input. The switch (`Service/LocationService.swift`), its provider, and the
-Settings section (`View/Component/DeveloperToolsSection.swift`) are all inside `#if DEBUG`; a release
+code path with a different input. The switch (`Services/LocationService.swift`), its provider, and the
+Settings section (`Features/Settings/DeveloperToolsSection.swift`) are all inside `#if DEBUG`; a release
 build does not contain them, which is verifiable by grepping the Release binary for
 `SimulatedLocationProvider`.
 
@@ -284,7 +287,7 @@ The protocol deliberately has no notion of loading, refreshing, connectivity, or
 
 ### Layering
 
-`ContentKit` (Foundation only) → `RunEngine` (Foundation + ContentKit) → `DesignSystem` → the app target's `Model`/`ViewModel`/`View` (SwiftUI).
+`ContentKit` (Foundation only) → `RunEngine` (Foundation + ContentKit) → `DesignSystem` → the app target's `Features/`/`Shared/` (SwiftUI).
 
 The app target is not a shell — since `b597b5b` it holds every screen and view model. `DesignSystem` is the last package layer, and it knows nothing about `ContentKit`: every string is passed in by the caller (`NFR-I18N-01`), which is why components take `String` rather than `LocalizedText`.
 
@@ -294,20 +297,20 @@ The app target is not a shell — since `b597b5b` it holds every screen and view
 
 ## The presentation layer lives in the app target
 
-The SwiftUI layer used to be an `AppFeatures` package target. Since `b597b5b` it sits in the app target as conventional MVVM:
+The SwiftUI layer used to be an `AppFeatures` package target, then a layer-first `Model/`/`ViewModel/`/`View/`/`Service/`/`Support/` split in the app target. The feature-folder reorg replaced that split with feature-first grouping:
 
 | Folder | Holds | Rule |
 |---|---|---|
-| `Model/` | view-facing presentation types | `Sendable` value types only |
-| `ViewModel/` | one `@MainActor @Observable` class per screen | no SwiftUI import |
-| `View/` | one screen per file | |
-| `View/Component/` | shared and extracted subviews | |
-| `Service/` | platform edges — location, preferences, erasure, storage reporting | |
-| `Support/` | environment assembly, formatting, UI strings | |
+| `App/` | shell, composition root, routing | |
+| `Features/<Name>/` | one screen's view, view model, and presentation models, filed together | presentation models `Sendable` value types only; view models no SwiftUI import |
+| `Shared/` | components, lore, strings, and (quarantined) wireframe types used by two or more features | |
+| `Services/` | platform edges — location, preferences, erasure, storage reporting | |
 
-**`Model/` is not the domain model.** Domain types live in `ContentKit` and `RunEngine`; these are resolved snapshots ready to render — strings already localized, distances already formatted. Do not mirror a `Quest` or a `Run` here.
+The placement rule the reorg used, and that new files should keep following: a type lives in the one feature that uses it; in `Shared/` if two or more features use it; in `Services/` if it is a service or only a service's parameter/return type.
 
-The `Sendable` conformance on every `Model/` type is a deliberate constraint, not concurrency plumbing — most never cross an isolation boundary. It makes it structurally impossible to store a repository, a palette, or a location provider in a presentation type. `LoreBlockPresentation.Ink` is the visible consequence: it is a two-case enum rather than the obvious `KeyPath<KultaraPalette, SRGBColor>` so the model stays ignorant of the palette, and the view does the lookup.
+**A `Features/<Name>/` presentation model is not the domain model.** Domain types live in `ContentKit` and `RunEngine`; these are resolved snapshots ready to render — strings already localized, distances already formatted. Do not mirror a `Quest` or a `Run` here.
+
+The `Sendable` conformance on every presentation model is a deliberate constraint, not concurrency plumbing — most never cross an isolation boundary. It makes it structurally impossible to store a repository, a palette, or a location provider in a presentation type. `LoreBlockPresentation.Ink` is the visible consequence: it is a two-case enum rather than the obvious `KeyPath<KultaraPalette, SRGBColor>` so the model stays ignorant of the palette, and the view does the lookup.
 
 ## Invariants held by tests, not by review
 
@@ -425,8 +428,8 @@ The team's flow chart draws nodes the app does not have: splash, login/register,
 (visited places → trip summary → share → template preview), a Profile branch (account settings →
 app preferences), the create/save-journal loop, the next-adventure recommendation, and the
 passing-by notification branch. Each is reachable in the running app as a **wireframe** —
-`View/WireframeScreens.swift` around `View/Component/WireframeScreen.swift`, with all copy in
-`Support/WireframeCatalog.swift`.
+`Shared/Wireframe/WireframeScreens.swift` around `Shared/Wireframe/WireframeScreen.swift`, with all copy in
+`Shared/Wireframe/WireframeCatalog.swift`.
 
 They are drawings, not features: dashed empty boxes, a `WIREFRAME // NOT BUILT` stamp, and a note
 on each saying what has to be decided before it can be built. Nothing behind them works, and
@@ -477,7 +480,7 @@ auto-advancing and the login carrying a "Skip for now".
   rest of the island is a pan, not a zoom. The map opens centred on the pins rather than on the
   artwork, and returning to fill keeps the pan rather than resetting it. Markers are `275:2309`'s own illustrated
   buildings standing in fog (`MapLandmarkFigure`, three drawings, quest-id table in
-  `Support/MapLandmarkCatalog.swift`) with a 44-point square target hung on the building — the
+  `Features/Map/Region/MapLandmarkCatalog.swift`) with a 44-point square target hung on the building — the
   figure is 120 points wide and mostly transparent fog, so its bounds are not the target.
 - **The shipped site plan is a generated illustration, and the screen says so.** `Place.siteMap`
   (`{ asset, aspectRatio, sourceRef }`) is new as of `contentBundleVersion` **2026.09.2**, and
@@ -501,8 +504,8 @@ auto-advancing and the login carrying a "Skip for now".
   the checkpoint. Nothing here gates progression (`AD-2`) — the skip is on the same screen, and an
   empty field saves as a skip.
 - **Photo capture ships now, and it owns the capture session rather than borrowing the picker.**
-  `1:4681` ("Camera") is `View/Component/QuestPhotoCaptureScreen.swift` over
-  `Service/CameraSession.swift` — `AVCaptureSession` + `AVCapturePhotoOutput`, because the frame
+  `1:4681` ("Camera") is `Features/QuestRun/QuestPhotoCaptureScreen.swift` over
+  `Services/CameraSession.swift` — `AVCaptureSession` + `AVCapturePhotoOutput`, because the frame
   draws its own chrome (titled dark bar with a cross, a 2× badge, a ringed shutter, a flash toggle)
   and `UIImagePickerController` will not let a caller replace Apple's. The sidequest challenge still
   uses the picker (`CameraCaptureView`); that flow has no frame of its own. `1:4827`
@@ -559,7 +562,7 @@ auto-advancing and the login carrying a "Skip for now".
   `Resources/Images`, because `Package.swift` copies that directory wholesale and the exports would
   ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — one finished quest through a place shows
   the first drawing, two the second, three or more the third, clamped at both ends —
-  `StampArtworkResolver` (`Support/StampArtwork.swift`) counts finished walks per place, and place
+  `StampArtworkResolver` (`Shared/Lore/StampArtwork.swift`) counts finished walks per place, and place
   id → asset stem is **a table in the app target, not a field on `Place`**. A sixth authored place
   gets an empty window until that table is edited, which is the honest fallback and also the debt.
   `docs/hisplora-tokens.md` has the extraction detail.
@@ -571,7 +574,7 @@ auto-advancing and the login carrying a "Skip for now".
 - **Unsealing a letter no longer redirects.** It used to push `runScreen`, which for a finished
   walk lands on the museum-catalogue summary — a second visual direction with a navigation bar,
   reached by an animation that had just spent four seconds saying *this is a letter*.
-  `View/JournalLetterView.swift` now opens the letter full screen over the shelf as a scrollable
+  `Features/Letters/JournalLetterView.swift` now opens the letter full screen over the shelf as a scrollable
   page: the same `RunSummaryViewModel` snapshots (lore claims with their accuracy labels and
   citations, the walker's written answers, the pinned content version) set as a paper sheet on the
   printed brown ground, with the earned stamps at the foot. `KultaraRootView.journalRunDestination`
