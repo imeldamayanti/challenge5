@@ -33,7 +33,7 @@ struct QuestRunView: View {
     /// underneath it, so on those stages it goes away entirely.
     private var isOnStoryFlow: Bool {
         switch model.stage {
-        case .storyPreview, .awaitingArrival, .cutsceneIntro, .cutscenePortrait,
+        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
              .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .transition:
             true
         case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
@@ -43,7 +43,7 @@ struct QuestRunView: View {
 
     var body: some View {
         content
-            .kultaraGround()
+            .kultaraSpeckledGround(palette.paper)
             .navigationTitle(isOnStoryFlow ? "" : model.quest.title.value(for: language))
             .kultaraInlineNavigationTitle()
             .toolbar(isOnStoryFlow ? .hidden : .visible, for: .navigationBar)
@@ -90,6 +90,7 @@ struct QuestRunView: View {
         case .safetyNotice: safetyNotice
         case .locationNotice: locationNotice
         case .awaitingArrival: arrivalScreen
+        case .locationVerified: locationVerified
         case .cutsceneIntro: cutsceneIntro
         case .cutscenePortrait: cutscenePortrait
         case .storyReveal: storyReveal
@@ -118,6 +119,18 @@ struct QuestRunView: View {
             portraitURL: model.cutsceneImageURL,
             onReady: { model.advanceFromStoryPreview() },
             onBack: { model.advanceFromStoryPreview() })
+    }
+
+    /// `1:4458` — the fix confirmed on its own screen before the story starts. The arrival is
+    /// already recorded when this draws; the back chevron leaves the screen rather than undoing it,
+    /// which is what every other back control on this flow does.
+    private var locationVerified: some View {
+        LocationVerifiedScreen(
+            language: language,
+            questTitle: model.questTitle,
+            onContinue: { model.advanceFromLocationVerified() },
+            onBack: { dismiss() },
+            map: { routeMap })
     }
 
     private var cutsceneIntro: some View {
@@ -209,13 +222,19 @@ struct QuestRunView: View {
                 task: task,
                 prompt: checkpoint.taskPrompts[task.id] ?? "",
                 resolution: model.resolution(for: task),
+                draft: Binding(
+                    get: { model.taskDrafts[task.id] ?? "" },
+                    set: { model.taskDrafts[task.id] = $0 }),
                 completedTasks: model.resolvedTaskCount,
                 totalTasks: model.taskCount,
                 portraitURL: model.cutsceneImageURL,
                 hasSiteMap: checkpoint.siteMap != nil,
-                // The sheet names what is waiting; the answer field, the save and the skip are on the
-                // checkpoint screen (`TaskCard`, `FR-TASK-02`), which is where this continues to.
-                onPrimaryAction: { model.advanceFromCheckpointDetail() },
+                // Saving and skipping both write through the view model and both land on the task
+                // menu — the sheet is the checkpoint's first screen, so it has to be able to finish
+                // what it opens (`FR-TASK-02`, `AD-2`).
+                onSave: { model.saveTaskFromDetail(task) },
+                onSkip: { model.skipTaskFromDetail(task) },
+                onContinue: { model.advanceFromTaskDetail() },
                 onOpenSiteMap: { model.presentSiteMap() },
                 onBack: { model.retreatFromStoryStage() })
                 // A cover rather than a stage: the plan is glanced at and dismissed back to the same

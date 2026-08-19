@@ -46,17 +46,9 @@ public struct HisploraStage<Content: View>: View {
         return content
             .environment(\.hisploraPalette, palette)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background {
-                ZStack {
-                    palette[keyPath: ground].color
-                    // `275:2179`'s printed sheet, the same one the museum theme prints. It
-                    // replaced `547:2953`'s brown ground on 2026-08-19 at the author's
-                    // instruction — one ground for the whole app rather than two.
-                    // `respectsAppearance: false` because this direction does not flip.
-                    if grain { KultaraGroundSheet(respectsAppearance: false) }
-                }
-                .ignoresSafeArea()
-            }
+            // Token first, speckle over it — `Speckle.swift` explains why that ordering is what
+            // keeps `HisploraThemeTests`' measured pairs describing what is actually on screen.
+            .kultaraSpeckledGround(palette[keyPath: ground])
     }
 }
 

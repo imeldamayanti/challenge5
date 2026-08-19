@@ -17,6 +17,12 @@ final class QuestRunViewModel {
         /// `FR-START-02` — the plain-language explanation that precedes the system prompt.
         case locationNotice
         case awaitingArrival
+        /// `1:4458` ("Location Verified" on the New Hisplora board) — the fix landed, inside the
+        /// radius and precise enough, and the walk says so on its own screen before the story
+        /// starts. `LocationState.verified` was drawn before this stage existed, but only ever in
+        /// passing: `record` recorded the arrival and moved straight to the cutscene, so the state
+        /// was reachable for a frame and no walker saw it.
+        case locationVerified
         /// The Hisplora cutscene — the quest's hook and a framed image, shown once at the first
         /// arrival of a walk. A presentation of `hookLore`, not a new content type: see
         /// `CutsceneScreens.swift`.
@@ -24,20 +30,29 @@ final class QuestRunViewModel {
         case cutscenePortrait
         /// The lore reveal — one passage, joined from every `LoreBlock` at the checkpoint.
         case storyReveal
-        /// `50:137` — the sacred-Place notice, before the task menu. Only reached when
-        /// `checkpoint.isSacred`; every other checkpoint's story goes straight to `checkpointDetail`.
+        /// `1:4592` ("Quest" on the New Hisplora board, `50:137` before it) — the sacred-Place
+        /// notice, reached from the transition and before the first task. Only reached when
+        /// `checkpoint.isSacred`; every other checkpoint's story goes straight to the first task.
         case placeNotice
-        /// `452:3132` ("Quest 1/3") — what is waiting at this checkpoint, named before it is
-        /// answered. Replaces the earlier `51:201` treatment.
+        /// `1:4904` ("All Quest", `452:3132` before it) — every task at this checkpoint, with the
+        /// ones already resolved sealed. Reached *after* the checkpoint's first task
+        /// (`1:4711`), not before it.
         case checkpointDetail
-        /// `447:1880` ("Quest_Filled") — one task on its own parchment sheet, reached by tapping its
-        /// row on `checkpointDetail`.
+        /// `1:4711` ("Quest_Filled", `447:1880` before it) — one task on its own parchment sheet,
+        /// with its answer field, its save and its skip.
+        ///
+        /// Two ways in, and the order of the board's frames is what decides them: the checkpoint's
+        /// **first** task opens automatically from `1:4592`, before the menu exists to be tapped,
+        /// and every other visit comes from a row on `checkpointDetail`. `stageBeforeTaskDetail`
+        /// remembers which, so backing out returns where the walker came from.
         ///
         /// It carries the task id rather than an index: the presentation's `tasks` are already
         /// filtered (`FR-TASK-06` drops a photo task at a Place where photography is prohibited), so
         /// an index into the list would point at a different task depending on the Place.
         case taskDetail(taskID: String)
-        /// The place name, before the checkpoint proper.
+        /// `1:4586` ("Transition") — the sealed scroll between the story and the walk. It closes
+        /// the reveal and opens the checkpoint's own screens, so it sits between `storyReveal` and
+        /// `placeNotice`/`checkpointDetail`, not after the task menu.
         case transition
         case atCheckpoint
         case finished
@@ -77,6 +92,11 @@ final class QuestRunViewModel {
     var isPresentingManualOverride: Bool { sampling.isPresentingManualOverride }
     /// The cutscene is shown once per walk, not once per checkpoint.
     private var hasShownCutscene = false
+    /// What `locationVerified`'s Continue hands over to. Decided at arrival, while `currentIndex`
+    /// still names the checkpoint just reached, rather than re-derived when the walker taps — the
+    /// walk moves on between those two moments only if something else advances it, and a stored
+    /// answer cannot disagree with the one the arrival took.
+    private var stageAfterArrivalConfirmed: Stage = .storyReveal
     /// `FR-START-09` — the named presence confirmation, shown only at the start checkpoint.
     private(set) var isConfirmingPresence = false
     private(set) var isConfirmingAbandon = false
@@ -371,10 +391,12 @@ final class QuestRunViewModel {
         // transition, then the checkpoint itself.
         if !hasShownCutscene && currentIndex == 0 {
             hasShownCutscene = true
-            stage = .cutsceneIntro
+            stageAfterArrivalConfirmed = .cutsceneIntro
         } else {
-            stage = .storyReveal
+            stageAfterArrivalConfirmed = .storyReveal
         }
+        // `1:4458` — arrival is confirmed on its own screen before any of that.
+        stage = .locationVerified
 
         if let run, let checkpoint {
             self.run = (try? engine.markLoreOpened(
@@ -384,30 +406,77 @@ final class QuestRunViewModel {
 
     // MARK: The Hisplora story stages
 
+    /// `1:4458`'s Continue — into the cutscene on the walk's first arrival, into the story reveal
+    /// at every other checkpoint.
+    func advanceFromLocationVerified() { stage = stageAfterArrivalConfirmed }
+
     func advanceFromCutsceneIntro() { stage = .cutscenePortrait }
 
     func advanceFromCutscenePortrait() { stage = .storyReveal }
 
-    /// A sacred Place explains itself before the task menu (`FR-TASK-05`'s rule, moved one screen
-    /// earlier); every other checkpoint goes straight to the menu.
-    func advanceFromStoryReveal() {
-        stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .checkpointDetail
+    /// The sealed scroll closes the story and opens the walk — `1:4856` → `1:4586` → `1:4592` on
+    /// the New Hisplora board. The transition is the seam between the two halves of a checkpoint,
+    /// so it sits here rather than after the task menu.
+    func advanceFromStoryReveal() { stage = .transition }
+
+    /// A sacred Place explains itself before any task is offered (`FR-TASK-05`'s rule, moved one
+    /// screen earlier); every other checkpoint goes straight to the first task.
+    func advanceFromTransition() {
+        stage = (checkpoint?.isSacred ?? false) ? .placeNotice : firstTaskStage(from: .transition)
     }
 
-    func advanceFromPlaceNotice() { stage = .checkpointDetail }
+    /// `1:4592` → `1:4711`. The notice hands over to the checkpoint's first task, not to the menu:
+    /// the walker meets one task, resolves it, and the menu is what they land on afterwards.
+    func advanceFromPlaceNotice() { stage = firstTaskStage(from: .placeNotice) }
 
-    func advanceFromCheckpointDetail() { stage = .transition }
+    /// The checkpoint's first task, in the order the content authors it — what the board reaches
+    /// straight from `1:4592`. A checkpoint whose task list is empty after `FR-TASK-06`'s filter
+    /// has nothing to open, so the menu is what it shows.
+    var firstTask: ContentTask? { checkpoint?.tasks.first }
 
-    func advanceFromTransition() { stage = .atCheckpoint }
+    private func firstTaskStage(from origin: Stage) -> Stage {
+        guard let first = firstTask else { return .checkpointDetail }
+        stageBeforeTaskDetail = origin
+        return .taskDetail(taskID: first.id)
+    }
 
-    /// Opening one task's own sheet (`452:3145` → `447:1880`).
+    func advanceFromCheckpointDetail() { stage = .atCheckpoint }
+
+    /// Where `taskDetail` was entered from — `placeNotice`/`transition` for the checkpoint's first
+    /// task, `checkpointDetail` for every task opened from the menu. Stored rather than derived:
+    /// once the first task is resolved it is indistinguishable from any other row, so "which task
+    /// is this" cannot answer "where did the walker come from".
+    private var stageBeforeTaskDetail: Stage = .checkpointDetail
+
+    /// Opening one task's own sheet from the menu (`1:4904` → `1:4711`).
     ///
     /// Guarded on the task actually being at this checkpoint. Not defensiveness: the presentation's
     /// task list is filtered by `FR-TASK-06`, and a stage holding an id nothing resolves would draw
     /// an empty sheet with a back button and no way to tell what went wrong.
     func openTaskDetail(taskID: String) {
         guard checkpoint?.tasks.contains(where: { $0.id == taskID }) == true else { return }
+        stageBeforeTaskDetail = .checkpointDetail
         stage = .taskDetail(taskID: taskID)
+    }
+
+    /// Leaving the sheet forwards — always onto the menu, whichever way the sheet was entered.
+    /// The menu is the checkpoint's hub: `checkpointDetailContinueToNext` is the one way out of it.
+    func advanceFromTaskDetail() { stage = .checkpointDetail }
+
+    /// Saving an answer from the sheet, then moving on to the menu.
+    ///
+    /// `saveTask` falls back to a skip on an empty draft, so the walk never stalls on a sheet whose
+    /// field was left blank — `AD-2` means a task gates nothing, and that has to stay true of the
+    /// screen the walk now opens on.
+    func saveTaskFromDetail(_ task: ContentTask) {
+        saveTask(task)
+        advanceFromTaskDetail()
+    }
+
+    /// `FR-TASK-02`'s skip, from the sheet. Same weight as saving and the same destination.
+    func skipTaskFromDetail(_ task: ContentTask) {
+        skipTask(task)
+        advanceFromTaskDetail()
     }
 
     /// The task the `taskDetail` stage is showing, or nil on every other stage.
@@ -449,9 +518,18 @@ final class QuestRunViewModel {
         switch stage {
         case .cutscenePortrait: stage = .cutsceneIntro
         case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .cutscenePortrait : .storyReveal
-        case .placeNotice: stage = .storyReveal
-        case .checkpointDetail: stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .storyReveal
-        case .taskDetail: stage = .checkpointDetail
+        case .transition: stage = .storyReveal
+        case .placeNotice: stage = .transition
+        // The menu now sits *after* the first task, so backing out of it returns to that task
+        // rather than to the notice the walk passed through before it.
+        case .checkpointDetail:
+            if let first = firstTask {
+                stageBeforeTaskDetail = (checkpoint?.isSacred ?? false) ? .placeNotice : .transition
+                stage = .taskDetail(taskID: first.id)
+            } else {
+                stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .transition
+            }
+        case .taskDetail: stage = stageBeforeTaskDetail
         default: break
         }
     }

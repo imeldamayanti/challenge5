@@ -43,7 +43,7 @@ struct WireframeScreen<Existing: View, Actions: View>: View {
             .padding(KultaraMetrics.lg)
             .kultaraFloatingTabBarClearance()
         }
-        .kultaraGround()
+        .kultaraSpeckledGround(palette.paper)
     }
 
     private var heading: some View {

@@ -102,11 +102,7 @@ struct RegionMapView: View {
                 content = filledSize(in: newViewport)
             }
         }
-        // The artwork's own sea, not the photo scrim. Nothing should expose it now that the pinch
-        // floor is fill — it is here for the moment during a pinch when the live magnification runs
-        // ahead of the clamp, where a near-black band around a blue-grey map reads as a rendering
-        // fault rather than as the edge of the paper.
-        .background(RegionMapArtwork.seaEdge.color)
+        .kultaraSpeckledGround(palette.photoScrim)
         .ignoresSafeArea()
         .overlay(alignment: .topLeading) { closeButton }
         // Deliberately no `accessibilityLabel` on this container: naming it turns the whole map

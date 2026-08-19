@@ -55,7 +55,15 @@ public struct KultaraThemeProvider<Content: View>: View {
             .background {
                 ZStack {
                     palette.paper.color
-                    KultaraGroundSheet()
+                    KultaraPaperTexture.paperGrain(for: colorScheme)?
+                        .resizable()
+                        .scaledToFill()
+                        .opacity(KultaraPaperTexture.grainOpacity)
+                        .allowsHitTesting(false)
+                        .accessibilityHidden(true)
+                    // The speckle every ground in the app now carries, including the dark
+                    // appearance the cream artwork above deliberately has no variant for.
+                    KultaraSpeckleField(over: palette.paper)
                 }
                 .ignoresSafeArea()
             }

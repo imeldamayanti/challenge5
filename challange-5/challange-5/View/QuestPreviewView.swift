@@ -33,7 +33,7 @@ struct QuestPreviewView: View {
             .padding(KultaraMetrics.lg)
             .kultaraFloatingTabBarClearance()
         }
-        .kultaraGround()
+        .kultaraSpeckledGround(palette.paper)
         .navigationTitle(model.title)
         #if os(iOS)
         .navigationBarTitleDisplayMode(.inline)
