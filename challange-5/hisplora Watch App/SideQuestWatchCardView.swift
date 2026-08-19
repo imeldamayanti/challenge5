@@ -63,7 +63,7 @@ struct SideQuestWatchCardView: View {
         VStack(spacing: 12) {
             framedSlot
                 .frame(width: frameWidth, height: frameWidth / Metrics.frameAspectRatio)
-                .padding(.top, cardWidth * Metrics.frameTopInsetFraction)
+                // .padding(.top, cardWidth * Metrics.frameTopInsetFraction)
             Text(synopsis)
                 .font(.footnote)
                 .foregroundStyle(Self.ink)
@@ -138,13 +138,19 @@ struct SideQuestWatchCardView: View {
     /// **Do not restore the bar.** If you are here because it looks unfinished against the Figma
     /// frame, that is the deviation working as intended.
     private var handoffCaption: some View {
-        HStack(spacing: 4) {
+        // The icon sits to the left of the text, leveled against the *whole* wrapped block rather
+        // than its first line — `alignment: .center` on the `HStack` does that automatically once
+        // the text is left-aligned instead of centred; a centred multi-line text block next to a
+        // left-hand icon is what read as lopsided before. Sized up a step from the text
+        // (`.body` against `.footnote`) so it reads as a label, not an afterthought.
+        HStack(alignment: .center, spacing: 6) {
             Image(systemName: "iphone")
+                .font(.body)
             Text("The full story is on your iPhone")
+                .font(.footnote)
+                .multilineTextAlignment(.leading)
         }
-        .font(.footnote)
         .foregroundStyle(Self.captionInk)
-        .multilineTextAlignment(.center)
     }
 }
 
