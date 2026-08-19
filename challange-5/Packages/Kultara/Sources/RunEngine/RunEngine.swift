@@ -226,7 +226,11 @@ public struct RunEngine {
         checkpointID: String,
         taskID: String,
         skipped: Bool,
-        text: String? = nil
+        text: String? = nil,
+        /// Where `PhotoStore` wrote the walker's photograph, relative to the app container — never
+        /// absolute (`NFR-REL-05`). The field has been on `TaskResult` since the store shipped; this
+        /// is the parameter that finally fills it, for `1:4827`'s photo task.
+        photoRelativePath: String? = nil
     ) throws -> Run {
         var run = try openRunOrThrow(runID)
         let quest = try questOrThrow(run.questID)
@@ -247,6 +251,10 @@ public struct RunEngine {
             promptSnapshot: task.prompt.value(for: run.language),
             skipped: skipped,
             text: skipped ? nil : text,
+            // A skip discards the photograph the same way it discards the words: `AD-2` makes the
+            // two resolutions symmetric, and a "skipped" result still holding an answer would make
+            // the summary contradict itself.
+            photoRelativePath: skipped ? nil : photoRelativePath,
             completedAt: now())
 
         // One result per task: answering after skipping replaces the skip rather than stacking.

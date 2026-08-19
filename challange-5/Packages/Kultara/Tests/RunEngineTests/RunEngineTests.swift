@@ -169,6 +169,37 @@ struct RunEngineTests {
         #expect(result.text == nil)
     }
 
+    /// `1:4827`'s photo task. `TaskResult.photoRelativePath` has existed since the store shipped and
+    /// was written by nothing; this is the parameter that fills it.
+    @Test func aPhotoTaskRecordsWhereItsPhotographWasWritten() throws {
+        let (engine, _) = engine()
+        var run = try started(engine)
+
+        run = try engine.recordTaskResult(
+            runID: run.id, checkpointID: "cp0", taskID: "t0",
+            skipped: false, photoRelativePath: "sidequest-photos/abc.jpg")
+
+        let result = try #require(run.result(forCheckpointID: "cp0")?.taskResults.first)
+        #expect(result.skipped == false)
+        #expect(result.photoRelativePath == "sidequest-photos/abc.jpg")
+    }
+
+    /// A skip discards the photograph the way it discards the words. `AD-2` makes the two
+    /// resolutions symmetric, and a result marked skipped that still held an answer would make the
+    /// summary contradict itself.
+    @Test func skippingDiscardsThePhotographTheWayItDiscardsTheWords() throws {
+        let (engine, _) = engine()
+        var run = try started(engine)
+
+        run = try engine.recordTaskResult(
+            runID: run.id, checkpointID: "cp0", taskID: "t0",
+            skipped: true, text: "tertulis", photoRelativePath: "sidequest-photos/abc.jpg")
+
+        let result = try #require(run.result(forCheckpointID: "cp0")?.taskResults.first)
+        #expect(result.text == nil)
+        #expect(result.photoRelativePath == nil)
+    }
+
     @Test func answeringAfterSkippingReplacesTheSkipRatherThanStacking() throws {
         let (engine, _) = engine()
         var run = try started(engine)

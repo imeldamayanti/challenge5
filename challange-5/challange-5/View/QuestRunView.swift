@@ -34,7 +34,8 @@ struct QuestRunView: View {
     private var isOnStoryFlow: Bool {
         switch model.stage {
         case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
-             .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .transition:
+             .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .questExplanation,
+             .stampAward, .transition:
             true
         case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
             false
@@ -97,6 +98,8 @@ struct QuestRunView: View {
         case .placeNotice: placeNotice
         case .checkpointDetail: checkpointDetail
         case .taskDetail: taskDetail
+        case .questExplanation: questExplanation
+        case .stampAward: stampAward
         case .transition: transition
         case .atCheckpoint: checkpointScreen
         case .finished: finishedScreen
@@ -228,15 +231,34 @@ struct QuestRunView: View {
                 completedTasks: model.resolvedTaskCount,
                 totalTasks: model.taskCount,
                 portraitURL: model.cutsceneImageURL,
+                photoDraft: model.photoDraft(for: task).map { Image(uiImage: $0) },
+                isCameraAvailable: model.isCameraAvailable,
                 hasSiteMap: checkpoint.siteMap != nil,
                 // Saving and skipping both write through the view model and both land on the task
                 // menu — the sheet is the checkpoint's first screen, so it has to be able to finish
                 // what it opens (`FR-TASK-02`, `AD-2`).
                 onSave: { model.saveTaskFromDetail(task) },
                 onSkip: { model.skipTaskFromDetail(task) },
+                onTakePhoto: { model.presentCamera() },
+                onRemovePhoto: { model.removePhotoDraft(task) },
                 onContinue: { model.advanceFromTaskDetail() },
                 onOpenSiteMap: { model.presentSiteMap() },
                 onBack: { model.retreatFromStoryStage() })
+                // `1:4681`, over the sheet. A cover rather than a stage for the same reason the site
+                // plan is one: the camera is opened and dismissed back to the same task.
+                .fullScreenCover(
+                    isPresented: Binding(get: { model.isPresentingCamera },
+                                         set: { if !$0 { model.dismissCamera() } })
+                ) {
+                    QuestPhotoCaptureScreen(
+                        language: language,
+                        onCapture: { model.capturedPhoto($0) },
+                        onCancel: { model.dismissCamera() },
+                        onSkip: {
+                            model.dismissCamera()
+                            model.skipTaskFromDetail(task)
+                        })
+                }
                 // A cover rather than a stage: the plan is glanced at and dismissed back to the same
                 // task, so backing out of it must not be ambiguous with backing out of the task.
                 .fullScreenCover(
@@ -252,6 +274,36 @@ struct QuestRunView: View {
         } else {
             EmptyView()
         }
+    }
+
+    /// `1:4609` — the story behind the task just resolved.
+    private var questExplanation: some View {
+        QuestExplanationScreen(
+            language: language,
+            claims: model.explanationClaims,
+            // The frame's sitter is a generated likeness of a named historical person, which the
+            // content tree carries neither a source nor a consent record for (`FR-CP-05`). The
+            // quest's own hero image stands in, the same substitution every other framed picture on
+            // this flow makes.
+            portraitURL: model.cutsceneImageURL,
+            portraitLabel: model.currentPlaceName,
+            onContinue: { model.advanceFromQuestExplanation() },
+            onBack: { model.retreatFromStoryStage() })
+    }
+
+    /// `1:4641` — the checkpoint's stamp, presented rather than granted (`FR-CP-07` awarded it on
+    /// arrival).
+    private var stampAward: some View {
+        StampAwardScreen(
+            language: language,
+            placeName: model.currentPlaceName,
+            region: model.quest.region,
+            artworkName: model.stampArtworkName,
+            stampNumber: model.stampNumber,
+            totalStamps: model.stampTotal,
+            remainingTasks: model.unresolvedTaskCount,
+            onMoreQuests: { model.stampAwardMoreQuests() },
+            onNextLocation: { model.stampAwardNextLocation() })
     }
 
     /// This checkpoint's resolved tasks, keyed by task id — what fills the segmented bar and picks

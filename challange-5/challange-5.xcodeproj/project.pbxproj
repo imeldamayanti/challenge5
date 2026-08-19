@@ -432,6 +432,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hisplora;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Used only when you choose to take a photo for an activity on a quest. Photos stay on this device and are never sent anywhere.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Used to tell you when you walk past a historical place, even when the app is closed. Your location is never sent anywhere.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used only to confirm you have reached a checkpoint on a quest you are walking, and only while the app is open. Your location is never sent anywhere.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
@@ -467,6 +468,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Hisplora;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
+				INFOPLIST_KEY_NSCameraUsageDescription = "Used only when you choose to take a photo for an activity on a quest. Photos stay on this device and are never sent anywhere.";
 				INFOPLIST_KEY_NSLocationAlwaysAndWhenInUseUsageDescription = "Used to tell you when you walk past a historical place, even when the app is closed. Your location is never sent anywhere.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "Used only to confirm you have reached a checkpoint on a quest you are walking, and only while the app is open. Your location is never sent anywhere.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
