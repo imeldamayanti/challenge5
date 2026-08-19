@@ -1,0 +1,82 @@
+{
+  "id": "sovereign-bali-hotel",
+  "nameOfficial": {
+    "id": "Sovereign Bali Hotel",
+    "en": "Sovereign Bali Hotel"
+  },
+  "nameVariants": [
+    "Sovereign Bali Hotel"
+  ],
+  "type": "ruang-publik",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.7434236,
+    "lon": 115.1787411
+  },
+  "arrivalRadiusM": 100,
+  "address": {
+    "id": "Sovereign Bali Hotel, Denpasar. Titik uji tambahan buat nyoba alur sidequest \"Alas Kaki yang Tepat\" (Pasar Kumbasari) tanpa harus ke lokasi aslinya — cerita/lore di sidequest ini tetap tentang Pasar Kumbasari, cuma koordinatnya dipindah ke sini buat testing.",
+    "en": "Sovereign Bali Hotel, Denpasar. An additional temporary test point for trying the \"The Right Shoes\" (Pasar Kumbasari) sidequest without traveling to the real site — the sidequest's story stays about Pasar Kumbasari, only the coordinate is moved here for testing."
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Jam buka belum diverifikasi; bukan bagian dari lokasi asli sidequest ini.",
+      "en": "Opening hours not yet verified; not part of this sidequest's real site."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "00:00", "close": "23:59" },
+      { "weekday": 2, "open": "00:00", "close": "23:59" },
+      { "weekday": 3, "open": "00:00", "close": "23:59" },
+      { "weekday": 4, "open": "00:00", "close": "23:59" },
+      { "weekday": 5, "open": "00:00", "close": "23:59" },
+      { "weekday": 6, "open": "00:00", "close": "23:59" },
+      { "weekday": 7, "open": "00:00", "close": "23:59" }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan busana khusus.",
+    "en": "No specific dress code."
+  },
+  "photoPolicy": {
+    "level": "allowed",
+    "notes": {
+      "id": "Titik uji publik; memotret umumnya tidak dibatasi.",
+      "en": "A public test point; photography is generally unrestricted."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": false,
+    "stepCount": null,
+    "surface": "paving",
+    "notes": {
+      "id": "Belum disurvei secara detail.",
+      "en": "Not surveyed in detail."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Titik ini dipakai sebagai lokasi uji tambahan untuk sidequest Pasar Kumbasari, bukan tempat aslinya itu sendiri.",
+        "en": "This point is used as an additional test location for the Pasar Kumbasari sidequest, not the real site itself."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Catatan internal tim — titik uji lokal tambahan untuk pengembangan fitur sidequest",
+      "url": null
+    }
+  ],
+  "consentRecordId": "sovereign-bali-hotel",
+  "mapPoint": {
+    "x": 0.415,
+    "y": 0.635
+  }
+}

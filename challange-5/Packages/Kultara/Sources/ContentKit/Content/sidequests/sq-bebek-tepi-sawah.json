@@ -1,0 +1,58 @@
+{
+  "id": "sq-bebek-tepi-sawah",
+  "placeId": "bebek-tepi-sawah",
+  "title": {
+    "id": "Halaman Berjenjang (uji coba)",
+    "en": "Courtyard Within Courtyard (test)"
+  },
+  "synopsis": {
+    "id": "Halaman Pura Maospahit berjenjang masuk lewat gerbang. Tidak semuanya terbuka untukmu tanpa izin.",
+    "en": "Pura Maospahit's courtyards step inward through gateways. Not all of them are open to you without permission."
+  },
+  "lore": [
+    {
+      "text": {
+        "id": "Halaman-halaman Pura Maospahit bukan satu ruang terbuka — halaman itu berjenjang masuk melalui gerbang-gerbang, dan halaman paling dalam tidak terbuka bagi pengunjung yang belum meminta izin pemangku.",
+        "en": "Pura Maospahit's courtyards are not one open space — they step inward through gateways, and the innermost one is not open to a visitor who has not asked the pemangku first."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    },
+    {
+      "text": {
+        "id": "Pura ini juga tertutup penuh mengikuti kalendernya sendiri — odalan jatuh pada Purnama Jyestha dan Purnama Kalima, dan pura yang sedang berupacara bukan tempat singgah dalam rute jalan kaki.",
+        "en": "The temple also closes completely around its own calendar — odalan falls on Purnama Jyestha and Purnama Kalima, and a pura mid-ceremony is not a stop on a walking route."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "challenge": {
+    "type": "quiz",
+    "question": {
+      "id": "Kenapa halaman paling dalam di Pura Maospahit bisa tertutup untukmu, walaupun dalam jam kunjung?",
+      "en": "Why might the innermost courtyard at Pura Maospahit be closed to you even during opening hours?"
+    },
+    "options": [
+      {
+        "id": "Hanya untuk staf museum",
+        "en": "It's reserved for museum staff"
+      },
+      {
+        "id": "Kamu perlu izin pemangku untuk masuk",
+        "en": "You need the pemangku's permission to enter it"
+      },
+      {
+        "id": "Hanya buka hari Minggu",
+        "en": "It's only open on Sundays"
+      }
+    ],
+    "correctIndex": 1,
+    "explanation": {
+      "id": "Halaman pura Bali berjenjang masuk secara bertahap, dan halaman paling dalam adalah yang paling dijaga — izin pemangku adalah gerbang sesungguhnya, bukan papan tanda atau loket.",
+      "en": "Balinese temple courtyards step inward in stages, and the innermost one is the most restricted — permission from the pemangku is the real gate, not a sign or a ticket booth."
+    }
+  },
+  "triggerRadiusM": 60,
+  "noticeRadiusM": 200
+}

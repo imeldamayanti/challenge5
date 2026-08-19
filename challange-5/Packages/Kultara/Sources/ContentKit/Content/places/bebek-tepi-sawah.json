@@ -1,0 +1,82 @@
+{
+  "id": "bebek-tepi-sawah",
+  "nameOfficial": {
+    "id": "Bebek Tepi Sawah",
+    "en": "Bebek Tepi Sawah"
+  },
+  "nameVariants": [
+    "Bebek Tepi Sawah"
+  ],
+  "type": "ruang-publik",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.7417435,
+    "lon": 115.1792693
+  },
+  "arrivalRadiusM": 100,
+  "address": {
+    "id": "Bebek Tepi Sawah, Denpasar. Titik uji tambahan buat nyoba alur sidequest \"Halaman Berjenjang\" (Pura Maospahit) tanpa harus ke lokasi aslinya — cerita/lore di sidequest ini tetap tentang Pura Maospahit, cuma koordinatnya dipindah ke sini buat testing.",
+    "en": "Bebek Tepi Sawah, Denpasar. An additional temporary test point for trying the \"Courtyard Within Courtyard\" (Pura Maospahit) sidequest without traveling to the real site — the sidequest's story stays about Pura Maospahit, only the coordinate is moved here for testing."
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Jam buka belum diverifikasi; bukan bagian dari lokasi asli sidequest ini.",
+      "en": "Opening hours not yet verified; not part of this sidequest's real site."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "00:00", "close": "23:59" },
+      { "weekday": 2, "open": "00:00", "close": "23:59" },
+      { "weekday": 3, "open": "00:00", "close": "23:59" },
+      { "weekday": 4, "open": "00:00", "close": "23:59" },
+      { "weekday": 5, "open": "00:00", "close": "23:59" },
+      { "weekday": 6, "open": "00:00", "close": "23:59" },
+      { "weekday": 7, "open": "00:00", "close": "23:59" }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan busana khusus.",
+    "en": "No specific dress code."
+  },
+  "photoPolicy": {
+    "level": "allowed",
+    "notes": {
+      "id": "Titik uji publik; memotret umumnya tidak dibatasi.",
+      "en": "A public test point; photography is generally unrestricted."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": false,
+    "stepCount": null,
+    "surface": "paving",
+    "notes": {
+      "id": "Belum disurvei secara detail.",
+      "en": "Not surveyed in detail."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Titik ini dipakai sebagai lokasi uji tambahan untuk sidequest Pura Maospahit, bukan tempat aslinya itu sendiri.",
+        "en": "This point is used as an additional test location for the Pura Maospahit sidequest, not the real site itself."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Catatan internal tim — titik uji lokal tambahan untuk pengembangan fitur sidequest",
+      "url": null
+    }
+  ],
+  "consentRecordId": "bebek-tepi-sawah",
+  "mapPoint": {
+    "x": 0.41,
+    "y": 0.63
+  }
+}

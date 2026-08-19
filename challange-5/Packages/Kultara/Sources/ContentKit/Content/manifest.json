@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentBundleVersion": "2026.09.3",
+  "contentBundleVersion": "2026.09.5",
   "languages": [
     "id",
     "en"
@@ -11,7 +11,12 @@
     "badung-pasar-kumbasari",
     "badung-catur-muka",
     "badung-museum-bali",
-    "park23"
+    "park23",
+    "citra-minang",
+    "mahen-living",
+    "bebek-tepi-sawah",
+    "sovereign-bali-hotel",
+    "taman-ngurah-rai"
   ],
   "quests": [
     "badung-empat-wajah"
@@ -22,7 +27,12 @@
     "sq-badung-pura-maospahit",
     "sq-badung-pasar-kumbasari",
     "sq-badung-museum-bali",
-    "sq-park23"
+    "sq-park23",
+    "sq-citra-minang",
+    "sq-mahen-living",
+    "sq-bebek-tepi-sawah",
+    "sq-sovereign-bali-hotel",
+    "sq-taman-ngurah-rai"
   ],
   "collections": [
     "badung-jejak",

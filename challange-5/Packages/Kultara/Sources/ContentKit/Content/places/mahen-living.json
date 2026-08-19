@@ -1,0 +1,82 @@
+{
+  "id": "mahen-living",
+  "nameOfficial": {
+    "id": "Mahen Living",
+    "en": "Mahen Living"
+  },
+  "nameVariants": [
+    "Mahen Living"
+  ],
+  "type": "ruang-publik",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.7556039,
+    "lon": 115.1753025
+  },
+  "arrivalRadiusM": 100,
+  "address": {
+    "id": "Mahen Living, Denpasar. Titik uji tambahan buat nyoba alur sidequest \"Rumah yang Masih Dihuni\" (Puri Agung Pemecutan) tanpa harus ke lokasi aslinya — cerita/lore di sidequest ini tetap tentang Puri Agung Pemecutan, cuma koordinatnya dipindah ke sini buat testing.",
+    "en": "Mahen Living, Denpasar. An additional temporary test point for trying the \"A House Still Lived In\" (Puri Agung Pemecutan) sidequest without traveling to the real site — the sidequest's story stays about Puri Agung Pemecutan, only the coordinate is moved here for testing."
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Jam buka belum diverifikasi; bukan bagian dari lokasi asli sidequest ini.",
+      "en": "Opening hours not yet verified; not part of this sidequest's real site."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "00:00", "close": "23:59" },
+      { "weekday": 2, "open": "00:00", "close": "23:59" },
+      { "weekday": 3, "open": "00:00", "close": "23:59" },
+      { "weekday": 4, "open": "00:00", "close": "23:59" },
+      { "weekday": 5, "open": "00:00", "close": "23:59" },
+      { "weekday": 6, "open": "00:00", "close": "23:59" },
+      { "weekday": 7, "open": "00:00", "close": "23:59" }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan busana khusus.",
+    "en": "No specific dress code."
+  },
+  "photoPolicy": {
+    "level": "allowed",
+    "notes": {
+      "id": "Titik uji publik; memotret umumnya tidak dibatasi.",
+      "en": "A public test point; photography is generally unrestricted."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": false,
+    "stepCount": null,
+    "surface": "paving",
+    "notes": {
+      "id": "Belum disurvei secara detail.",
+      "en": "Not surveyed in detail."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Titik ini dipakai sebagai lokasi uji tambahan untuk sidequest Puri Agung Pemecutan, bukan tempat aslinya itu sendiri.",
+        "en": "This point is used as an additional test location for the Puri Agung Pemecutan sidequest, not the real site itself."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Catatan internal tim — titik uji lokal tambahan untuk pengembangan fitur sidequest",
+      "url": null
+    }
+  ],
+  "consentRecordId": "mahen-living",
+  "mapPoint": {
+    "x": 0.44,
+    "y": 0.65
+  }
+}

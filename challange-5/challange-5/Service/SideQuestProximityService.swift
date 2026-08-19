@@ -279,13 +279,23 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
     }
 
     #if DEBUG
-    /// A minute-scale cooldown for the local `park23` dev test target only, so "Simulate passing a
-    /// place" — or repeatedly leaving and re-entering the real 50 m radius — can be tapped over and
-    /// over while iterating on the flow. Every other target, real or test, keeps `Limits()`'s normal
-    /// 24 h cooldown and 3-per-day cap (`FR-PROX-09`) — this never loosens rate limiting for content
-    /// that ships.
+    /// The `sidequest-test` collection's dev test targets — real, walkable stand-in coordinates
+    /// carrying reused story content, tracked in `docs/consent/*-prototype-note.md`. Every one of
+    /// them gets the same loosened rate limit below, not just `sq-park23`.
+    private static let devTestSideQuestIDs: Set<String> = [
+        "sq-park23", "sq-citra-minang", "sq-mahen-living",
+        "sq-bebek-tepi-sawah", "sq-sovereign-bali-hotel", "sq-taman-ngurah-rai",
+    ]
+
+    /// No quiet hours for these dev targets — "no time limit" — and no daily cap, so passing any of
+    /// them fires a notification whenever it happens, not just up to three times a day or only
+    /// between 07:00 and 22:00. The 60 s per-target cooldown stays: it is what keeps a single pass
+    /// (or a "Simulate passing a place" tap) to exactly one notification instead of one per GPS
+    /// update while lingering in the radius, without reintroducing the 24 h real-content cooldown.
+    /// Every other target, real or test, keeps `Limits()`'s normal 24 h cooldown and 3-per-day cap
+    /// (`FR-PROX-09`) — this never loosens rate limiting for content that ships.
     private static func limits(for targetID: String) -> ProximityGate.Limits {
-        guard targetID == "sq-park23" else { return ProximityGate.Limits() }
+        guard devTestSideQuestIDs.contains(targetID) else { return ProximityGate.Limits() }
         return ProximityGate.Limits(
             quietFrom: TimeOfDay(hour: 0, minute: 0), quietUntil: TimeOfDay(hour: 0, minute: 0),
             perTargetCooldown: 60, maxPerDay: .max)

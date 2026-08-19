@@ -1,0 +1,15 @@
+{
+  "placeId": "sovereign-bali-hotel",
+  "grantingBody": "Tim [NAMA TIM] — prototipe akademik, bukan izin dari pengelola",
+  "grantedByName": "[NAMA ANGGOTA 1]",
+  "grantedByRole": "[PERAN ANGGOTA 1]",
+  "grantedAt": "2026-08-18",
+  "expiresAt": "2028-12-31",
+  "scope": [
+    "inclusion",
+    "naming"
+  ],
+  "documentRef": "docs/consent/sovereign-bali-hotel-prototype-note.md",
+  "status": "granted",
+  "regionOwner": "[NAMA ANGGOTA 2]"
+}

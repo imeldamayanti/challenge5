@@ -1,0 +1,58 @@
+{
+  "id": "sq-mahen-living",
+  "placeId": "mahen-living",
+  "title": {
+    "id": "Rumah yang Masih Dihuni (uji coba)",
+    "en": "A House Still Lived In (test)"
+  },
+  "synopsis": {
+    "id": "Puri Agung Pemecutan bukan museum. Ini rumah dan tempat upacara seseorang — tanya dulu di gerbang sebelum melangkah masuk.",
+    "en": "Puri Agung Pemecutan is not a museum. It is somebody's home and place of ceremony — ask at the gate before you step in."
+  },
+  "lore": [
+    {
+      "text": {
+        "id": "Puri Agung Pemecutan adalah kediaman dan tempat upacara yang masih aktif, bukan bangunan cagar budaya yang buka sesuai jadwal tetap — bisa tertutup bagi pengunjung sewaktu-waktu tanpa pemberitahuan.",
+        "en": "Puri Agung Pemecutan is a working residence and ceremonial site, not a preserved building open on a fixed schedule — it can be closed to visitors without notice."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    },
+    {
+      "text": {
+        "id": "Busana yang diharapkan di sini — kamen, selendang, bahu tertutup — sama dengan yang diharapkan di pura, karena puri ini juga menjalankan upacaranya sendiri.",
+        "en": "The dress expected here — kamen, sash, covered shoulders — is the same as at a pura, because a puri carries out its own ceremonies too."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "challenge": {
+    "type": "quiz",
+    "question": {
+      "id": "Apa yang sebaiknya kamu lakukan sebelum melangkah masuk lewat gerbang Puri Agung Pemecutan?",
+      "en": "What should you do before stepping past the gate at Puri Agung Pemecutan?"
+    },
+    "options": [
+      {
+        "id": "Membeli tiket masuk",
+        "en": "Buy an entry ticket"
+      },
+      {
+        "id": "Bertanya, karena bisa saja sedang tertutup tanpa pemberitahuan",
+        "en": "Ask, because it may be closed without notice"
+      },
+      {
+        "id": "Menunggu tur berpemandu dimulai",
+        "en": "Wait for a guided tour to start"
+      }
+    ],
+    "correctIndex": 1,
+    "explanation": {
+      "id": "Tidak ada loket tiket di sini — ini kediaman, bukan museum, sehingga sopan santun bertanya menggantikan formalitas loket.",
+      "en": "There is no ticket booth here — it is a residence, not a museum, so the courtesy of asking replaces the formality of a ticket window."
+    }
+  },
+  "triggerRadiusM": 75,
+  "noticeRadiusM": 200
+}

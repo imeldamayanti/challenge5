@@ -1,0 +1,39 @@
+{
+  "id": "sq-taman-ngurah-rai",
+  "placeId": "taman-ngurah-rai",
+  "title": {
+    "id": "Empat Arah (uji coba)",
+    "en": "Four Directions (test)"
+  },
+  "synopsis": {
+    "id": "Fakta unik: dulu tempat ini adalah kawasan berair. Ada cerita di baliknya. Mau tahu lebih lanjut?",
+    "en": "Funfact this place back then is a water place. And there's some story behind it. Do you want know more?"
+  },
+  "lore": [
+    {
+      "text": {
+        "id": "Setiap dari empat wajah patung ini menghadap lurus ke salah satu lengan perempatan, sehingga foto yang diambil dari salah satu dari empat jalan yang mendekat akan membingkai wajah yang berbeda secara langsung.",
+        "en": "Each of the statue's four faces looks straight down one arm of the junction, so a photograph taken from any of the four approaching streets frames a different face square-on."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    },
+    {
+      "text": {
+        "id": "Warga memberi petunjuk arah dari perempatan ini seperti kota lain memakai stasiun atau alun-alun — inilah titik acuan yang dipakai untuk menjelaskan sisa inti kota lama.",
+        "en": "Locals give directions from this junction the way other cities give them from a station or a square — it is the reference point the rest of the old core is described against."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "challenge": {
+    "type": "photo",
+    "prompt": {
+      "id": "Ambil satu foto Catur Muka dari salah satu dari empat jalan yang bertemu di sana, membingkai wajah yang menghadap ke arahmu.",
+      "en": "Take one photograph of Catur Muka from one of the four streets that meet there, framing the face that looks back at you."
+    }
+  },
+  "triggerRadiusM": 40,
+  "noticeRadiusM": 50
+}

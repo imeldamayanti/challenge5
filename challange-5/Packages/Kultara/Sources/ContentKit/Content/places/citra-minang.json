@@ -1,0 +1,83 @@
+{
+  "id": "citra-minang",
+  "nameOfficial": {
+    "id": "WR Padang Citra Minang",
+    "en": "WR Padang Citra Minang"
+  },
+  "nameVariants": [
+    "Citra Minang",
+    "Warung Padang Citra Minang"
+  ],
+  "type": "ruang-publik",
+  "isSacred": false,
+  "coordinate": {
+    "lat": -8.7376671,
+    "lon": 115.1766776
+  },
+  "arrivalRadiusM": 100,
+  "address": {
+    "id": "WR Padang Citra Minang, Denpasar. Titik uji kedua buat nyoba alur sidequest \"Arsitektur yang Dipinjam\" (Museum Bali) tanpa harus ke lokasi aslinya — cerita/lore di sidequest ini tetap tentang Museum Bali, cuma koordinatnya dipindah ke sini buat testing.",
+    "en": "WR Padang Citra Minang, Denpasar. A second temporary test point for trying the \"Borrowed Architecture\" (Museum Bali) sidequest without traveling to the real site — the sidequest's story stays about Museum Bali, only the coordinate is moved here for testing."
+  },
+  "visitingHours": {
+    "notes": {
+      "id": "Jam buka belum diverifikasi; pakai jam operasional rumah makan setempat sebagai perkiraan.",
+      "en": "Opening hours not yet verified; assume the local eatery's operating hours as an estimate."
+    },
+    "weekly": [
+      { "weekday": 1, "open": "00:00", "close": "23:59" },
+      { "weekday": 2, "open": "00:00", "close": "23:59" },
+      { "weekday": 3, "open": "00:00", "close": "23:59" },
+      { "weekday": 4, "open": "00:00", "close": "23:59" },
+      { "weekday": 5, "open": "00:00", "close": "23:59" },
+      { "weekday": 6, "open": "00:00", "close": "23:59" },
+      { "weekday": 7, "open": "00:00", "close": "23:59" }
+    ]
+  },
+  "dressCode": {
+    "id": "Tidak ada aturan busana khusus.",
+    "en": "No specific dress code."
+  },
+  "photoPolicy": {
+    "level": "allowed",
+    "notes": {
+      "id": "Rumah makan umum; memotret umumnya tidak dibatasi.",
+      "en": "A public eatery; photography is generally unrestricted."
+    }
+  },
+  "entryCost": {
+    "amount": 0,
+    "currency": "IDR"
+  },
+  "accessibility": {
+    "hasSteps": false,
+    "stepCount": null,
+    "surface": "paving",
+    "notes": {
+      "id": "Belum disurvei secara detail.",
+      "en": "Not surveyed in detail."
+    }
+  },
+  "loreStandalone": [
+    {
+      "text": {
+        "id": "Titik ini dipakai sebagai lokasi uji kedua untuk sidequest Museum Bali, bukan tempat aslinya itu sendiri.",
+        "en": "This point is used as a second test location for the Museum Bali sidequest, not the real site itself."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [0]
+    }
+  ],
+  "sources": [
+    {
+      "kind": "documented",
+      "citation": "Catatan internal tim — titik uji lokal kedua untuk pengembangan fitur sidequest",
+      "url": null
+    }
+  ],
+  "consentRecordId": "citra-minang",
+  "mapPoint": {
+    "x": 0.409,
+    "y": 0.616
+  }
+}
