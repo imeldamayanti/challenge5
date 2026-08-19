@@ -108,10 +108,14 @@ struct HisploraBaliMapView: View {
 
     @ViewBuilder
     private func grainOverlayView(viewport: CGSize) -> some View {
-        if let grain = KultaraPaperTexture.grain {
+        // `KultaraGround` rather than the old `KultaraPaperTexture`: the museum grain was replaced
+        // by `275:2179`'s printed sheet on 2026-08-19. Tiled and multiplied at low opacity it still
+        // reads as grain here — the sheet is 98.6% #FDF2DE, so multiplying by it warms the
+        // parchment slightly and the 1.43% speckle lands as a faint dot.
+        if let grain = KultaraGround.image {
             grain
                 .resizable(resizingMode: .tile)
-                .opacity(KultaraPaperTexture.grainOpacity * 0.4)
+                .opacity(KultaraGround.opacity * 0.4)
                 .blendMode(.multiply)
                 .allowsHitTesting(false)
                 .frame(width: viewport.width, height: viewport.height)

@@ -150,10 +150,17 @@ public enum KultaraTheme {
     //
     // Every number below is produced by `KultaraThemeTests.reportMeasuredContrastRatios`.
 
-    /// Light: the catalogue page. Lowest measured ratio is 4.06:1 on a hairline (needs 3:1); lowest
+    /// Light: the catalogue page. Lowest measured ratio is 4.13:1 on a hairline (needs 3:1); lowest
     /// text ratio is 5.52:1 (needs 4.5:1).
     public static let light = KultaraPalette(
-        paper: SRGBColor(hex: "#F6F1E4"),           // the stock
+        // The Home frame's ground, taken from its own export (`docs/design-sources/home-ground.svg`, node
+        // `275:2179`) rather than from the flattened fill the codegen reports: the sheet is a
+        // #FDF2DE stock with a fine speckle printed on it, and this token is the stock. The
+        // speckle is `KultaraPaperTexture`, drawn over the top, and it costs about 1% of every
+        // ratio measured here — ink 15.26:1 on the flat token, 15.12:1 on the sheet as rendered.
+        // `KultaraThemeTests` measures the token; `PaperTextureTests` is what keeps the artwork
+        // from moving it.
+        paper: SRGBColor(hex: "#FDF2DE"),           // the stock
         paperRaised: SRGBColor(hex: "#FCF9F1"),     // plate mat, a sheet laid on the page
         paperSunken: SRGBColor(hex: "#E9E1D0"),     // inset: chips, breakdown rows
         ink: SRGBColor(hex: "#201C18"),             // 15.01:1 on paper

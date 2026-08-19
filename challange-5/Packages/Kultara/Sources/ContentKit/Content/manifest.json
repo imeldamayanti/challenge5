@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentBundleVersion": "2026.09.3",
+  "contentBundleVersion": "2026.09.4",
   "languages": [
     "id",
     "en"
@@ -30,6 +30,6 @@
   ],
   "regionMap": {
     "asset": "maps/bali-illustrated.png",
-    "aspectRatio": 0.4626
+    "aspectRatio": 1.3716
   }
 }

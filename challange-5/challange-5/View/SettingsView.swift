@@ -41,7 +41,7 @@ struct SettingsView: View {
         // Permission state changes out from under the app — a trip to system Settings and back —
         // and there is no push channel for it, so the screen re-checks whenever it is shown.
         .onAppear { model.refreshNearbyAlertsStatus() }
-        .background(palette.paper.color)
+        .kultaraGround()
         // Deliberately empty: the sheet's name is the typed heading at the top of the page, and a
         // bar title as well would print it twice. The heading carries the header trait, so nothing
         // is lost to VoiceOver.

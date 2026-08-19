@@ -26,7 +26,7 @@ struct OnboardingView: View {
         }
         .padding(KultaraMetrics.xl)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-        .background(palette.paper.color)
+        .kultaraGround()
         .onChange(of: model.isFinished) { _, finished in
             if finished { onFinish() }
         }

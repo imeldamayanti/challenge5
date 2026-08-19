@@ -122,7 +122,7 @@ struct QuestListView: View {
                 .padding(.bottom, KultaraMetrics.xl)
             list
         }
-        .background(palette.paper.color)
+        .kultaraGround()
     }
 
     /// Masthead and the search field beneath it, as the Ngalcer Home frame opens (`28:171`,

@@ -48,7 +48,7 @@ struct LetterCollectionView: View {
                 .padding(KultaraMetrics.lg)
             }
         }
-        .background(palette.paper.color)
+        .kultaraGround()
         .navigationTitle(UIStrings.string(.collectionHeading, language))
         .kultaraInlineNavigationTitle()
         // A letter may have been earned since this screen was last looked at.

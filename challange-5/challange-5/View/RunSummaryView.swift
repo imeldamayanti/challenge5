@@ -31,7 +31,7 @@ struct RunSummaryView: View {
             .padding(KultaraMetrics.lg)
             .kultaraFloatingTabBarClearance()
         }
-        .background(palette.paper.color)
+        .kultaraGround()
         .navigationTitle(UIStrings.string(.summaryHeading, language))
         .kultaraInlineNavigationTitle()
     }

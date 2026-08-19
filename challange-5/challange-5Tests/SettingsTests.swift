@@ -226,6 +226,10 @@ final class StubProximityMonitor: ProximityMonitoring {
 
     #if DEBUG
     func simulateEntry(sideQuestID: String) { onSideQuestNearby?(sideQuestID) }
+    /// Also a no-op, and for the same reason as `requestAlwaysAuthorization()`: the real one posts
+    /// a notification, and a test double that did would be a side effect no assertion here asked
+    /// for. Its absence is what stopped this target compiling.
+    func fireHardcodedTestNotification() {}
     #endif
 }
 
