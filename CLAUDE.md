@@ -43,7 +43,30 @@ The repo root and the Xcode project directory share a name, which is confusing:
 │   └── seed.sql               local only; installs pgTAP and the fixtures
 └── challange-5/               Xcode project directory
     ├── challange-5.xcodeproj
-    ├── challange-5/           app target — Model/ ViewModel/ View/ Service/ Support/
+    ├── challange-5/           app target — feature-first layout
+    │   ├── App/                      6   shell, composition root, routing
+    │   ├── Features/
+    │   │   ├── Onboarding/           3
+    │   │   ├── QuestList/            9
+    │   │   ├── QuestPreview/         5
+    │   │   ├── QuestRun/            16   largest feature
+    │   │   ├── RunSummary/           2
+    │   │   ├── SideQuest/           11
+    │   │   ├── Letters/              8   the journal surface
+    │   │   ├── Explorer/             3
+    │   │   ├── Map/                 26   only feature with sub-folders
+    │   │   │   ├── Interactive/     10
+    │   │   │   ├── Bali/             7
+    │   │   │   ├── Tiles/            5
+    │   │   │   └── Region/           4
+    │   │   └── Settings/             4
+    │   ├── Shared/
+    │   │   ├── Components/           5
+    │   │   ├── Lore/                 5
+    │   │   ├── Strings/              1
+    │   │   └── Wireframe/            3   quarantine — production code read by RunSummaryView, SideQuestNoticeView, PlaceholderQuestCatalog, despite the name
+    │   ├── Services/                 9
+    │   └── Assets.xcassets/              unchanged
     ├── challange-5UITests/    XCUITest, the only tests needing a simulator
     ├── challange-5Tests/       unit tests for the app target — view models,
     │                           presentation models, UI strings
@@ -101,10 +124,11 @@ a rule that can be checked by reading source, put it there rather than in `chall
 
 ## Commands
 
-Run from `challange-5/Packages/Kultara` unless noted.
+Run from `challange-5/Packages/Kultara` unless noted. On this machine `swift test` needs the
+`DEVELOPER_DIR` prefix below — see "This machine's toolchain is misconfigured" further down for why.
 
 ```bash
-swift test                                    # all pure-logic suites, macOS, no simulator
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer swift test   # all pure-logic suites, macOS, no simulator
 swift test --filter ContentValidatorTests     # one suite
 swift test --filter "ContentValidatorTests/rejectsMissingConsent"   # one test
 swift build
@@ -191,8 +215,9 @@ fail for a reason that has nothing to do with the code. iPhone 17 / 17 Pro / 17 
 exist under 26.3, 26.4 and 26.5; **iPhone 16e exists only under 26.3**, and there is no iPhone 16 at
 all. Run `xcrun simctl list devices available` before assuming any device name.
 
-Schemes: `challange-5` (app + UI tests), plus `ContentKit`, `RunEngine`, `DesignSystem` and
-`content-validator` from the package. No `.xcscheme` is tracked in Git — schemes are generated
+Schemes: `challange-5` (app + UI tests), plus `ContentKit`, `RunEngine`, `DesignSystem`,
+`GovernanceKit`, `TelemetryKit`, `UIStringsKit` and `content-validator` from the package — the
+package has seven targets, not four. No `.xcscheme` is tracked in Git — schemes are generated
 per-machine — so an `AppFeatures` scheme left over from before `b597b5b` may still be listed locally.
 It is stale; that target no longer exists.
 
