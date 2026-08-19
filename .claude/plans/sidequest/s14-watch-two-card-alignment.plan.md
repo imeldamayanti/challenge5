@@ -136,7 +136,7 @@ accompanying comment cites "`s9`'s notification-copy revision", which is not a d
 - Modify: `challange-5/challange-5/Service/SideQuestProximityService.swift`
 - Modify: `challange-5/hisplora Watch App/SideQuestNotificationController.swift`
 
-- [ ] **Step 1: Add a logger to each file**
+- [x] **Step 1: Add a logger to each file**
 
 ```swift
 import os
@@ -145,7 +145,7 @@ private let log = Logger(subsystem: "com.umar.hisplora", category: "proximity") 
 private let log = Logger(subsystem: "com.umar.hisplora", category: "watch-notif") // watch
 ```
 
-- [ ] **Step 2: Convert every `#if DEBUG print(...) #endif` block**
+- [x] **Step 2: Convert every `#if DEBUG print(...) #endif` block**
 
 Drop the `#if DEBUG` wrapper — `Logger` is meant to ship, and `.debug` level is not persisted unless
 someone asks for it. Mark interpolated values explicitly: sidequest IDs and authorization states are
@@ -160,7 +160,7 @@ log.error("add(request) failed for \(sideQuestID, privacy: .public): \(error.loc
 Use `.error` for the two genuine failure paths (`add(request)` failing, authorization denied) and
 `.debug` for the flow tracing.
 
-- [ ] **Step 3: Build the app scheme**
+- [x] **Step 3: Build the app scheme**
 
 ```bash
 DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
@@ -169,7 +169,7 @@ xcodebuild build -project challange-5.xcodeproj -scheme challange-5 \
   -destination 'platform=iOS Simulator,name=iPhone 17,OS=26.5'
 ```
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git commit -m "chore: trace sidequest proximity through os.Logger instead of print"
@@ -180,14 +180,14 @@ git commit -m "chore: trace sidequest proximity through os.Logger instead of pri
 **Files:**
 - Modify: `challange-5/challange-5/Service/SideQuestProximityService.swift` (comment only)
 
-- [ ] **Step 1: Correct the comment's false citation**
+- [x] **Step 1: Correct the comment's false citation**
 
 The current comment credits "`s9`'s notification-copy revision". No such decision exists in `s9` or
 anywhere else in this series. Replace it with the actual reasoning: the notification announces a
 sidequest, so the sidequest's own title is the honest headline; the place name is already the
 notification's subject matter and repeating it as the title told the walker nothing new.
 
-- [ ] **Step 2: Commit separately from Task 0.1**
+- [x] **Step 2: Commit separately from Task 0.1**
 
 ```bash
 git commit -m "feat: title sidequest notifications with the sidequest, not the place"
@@ -215,7 +215,7 @@ git commit -m "feat: title sidequest notifications with the sidequest, not the p
 | Centre symbol | em box **31%** of the disc diameter | metadata: 35 of 112.6 |
 | Visible cream circle | 24% of the disc diameter | pixel sample — smaller than the em box, as expected |
 
-- [ ] **Step 1: Resolve the centre symbol's name — do not guess**
+- [x] **Step 1: Resolve the centre symbol's name — do not guess**
 
 The metadata shows the icon is a **text node whose content is `U+F077D`** — an SF Symbol rendered as a
 character, inside `Frame 427319259` at (85, 82), 35×35, horizontally centred (102.5 = 205/2).
@@ -237,7 +237,7 @@ The visual read is a standing figure with one arm raised, so `figure.wave.circle
 candidate — **but it is a candidate, not the answer.** Writing a guess into the file is precisely the
 mistake that produced `holeWidthFraction`'s fictional measurement; do not repeat it.
 
-- [ ] **Step 2: Replace the file's contents**
+- [x] **Step 2: Replace the file's contents**
 
 Structure — the `Short Look` component instance's concentric rings and crosshair are visible in the
 render but are not exposed as nodes (they live inside an Apple system component instance), so they are
@@ -265,21 +265,21 @@ struct SideQuestLongLookView: View {
 }
 ```
 
-- [ ] **Step 3: Preserve `FR-WATCH-06`'s photo path**
+- [x] **Step 3: Preserve `FR-WATCH-06`'s photo path**
 
 A sidequest that ships a real `heroImageAsset` fills the disc with that photo, clipped to the same
 circle; every sidequest today has none and gets the radar graphic. This is the same slot in two
 states, not a graphic bolted next to a photo slot — carried over unchanged from `s13`, which had it
 right.
 
-- [ ] **Step 4: Label the graphic for VoiceOver**
+- [x] **Step 4: Label the graphic for VoiceOver**
 
 The image slot currently carries no accessibility label at all, so VoiceOver reads the **asset name**.
 Give the photo state a label naming what it shows and mark the radar placeholder
 `.accessibilityHidden(true)` — it is decoration standing in for an absent picture, and announcing it
 tells a VoiceOver user nothing. The synopsis text is the card's real content and already reads.
 
-- [ ] **Step 5: Build the watch target**
+- [x] **Step 5: Build the watch target**
 
 ```bash
 xcrun simctl list devices available | grep -i watch
@@ -289,7 +289,7 @@ xcodebuild build -project challange-5.xcodeproj -scheme "hisplora Watch App" \
   -destination 'platform=watchOS Simulator,name=Apple Watch Series 11 (46mm),OS=26.5'
 ```
 
-- [ ] **Step 6: Verify both `#Preview`s, then commit**
+- [x] **Step 6: Verify both `#Preview`s, then commit**
 
 ```bash
 git commit -m "feat(watch): render the long-look card as 91:176's radar motif"
