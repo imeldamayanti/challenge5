@@ -29,21 +29,22 @@ struct QuestRunView: View {
     private var language: ContentLanguage { model.language }
 
     /// The story-flow stages carry their own heading and their own back control, on their own
-    /// ground. The museum navigation bar over them is cream on brown and it clips the eyebrow
-    /// underneath it, so on those stages it goes away entirely.
-    private var isOnStoryFlow: Bool {
-        switch model.stage {
-        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
-             .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .questExplanation,
-             .stampAward, .transition:
-            true
-        case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
-            false
-        }
-    }
+    /// ground. The rule itself lives on the view model, because `KultaraRootView` has to answer
+    /// the same question one frame earlier — before this model is built.
+    private var isOnStoryFlow: Bool { QuestRunViewModel.isStoryFlow(model.stage) }
 
     var body: some View {
         content
+            // One screen swaps for the next in place, so without this the change is a hard cut —
+            // most visible leaving the cutscene, where the walker has just uncovered a picture and
+            // the frame vanishes mid-look. A cross-fade rather than a slide: these stages are not
+            // a stack and nothing here moves in a direction (`isOnStoryFlow` even hides the
+            // navigation bar), so a push would claim a spatial relationship the flow does not have.
+            //
+            // Each stage still runs its own entrance — the typewriter, the scroll, the reveal's own
+            // fade — on top of this.
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.35), value: model.stage)
             .kultaraSpeckledGround(palette.paper)
             .navigationTitle(isOnStoryFlow ? "" : model.quest.title.value(for: language))
             .kultaraInlineNavigationTitle()
@@ -94,6 +95,7 @@ struct QuestRunView: View {
         case .locationVerified: locationVerified
         case .cutsceneIntro: cutsceneIntro
         case .cutscenePortrait: cutscenePortrait
+        case .approachTransition: approachTransition
         case .storyReveal: storyReveal
         case .placeNotice: placeNotice
         case .checkpointDetail: checkpointDetail
@@ -137,7 +139,24 @@ struct QuestRunView: View {
             questTitle: model.questTitle,
             onContinue: { model.advanceFromLocationVerified() },
             onBack: { dismiss() },
-            map: { routeMap })
+            map: { locationVerifiedMap })
+    }
+
+    /// What fills the parchment on `1:4458`: the checkpoint's own authored approach map where the
+    /// content tree ships one, and the run's projected route everywhere else.
+    ///
+    /// The fallback is not a placeholder — `RunRouteMapView` is what this slot drew before any Place
+    /// carried an approach map, and only `badung-puri-agung-pemecutan` carries one today. A drawing
+    /// of one checkpoint's streets shown at every checkpoint would be the screen asserting the walker
+    /// is somewhere they are not.
+    @ViewBuilder private var locationVerifiedMap: some View {
+        if let checkpoint = model.checkpoint, let approachMap = checkpoint.approachMap {
+            ApproachMapView(language: language,
+                            placeName: checkpoint.placeName,
+                            approachMap: approachMap)
+        } else {
+            routeMap
+        }
     }
 
     private var cutsceneIntro: some View {
@@ -164,6 +183,19 @@ struct QuestRunView: View {
             subtitle: nil,
             hook: model.hookText,
             onStart: { model.advanceFromCutscenePortrait() },
+            onBack: { model.retreatFromStoryStage() })
+    }
+
+    /// `187:1103` — the approach map with a dot beating over the first place, between the cutscene
+    /// and the reveal. It moves itself on; the chevron is what leaves it early.
+    private var approachTransition: some View {
+        ApproachTransitionScreen(
+            language: language,
+            questTitle: model.questTitle,
+            region: model.quest.region,
+            placeName: model.currentPlaceName,
+            approachMap: model.checkpoint?.approachMap,
+            onAdvance: { model.advanceFromApproachTransition() },
             onBack: { model.retreatFromStoryStage() })
     }
 

@@ -199,6 +199,9 @@ public enum UIStrings {
             id: "Kamu ada di tempat yang tepat. Ceritanya menunggu.",
             en: "You're at the right place. The story awaits."),
         .locationVerifiedContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .locationVerifiedMapAccessibility: LocalizedText(
+            id: "Peta jalan di sekitar %@",
+            en: "Street map of the area around %@"),
         .locationNotThereTitle: LocalizedText(
             id: "Belum sampai", en: "Not Quite There"),
         .locationNotThereBody: LocalizedText(
@@ -233,6 +236,9 @@ public enum UIStrings {
         .transitionSteppingInto: LocalizedText(
             id: "Melangkah ke titik pertama %@", en: "Stepping into the first place of %@"),
         .transitionContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .approachTransitionMapAccessibility: LocalizedText(
+            id: "Peta jalan di sekitar %@, dengan titik yang menandai tempatnya",
+            en: "Street map of the area around %@, with a dot marking the place"),
         .transitionTapToReveal: LocalizedText(id: "Ketuk untuk membuka", en: "Tap to reveal"),
         .placeNoticeBeforeExplore: LocalizedText(
             id: "Sebelum menjelajah:", en: "Before you explore:"),

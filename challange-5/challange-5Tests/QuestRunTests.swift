@@ -99,13 +99,14 @@ struct QuestRunTests {
     @discardableResult
     private func walkTheStoryStages(_ harness: Harness) -> Bool {
         // Bounded rather than `while`: a stage that returns itself would otherwise hang the suite
-        // instead of failing it. Seven stages is the longest legal path — `1:4458`'s arrival
-        // confirmation added one — and ten gives it room.
-        for _ in 0..<10 {
+        // instead of failing it. Nine stages is the longest legal path — `1:4458`'s arrival
+        // confirmation added one and `187:1103`'s map added another — and twelve gives it room.
+        for _ in 0..<12 {
             switch harness.model.stage {
             case .locationVerified: harness.model.advanceFromLocationVerified()
             case .cutsceneIntro: harness.model.advanceFromCutsceneIntro()
             case .cutscenePortrait: harness.model.advanceFromCutscenePortrait()
+            case .approachTransition: harness.model.advanceFromApproachTransition()
             case .storyReveal: harness.model.advanceFromStoryReveal()
             case .placeNotice: harness.model.advanceFromPlaceNotice()
             // The checkpoint's first task now sits between the notice and the menu (`1:4592` →
@@ -246,6 +247,91 @@ struct QuestRunTests {
         #expect(harness.model.stage == .locationVerified)
         harness.model.advanceFromLocationVerified()
         #expect(harness.model.stage == .cutsceneIntro)
+    }
+
+    /// `98:1588`'s back chevron goes back. It fell through `retreatFromStoryStage`'s `default: break`
+    /// and did nothing at all, which left the cutscene the one story stage with a control that was
+    /// drawn and dead. Going back and forward again lands on the same screen: the arrival stored
+    /// where its Continue leads, so returning to it cannot change the answer.
+    @Test func backingOutOfTheCutsceneReturnsToTheArrivalConfirmation() throws {
+        let harness = try harness()
+        openArrival(harness)
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+        harness.model.advanceFromLocationVerified()
+        #expect(harness.model.stage == .cutsceneIntro)
+
+        harness.model.retreatFromStoryStage()
+        #expect(harness.model.stage == .locationVerified)
+
+        harness.model.advanceFromLocationVerified()
+        #expect(harness.model.stage == .cutsceneIntro)
+    }
+
+    /// `187:1103` — the cutscene hands over to the map with the beating dot, not straight to the
+    /// reveal, and the map hands over to the reveal.
+    ///
+    /// The order is the whole point of the screen: the cutscene names a story and this says where
+    /// it starts, so a reveal reached before it would be the walk telling the story of a place it
+    /// had not yet pointed at.
+    @Test func theCutsceneHandsOverToTheApproachMapAndTheMapToTheStory() throws {
+        let harness = try harness()
+        openArrival(harness)
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+        harness.model.advanceFromLocationVerified()
+        harness.model.advanceFromCutsceneIntro()
+        #expect(harness.model.stage == .cutscenePortrait)
+
+        harness.model.advanceFromCutscenePortrait()
+        #expect(harness.model.stage == .approachTransition)
+
+        harness.model.advanceFromApproachTransition()
+        #expect(harness.model.stage == .storyReveal)
+    }
+
+    /// The screen leaves on its own, and the guard is that it only leaves *itself*.
+    ///
+    /// `ApproachTransitionScreen` runs the clock in a `.task`, which cancellation is meant to take
+    /// with it — but a late tick that outlives the back-out would otherwise push a walker from
+    /// wherever they went onto the reveal. The stage check inside `advanceFromApproachTransition`
+    /// is what makes that harmless, and this is what pins it.
+    @Test func theApproachMapsTimerCannotAdvanceAStageItIsNotOn() throws {
+        let harness = try harness()
+        openArrival(harness)
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+        harness.model.advanceFromLocationVerified()
+        harness.model.advanceFromCutsceneIntro()
+        harness.model.advanceFromCutscenePortrait()
+        #expect(harness.model.stage == .approachTransition)
+
+        harness.model.retreatFromStoryStage()
+        #expect(harness.model.stage == .cutscenePortrait)
+
+        harness.model.advanceFromApproachTransition()
+        #expect(harness.model.stage == .cutscenePortrait)
+    }
+
+    /// Backing out of the reveal on the walk's first checkpoint returns to the map, which is now
+    /// the screen before it. Nine stages of walk are easy to reorder by accident; this is the seam
+    /// that reordering would break silently.
+    @Test func backingOutOfTheFirstStoryRevealReturnsToTheApproachMap() throws {
+        let harness = try harness()
+        openArrival(harness)
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+        harness.model.advanceFromLocationVerified()
+        harness.model.advanceFromCutsceneIntro()
+        harness.model.advanceFromCutscenePortrait()
+        harness.model.advanceFromApproachTransition()
+        #expect(harness.model.stage == .storyReveal)
+
+        harness.model.retreatFromStoryStage()
+        #expect(harness.model.stage == .approachTransition)
+    }
+
+    /// The map screen is drawn on the Hisplora ground and carries its own header, so the museum
+    /// navigation bar must go away over it — the rule `isStoryFlow` holds for every other story
+    /// stage, and a new stage left out of it gets a cream-on-brown bar clipping its heading.
+    @Test func theApproachMapIsAStoryFlowStage() {
+        #expect(QuestRunViewModel.isStoryFlow(.approachTransition))
     }
 
     /// The second checkpoint confirms arrival too — the cutscene is once per walk, the

@@ -1,3 +1,4 @@
+import ContentKit
 import Foundation
 
 /// The drawn plan of a Place's grounds, resolved for the site-map screen (`452:3028`).
@@ -26,4 +27,21 @@ struct SiteMapMarker: Sendable, Equatable, Identifiable {
     let id: Int
     let x: Double
     let y: Double
+}
+
+/// The drawn map of the streets around a Place, resolved for the Location Verified screen
+/// (`1:4458`).
+///
+/// **It carries no citation, unlike `SiteMapPresentation`, and that is the open half of the
+/// decision recorded on `ApproachMapView`.** The authored `sourceRef` is still there and still
+/// enforced by V3 and V14; the screen does not print it, so there is nothing for this model to hand
+/// over. Restoring the line means adding the field back here and reading it in the view — the
+/// resolver already has the Place's sources in hand.
+struct ApproachMapPresentation: Sendable, Equatable {
+    let imageURL: URL?
+    let aspectRatio: Double
+    /// Where the Place stands on this drawing, in fractions of the image — what the transition
+    /// screen's pulsing dot sits over. Nil where the content has not read the point off the drawing,
+    /// and the map then draws with no dot at all rather than with one guessed at.
+    let marker: MapPoint?
 }

@@ -282,6 +282,39 @@ public enum ContentValidator {
                 }
             }
 
+            // V14 and V3 again, over the approach map — the drawing on `1:4458`.
+            //
+            // The same two failures apply and for the same reasons. A missing file leaves the
+            // walker with an empty frame at the moment the fix lands, and an unresolvable
+            // `sourceRef` renders as no citation at all — which for a drawing that names real
+            // streets is exactly the unsourced claim `FR-CP-05` forbids.
+            if let approachMap = place.approachMap {
+                if !assets.exists(approachMap.asset) {
+                    findings.append(ValidationFinding(
+                        rule: .v14, path: path,
+                        message: "Approach map asset \"\(approachMap.asset)\" does not exist."))
+                }
+                if approachMap.sourceRef < 0 || approachMap.sourceRef >= place.sources.count {
+                    findings.append(ValidationFinding(
+                        rule: .v3, path: path,
+                        message: "approachMap cites source index \(approachMap.sourceRef); the Place has \(place.sources.count) source(s)."))
+                }
+                if approachMap.aspectRatio <= 0 {
+                    findings.append(ValidationFinding(
+                        rule: .v14, path: path,
+                        message: "approachMap aspectRatio is \(approachMap.aspectRatio); must be greater than zero."))
+                }
+                // The pulsing dot's home on the drawing. Range only, the same thing V15 checks of
+                // `mapPoint` and for the same reason: whether the point lands on the right street
+                // is a question about the illustration, which no rule can answer. A point outside
+                // the image would put the dot off the paper entirely, and that a rule can.
+                if let marker = approachMap.marker, !marker.isInsideImage {
+                    findings.append(ValidationFinding(
+                        rule: .v14, path: path,
+                        message: "approachMap marker is (\(marker.x), \(marker.y)); both must be within 0–1."))
+                }
+            }
+
             // V13 — FR-ARR-07
             if !(30...250).contains(place.arrivalRadiusM) {
                 findings.append(ValidationFinding(

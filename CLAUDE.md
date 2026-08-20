@@ -49,7 +49,7 @@ The repo root and the Xcode project directory share a name, which is confusing:
     │   │   ├── Onboarding/           3
     │   │   ├── QuestList/            9
     │   │   ├── QuestPreview/         5
-    │   │   ├── QuestRun/            16   largest feature
+    │   │   ├── QuestRun/            18   largest feature
     │   │   ├── RunSummary/           2
     │   │   ├── SideQuest/           11
     │   │   ├── Letters/              8   the journal surface
@@ -96,8 +96,8 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 529 tests / 67 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
-| `xcodebuild test -only-testing:challange-5Tests` | 190 tests / 19 suites — view models, presentation, UI strings, host linkage | Yes |
+| `swift test` (from `Packages/Kultara`) | 541 tests / 69 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `xcodebuild test -only-testing:challange-5Tests` | 193 tests / 19 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
 **Three `swift test` failures are pre-existing on this branch and are not yours.** None is in a
@@ -534,6 +534,30 @@ auto-advancing and the login carrying a "Skip for now".
   resolves. Replacing it with a real survey is a content change and nothing else. The frame's three
   marker dots are **not** drawn: nothing authors them, and inventing coordinates would be the app
   asserting where three things stand inside a real puri.
+- **A map with a beating dot stands between the cutscene and the story, and it leaves on its own.**
+  `187:1103` is back as `approachTransition` — `cutscenePortrait` → `approachTransition` →
+  `storyReveal`, on the walk's first checkpoint only, since it is the cutscene that it lands. It is
+  `1:4458`'s own open scroll (`HisploraMapScroll`) holding the Place's authored `approachMap`, with
+  the quest's region in the eyebrow and the place's name under it. Four things about it:
+  - **The dot's position is authored, not projected.** `PlaceApproachMap.marker` is a `MapPoint` in
+    fractions of the *drawing*, new at `contentBundleVersion` **2026.09.7** and carried only by
+    `badung-puri-agung-pemecutan` — read off the illustration's own pin for that Place. Projecting
+    `coordinate` onto a stylised street grid would land it on the wrong road while looking exact,
+    which is `Place.mapPoint`'s rule applied one scale down. V14 range-checks it; absent means no
+    dot at all, never a fallback to the middle of the paper.
+  - **It has no control, so the back chevron is load-bearing.** The wait is a `.task` on the screen
+    rather than a timer on the model: backing out cancels it, and
+    `advanceFromApproachTransition` additionally refuses to move a stage it is not on. Five seconds
+    with no way out would be five seconds a walker cannot leave.
+  - **Under VoiceOver the clock does not run and a Continue appears instead.** A screen that reads
+    itself out and then vanishes mid-sentence has no right duration; `CutsceneIntroScreen` draws its
+    button under the same rule.
+  - **No new palette token and no new art.** The dot is `mapMarker`, already measured against
+    `paperCream`, wearing the cream ring the site plan's markers wear (`NFR-A11Y-05`) — and the map
+    accessibility label names the dot, so colour and motion never carry it alone.
+    `HisploraPulsingMapMarker` stops the ring rather than the dot under Reduce Motion.
+  `1:4586`'s sealed scroll (`transition`) is untouched and still sits between `storyReveal` and the
+  checkpoint's own screens at every checkpoint.
 - **The task sheet comes before the task list, and it is where a task is answered.** `1:4592` →
   `1:4711` → `1:4904` on the New Hisplora board: the place notice hands over to the checkpoint's
   **first** task, and the menu is what the walker reaches after resolving it. So `TaskDetailScreen`

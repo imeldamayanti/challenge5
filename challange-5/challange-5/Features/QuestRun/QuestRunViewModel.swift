@@ -30,6 +30,18 @@ final class QuestRunViewModel {
         /// `CutsceneScreens.swift`.
         case cutsceneIntro
         case cutscenePortrait
+        /// `187:1103` — the approach map on the open scroll, with a dot beating over the place the
+        /// cutscene has just finished pointing at.
+        ///
+        /// **It sits after the cutscene and nowhere else.** The cutscene is the once-per-walk
+        /// introduction, and this is the sentence that lands it somewhere: *that story starts here,
+        /// and here is where here is*. Every later checkpoint reaches its story from an arrival the
+        /// walker made on purpose, and already has `locationVerified`'s map for the same job.
+        ///
+        /// **It has no control and moves itself on** (`ApproachTransitionScreen`). That is what the
+        /// frame draws, and it is why the back chevron matters: a screen that leaves on its own must
+        /// still be leavable on purpose.
+        case approachTransition
         /// The lore reveal — one passage, joined from every `LoreBlock` at the checkpoint.
         case storyReveal
         /// `1:4592` ("Quest" on the New Hisplora board, `50:137` before it) — the sacred-Place
@@ -187,11 +199,7 @@ final class QuestRunViewModel {
         // route. V18 is what stops that reaching a release.
         self.routeGeometry = (try? repository.routeGeometry(questID: questID)) ?? nil
 
-        stage = Self.initialStage(
-            run: existingRun,
-            quest: quest,
-            preferences: preferences,
-            authorization: sampling.authorization)
+        stage = Self.initialStage(run: existingRun)
         if stage == .atCheckpoint || stage == .finished {
             checkpoint = presentation(forOrderIndex: currentIndex)
         }
@@ -201,12 +209,7 @@ final class QuestRunViewModel {
         }
     }
 
-    private static func initialStage(
-        run: Run?,
-        quest: Quest,
-        preferences: any AppPreferencesStore,
-        authorization: LocationAuthorizationSnapshot
-    ) -> Stage {
+    private static func initialStage(run: Run?) -> Stage {
         if let run {
             // A walk already under way has been through both notices. Showing them again on every
             // resume would turn a safety notice into a dialog people learn to dismiss.
@@ -218,6 +221,34 @@ final class QuestRunViewModel {
         // A fresh walk opens on the hook, as the board does. A resumed one never sees it again —
         // it is an opening, not a gate.
         return .storyPreview
+    }
+
+    /// Which stages are drawn on the Hisplora ground, carrying their own heading and their own
+    /// back control. The museum navigation bar over them is cream on brown and it clips the
+    /// eyebrow underneath it, so on those stages it goes away entirely.
+    ///
+    /// The rule lives here rather than in the view because two callers need it: the view, and the
+    /// host that has to know the answer *before* this model exists (see `opensOnStoryFlow`).
+    static func isStoryFlow(_ stage: Stage) -> Bool {
+        switch stage {
+        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
+             .approachTransition, .storyReveal, .placeNotice, .checkpointDetail, .taskDetail,
+             .questExplanation, .stampAward, .transition:
+            true
+        case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
+            false
+        }
+    }
+
+    /// Whether a run screen opened for this Run lands on a story stage, answerable without
+    /// building the model.
+    ///
+    /// The model is built in `onAppear`, so the pushed screen draws a placeholder first. A
+    /// placeholder that does not already hide the navigation bar gets the stack's default one, and
+    /// the walker sees a bar appear and vanish as the story preview arrives. Asking here keeps
+    /// that answer and `initialStage` from drifting apart.
+    static func opensOnStoryFlow(existingRun: Run?) -> Bool {
+        isStoryFlow(initialStage(run: existingRun))
     }
 
     /// Leaving the hook for the notices. The order after it is unchanged: `FR-START-04` before
@@ -456,7 +487,21 @@ final class QuestRunViewModel {
 
     func advanceFromCutsceneIntro() { stage = .cutscenePortrait }
 
-    func advanceFromCutscenePortrait() { stage = .storyReveal }
+    /// `187:866`'s "Start the Journey" — into `187:1103`, the map with the beating dot, rather
+    /// than straight into the reveal. The cutscene names the story; this says where it starts.
+    func advanceFromCutscenePortrait() { stage = .approachTransition }
+
+    /// `187:1103` leaves on its own after `approachTransitionDuration`, and the screen is what runs
+    /// the clock — a timer here would keep counting through a back-out and land the walker on the
+    /// reveal from a screen they had already left.
+    func advanceFromApproachTransition() {
+        guard stage == .approachTransition else { return }
+        stage = .storyReveal
+    }
+
+    /// How long `187:1103` holds before it moves itself on. Named rather than written at the call
+    /// site so the screen and the guard that pins it read the same number.
+    static let approachTransitionDuration: Duration = .seconds(5)
 
     /// The sealed scroll closes the story and opens the walk — `1:4856` → `1:4586` → `1:4592` on
     /// the New Hisplora board. The transition is the seam between the two halves of a checkpoint,
@@ -642,8 +687,17 @@ final class QuestRunViewModel {
     /// Backing out of a story stage returns to the one before it rather than leaving the walk.
     func retreatFromStoryStage() {
         switch stage {
+        // `1:4458` is the screen the cutscene was reached from, and it is a pure display stage —
+        // `advanceFromLocationVerified` still hands over to the stored `stageAfterArrivalConfirmed`,
+        // so going back there and forward again lands on this same screen. Without this case the
+        // chevron on `98:1588` fell to `default: break` and did nothing at all.
+        case .cutsceneIntro: stage = .locationVerified
         case .cutscenePortrait: stage = .cutsceneIntro
-        case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .cutscenePortrait : .storyReveal
+        case .approachTransition: stage = .cutscenePortrait
+        // The map now stands between the cutscene and the reveal, so on the walk's first
+        // checkpoint that is what backing out of the reveal returns to. Every later checkpoint
+        // never passed through either, and has nowhere above it to go.
+        case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .approachTransition : .storyReveal
         case .transition: stage = .storyReveal
         case .placeNotice: stage = .transition
         // The menu now sits *after* the first task, so backing out of it returns to that task
@@ -893,7 +947,8 @@ final class QuestRunViewModel {
             coordinate: place?.coordinate ?? Coordinate(lat: 0, lon: 0),
             arrivalRadiusM: place?.arrivalRadiusM ?? 75,
             isFinal: checkpoint.orderIndex == (orderedCheckpoints.last?.orderIndex ?? 0),
-            siteMap: place.flatMap(siteMap(for:)))
+            siteMap: place.flatMap(siteMap(for:)),
+            approachMap: place.flatMap(approachMap(for:)))
     }
 
     /// The Place's drawn plan, with its citation resolved (`452:3028`).
@@ -916,5 +971,21 @@ final class QuestRunViewModel {
             // where three things stand inside a real puri — which is precisely the claim the
             // citation above exists to qualify. Empty until content carries them.
             markers: [])
+    }
+
+    /// The Place's drawn approach map (`1:4458`).
+    ///
+    /// The `sourceRef` still has to resolve even though the screen no longer prints what it resolves
+    /// to — the same runtime half of V3 that `siteMap(for:)` above applies. A map whose provenance
+    /// has gone missing from the content is a different thing from one whose provenance is merely
+    /// not on screen, and this is the check that keeps the first case off the parchment.
+    private func approachMap(for place: Place) -> ApproachMapPresentation? {
+        guard let authored = place.approachMap,
+              place.sources.indices.contains(authored.sourceRef)
+        else { return nil }
+        return ApproachMapPresentation(
+            imageURL: (try? repository.assetURL(authored.asset)) ?? nil,
+            aspectRatio: authored.aspectRatio,
+            marker: authored.marker)
     }
 }

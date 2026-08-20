@@ -94,7 +94,7 @@ public struct ScratchRevealField: Sendable, Equatable {
 /// try it and is not a control at all for VoiceOver, so under Reduce Motion or VoiceOver this
 /// renders uncovered from the first frame and the screen above shows its own action instead
 /// (`NFR-A11Y-04`, `NFR-A11Y-05`).
-public struct HisploraScratchReveal<Content: View>: View {
+public struct HisploraScratchReveal<Content: View, Cover: View>: View {
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
@@ -104,6 +104,11 @@ public struct HisploraScratchReveal<Content: View>: View {
     private let onProgress: (Double) -> Void
     private let onComplete: () -> Void
     private let content: Content
+    /// What stands over the picture until it is rubbed away. Supplied by the caller rather than
+    /// derived here, because *how* a picture is spoiled is a decision about the picture: the
+    /// cutscene hands in the same photograph at a destroyed resolution, which keeps the covered
+    /// frame recognisably the thing being uncovered. `nil` falls back to this view's own treatment.
+    private let coverContent: Cover?
 
     @State private var field = ScratchRevealField()
     /// One array per continuous drag. Kept separate so lifting the finger and starting again
@@ -113,18 +118,23 @@ public struct HisploraScratchReveal<Content: View>: View {
 
     /// `brushRadius` is the rubbed radius in points. 34 is a little over a fingertip, which is what
     /// keeps the reveal feeling like wiping rather than colouring.
+    ///
+    /// `cover` is what the walker rubs away. Give it the picture in whatever spoiled state the
+    /// screen wants — the cutscene passes the same photograph at a destroyed resolution.
     public init(
         brushRadius: CGFloat = 34,
         veil: KeyPath<HisploraPalette, SRGBColor> = \.brownStone,
         onProgress: @escaping (Double) -> Void = { _ in },
         onComplete: @escaping () -> Void = {},
-        @ViewBuilder content: () -> Content
+        @ViewBuilder content: () -> Content,
+        @ViewBuilder cover: () -> Cover
     ) {
         self.brushRadius = brushRadius
         self.veil = veil
         self.onProgress = onProgress
         self.onComplete = onComplete
         self.content = content()
+        self.coverContent = cover()
     }
 
     /// Whether the cover is skipped outright. Not the same as "finished": the screen above reads
@@ -155,14 +165,23 @@ public struct HisploraScratchReveal<Content: View>: View {
         }
     }
 
-    /// The obscured copy: the same picture out of focus, under a wash of the ground colour. Blur
-    /// alone still reads as a photograph of a face; the wash is what makes it a covered frame.
+    /// The obscured copy.
+    ///
+    /// The caller's spoiled picture when it supplied one, and otherwise this view's own fallback:
+    /// the same picture out of focus under a thin wash of the ground colour. The wash used to be
+    /// heavy enough to hide the subject outright, which made the covered frame a grey plate — and a
+    /// grey plate says nothing about what is under it. What is being rubbed away has to read as the
+    /// photograph all along.
     private var cover: some View {
         ZStack {
-            content
-                .blur(radius: 18)
-                .saturation(0.55)
-            palette[keyPath: veil].color.opacity(0.55)
+            if let coverContent {
+                coverContent
+            } else {
+                content
+                    .blur(radius: 14)
+                    .saturation(0.8)
+            }
+            palette[keyPath: veil].color.opacity(0.18)
         }
     }
 
@@ -200,6 +219,23 @@ public struct HisploraScratchReveal<Content: View>: View {
             for point in stroke.dropFirst() { path.addLine(to: point) }
         }
         return path
+    }
+
+    /// Without a cover of its own the view spoils the picture itself, which is enough for a caller
+    /// that has nothing better to hand in.
+    public init(
+        brushRadius: CGFloat = 34,
+        veil: KeyPath<HisploraPalette, SRGBColor> = \.brownStone,
+        onProgress: @escaping (Double) -> Void = { _ in },
+        onComplete: @escaping () -> Void = {},
+        @ViewBuilder content: () -> Content
+    ) where Cover == EmptyView {
+        self.brushRadius = brushRadius
+        self.veil = veil
+        self.onProgress = onProgress
+        self.onComplete = onComplete
+        self.content = content()
+        self.coverContent = nil
     }
 
     private func rub(at location: CGPoint, in size: CGSize) {
