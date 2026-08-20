@@ -35,6 +35,94 @@ public enum HisploraScrollArt {
 
     /// The tilt `447:1909` gives the scroll above the map hint.
     public static let mapHintTiltDegrees: Double = 41.6
+
+    /// The open horizontal scroll the Location Verified map is drawn on — `1:4467` ("image 26") on
+    /// `1:4458`. Gold-capped rods left and right, the sheet bowing between them.
+    ///
+    /// **It is the frame's own source image rotated, not the frame's export.** Figma exports this
+    /// node with the frame's `#82736B` backdrop baked into every transparent pixel and clipped to
+    /// the 402-point frame width, losing the 19 points it bleeds past each edge — the same defect
+    /// `HisploraScrollArt.divider` records. The upload behind it is a 326 x 350 *vertical* scroll
+    /// with real alpha, and the node is that image turned a quarter turn clockwise, which is what
+    /// ships.
+    ///
+    /// **It is a 1x asset and wants replacing.** 350 x 326 drawn 439 points wide is under a third of
+    /// what a 3x screen asks for, so the rods are soft. A hand export of the *unrotated* source at
+    /// 4x, turned the same quarter turn, is a drop-in at this path.
+    public static let mapScroll = PackagedImage(name: "map-scroll", aspectRatio: 439.0 / 409.0)
+}
+
+/// `1:4458`'s open scroll with a drawing laid in its paper field.
+///
+/// **An overlay rather than a background, unlike `HisploraParchmentSheet`**, and the difference is
+/// deliberate. The parchment holds a task's words, so it has to grow when the words do
+/// (`NFR-A11Y-01`); this holds one image at a fixed aspect ratio, which never reflows. Sizing the
+/// scroll and insetting the drawing by fractions of it is what keeps the rods the shape they are
+/// drawn — a background stretched to fit a taller caller would smear them.
+///
+/// The fractions are the frame's own arithmetic. The scroll spans x −19…420 and y 205…614 of a
+/// 402 x 874 frame; `1:4468` sits at x 30…368, y 310…523. The interior that leaves is 338 x 213 —
+/// exactly the map asset's own size, so the drawing fills the field rather than floating in it.
+///
+/// When the art is missing the drawing still draws, on a plain cream panel. A missing decoration
+/// must not take the thing it decorates with it, which is the rule `HisploraParchmentSheet` and
+/// `RunRouteMapView` already follow.
+public struct HisploraMapScroll<Content: View>: View {
+    @Environment(\.hisploraPalette) private var palette
+
+    private let content: Content
+
+    public init(@ViewBuilder content: () -> Content) {
+        self.content = content()
+    }
+
+    public var body: some View {
+        scroll
+            .aspectRatio(HisploraScrollArt.mapScroll.aspectRatio, contentMode: .fit)
+            .overlay {
+                GeometryReader { proxy in
+                    content
+                        .frame(width: proxy.size.width * HisploraMapScrollMetrics.interiorWidth,
+                               height: proxy.size.height * HisploraMapScrollMetrics.interiorHeight)
+                        .position(
+                            x: proxy.size.width * HisploraMapScrollMetrics.interiorCentreX,
+                            y: proxy.size.height * HisploraMapScrollMetrics.interiorCentreY)
+                }
+            }
+    }
+
+    @ViewBuilder private var scroll: some View {
+        if let image = HisploraScrollArt.mapScroll.image {
+            image
+                .resizable()
+                .accessibilityHidden(true)
+        } else {
+            RoundedRectangle(cornerRadius: KultaraMetrics.sm)
+                .fill(palette.paperCream.color)
+                .accessibilityHidden(true)
+        }
+    }
+}
+
+/// Where the paper field sits inside `1:4467`, in fractions of the scroll's own 439 x 409.
+///
+/// Fractions and not points: the scroll is drawn at whatever width the screen gives it, and a fixed
+/// inset would put the drawing over a rod on a narrow device.
+public enum HisploraMapScrollMetrics {
+    /// The rods eat 49 points off the left of 439 and 52 off the right.
+    public static let interiorWidth: CGFloat = 338.0 / 439.0
+    /// The curled top and bottom edges eat 105 and 91 of 409.
+    public static let interiorHeight: CGFloat = 213.0 / 409.0
+    /// x = 30…368 of −19…420, so the field's centre is a shade right of the scroll's.
+    public static let interiorCentreX: CGFloat = (30 + 338 / 2.0 - (-19)) / 439.0
+    /// y = 310…523 of 205…614, a shade above centre — the top curl is deeper than the bottom one.
+    public static let interiorCentreY: CGFloat = (310 + 213 / 2.0 - 205) / 409.0
+
+    /// How far the scroll runs past each edge of a 402-point screen: x −19…420.
+    ///
+    /// The screen lays its content out in the frame's 362-point column, so reaching the scroll's
+    /// full width means escaping that column by this much plus the column's own 20-point margin.
+    public static let screenBleed: CGFloat = 19
 }
 
 /// One image shipped with the design system, loaded once from the package bundle.

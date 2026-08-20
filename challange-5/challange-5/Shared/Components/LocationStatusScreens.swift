@@ -159,10 +159,11 @@ struct LocationClueCard: View {
 ///   fills the slot is the checkpoint's own `Place.approachMap` where content ships one
 ///   (`ApproachMapView`, citation and all), and `RunRouteMapView`'s projected canvas everywhere
 ///   else. The caller passes whichever, so this file keeps knowing nothing about routes or places.
-/// - **The scroll is the packaged parchment**, `HisploraParchmentSheet`. The frame draws a rod-and-
-///   sheet scroll that ships nowhere in this project; the parchment is the same object drawn the
-///   way the design system already draws it, and swapping in a real export is a change to that one
-///   component rather than to this screen.
+/// - **The scroll is `1:4467`'s own art**, by way of `HisploraMapScroll`. It stood in as
+///   `HisploraParchmentSheet` — the vertical rolled sheet the task screens use — until the frame's
+///   asset was pulled: the real one is a *horizontal* scroll on gold-capped rods, and it bleeds
+///   19 points past each edge of the screen rather than sitting inside the content column. Both
+///   differences are visible at a glance, which is why the stand-in did not survive.
 struct LocationVerifiedScreen<MapContent: View>: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -182,16 +183,29 @@ struct LocationVerifiedScreen<MapContent: View>: View {
                 ScrollView {
                     VStack(spacing: 0) {
                         // The frame sets the heading at y = 156 under a header ending at 108.
-                        Spacer(minLength: 40)
+                        Spacer(minLength: 48)
                         LocationStateHeading(state: .verified, language: language)
-                        // 84 as drawn, between the lead's baseline and the top of the scroll.
-                        Spacer(minLength: 40)
-                        HisploraParchmentSheet { map }
+                        // The frame starts the scroll at y = 205, which is 21 points *above* where
+                        // the lead's box ends — the two overlap, because the scroll's top edge dips
+                        // in the middle and the lead sits in the dip. Reproduced as a small
+                        // positive gap instead: the overlap is with the text's box and not its ink,
+                        // and a negative one would collide at the accessibility sizes where the
+                        // lead genuinely wraps to three lines — so the gap closes to nothing and
+                        // no further.
+                        Spacer(minLength: 0)
+                        HisploraMapScroll { map }
+                            // The scroll runs x −19…420 on a 402-point screen while this column is
+                            // the frame's 362. Escaping by the column's margin plus the bleed is
+                            // what gets it to its drawn width; clipping it to the column would put
+                            // both rods inside the screen and make it a different object.
+                            .padding(.horizontal, -(20 + HisploraMapScrollMetrics.screenBleed))
                         Spacer(minLength: 24)
                     }
                     .frame(maxWidth: .infinity)
                 }
                 .scrollBounceBehavior(.basedOnSize)
+                // The scroll is drawn wider than this view, so the scroll view must not crop it.
+                .scrollClipDisabled()
             }
             // 20 each side, which leaves the frame's 362-point content column on a 402-point screen.
             .padding(.horizontal, 20)
