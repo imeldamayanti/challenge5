@@ -11,16 +11,16 @@ import UIStringsKit
 /// (`AD-3`). The frame pastes a live street-map screenshot into this slot; what ships instead is the
 /// same picture authored as content, which is the only form of it this app is allowed to hold.
 ///
-/// **The citation is printed under the drawing and is not optional.** A street map names real roads
-/// and asserts how they meet, so `FR-CP-05` treats it as a claim exactly as it treats a sentence of
-/// lore — the same argument `PlaceSiteMapScreen` makes for the site plan, and the same reason
-/// `ApproachMapPresentation` carries the citation rather than leaving the view to look it up. Today's
-/// citation begins `BELUM DIVERIFIKASI` and says in as many words that the map is an illustration
-/// rather than a survey.
+/// **The citation is authored but deliberately not drawn, and that is an open `FR-CP-05` gap.** The
+/// drawing names real Denpasar streets and asserts how they meet, which is a claim of the kind the
+/// rule covers — the content still carries a `sourceRef` (V3 and V14 hold it, and
+/// `QuestRunViewModel.approachMap(for:)` still refuses a map whose ref does not resolve), so the
+/// provenance exists and is enforced; it simply is not on this screen. That was a product decision
+/// on 2026-08-20, made the same way the Story Reveal's omission was, and like that one it has no PRD
+/// amendment and no named owner yet. Both need signing off together rather than by inference.
 ///
-/// When the image is missing the citation still draws. A missing asset must not take the words about
-/// it with it — that would leave the drawing's absence looking like a screen with nothing to say
-/// rather than a screen whose picture failed to load.
+/// When the image is missing a reserved box draws in its place, so the parchment does not silently
+/// collapse to nothing.
 struct ApproachMapView: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -29,11 +29,8 @@ struct ApproachMapView: View {
     let approachMap: ApproachMapPresentation
 
     var body: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            drawing
-            citation
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        drawing
+            .frame(maxWidth: .infinity)
     }
 
     @ViewBuilder private var drawing: some View {
@@ -50,26 +47,11 @@ struct ApproachMapView: View {
                     String(format: UIStrings.string(.locationVerifiedMapAccessibility, language),
                            placeName))
         } else {
-            // The reserved box rather than nothing, so the sheet does not silently collapse to the
-            // height of two lines of citation when an asset goes missing.
             RoundedRectangle(cornerRadius: KultaraMetrics.xs)
                 .fill(palette.inkDusty.color.opacity(0.15))
                 .aspectRatio(approachMap.aspectRatio, contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .accessibilityHidden(true)
         }
-    }
-
-    private var citation: some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
-            Text(UIStrings.string(.locationVerifiedMapSourceHeading, language))
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(palette.inkDark.color)
-            Text(approachMap.citation)
-                .font(.system(size: 12))
-                .foregroundStyle(palette.inkBody.color)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

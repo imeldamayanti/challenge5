@@ -130,8 +130,12 @@ struct ShippedApproachMapTests {
 
     @Test func theShippedApproachMapsCitationSaysItIsUnverified() throws {
         // `docs/field-verification-checklist.md`'s convention: a claim nobody has checked carries a
-        // citation beginning `BELUM DIVERIFIKASI`. `ApproachMapView` prints this exact string, so
-        // the screen tells the truth for as long as this holds and no longer.
+        // citation beginning `BELUM DIVERIFIKASI`.
+        //
+        // **The screen no longer prints it** — that was a product decision on 2026-08-20, recorded
+        // on `ApproachMapView` as an open `FR-CP-05` gap. This still holds the content half: the
+        // provenance exists, resolves, and says what it is, so restoring the line is a view change
+        // and not a content one.
         let repository = try BundledContentRepository()
         let place = try #require(try repository.place(id: "badung-puri-agung-pemecutan"))
         let approachMap = try #require(place.approachMap)

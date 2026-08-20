@@ -938,18 +938,18 @@ final class QuestRunViewModel {
             markers: [])
     }
 
-    /// The Place's drawn approach map, with its citation resolved (`1:4458`).
+    /// The Place's drawn approach map (`1:4458`).
     ///
-    /// Nil rather than a map with an empty citation when the `sourceRef` does not resolve — the same
-    /// runtime half of V3 that `siteMap(for:)` above applies, and for the same reason: a drawing that
-    /// names real streets must not reach a walker with nothing said about where it came from.
+    /// The `sourceRef` still has to resolve even though the screen no longer prints what it resolves
+    /// to — the same runtime half of V3 that `siteMap(for:)` above applies. A map whose provenance
+    /// has gone missing from the content is a different thing from one whose provenance is merely
+    /// not on screen, and this is the check that keeps the first case off the parchment.
     private func approachMap(for place: Place) -> ApproachMapPresentation? {
         guard let authored = place.approachMap,
               place.sources.indices.contains(authored.sourceRef)
         else { return nil }
         return ApproachMapPresentation(
             imageURL: (try? repository.assetURL(authored.asset)) ?? nil,
-            aspectRatio: authored.aspectRatio,
-            citation: place.sources[authored.sourceRef].citation)
+            aspectRatio: authored.aspectRatio)
     }
 }

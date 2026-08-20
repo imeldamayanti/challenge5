@@ -31,13 +31,12 @@ struct SiteMapMarker: Sendable, Equatable, Identifiable {
 /// The drawn map of the streets around a Place, resolved for the Location Verified screen
 /// (`1:4458`).
 ///
-/// The citation rides with the image for the same reason it does on `SiteMapPresentation`: a street
-/// map names real roads and asserts how they meet, so `FR-CP-05` treats it as a claim, and a screen
-/// that has the drawing necessarily has the words about it.
+/// **It carries no citation, unlike `SiteMapPresentation`, and that is the open half of the
+/// decision recorded on `ApproachMapView`.** The authored `sourceRef` is still there and still
+/// enforced by V3 and V14; the screen does not print it, so there is nothing for this model to hand
+/// over. Restoring the line means adding the field back here and reading it in the view — the
+/// resolver already has the Place's sources in hand.
 struct ApproachMapPresentation: Sendable, Equatable {
     let imageURL: URL?
     let aspectRatio: Double
-    /// The Place's own `Source.citation` for the map. Today's shipped map is an illustration and its
-    /// citation says so, beginning `BELUM DIVERIFIKASI`.
-    let citation: String
 }

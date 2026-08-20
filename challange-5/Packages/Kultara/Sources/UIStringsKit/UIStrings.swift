@@ -201,7 +201,6 @@ public enum UIStrings {
             id: "Kamu ada di tempat yang tepat. Ceritanya menunggu.",
             en: "You're at the right place. The story awaits."),
         .locationVerifiedContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
-        .locationVerifiedMapSourceHeading: LocalizedText(id: "Sumber peta", en: "Map source"),
         .locationVerifiedMapAccessibility: LocalizedText(
             id: "Peta jalan di sekitar %@",
             en: "Street map of the area around %@"),
