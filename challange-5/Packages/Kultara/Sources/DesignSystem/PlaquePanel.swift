@@ -54,6 +54,18 @@ public enum HisploraPlaqueMetrics {
     public static let outerRuleInset: CGFloat = 12
     public static let innerRuleInset: CGFloat = 17
 
+    /// The sheet's own proportions on `293:1630`: straight sides at x = 24…381 and the body's
+    /// edges at y = 44 and y = 616, so 357 × 572. The panel's box is that sheet plus both lobes,
+    /// and `panelHeight(forWidth:)` is what a caller that wants the plate at its *drawn* size —
+    /// rather than at whatever size its contents happen to need — measures against.
+    public static let sheetWidth: CGFloat = 357
+    public static let sheetHeight: CGFloat = 572
+
+    /// The panel box (crest tip to pendant tip) at the plate's own aspect, for a box `width` wide.
+    public static func panelHeight(forWidth width: CGFloat) -> CGFloat {
+        width * (sheetHeight / sheetWidth) + crestHeight + pendantDepth
+    }
+
     /// The head spray's box, in the body's own terms: the stock plate's filigree covers x 50…350 of
     /// 402 and y 55…250 of the frame, which against a body starting at y = 44 is this.
     public static let crestSprayWidthFraction: CGFloat = 300.0 / 357.0
