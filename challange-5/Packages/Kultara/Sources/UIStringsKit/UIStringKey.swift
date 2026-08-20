@@ -343,6 +343,12 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// The swipe the carousel affords, said in words as well as drawn as a nudge — a wiggle is
     /// not something VoiceOver can read (`NFR-A11Y-05`).
     case journalSwipeHint
+    /// What to do with the envelope, printed under the letter's title (`791:5627`). The frame
+    /// removes the "Unseal the Journey" pill and makes the card itself the target, so the words
+    /// that were on a button are the instruction above it — and `journalUnsealAction` stays as the
+    /// card's spoken name, because a picture with a tap gesture is not a control VoiceOver can
+    /// announce on its own (`NFR-A11Y-05`).
+    case journalTapToOpen
     case journalCollectionsAction
     /// What is written on the back of the envelope (`791:5657`), above the walk's own title, place
     /// and date — the only line of the address that is not the walk's own data.

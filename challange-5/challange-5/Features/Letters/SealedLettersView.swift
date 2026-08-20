@@ -70,11 +70,15 @@ struct SealedLettersView: View {
 
     /// The frame's header row is a `justify-between` with one child in it. The second slot is where
     /// the collections go: they have to be reachable from this tab (`FR-SIDE-08`) and the design
-    /// leaves exactly one place for them.
+    /// leaves exactly one place for them — `791:5630` is a hidden instance sitting in exactly that
+    /// slot, so the row is drawn for two children whether or not the frame fills the second.
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(UIStrings.string(.journalSealedHeading, language))
-                .kultaraFont(.storyDisplay)
+                // Sans at `.title2`, not the display serif: `791:5601` gives the serif to the
+                // letter's own title over the envelope, and this steps back to being the screen's
+                // label. See `journalShelfHeading`.
+                .kultaraFont(.journalShelfHeading)
                 .foregroundStyle(palette.inkDark.color)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: KultaraMetrics.sm)
@@ -91,48 +95,98 @@ struct SealedLettersView: View {
         .padding(.top, KultaraMetrics.lg)
     }
 
+    /// The curve the words travel on as the envelope opens — the same one the flap swings on, so
+    /// the title going and the flap coming up are one movement rather than two that happened to
+    /// start together.
+    private var openingCurve: Animation? {
+        sequence.animation(of: .opening)
+    }
+
     // MARK: - The shelf
 
+    /// `791:5601`'s order, which is not the order this screen shipped with: the letter's title and
+    /// what to do with it stand *above* the envelope, the shelf's position is a row of dots below
+    /// it, and there is no button at all.
+    ///
+    /// **The pill is gone because the envelope is the control now.** That is a real accessibility
+    /// decision rather than a layout one: a picture with a tap gesture is not something VoiceOver
+    /// announces, so the card is a `Button` carrying the pill's own label
+    /// (`journalUnsealAction`), and the words that were printed on the pill are printed above it
+    /// for everyone else (`NFR-A11Y-05`).
     private var shelf: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 0)
-            carousel
-            Spacer(minLength: KultaraMetrics.lg)
+            // `791:5601` puts 115 points between the header and the title and 187 between the dots
+            // and the tab bar, which is what the one-against-two split below approximates: two
+            // spacers under the group, one over it. Spacers rather than the frame's literal
+            // offsets because every one of these blocks grows with the reader's text size.
+            Spacer(minLength: KultaraMetrics.xl)
 
-            // The title and the hint step back once the page is on its way out. The zoom is the
-            // last beat before the screen hands over, and a 40-point heading printed across the
-            // page it is zooming is two things asking to be read at once.
-            VStack(spacing: 0) {
+            // The title and the hint step back the moment the envelope opens. The flap swings up
+            // over the words — past the fold it stands 118 of its 120 points above the card — and a
+            // title read through a flap is worse than no title. `791:5585` solves the same problem
+            // by moving both the card and the title; moving the card turned out to read as a lurch
+            // under the reader's finger, so what moves here is nothing, and the words yield.
+            VStack(spacing: KultaraMetrics.lg) {
                 Text(model.selectedLetter?.title ?? "")
-                    .kultaraFont(.storyDisplay)
-                    .foregroundStyle(palette.inkDark.color)
+                    .kultaraFont(.journalLetterTitle)
+                    // `#151311` — the frame's own ink, which the palette already holds. A shade off
+                    // `inkDark`, and the frame is what is written down.
+                    .foregroundStyle(palette.buttonFill.color)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.horizontal, KultaraMetrics.xl)
                     // The title belongs to whichever envelope is centred, so it changes with it
                     // rather than cross-fading into itself.
                     .id(model.selectedLetter?.id)
 
-                if model.showsSwipeHint {
-                    Text(UIStrings.string(.journalSwipeHint, language))
-                        .kultaraFont(.metadata)
-                        .foregroundStyle(palette.inkMuted.color)
-                        .padding(.top, KultaraMetrics.sm)
-                }
+                Text(UIStrings.string(.journalTapToOpen, language))
+                    .kultaraFont(.journalTapHint)
+                    // `#6E2717`, which is `brownDeep` exactly.
+                    .foregroundStyle(palette.brownDeep.color)
+                    .multilineTextAlignment(.center)
             }
-            .opacity(model.stage >= .rising ? 0 : 1)
-            .animation(.easeOut(duration: 0.5), value: model.stage)
+            // 332 of the frame's 402, which is what wraps a long title onto the two lines
+            // `791:5626` sets it in rather than running it to both edges.
+            .frame(maxWidth: 332)
+            .padding(.horizontal, KultaraMetrics.lg)
+            .opacity(model.stage == .sealed ? 1 : 0)
+            .animation(openingCurve, value: model.stage)
 
-            Spacer(minLength: KultaraMetrics.lg)
+            // 375 − 341 on the frame.
+            Spacer(minLength: 0).frame(height: 34)
 
-            Button(UIStrings.string(.journalUnsealAction, language)) {
-                unseal()
-            }
-            .buttonStyle(.hisploraPill)
-            .disabled(model.stage != .sealed)
-            .padding(.horizontal, KultaraMetrics.xl)
-            .padding(.bottom, KultaraMetrics.lg)
+            carousel
+
+            // 584 − 549.
+            Spacer(minLength: 0).frame(height: 35)
+
+            shelfPosition
+                .opacity(model.stage == .sealed ? 1 : 0)
+                .animation(openingCurve, value: model.stage)
+
+            Spacer(minLength: KultaraMetrics.xl)
+            Spacer(minLength: 0)
         }
+    }
+
+    /// `791:5632` — one 8-point dot per letter, the centred one inked.
+    ///
+    /// Decoration, and hidden from VoiceOver: it says the same thing the swipe hint says in words,
+    /// and a row of four unlabelled circles is not information anyone can hear.
+    private var shelfPosition: some View {
+        HStack(spacing: KultaraMetrics.xs) {
+            ForEach(model.letters.indices, id: \.self) { index in
+                Circle()
+                    .fill(index == model.selectedIndex
+                          ? palette.inkBody.color
+                          // `#D9D9D9` on the frame. Drawn as the same ink at a quarter rather than
+                          // as a token of its own: a grey pip is decoration, and a palette token
+                          // is a colour something has to be measured against.
+                          : palette.inkBody.color.opacity(0.25))
+                    .frame(width: 8, height: 8)
+            }
+        }
+        .animation(.easeOut(duration: 0.25), value: model.selectedIndex)
+        .accessibilityHidden(true)
     }
 
     /// The shelf itself. Neighbours are drawn at three-quarters and half opacity, as the frame
@@ -160,14 +214,32 @@ struct SealedLettersView: View {
                                 wiggles: index == model.selectedIndex && model.stage == .sealed
                                     && !reduceMotion && !voiceOverEnabled)
                                 .frame(width: cardWidth)
-                                // `791:5626` — "Tap envelope to open". The pill under the shelf
-                                // stays: it is the labelled control, and a tap on a picture is not
-                                // something VoiceOver announces on its own (`NFR-A11Y-05`).
+                                // **The card is the control now** (`791:5627`, "Tap envelope to
+                                // open"): the pill is gone from the frame, so the envelope is a
+                                // real `Button` rather than a picture with a tap gesture on it —
+                                // which is what gives VoiceOver something to announce and something
+                                // to activate (`NFR-A11Y-05`). Its spoken name is the pill's old
+                                // label; the card's own description is on the envelope inside.
+                                .accessibilityElement(children: .combine)
+                                .accessibilityAddTraits(.isButton)
+                                .accessibilityLabel(
+                                    "\(letter.accessibilityLabel). "
+                                    + UIStrings.string(.journalUnsealAction, language))
+                                // The swipe survives here and nowhere else. `791:5601` draws it as
+                                // a row of dots, and a row of unlabelled circles is not something
+                                // anyone can hear (`NFR-A11Y-05`) — so the words the shelf used to
+                                // print under the title are spoken instead, whenever there is in
+                                // fact more than one letter to swipe between.
+                                .accessibilityHint(tapHint)
                                 .onTapGesture {
                                     if index == model.selectedIndex { unseal() }
                                 }
+                                .accessibilityAction { if index == model.selectedIndex { unseal() } }
                                 // The centred card steps aside for the opening drawn over it, so
-                                // there is never a second copy of the same envelope on screen.
+                                // there is never a second copy of the same envelope on screen. Both
+                                // are the same envelope at the same size in the same place, so the
+                                // swap is invisible — which is the whole reason the opening can be
+                                // drawn somewhere the scroll view is not clipping it.
                                 .opacity(index == model.selectedIndex && isOpening ? 0 : 1)
                                 .scrollTransition { content, phase in
                                     content
@@ -189,16 +261,27 @@ struct SealedLettersView: View {
                 }
                 .scrollTargetBehavior(.viewAligned)
                 .scrollIndicators(.hidden)
+                // **A scroll view clips, and this card moves outside itself.** The turn is a
+                // `rotation3DEffect` with perspective: the near edge of a card at 90° is drawn
+                // wider than the card's own frame, and the shelf's content is exactly the width of
+                // its viewport — so the addressed side lost a vertical strip off its right-hand
+                // edge every time it came round. The nudge does the same thing to the corners.
+                // Nothing here needs the clip: the neighbours it would cut are off-screen anyway.
+                .scrollClipDisabled()
                 .scrollDisabled(model.stage != .sealed)
                 .scrollPosition(id: Binding(
                     get: { model.letters.indices.contains(model.selectedIndex) ? model.selectedIndex : nil },
                     set: { if let index = $0 { model.select(index) } }))
 
-                // **The opening is drawn outside the ScrollView, and that is the whole point.**
-                // A `ScrollView` clips its content. The page rises two thirds of a card above the
-                // envelope and then grows to 2.1×, which put most of the last two beats outside a
-                // 260-point band and cut the top off the page mid-zoom. Same envelope, same place
-                // on screen, nothing clipping it.
+                // **The opening is drawn outside the ScrollView, and it plays where the card
+                // stands.** Outside, because a scroll view clips and the sheets leave the band.
+                // *In place*, because the alternative was tried and is worse: `791:5585` draws the
+                // open envelope 1.172× the sealed one and 73.8 points lower, and animating the card
+                // into that reads as the envelope lurching sideways out from under the reader's
+                // finger at the exact moment they tap it. The frame is a still of an open envelope
+                // laid out for a screen with no header, not a keyframe of this movement — the
+                // opening the shelf shipped with holds the card still and swings the flap, and that
+                // is what it goes on doing.
                 if isOpening, let letter = model.selectedLetter {
                     SealedLetterEnvelope(
                         letter: letter,
@@ -212,7 +295,10 @@ struct SealedLettersView: View {
             }
             .frame(width: proxy.size.width, height: proxy.size.height)
         }
-        .frame(height: 260)
+        // The band is the frame's own: 402 × 174, which is exactly the card at 0.72 of the width
+        // with nothing above or below it. A fixed 260 was a guess that left the dots and the title
+        // further from the envelope than `791:5601` puts them, and it did not follow the width.
+        .aspectRatio(402.0 / 174.0, contentMode: .fit)
         // Each beat carries its own curve and its own length: `.animation(_:value:)` resolves the
         // animation against the stage being moved *to*, so the flap, the rise and the slow zoom no
         // longer share one 900ms ease.
@@ -220,6 +306,14 @@ struct SealedLettersView: View {
         // The turn is its own sequence with its own beats, and it moves the whole card rather than
         // anything inside it.
         .animation(sequence.animation(ofFlip: model.flip), value: model.flip)
+    }
+
+    /// What the card's own control says it does, and — on a shelf with more than one letter — that
+    /// the shelf can be swiped.
+    private var tapHint: String {
+        let tap = UIStrings.string(.journalTapToOpen, language)
+        guard model.showsSwipeHint else { return tap }
+        return tap + ". " + UIStrings.string(.journalSwipeHint, language)
     }
 
     /// Whether the centred envelope is anywhere past closed.

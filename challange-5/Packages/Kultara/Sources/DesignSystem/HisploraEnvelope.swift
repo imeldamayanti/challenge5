@@ -122,16 +122,22 @@ public struct HisploraEnvelopeSequence: Sendable, Equatable {
     /// gate in front of every letter a reader opens, not a title sequence they see at launch. The
     /// beats keep their proportions to each other — the flap is still the quickest, the dwell is
     /// still the longest, the zoom still outlasts the rise — so the opening is the same shape at
-    /// 2.9s that it was at 6.4s. `total` is what any test should assert against, never a literal.
+    /// 4.5s that it was at 6.4s. `total` is what any test should assert against, never a literal.
+    ///
+    /// **Halved was too far.** At 2.9s the envelope did not open so much as flick: the flap, the
+    /// card's move into its open position and the sheets' rise all landed inside a second and a
+    /// half, and no curve makes movement that quick read as paper. These are the halved values
+    /// given back about half of what was taken, which is the range where the beats are legible
+    /// without becoming the title sequence the note above rules out.
     public func duration(of stage: HisploraEnvelopeStage) -> Duration {
         guard !rendersImmediately else { return .zero }
         switch stage {
         case .sealed: return .zero
-        case .opening: return .milliseconds(520)
+        case .opening: return .milliseconds(820)
         // The designer's "2 or 3 seconds", taken at a beat the reader will sit through repeatedly.
-        case .dwelling: return .milliseconds(900)
-        case .rising: return .milliseconds(700)
-        case .zooming: return .milliseconds(780)
+        case .dwelling: return .milliseconds(1300)
+        case .rising: return .milliseconds(1150)
+        case .zooming: return .milliseconds(1250)
         }
     }
 
@@ -151,12 +157,17 @@ public struct HisploraEnvelopeSequence: Sendable, Equatable {
         let seconds = duration(of: stage).seconds
         switch stage {
         case .sealed, .dwelling: return nil
-        // Paper swinging on a fold: it leaves fast and settles.
-        case .opening: return .easeOut(duration: seconds)
-        // Drawn out of the pocket by hand — it starts and stops.
-        case .rising: return .easeInOut(duration: seconds)
+        // Paper swinging on a fold: it leaves fast and settles. `.smooth` rather than `.easeOut`
+        // because a flap that stops dead at 168° reads as a hinge; this one carries its weight
+        // into the stop.
+        case .opening: return .smooth(duration: seconds)
+        // Drawn out of the pocket by hand — it starts and stops, and it does neither abruptly.
+        // `.smooth` is the spring-based curve with no bounce: the same shape `.easeInOut` was
+        // reaching for, without the flat middle that made the rise look like it was being dragged
+        // at a constant rate.
+        case .rising: return .smooth(duration: seconds)
         // Toward the reader, and never snapping at either end.
-        case .zooming: return .easeInOut(duration: seconds)
+        case .zooming: return .smooth(duration: seconds)
         }
     }
 
@@ -174,11 +185,11 @@ public struct HisploraEnvelopeSequence: Sendable, Equatable {
     ///
     /// Longer than the wiggle's interval: a nudge is a twitch and a turn is a whole movement, and
     /// two of them on the same card at the same cadence would be a screen that never settles.
-    public static let flipInterval: Duration = .seconds(5.5)
+    public static let flipInterval: Duration = .seconds(6)
     /// A quarter turn — half the flip. Two of these make the turn, and the face swaps between them.
-    public static let flipHalfDuration: Duration = .milliseconds(320)
+    public static let flipHalfDuration: Duration = .milliseconds(420)
     /// How long the addressed side is held before the card turns back.
-    public static let flipBackDwell: Duration = .milliseconds(1400)
+    public static let flipBackDwell: Duration = .milliseconds(1600)
     /// How much depth the turn is drawn with. Enough for the card to read as a physical object
     /// passing edge-on, not so much that its far edge stretches.
     public static let flipPerspective: CGFloat = 0.4
@@ -201,8 +212,14 @@ public struct HisploraEnvelopeSequence: Sendable, Equatable {
     public func animation(ofFlip flip: HisploraEnvelopeFlip) -> Animation? {
         guard !rendersImmediately else { return nil }
         switch flip {
-        case .back: return .easeOut(duration: Self.flipHalfDuration.seconds)
-        default: return .linear(duration: Self.flipHalfDuration.seconds)
+        // **Each half-turn accelerates and then decelerates, across two beats.** Both quarter
+        // turns used to be `.linear`, which is a card that starts at full speed, stops dead at the
+        // half-turn and starts again — three visible hitches in one turn. The beat that leaves a
+        // face eases *in*; the beat that arrives at one eases *out*; and because the swap happens
+        // at the quarter turn, where the card has no width, the two halves join at the fastest
+        // point of the movement rather than at a stop.
+        case .turningToBack, .turningToFront: return .easeIn(duration: Self.flipHalfDuration.seconds)
+        case .back, .front: return .easeOut(duration: Self.flipHalfDuration.seconds)
         }
     }
 
@@ -309,6 +326,10 @@ public struct HisploraEnvelope<Franking: View, Back: View, Paper: View, Companio
             Group {
                 if stage.isOpen { flap(size: size) }
                 layer(HisploraEnvelopeMetrics.innerImage, size: size)
+                    // The inside of a paper object is in shadow, and now that the front is cut from
+                    // the same sheet it is the only thing that tells the notch apart from the wings
+                    // around it. Slight — a shade, not a second colour.
+                    .brightness(stage.isOpen ? -0.05 : 0)
             }
             .opacity(envelopeOpacity)
             .zIndex(0)
@@ -327,7 +348,10 @@ public struct HisploraEnvelope<Franking: View, Back: View, Paper: View, Companio
                 // Masking it to a straight band across the middle, which is what this did, printed
                 // a horizontal seam no envelope has and hid the wings that make the object read as
                 // one; the papers are behind it either way, so they still come from inside.
-                layer(HisploraEnvelopeMetrics.bodyImage, size: size)
+                paperLayer(shapedBy: HisploraEnvelopeMetrics.bodyImage, size: size)
+                    // The pocket's lip catching the light against the inside behind it. Without it
+                    // the front and the inside are one flat field of the same paper.
+                    .shadow(color: .black.opacity(stage.isOpen ? 0.28 : 0), radius: 6, y: 2)
                 // Closed, the flap is folded down over the notch. Open, it has swung behind the
                 // card and is drawn there instead — see `frontFace`'s first group.
                 if !stage.isOpen { flap(size: size) }
@@ -389,6 +413,35 @@ public struct HisploraEnvelope<Franking: View, Back: View, Paper: View, Companio
         }
     }
 
+    /// A front-facing layer, cut to an export's silhouette but printed on the envelope's *own*
+    /// paper — `envelope-inner`, the sheet the back is drawn from.
+    ///
+    /// **The front and the back are one sheet of paper, and the exports disagreed about that.**
+    /// `envelope-body` and `envelope-flap` are photographed a good deal darker than
+    /// `envelope-inner` (mean `#8A6E47` and `#5A472D` against `#D6C1A1`), so a card that turned
+    /// over changed colour halfway round, and an open envelope was a dark front standing on a pale
+    /// inside. Rather than re-grade two exports — a per-channel gain of 1.55/1.75/2.26 that clips
+    /// every highlight — the shape is taken from one picture and the paper from the other. What
+    /// keeps the pocket readable afterwards is the shadow its lip casts and the shade on the
+    /// inside, which is what tells those two surfaces apart on a real envelope too.
+    @ViewBuilder private func paperLayer(shapedBy shape: Image?, size: CGSize) -> some View {
+        if let shape, let paper = HisploraEnvelopeMetrics.innerImage {
+            paper
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: size.width, height: size.height)
+                .clipped()
+                .mask {
+                    shape
+                        .resizable()
+                        .frame(width: size.width, height: size.height)
+                }
+                .accessibilityHidden(true)
+        } else {
+            layer(shape, size: size)
+        }
+    }
+
     /// The flap, hinged along its own top edge.
     ///
     /// Drawn at its own height rather than cropped out of a card-sized copy: the export is the
@@ -397,18 +450,32 @@ public struct HisploraEnvelope<Franking: View, Back: View, Paper: View, Companio
     private func flap(size: CGSize) -> some View {
         let flapSize = CGSize(width: size.width,
                               height: size.height * HisploraEnvelopeMetrics.flapHeightRatio)
-        return layer(HisploraEnvelopeMetrics.flapImage, size: flapSize)
+        return paperLayer(shapedBy: HisploraEnvelopeMetrics.flapImage, size: flapSize)
             // Past the fold the reader is looking at the *back* of the flap, standing away from
             // the light the rest of the object is photographed in. Drawn at the export's own
             // brightness it reads as a second, brighter envelope pitched behind the first — the
             // "tent" over the top of the card. The shade is what puts it behind.
-            .brightness(stage.isOpen ? -0.14 : 0)
+            .brightness(stage.isOpen ? -0.14 : -0.03)
             .saturation(stage.isOpen ? 0.8 : 1)
             .rotation3DEffect(
                 .degrees(stage.isOpen ? HisploraEnvelopeSequence.flapAngle : 0),
                 axis: (x: 1, y: 0, z: 0),
                 anchor: .top,
                 perspective: 0.45)
+            // **The swung flap has to be pushed back onto the card, and the amount is measured.**
+            // A flap hinged at `anchor: .top` ought to keep that edge fixed, and it does not: with
+            // `perspective: 0.45` at 168° the whole plane is displaced away from the hinge by about
+            // `height · sin(12°) · perspective` — some ten points at the size this ships — so the
+            // page showed between the flap and the card as a bright line right across the object.
+            // Moving the filters, the shadow and the clip around does not touch it; only the
+            // offset does. It is a ratio because the displacement scales with the card.
+            .offset(y: stage.isOpen ? size.height * HisploraEnvelopeMetrics.flapHingeOverlapRatio : 0)
+            // **After the rotation, not before.** A shadow expands the layer it is drawn into, and
+            // `rotation3DEffect` anchors on those expanded bounds — so a shadow applied first moved
+            // the hinge three points off the top of the card, which is most of the gap this fixed.
+            // It is also simply what a shadow is: cast by the flap where the flap ends up, not
+            // carried around by it.
+            .shadow(color: .black.opacity(stage.isOpen ? 0.18 : 0.22), radius: 5, y: 2)
             .frame(width: size.width, height: size.height, alignment: .top)
     }
 
@@ -473,15 +540,20 @@ public struct HisploraEnvelope<Franking: View, Back: View, Paper: View, Companio
         while !Task.isCancelled {
             try? await Task.sleep(for: HisploraEnvelopeSequence.wiggleInterval)
             guard !Task.isCancelled else { return }
-            let step = HisploraEnvelopeSequence.wiggleDuration / 4
-            for angle in [HisploraEnvelopeSequence.wiggleAngle,
-                          -HisploraEnvelopeSequence.wiggleAngle,
-                          HisploraEnvelopeSequence.wiggleAngle * 0.5,
-                          0] {
-                withAnimation(.easeInOut(duration: step.seconds)) { wiggleAngle = angle }
-                try? await Task.sleep(for: step)
-                guard !Task.isCancelled else { return }
+            // **Two beats and a spring, not four keyframes.** The nudge used to step through
+            // +1.6°, −1.6°, +0.8°, 0 on four 130 ms eases, and every one of them came to a full
+            // stop before the next began — a stutter rather than a rock. It leans once and is let
+            // go: the spring carries it back through its own diminishing overshoots, which is what
+            // a card resting on a shelf actually does.
+            let out = HisploraEnvelopeSequence.wiggleDuration / 3
+            withAnimation(.easeInOut(duration: out.seconds)) {
+                wiggleAngle = HisploraEnvelopeSequence.wiggleAngle
             }
+            try? await Task.sleep(for: out)
+            guard !Task.isCancelled else { return }
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.45)) { wiggleAngle = 0 }
+            try? await Task.sleep(for: HisploraEnvelopeSequence.wiggleDuration - out)
+            guard !Task.isCancelled else { return }
         }
     }
 }
@@ -513,6 +585,11 @@ public enum HisploraEnvelopeMetrics {
     /// is the same shape to within a percent — so the card keeps its ratio and the new frame's
     /// numbers are converted against it below rather than the card being re-cut.
     public static let aspectRatio: CGFloat = 290.0 / 173.999
+    /// How far the swung flap is pushed back down over the card, as a fraction of the card's
+    /// height. Twelve points on the frame's own card, which is what the measured gap came to —
+    /// see `flap(size:)` for where the displacement comes from. The overlap is hidden: the
+    /// envelope's own paper is drawn after the flap and covers it.
+    public static let flapHingeOverlapRatio: CGFloat = 12 / 173.999
     /// The flap is 120.652 of the card's 173.999.
     public static let flapHeightRatio: CGFloat = 120.652 / 173.999
     /// Where the pocket's notch bottoms out, as a fraction of the card's height — the vertex of

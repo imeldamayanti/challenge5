@@ -82,12 +82,15 @@ struct HisploraEnvelopeTests {
         }
     }
 
-    @Test func theFullOpeningIsShortEnoughToSitThrough() {
-        // A reader who taps "Unseal" is waiting, and they will wait through this every time they
-        // open a letter. Three seconds of paper is a beat; six is a loading screen wearing a
-        // costume, which is what it was.
+    @Test func theFullOpeningIsShortEnoughToSitThroughAndSlowEnoughToRead() {
+        // A reader who taps the envelope is waiting, and they will wait through this every time
+        // they open a letter. Six seconds is a loading screen wearing a costume, which is what it
+        // was — but 2.9 was the other failure: the flap, the card's move into its open position and
+        // the sheets' rise all landed inside a second and a half, and no curve makes movement that
+        // quick read as paper. The band is what the ceiling alone could not say.
         let sequence = HisploraEnvelopeSequence(rendersImmediately: false)
-        #expect(sequence.total <= .seconds(3.5))
+        #expect(sequence.total <= .seconds(5))
+        #expect(sequence.total >= .seconds(3.5))
     }
 
     @Test func theFlapOpensPastVerticalSoItLandsBehindTheEnvelope() {

@@ -84,7 +84,11 @@ public enum KultaraFonts {
             return .system(role.textStyle, design: .default, weight: role.weight)
 
         case .displaySerif:
+            // `.italic(_:)` rather than nothing: `journalLetterTitle` is the first display-serif
+            // role the frames set leaning, and a role that declares `isItalic` and is then drawn
+            // upright is a table that lies about what it decides.
             return .system(role.textStyle, design: .serif, weight: role.weight)
+                .italic(role.isItalic)
 
         case .typewriter:
             guard typewriterIsAvailable else {

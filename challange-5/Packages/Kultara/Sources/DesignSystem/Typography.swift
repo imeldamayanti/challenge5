@@ -66,6 +66,26 @@ public enum KultaraTypography {
         /// Its own role for the reason every other one is — one place decides what a piece of type
         /// is, rather than a `.system(size:)` call inside a card.
         case journalPaperTitle
+        /// The Journal shelf's own heading — "Sealed Letters" (`791:5629`).
+        ///
+        /// **Sans, where this screen's heading used to be the display serif.** `791:5601` moves the
+        /// serif onto the *letter's* title, which now stands over the envelope at 35 points; two
+        /// serif mastheads on one screen would fight, so the screen's own name steps back into the
+        /// sans the tab bar and the rest of the chrome are set in.
+        case journalShelfHeading
+        /// The centred letter's title, over the envelope on the shelf (`791:5626`).
+        ///
+        /// New York Regular *Italic* at 35 — the one display role in the table that is italic in the
+        /// display serif, and the reason `face == .displaySerif` now honours `isItalic` at all. It
+        /// is not `storyDisplay` (38, upright): the frame sets this one smaller and leaning, which
+        /// is what makes it read as the name of an object rather than as the title of the screen.
+        case journalLetterTitle
+        /// The line under it that says what to do with the envelope (`791:5627`).
+        ///
+        /// SF Pro Medium at 17, tracked in — a hint rather than a control. It exists because
+        /// `791:5601` removes the "Unseal the Journey" pill and makes the envelope itself the
+        /// target: the words that used to be on a button are now the instruction above it.
+        case journalTapHint
         /// The hook typed onto the sheet in the typewriter (`81:588`).
         case typedSheet
         /// The two figures ruled beneath it: the distance and the duration.
@@ -96,6 +116,12 @@ public enum KultaraTypography {
             // 25 and 17 as drawn; `.title2` and `.title3` are the two system styles those sit
             // between, and a text style is what makes them scale at all (`NFR-A11Y-01`).
             case .storySection, .storyTaskTitle, .journalPaperTitle: .title2
+            // 25 as drawn, which is the step between `.title2` (22) and `.title` (28). The larger
+            // of the two would out-shout the letter's own title beneath it, which on this screen is
+            // the thing being named.
+            case .journalShelfHeading: .title2
+            case .journalLetterTitle: .largeTitle
+            case .journalTapHint: .body
             case .onboardingDisplay: .title
             case .storyPlaceMark, .storyBarTitle: .title3
             case .typedSheet: .footnote
@@ -115,7 +141,9 @@ public enum KultaraTypography {
             // Special Elite ships in one weight, and New York's display cut is drawn light on
             // purpose — the frames set both regular.
             case .storyDisplay, .typedSheet, .typedFigure, .storyBarTitle,
-                 .onboardingDisplay, .journalPaperTitle: .regular
+                 .onboardingDisplay, .journalPaperTitle, .journalLetterTitle: .regular
+            case .journalShelfHeading: .semibold
+            case .journalTapHint: .medium
             // The three weights `452:3174`, `447:1896` and `447:1906` are drawn in. New York is
             // the system's own serif and ships every weight, so unlike Instrument Serif these are
             // real cuts rather than a synthesised smear.
@@ -136,7 +164,8 @@ public enum KultaraTypography {
             switch self {
             case .questTitleLarge, .questTitle, .sectionHeading: .serif
             case .storyDisplay, .storySection, .storyTaskTitle, .storyPlaceMark,
-                 .storyBarTitle, .onboardingDisplay, .journalPaperTitle: .displaySerif
+                 .storyBarTitle, .onboardingDisplay, .journalPaperTitle,
+                 .journalLetterTitle: .displaySerif
             case .typedSheet, .typedFigure: .typewriter
             default: .sans
             }
@@ -146,7 +175,7 @@ public enum KultaraTypography {
         /// masthead is upright.
         public var isItalic: Bool {
             switch self {
-            case .sectionHeading: true
+            case .sectionHeading, .journalLetterTitle: true
             default: false
             }
         }
@@ -161,6 +190,7 @@ public enum KultaraTypography {
             case .questTitle: 24
             case .sectionHeading: 22
             case .storyDisplay: 38
+            case .journalLetterTitle: 35
             case .onboardingDisplay: 30
             case .storySection, .storyTaskTitle: 25
             case .journalPaperTitle: 26
@@ -197,6 +227,11 @@ public enum KultaraTypography {
             // -0.7875 as drawn, at 26.25. Kept as the frame's own ratio rather than rounded to the
             // neighbouring roles' -0.5.
             case .journalPaperTitle: -0.79
+            case .journalLetterTitle: -0.7
+            // 0.38 out, unlike every other role here: the frame sets the screen's own name in the
+            // sans at 25, where SF Pro is drawn tight enough to want opening rather than closing.
+            case .journalShelfHeading: 0.38
+            case .journalTapHint: -0.51
             case .storyPlaceMark: -0.34
             case .storyBarTitle: -0.38
             case .typedSheet, .typedFigure: -0.34
@@ -221,7 +256,8 @@ public enum KultaraTypography {
             // `typedFigure` is deliberately absent. It is `.title3` — 20 pt regular — which is
             // under WCAG's 24 pt, so claiming the allowance here would quietly lower the bar the
             // palette is measured against. It is inkDark on paper anyway, at 13.64:1.
-            case .questTitleLarge, .questTitle, .storyDisplay, .onboardingDisplay: true
+            case .questTitleLarge, .questTitle, .storyDisplay, .onboardingDisplay,
+                 .journalLetterTitle: true
             default: false
             }
         }
@@ -240,6 +276,8 @@ public enum KultaraTypography {
             case .questTitleLarge: -4
             case .questTitle, .sectionHeading: -2
             case .storyDisplay: -3
+            // `leading-none` at 35: the frame stacks the two lines of a long title solid.
+            case .journalLetterTitle: -4
             case .onboardingDisplay: -2
             case .storySection, .storyTaskTitle, .storyPlaceMark, .storyBarTitle: -1
             // The frames set this one solid — `leading-none`, a line box the height of the type.

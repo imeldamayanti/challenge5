@@ -525,6 +525,8 @@ public enum UIStrings {
             en: "Every walk you start is kept here as a letter. Finish a route, then come back and open it."),
         .journalSwipeHint: LocalizedText(
             id: "Geser untuk surat lainnya", en: "Swipe for other letters"),
+        .journalTapToOpen: LocalizedText(
+            id: "Ketuk amplop untuk membuka", en: "Tap envelope to open"),
         .journalCollectionsAction: LocalizedText(id: "Koleksi huruf", en: "Letter collections"),
         .journalEnvelopeSalutation: LocalizedText(id: "Sudah kamu jalani,", en: "Well walked,"),
         .journalPaperSummaryEyebrow: LocalizedText(

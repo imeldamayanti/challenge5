@@ -47,6 +47,19 @@ struct TypographyTests {
         }
     }
 
+    @Test func theJournalShelfsTwoHeadingsAreTwoDifferentVoices() {
+        // `791:5601` moves the display serif off the screen's own name and onto the letter's title
+        // over the envelope. Both being the serif is what the frame is deliberately not doing —
+        // two mastheads on one screen — so this is worth holding rather than reviewing.
+        #expect(KultaraTypography.Role.journalShelfHeading.face == .sans)
+        #expect(KultaraTypography.Role.journalLetterTitle.face == .displaySerif)
+        #expect(KultaraTypography.Role.journalLetterTitle.isItalic)
+        #expect(!KultaraTypography.Role.journalShelfHeading.isItalic)
+        // And the hint under the title is the sans at reading size, not a third title.
+        #expect(KultaraTypography.Role.journalTapHint.face == .sans)
+        #expect(KultaraTypography.Role.journalTapHint.textStyle == .body)
+    }
+
     @Test func tapTargetsAreAtLeastFortyFourPoints() {
         #expect(KultaraMetrics.minimumTapTarget == 44)   // NFR-A11Y-06
     }
