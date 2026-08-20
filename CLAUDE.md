@@ -96,8 +96,8 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 482 tests / 61 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
-| `xcodebuild test -only-testing:challange-5Tests` | 164 tests / 18 suites — view models, presentation, UI strings, host linkage | Yes |
+| `swift test` (from `Packages/Kultara`) | 529 tests / 67 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `xcodebuild test -only-testing:challange-5Tests` | 190 tests / 19 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
 **Three `swift test` failures are pre-existing on this branch and are not yours.** None is in a
@@ -356,20 +356,27 @@ Still unguarded:
   outstanding, no owner named). `theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources` does *not*
   cover it — that test asserts on `CheckpointPresentation`, which still carries every accuracy label
   and citation. The omission is in the view.
-- **`AccessibilityXXXL` occlusion, and the test is now red.**
-  `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` fails at
-  `DiscoveryFlowUITests.swift:105` — "Profile did not offer a way into the app preferences" — which
-  is the *existence* check, before the scroll-into-reach loop it was given. At the largest content
-  size the tap on the floating bar's Profile does not switch the tab, so the Explorer's Card is
-  never on screen to be scrolled. **Verified pre-existing on this branch**: the same test fails
-  identically in a clean worktree at `a1d914c`, so it is not the stamp/journal/profile work.
-  `testQuestListAndSettingsAreReachable` walks the same Profile → Settings path at the default size
-  and is green, which is what narrows it to the size. `resetLocalData` already carries a one-retry
-  workaround for exactly this mistimed-tab-bar-tap failure; `openSettings` does not.
+- **Three XCUITests are red, and all three are pre-existing.** Re-verified 2026-08-20 in a clean
+  worktree at `65f9465`, which is the only reason they can be called pre-existing rather than
+  assumed to be:
+  - `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` and
+    `testQuestListAndSettingsAreReachable` both fail at `DiscoveryFlowUITests.swift:105` —
+    "Profile did not offer a way into the app preferences" — which is the *existence* check, before
+    the scroll-into-reach loop. The tap on the floating bar's Profile does not switch the tab, so
+    the Explorer's Card is never on screen to be scrolled. **This is no longer size-specific.** An
+    earlier note here said the default-size test was green and that this narrowed the fault to the
+    content size; that is now false, and what it actually narrows to is the mistimed tab-bar tap.
+    `resetLocalData` carries a one-retry workaround for exactly that failure; `openSettings` does
+    not, and giving it one is the obvious next move.
+  - `testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow` fails at
+    `DiscoveryFlowUITests.swift:227` — "A map marker did not open the story flow".
+  - `SideQuestFlowUITests.testReopeningACompletedSidequestReplaysWithoutAwardingAgain` is **flaky,
+    not red**: it failed once on "The delete confirmation dialog did not appear" and passed on a
+    re-run of the same build. Do not treat a single failure of it as a regression without a re-run.
 
 ## Two visual directions, split at a screen boundary
 
-The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task sheet → task list → site plan** → transition — and, since 2026-08-18, **onboarding**, which is now the first Hisplora surface the app shows and is reached before the museum theme is ever seen.
+The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task sheet → task list → site plan** → transition — and, since 2026-08-18, **onboarding**, which is now the first Hisplora surface the app shows and is reached before the museum theme is ever seen. Onboarding is the one Hisplora screen that is *not* brown: since 2026-08-20 it stands on the cream `paperSheet`, which is a re-paint of the same direction and not a third one.
 
 The last three landed 2026-08-17 from Figma `452:3132` ("Quest 1/3"), `447:1880` ("Quest_Filled") and `452:3028` ("Site Map"): `CheckpointDetailScreen` (restyled from the earlier `51:201`), the new `TaskDetailScreen`, and the new `PlaceSiteMapScreen`. `452:3028` is the **one story-flow screen on paper rather than brown** — `mapGround`, its own token — because a plan is a document. Five new palette tokens, four new New York type roles, and four recorded deviations came with them; `docs/hisplora-tokens.md` has all of it.
 
@@ -378,14 +385,50 @@ Two rules keep that from rotting:
 - **The seam falls between screens, never inside one.** A half-restyled screen is not survivable; a boundary between two whole screens is. `QuestRunView.isOnStoryFlow` is the switch, and it also hides the museum navigation bar on those stages.
 - **Museum-inked components must not be dropped onto a Hisplora ground.** They are measured against paper. `RunRouteMapView` takes `showsChrome:` for exactly this reason — its heading is `palette.seal`, which falls to about 2:1 on brown. This shipped as a real contrast bug before it was caught on device.
 
-Onboarding came from `523:1946`, `523:1973` and `523:1999` on 2026-08-18: four screens rather than
-the frames' three, because `FR-ONB-03`'s pocket-the-phone screen is a P0 MUST that none of the three
-carries and `FR-ONB-02` allows four. It is the second of the four and the one screen drawn with a
-symbol rather than an export. One palette token (`trackDim`), one type role (`onboardingDisplay`) and
-three illustrations came with it. **The three PNGs are 1× and want replacing**: the 3× export
-composites the frame's own cream fill behind the art, and the only transparent form the Figma tool
-returns is a contents-only render it will not upscale. A hand export from Figma at 3× is a drop-in —
-same names, same boxes.
+Onboarding came from `523:1946`, `523:1973` and `523:1999` on 2026-08-18 and was **re-drawn from
+`702:2068`, `702:1999` and `702:1980` on 2026-08-20**. Both boards draw the same three subjects in
+the same order — Explore / Quest / Collection — and the app now ships exactly those three.
+
+**`FR-ONB-03` is not met by onboarding any more.** A fourth screen carrying the pocket-the-phone
+model (`AD-1`) stood second from the first board until 2026-08-20, when the owner asked for exact
+frame parity and it was removed on that instruction. Two halves of what that means:
+
+- **The words survive, the timing does not.** `QuestRunView.safetyNotice` — the `FR-START-04` screen
+  shown before the first Run of every quest, with an "I understand" nobody can walk past — already
+  printed that screen's paragraph under the quest's authored `safetyNotes` and still does. The
+  string was renamed `onboardingPocketBody` → **`safetyPocketBody`** to say where it is now read;
+  the title had no second caller and went, along with `OnboardingIllustration.symbol`. So a walker
+  who starts a quest is told in the same words; a walker who never starts one is not.
+- **The PRD still carries `FR-ONB-03` as a P0 MUST**, so this wants an amendment or a signed
+  exception with an owner, the way `FR-START-04`'s was signed on 2026-08-16. It has neither yet.
+  `OnboardingTests.onboardingIsTheBoardsThreeScreensAndNoLongerTeachesThePocketModel` is the
+  inverted guard that keeps this visible instead of the deletion being silent.
+
+What the second board changed is the paint and the escape hatch:
+
+- **The ground went from `brownMid` to `paperSheet`**, so every ink on the screen flipped —
+  `inkCream` type became `buttonFill`, and `trackDim` was **re-sampled** from `#926954` to
+  `#C3BAAB` because the bar's 25% wash now composites over cream. One new token, `inkQuiet`.
+- **The pill drops its hairline.** `HisploraPillButtonStyle` takes `ring:` now and onboarding passes
+  `nil`: near-black measures 16.71:1 on this cream so the fill is its own boundary, while
+  `buttonRing` — measured on the browns — is 2.47:1 here, under the 3:1 a boundary wants, so it
+  would outline the edge with something fainter than the edge. `.hisploraPillOnPaper` is that
+  case.
+- **Skip moved from a footer pill to an underlined top-right link, and is now on every screen.** In
+  the footer it could not appear on the last screen, where it and "Begin Your First Quest" do the
+  same thing. It is a `Button` (`.hisploraTextLink`) rather than a tapped label, so VoiceOver
+  announces it, and the frames' zero-opacity Skip pill beside Next is reproduced as what it looks
+  like — a half-width Next — rather than as an invisible control VoiceOver would still find.
+
+**The three PNGs are 3× now, and their alpha is computed rather than exported.** Figma will only
+give an opaque 3× export (the frame's cream fill baked in, one unit off the screen's own) or a
+transparent render it refuses to upscale past 1× — re-tested 2026-08-20, `maxDimension` does not
+lift it. Each file is the 3× export's colour with the 1× render's alpha resampled over it and the
+cream divided back out. Two things about that are load-bearing and easy to undo by accident:
+**alpha must not be quantised** — the octree merges transparent into an entry at alpha 1–2, which
+prints a visible rectangle of slightly darker cream, so the `tRNS` chunk is floored to 0 — and
+`onboarding-quest.png` is deliberately **not** palette-reduced, because it is a smooth gradient and
+256 colours band it.
 
 On 2026-08-19 the run flow gained four more from the same board: `1:4681` (the camera), `1:4827`
 (the task sheet holding a photograph), `1:4609` (the story behind a task) and `1:4641` (the stamp).
@@ -607,6 +650,36 @@ auto-advancing and the login carrying a "Skip for now".
   - **The sealed card's nudge is not gated on there being a shelf worth swiping.** It was gated on
     `showsSwipeHint` (false with one letter), so the first walk a reader finished sat still. The
     rock and the turn ride on top of each other — one is 2D, the other is about the vertical axis.
+  - **The shelf is `791:5601`'s order now, and there is no Unseal button.** The letter's title
+    stands *above* the envelope in the display serif's italic, "Tap envelope to open" under it, the
+    card, then a row of 8-point dots for the shelf's position. Removing the pill is an accessibility
+    change before it is a layout one: a picture with a tap gesture is not a control VoiceOver can
+    announce or activate, so the card is a `Button` carrying the pill's old label
+    (`journalUnsealAction`) and `journalSwipeHint` survives as its hint on a shelf worth swiping
+    (`NFR-A11Y-05`). The collections button stays in the header — `FR-SIDE-08`, and the frame's
+    hidden `791:5630` sits in exactly that slot.
+  - **The opening plays where the card stands, and `791:5585` is not a keyframe of it.** That
+    frame draws the open envelope 1.172× the sealed one and 73.8 points lower, with the title risen
+    to y 119 and no header. Animating the card into it was built and reverted: three things moving
+    at once, one of them the object just tapped, reads as the envelope lurching out from under the
+    reader's finger. The frame is a still of an open envelope on a headerless screen. The card holds
+    still, the flap swings, and the words step back.
+  - **The swung flap is pushed back down onto the card, and that is not a fudge.** `anchor: .top`
+    does not hold the hinge: at 168° with `perspective: 0.45` the plane is displaced about
+    `height · sin(12°) · perspective` — ten points at the shipped size — and the page showed between
+    the flap and the body as a bright line across the object. `flapHingeOverlapRatio` (12 of the
+    card's 174) closes it; the envelope's own paper is drawn after the flap and hides the overlap.
+    The flap's shadow also belongs *after* the rotation rather than before it.
+  - **The shelf's scroll view must not clip (`.scrollClipDisabled()`).** The turn is a
+    `rotation3DEffect` with perspective, so a card at 90° draws wider than its own frame, and the
+    content is exactly as wide as the viewport — the addressed side lost a strip off its right edge
+    every time it came round.
+  - **The envelope is one sheet of paper on every face.** `envelope-body` and `envelope-flap` are
+    photographed much darker than `envelope-inner` (means `#8A6E47`/`#5A472D` against `#D6C1A1`), so
+    a card that turned over changed colour halfway round. The front is drawn as `envelope-inner`
+    masked to the body's and the flap's alpha (`paperLayer(shapedBy:)`) rather than by re-grading
+    two exports, which would clip every highlight. The fold's shadow, the pocket lip's shadow and a
+    shade on the inside are what keep the object readable once every surface matches.
   - **`clipped()` clips drawing, not touches.** The paper cards' torn sheet is drawn far larger than
     the card, and the second card's copy of it swallowed every tap meant for the first card's
     button — "Read Summary" did nothing while "Read History" worked. Decorative layers in
@@ -652,4 +725,8 @@ auto-advancing and the login carrying a "Skip for now".
 - `Support/UIStrings.swift:338` still describes the content as "data contoh dengan tempat fiktif".
   That string is now wrong and needs a product decision, not a content edit.
 - **`FR-CP-05` has an undocumented exception, and it is still open.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**, which lists it as outstanding with no owner named (§10). It needs an amendment or a signed exception with an owner. `FR-START-04`'s comparable exception *was* signed on 2026-08-16 (owner af); this one was not, and the two are not a package.
+- **The redesigned onboarding has been seen on iPhone 17 / iOS 26.5**, all three screens, from a
+  fresh install — `docs/screenshots/m12-onboarding-*.png`. Reaching it needs
+  `xcrun simctl uninstall com.umar.hisplora`, not a relaunch: `OnboardingGate` reads
+  `onboardingCompletedAt`, which survives one.
 - The story flow has been seen rendering on iPhone 17 / iOS 26.5: story preview, both cutscenes, story reveal, place notice, and — on 2026-08-17 — the task list, the task sheet and the site plan (screenshots in `docs/screenshots/m9-*.png`). The "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP; drive arrival with `xcrun simctl location <udid> set -8.6595,115.2077` instead — the start checkpoint of `badung-empat-wajah` (Puri Agung Pemecutan — an unverified seed coordinate), with `ArrivalEvaluator` unmodified. **A resumed walk lands on `.atCheckpoint` and skips every story stage**, so reaching them from a desk needs a fresh install (`xcrun simctl uninstall com.umar.hisplora`), not a relaunch. The transition screen is still unseen.

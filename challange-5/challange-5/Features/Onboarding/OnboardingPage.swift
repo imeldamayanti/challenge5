@@ -16,7 +16,10 @@ struct OnboardingPage: Sendable, Identifiable {
 /// The view does the lookup.
 enum OnboardingIllustration: Sendable, Equatable {
     /// One of the three exported Figma artworks, by `HisploraOnboardingArt`'s own case name.
+    ///
+    /// The only case. There used to be a `symbol` beside it, for the one screen the Figma board did
+    /// not draw — the pocket-the-phone screen, removed 2026-08-20 (see `OnboardingViewModel` on
+    /// what that costs). It went with the screen rather than being left as an unreachable case that
+    /// reads like a supported option.
     case art(String)
-    /// An SF Symbol, for the one screen the Figma board does not draw. See `OnboardingViewModel`.
-    case symbol(String)
 }

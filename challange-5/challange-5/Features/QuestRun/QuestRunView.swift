@@ -344,7 +344,7 @@ struct QuestRunView: View {
                     .kultaraFont(.body)
                     .foregroundStyle(palette.ink.color)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(UIStrings.string(.onboardingPocketBody, language))
+                Text(UIStrings.string(.safetyPocketBody, language))
                     .kultaraFont(.body)
                     .foregroundStyle(palette.ink.color)
                     .fixedSize(horizontal: false, vertical: true)
