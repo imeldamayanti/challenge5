@@ -187,11 +187,7 @@ final class QuestRunViewModel {
         // route. V18 is what stops that reaching a release.
         self.routeGeometry = (try? repository.routeGeometry(questID: questID)) ?? nil
 
-        stage = Self.initialStage(
-            run: existingRun,
-            quest: quest,
-            preferences: preferences,
-            authorization: sampling.authorization)
+        stage = Self.initialStage(run: existingRun)
         if stage == .atCheckpoint || stage == .finished {
             checkpoint = presentation(forOrderIndex: currentIndex)
         }
@@ -201,12 +197,7 @@ final class QuestRunViewModel {
         }
     }
 
-    private static func initialStage(
-        run: Run?,
-        quest: Quest,
-        preferences: any AppPreferencesStore,
-        authorization: LocationAuthorizationSnapshot
-    ) -> Stage {
+    private static func initialStage(run: Run?) -> Stage {
         if let run {
             // A walk already under way has been through both notices. Showing them again on every
             // resume would turn a safety notice into a dialog people learn to dismiss.
@@ -218,6 +209,34 @@ final class QuestRunViewModel {
         // A fresh walk opens on the hook, as the board does. A resumed one never sees it again —
         // it is an opening, not a gate.
         return .storyPreview
+    }
+
+    /// Which stages are drawn on the Hisplora ground, carrying their own heading and their own
+    /// back control. The museum navigation bar over them is cream on brown and it clips the
+    /// eyebrow underneath it, so on those stages it goes away entirely.
+    ///
+    /// The rule lives here rather than in the view because two callers need it: the view, and the
+    /// host that has to know the answer *before* this model exists (see `opensOnStoryFlow`).
+    static func isStoryFlow(_ stage: Stage) -> Bool {
+        switch stage {
+        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
+             .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .questExplanation,
+             .stampAward, .transition:
+            true
+        case .safetyNotice, .locationNotice, .atCheckpoint, .finished:
+            false
+        }
+    }
+
+    /// Whether a run screen opened for this Run lands on a story stage, answerable without
+    /// building the model.
+    ///
+    /// The model is built in `onAppear`, so the pushed screen draws a placeholder first. A
+    /// placeholder that does not already hide the navigation bar gets the stack's default one, and
+    /// the walker sees a bar appear and vanish as the story preview arrives. Asking here keeps
+    /// that answer and `initialStage` from drifting apart.
+    static func opensOnStoryFlow(existingRun: Run?) -> Bool {
+        isStoryFlow(initialStage(run: existingRun))
     }
 
     /// Leaving the hook for the notices. The order after it is unchanged: `FR-START-04` before

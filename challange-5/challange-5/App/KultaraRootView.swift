@@ -59,6 +59,18 @@ struct KultaraRootView: View {
         let questID: String
         let existingRunID: UUID?
         let discardingExistingDraft: Bool
+        /// Whether this walk opens on a story stage, decided by whoever already holds the Run.
+        /// `runScreen` needs it before `ScreenHost` has built the view model, so the placeholder
+        /// hides the museum bar rather than letting it appear for a frame and vanish under the
+        /// story preview.
+        let opensOnStoryFlow: Bool
+
+        init(questID: String, existingRun: Run?, discardingExistingDraft: Bool) {
+            self.questID = questID
+            self.existingRunID = existingRun?.id
+            self.discardingExistingDraft = discardingExistingDraft
+            self.opensOnStoryFlow = QuestRunViewModel.opensOnStoryFlow(existingRun: existingRun)
+        }
     }
     /// The floating bar's selection. Two destinations is what the app has in M5; the bar exists
     /// because the Home design puts one there, and because a settings screen reached only from a
@@ -376,7 +388,7 @@ struct KultaraRootView: View {
                     onResumeRun: { runID in
                         guard let run = (try? environment.runStore.run(id: runID)) ?? nil else { return }
                         profileRunDestination = RunDestination(
-                            questID: run.questID, existingRunID: run.id,
+                            questID: run.questID, existingRun: run,
                             discardingExistingDraft: false)
                     })
             }
@@ -397,7 +409,7 @@ struct KultaraRootView: View {
     private func openRun(_ runID: UUID) {
         guard let run = (try? environment.runStore.run(id: runID)) ?? nil else { return }
         runDestination = RunDestination(
-            questID: run.questID, existingRunID: run.id, discardingExistingDraft: false)
+            questID: run.questID, existingRun: run, discardingExistingDraft: false)
     }
 
     /// A quest tapped from the catalogue (or a map marker — they share this closure) goes straight
@@ -408,11 +420,11 @@ struct KultaraRootView: View {
     private func startOrResumeRun(questID: String) {
         let draft = (try? environment.runStore.activeRun(questID: questID)) ?? nil
         runDestination = RunDestination(
-            questID: questID, existingRunID: draft?.id, discardingExistingDraft: false)
+            questID: questID, existingRun: draft, discardingExistingDraft: false)
     }
 
     private func runScreen(_ destination: RunDestination) -> some View {
-        ScreenHost {
+        ScreenHost(navigationBarWhileLoading: destination.opensOnStoryFlow ? .hidden : .automatic) {
             let existing = destination.existingRunID
                 .flatMap { (try? environment.runStore.run(id: $0)) ?? nil }
             return QuestRunViewModel(
