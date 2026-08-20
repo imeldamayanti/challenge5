@@ -4,151 +4,135 @@ import SwiftUI
 import UIStringsKit
 
 /// One walk drawn as a sealed letter: the packaged envelope from `DesignSystem`, franked with what
-/// this particular walk actually earned (Figma `511:1421`).
+/// this particular walk actually earned.
 ///
-/// **The franking is decoration and says so.** Every mark on the paper — the picture taped to it,
-/// the stamps down the right, the title along the pocket — is set at the size the frame photographs
-/// it, which is too small to be read at an accessibility size and would wreck the object if it
-/// grew. It is therefore `accessibilityHidden`, and the same information is carried at full size by
-/// the title under the envelope and by the card's own spoken label. Nothing here is the only place
-/// something is said (`NFR-A11Y-01`).
+/// **The franking moved to the back** (`791:5601` → `791:5637`). The sealed card the shelf shows is
+/// now bare paper and a wax seal; the stamps and the hand that addressed it are on the other side,
+/// which is what the idle turn exists to show. Drawing them on both faces would make the turn say
+/// nothing.
+///
+/// **Everything on the back is decoration and says so.** Every mark is set at the size the frame
+/// photographs it, which is too small to be read at an accessibility size and would wreck the
+/// object if it grew. It is therefore `accessibilityHidden`, and the same information is carried at
+/// full size by the title under the envelope, by the two papers' modal, and by the card's own
+/// spoken label. Nothing here is the only place something is said (`NFR-A11Y-01`).
 struct SealedLetterEnvelope: View {
     @Environment(\.hisploraPalette) private var palette
 
     let letter: SealedLetterPresentation
     let language: ContentLanguage
     var stage: HisploraEnvelopeStage = .sealed
+    var flip: HisploraEnvelopeFlip = .front
     var wiggles: Bool = false
-    /// Passed through so Reduce Motion reaches the page's own reveal, which is the one beat the
+    /// Passed through so Reduce Motion reaches the papers' own reveal, which is the one beat the
     /// envelope times for itself rather than taking from the caller.
     var sequence: HisploraEnvelopeSequence = HisploraEnvelopeSequence(rendersImmediately: false)
 
     var body: some View {
-        HisploraEnvelope(stage: stage, wiggles: wiggles, sequence: sequence) {
-            franking
-        } contents: {
-            SealedLetterPage(letter: letter, language: language)
+        HisploraEnvelope(stage: stage, flip: flip, wiggles: wiggles, sequence: sequence) {
+            EmptyView()
+        } back: {
+            addressedSide
+        } paper: {
+            thumbnail(letter.papers.first)
+        } companion: {
+            thumbnail(letter.papers.dropFirst().first)
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(letter.accessibilityLabel)
     }
 
-    /// Everything stuck to the paper, laid out against the frame's own proportions.
-    private var franking: some View {
+    /// One of the two sheets, at the size the pocket holds it.
+    @ViewBuilder private func thumbnail(_ paper: JournalPaperPresentation?) -> some View {
+        if let paper {
+            GeometryReader { proxy in
+                HisploraJournalPaperThumbnail(
+                    width: proxy.size.width,
+                    card: JournalPaperCard(paper: paper, action: nil).card)
+            }
+        }
+    }
+
+    // MARK: - The addressed side (`791:5641`)
+
+    /// What is written on the back: the stamps this walk earned, and the address in the frame's
+    /// hand.
+    private var addressedSide: some View {
         GeometryReader { proxy in
             let size = proxy.size
             ZStack(alignment: .topLeading) {
-                picture(size: size)
                 stamps(size: size)
-                title(size: size)
+                address(size: size)
             }
             .frame(width: size.width, height: size.height, alignment: .topLeading)
         }
         .accessibilityHidden(true)
     }
 
-    /// The photograph taped to the pocket. The quest's hero picture when it ships one, and an aged
-    /// blank when it does not — the frame's own slot, left honest rather than filled.
-    private func picture(size: CGSize) -> some View {
-        ZStack {
-            if let url = letter.heroImageURL, let image = BundledImage.load(url) {
-                image.resizable().aspectRatio(contentMode: .fill)
-            } else {
-                Rectangle().fill(palette.paperWarm.color)
-            }
-        }
-        .frame(width: size.width * 0.2008, height: size.height * 0.4122)
-        .clipped()
-        .border(palette.paperLight.color, width: 1.5)
-        .shadow(color: .black.opacity(0.25), radius: 0.8, x: 0.8, y: 0.8)
-        .rotationEffect(.degrees(-2))
-        .overlay(alignment: .top) {
-            if let tape = HisploraEnvelopeMetrics.tapeImage {
-                tape
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: size.width * 0.1042)
-                    .offset(y: -size.height * 0.03)
-            }
-        }
-        .offset(x: size.width * 0.0299, y: size.height * 0.312)
-    }
-
-    /// Up to six stamps, in the two columns of three the frame franks the envelope with. A seventh
-    /// checkpoint is not drawn — the Explorer's Card is where the whole set is listed.
+    /// Up to five stamps, in the three-then-two block the frame franks the back with (`791:5645`).
+    /// A sixth checkpoint is not drawn — the Explorer's Card is where the whole set is listed.
     private func stamps(size: CGSize) -> some View {
-        let columns = [0.7655, 0.8759]
-        let rows = [0.3103, 0.5287, 0.7471]
-        return ForEach(Array(letter.stamps.prefix(6).enumerated()), id: \.element.id) { index, stamp in
-            // The drawing, but no franking. At 26 points the frame's own caption is 2.3 points
-            // high — texture, not words — so the names are printed on the Explorer's Card, where
-            // the same stamp is set six times larger. The picture survives the shrink; the words
-            // do not.
+        ForEach(Array(letter.stamps.prefix(BackFranking.slots.count).enumerated()),
+                id: \.element.id) { index, stamp in
+            let slot = BackFranking.slots[index]
+            // The drawing, but no franking. At this size the frame's own caption is under three
+            // points high — texture, not words — so the names are printed on the Explorer's Card,
+            // where the same stamp is set six times larger.
             HisploraStampCard(
                 title: stamp.placeName,
                 subtitle: stamp.region,
                 showsFranking: false,
                 artworkName: stamp.artworkName)
-                .frame(width: size.width * 0.0889, height: size.height * 0.2011)
-                .offset(x: size.width * columns[index % 2],
-                        y: size.height * rows[index / 2])
+                .frame(height: size.height * BackFranking.stampHeightRatio)
+                .rotationEffect(.degrees(slot.rotation))
+                .position(x: size.width * slot.centre.x, y: size.height * slot.centre.y)
         }
     }
 
-    /// The quest's name written along the pocket, in the frame's hand.
-    private func title(size: CGSize) -> some View {
-        Text(letter.title.lowercased())
-            .font(.system(size: max(8, size.height * 0.115), design: .serif))
-            .foregroundStyle(palette.brownMid.color)
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .frame(width: size.width * 0.65, alignment: .leading)
-            .offset(x: size.width * 0.0294, y: size.height * 0.8082)
-    }
-}
-
-/// The page that comes out of the envelope — `332:1252`, the frame the designer's note describes as
-/// *"the detail page comes out of the envelope and zooming in slowly."*
-///
-/// It is a cover, not the walk: the screen hands over to the run summary the moment the zoom ends,
-/// and this exists so that hand-off has something to happen *to*. What it prints is the walk's own
-/// snapshots.
-struct SealedLetterPage: View {
-    @Environment(\.hisploraPalette) private var palette
-
-    let letter: SealedLetterPresentation
-    let language: ContentLanguage
-
-    var body: some View {
+    /// The four lines the frame writes on the back: a salutation, the walk's own title, where it
+    /// was walked and when.
+    private func address(size: CGSize) -> some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text(letter.title)
-                .font(.system(size: 15, design: .serif))
-                .foregroundStyle(palette.inkDark.color)
-                .lineLimit(3)
-                .minimumScaleFactor(0.6)
-                .padding(.horizontal, 8)
-                .padding(.top, 10)
-
-            ZStack {
-                Rectangle().fill(palette.paperWarm.color)
-                if let url = letter.heroImageURL, let image = BundledImage.load(url) {
-                    image.resizable().aspectRatio(contentMode: .fill)
-                }
+            ForEach(Array(letter.addressLines.enumerated()), id: \.offset) { _, line in
+                Text(line)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
             }
-            .frame(height: 96)
-            .clipped()
-            .padding(.horizontal, 8)
-            .padding(.top, 8)
-
-            Text(letter.progressText)
-                .font(.system(size: 9))
-                .foregroundStyle(palette.inkMuted.color)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 8)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.paperLight.color)
-        .shadow(color: .black.opacity(0.3), radius: 8, y: 4)
-        .accessibilityHidden(true)
+        .font(HisploraHandwriting.font(size: max(8, size.height * BackFranking.handSizeRatio)))
+        .foregroundStyle(palette.inkDark.color)
+        .lineSpacing(size.height * BackFranking.handSizeRatio * 0.4)
+        .frame(width: size.width * BackFranking.addressWidthRatio, alignment: .leading)
+        .offset(x: size.width * BackFranking.addressOrigin.x,
+                y: size.height * BackFranking.addressOrigin.y)
+    }
+
+    /// The back's own measurements, read off `791:5641` (356.669 × 214) and kept as ratios so they
+    /// survive the card being drawn at whatever width the carousel gives it.
+    private enum BackFranking {
+        struct Slot {
+            let centre: CGPoint
+            let rotation: Double
+        }
+
+        /// Three across the top, two under the right of them — the block `791:5645` draws, in the
+        /// order a walk earns its stamps.
+        static let slots: [Slot] = [
+            Slot(centre: CGPoint(x: 205.87 / 356.669, y: 34.60 / 214), rotation: -3),
+            Slot(centre: CGPoint(x: 263.17 / 356.669, y: 34.41 / 214), rotation: 2),
+            Slot(centre: CGPoint(x: 319.41 / 356.669, y: 34.86 / 214), rotation: -1),
+            Slot(centre: CGPoint(x: 262.57 / 356.669, y: 91.24 / 214), rotation: -2),
+            Slot(centre: CGPoint(x: 319.57 / 356.669, y: 90.82 / 214), rotation: 1)
+        ]
+
+        /// 48.09 of the card's 214. The die is portrait (`152 × 206`) where the frame's own stamp is
+        /// nearly square, so the height is what is matched and the width follows from the die —
+        /// re-cutting the stamp for one face would give the Explorer's Card a different object.
+        static let stampHeightRatio: CGFloat = 48.091 / 214
+
+        static let addressOrigin = CGPoint(x: 26 / 356.669, y: 123 / 214)
+        static let addressWidthRatio: CGFloat = 200 / 356.669
+        /// 12.299 on a 214-tall card, at the frame's 1.4 line height.
+        static let handSizeRatio: CGFloat = 12.299 / 214
     }
 }

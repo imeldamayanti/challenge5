@@ -891,6 +891,122 @@ frames; all eleven return `get_design_context` cleanly. It still breaks on the *
 frames. So the board cannot be enumerated from the tool: query frames by the node ids in this
 table, which is the reason the table exists.
 
+## The Journal's turn, its two papers and their modal (2026-08-20)
+
+Four frames on the New Hisplora board: `791:5637` ("Journal - Flip"), `791:5585` ("Journal -
+Open"), `791:5533` and `791:5551` (both "Journal - Transition to Detail Journal"). They replace the
+single-page opening the Journal shipped with — the envelope now turns itself over on the shelf, holds
+**two** sheets rather than one, and hands over to a modal instead of to a zoomed cover.
+
+### One new token
+
+| Token | Value | Sampled from | Measured |
+|---|---|---|---|
+| `paperCard` | `#F5F1E5` | `791:5568`, `791:5814` — the two cards' fill | 15.02:1 under `inkDark`, 8.02:1 under `brownMid`, 16.4:1 under `buttonFill` |
+
+Its own token rather than `paperLight` (`#F4EADD`) rounded to: the two creams sit on the same
+screen the moment a card is drawn over the shelf, and the frames' value is what is written down.
+
+### One new type role
+
+`journalPaperTitle` — New York Regular at 26.25, tracking −0.7875, set solid (`leading-none`).
+It is neither `storySection` (25, medium) nor `onboardingDisplay` (30, regular): the frames set this
+one lighter than the first and smaller than the second, and it is the masthead of an *object* rather
+than of a screen.
+
+### Three new packaged pictures
+
+| File | Source node | Size shipped | What it is |
+|---|---|---|---|
+| `journal-card-paper.png` | `791:5569` | 564 × 564 | the torn sheet both cards are printed on |
+| `journal-summary-emblem.png` | `791:5573` | 530 × 471 | the drawn roundel on the Trip Summary card |
+| `journal-history-plate.png` | `791:5819` | 664 × 1000 | the painting on the History card |
+
+The painting is exported at 664 × 1000 rather than the source's 1360 × 2048: the card draws it at
+209 × 145 points, so even at 3× the shipped file is generous, and the full-size export is 5.3 MB
+against 1.2 MB.
+
+**The envelope's back needed no new export at all.** `791:5642`/`791:5643` are the same crumpled
+papers the front already ships, turned about their own centres — so `backFace` draws
+`envelope-inner` at 180° and nothing else. It deliberately does *not* draw `envelope-body` as well:
+that export carries the pocket's flap cutout, and rotated it printed a bright trapezoid and two
+notched corners straight across the address.
+
+### Deviations
+
+- **The eyebrow keeps the theme's tracking, not the frame's.** `791:5571` sets "TRIP SUMMARY" in SF
+  Pro Bold at 12.75 with −0.255 tracking; it is set here in the `eyebrow` role, which is caps at
+  +2. One place decides what a piece of type is, and a negative-tracked caps label is the frame
+  drawing at photograph scale rather than a decision about the type system.
+- **The scrim is `inkDark` at 80%, not a token of its own.** `791:5567` is `#1A1A1A` at 80% and the
+  palette's ink is `#1D1D1D` — the same ink to within a step. A scrim is not a pair anyone measures
+  text against, so adding a token would be adding an unmeasurable one.
+- **The address is set in Bradley Hand, not Homemade Apple.** `791:5657`'s face is neither a system
+  face nor packaged here, and packaging a fifth typeface to write four lines on the back of a card
+  is not a trade worth making. `HisploraHandwriting` resolves the system's nearest printed hand and
+  falls back to the serif in italic — never to SF Pro, which would turn an address into a form
+  field.
+- **`zoomScale` fell from 2.1 to 1.5, and then to 1.3.** Two sheets already spread across more than
+  the card's width, so the scale a lone page grew to would throw both off the screen before the
+  modal arrives; once each sheet became a whole card rather than the frame's crop of its head, 1.5
+  walked them off the top and the sides too.
+
+### What was deliberately not built
+
+- **The frame's page dots and "Tap envelope to open" caption** (`791:5625`, `791:5632`). The tap
+  *is* wired — the centred envelope opens on a tap — but the labelled "Unseal the Journey" control
+  stays, because a tap on a picture is not something VoiceOver announces on its own
+  (`NFR-A11Y-05`), and the dots would be a second progress indicator for a carousel that already
+  has one.
+- **Two separate destination screens behind "Read Summary" and "Read History".** Both open the same
+  letter; the history card scrolls it to the first checkpoint. The two cards name two things a
+  reader might have come for, and both are already on that one sheet in that order — splitting it
+  would mean two screens printing halves of the same snapshots.
+
+### The bug this cost, worth writing down
+
+`clipped()` clips drawing, not touches. The card's torn sheet is laid in at 708 × 480 against a
+344 × 321 card, and the History plate is drawn `.fill` in a box narrower than itself — so both
+claimed a hit region far larger than the card, and the topmost of them silently swallowed every tap
+meant for the card *above* it. "Read Summary" did nothing while "Read History" worked, which reads
+like a wiring mistake and is not one. Both decorative layers are now `allowsHitTesting(false)`, and
+the card carries a `contentShape(Rectangle())` as the belt to that brace.
+
+### The second pass, and the four things it changed (2026-08-20)
+
+The frames were built first and then looked at on a device, which is what turned up four faults —
+three of them in things the frames themselves draw, and one in the shelf's layout.
+
+- **The open envelope is the whole body export now, not a band cut out of it.** The pocket front
+  used to be `envelope-body` masked to everything below `pocketTopRatio`, which drew a straight
+  horizontal seam across the middle of an open envelope — an edge no envelope has. The export is
+  already cut with the pocket's own V: two wings rising to the top corners and a notch between
+  them. Drawn whole, it *is* what a real envelope shows once the flap is off its front, and the
+  papers behind it are occluded by the export's alpha rather than by a rectangle. `pocketTopRatio`
+  is gone; `pocketNotchVertexRatio` (220 / 522 of the export) replaces it and describes the notch
+  rather than a mask.
+- **The open flap is shaded.** Past the fold the reader is looking at the *back* of the flap,
+  standing away from the light the rest of the object is photographed in; at the export's own
+  brightness it read as a second, brighter envelope pitched behind the first. `brightness(-0.14)`
+  and `saturation(0.8)` while open is what puts it behind.
+- **The sheets in the pocket are whole cards.** `791:5595` is 172.5 × 113.5 because the export stops
+  where the pocket covers the sheet — it is the *head* of a 344 × 321 card, not a card of its own.
+  Cropping the view there too shipped a card with its picture and its "Read Summary" sliced off, and
+  the slice showed the moment the sheets rose clear of the envelope. `HisploraJournalPaperThumbnail`
+  keeps `cardAspectRatio` now, `HisploraEnvelopeMetrics.paperAspectRatio` is that same ratio, and
+  both `PaperSlot` offsets were re-authored against the V: tucked, each sheet's head stands above
+  the notch; risen, the whole card is clear of the envelope and still under the screen's heading.
+- **The shelf's one envelope was 42 points left of centre.** The half-card gutter was a
+  `contentMargins(_:for: .scrollContent)`; the margin moves the content but the resting scroll
+  offset is still taken from the content's own origin, so a shelf that cannot scroll at all sat off
+  centre. It is `padding(.horizontal, inset)` on the row now — part of the layout, so one card is
+  centred by arithmetic rather than by where a scroll view happens to come to rest.
+
+And one thing the same pass restored: **the sealed card's nudge runs on every shelf, not only on one
+worth swiping.** It was gated on `showsSwipeHint`, which is false while there is a single letter — so
+the first walk a reader finishes sat perfectly still. The rock is the card's own 2D lean and the turn
+is about its vertical axis, so the two ride on top of each other rather than replacing one another.
+
 ## Seen rendering
 
 **`452:3132`, `447:1880` and `452:3028` were verified on iPhone 17 / iOS 26.5 on 2026-08-17**,
@@ -930,3 +1046,16 @@ unverified seed coordinate (`c1-badung-single-quest-content.plan.md` §11.0), so
 trusting a failed arrival. The arrival
 rule is unmodified — the radius and accuracy gate in `ArrivalEvaluator` runs on the reported fix, so
 what is exercised is the walker's own code path.
+
+**The four `791:*` Journal frames were verified on iPhone 17 / iOS 26.5 on 2026-08-20**, walked from
+a fresh install with one active walk on the shelf: the sealed front, the idle turn onto the
+addressed back and back again, the envelope open with both sheets in the pocket, the sheets rising
+and zooming, and the modal with both cards and both controls. Screenshots are in
+`docs/screenshots/m11-journal-*.png`.
+
+Two things about capturing it, since both cost time: `xcrun simctl io <udid> screenshot` served a
+**stale frame** repeatedly while the card was turning — twenty-six consecutive captures were
+byte-identical on a screen that was visibly animating — so the turn has to be recorded
+(`recordVideo`) and stepped through with `ffmpeg` rather than sampled with stills. And a resumed
+shelf never re-runs the opening, so the beats between `dwelling` and `zooming` are only reachable by
+unsealing again.

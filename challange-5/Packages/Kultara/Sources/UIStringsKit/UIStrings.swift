@@ -526,6 +526,17 @@ public enum UIStrings {
         .journalSwipeHint: LocalizedText(
             id: "Geser untuk surat lainnya", en: "Swipe for other letters"),
         .journalCollectionsAction: LocalizedText(id: "Koleksi huruf", en: "Letter collections"),
+        .journalEnvelopeSalutation: LocalizedText(id: "Sudah kamu jalani,", en: "Well walked,"),
+        .journalPaperSummaryEyebrow: LocalizedText(
+            id: "Ringkasan Perjalanan", en: "Trip Summary"),
+        .journalPaperSummaryTitle: LocalizedText(
+            id: "Perjalananmu menyusuri %@", en: "Your journey through %@"),
+        .journalPaperSummaryAction: LocalizedText(id: "Baca Ringkasan", en: "Read Summary"),
+        .journalPaperHistoryEyebrow: LocalizedText(id: "Sejarah", en: "History"),
+        .journalPaperHistoryTitle: LocalizedText(
+            id: "Kisah Terakhir %@", en: "The Last Tales of %@"),
+        .journalPaperHistoryAction: LocalizedText(id: "Baca Sejarah", en: "Read History"),
+        .journalPapersClose: LocalizedText(id: "Tutup", en: "Close"),
 
         // MARK: Profile — the Explorer's Card
         .profileHeading: LocalizedText(id: "Kartu Penjelajah", en: "Explorer’s Card"),

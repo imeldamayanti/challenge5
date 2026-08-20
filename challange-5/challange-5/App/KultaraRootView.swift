@@ -23,6 +23,13 @@ struct KultaraRootView: View {
     /// *this is a letter*. The letter now opens where it is: `JournalLetterView` renders the same
     /// snapshots as a page, and there is no stack to pop.
     @State private var journalLetter: SealedLetterPresentation?
+    /// Which part of that letter it opened at — the paper the reader chose in the modal.
+    @State private var journalLetterSection: JournalPaperPresentation.Kind = .summary
+    /// The two papers, drawn over the shelf once the envelope has finished opening (`791:5551`).
+    ///
+    /// Held here rather than inside the Journal tab because the floating tab bar is published over
+    /// the tab's own content: a modal underneath the bar is not a modal.
+    @State private var journalPapers: SealedLetterPresentation?
     /// And a third, for the Profile tab's Quests list. Same argument as the one above it.
     @State private var profileRunDestination: RunDestination?
     /// Bumped whenever a walk changes, so the home screen's journal is rebuilt. The store is not
@@ -135,7 +142,8 @@ struct KultaraRootView: View {
     private var sideQuestCover: Binding<SideQuestDestination?> {
         Binding(
             get: {
-                guard runDestination == nil, journalLetter == nil else { return nil }
+                guard runDestination == nil, journalLetter == nil, journalPapers == nil
+                else { return nil }
                 return router.pendingSideQuestID.map(SideQuestDestination.init)
             },
             set: { if $0 == nil { router.pendingSideQuestID = nil } })
@@ -158,6 +166,9 @@ struct KultaraRootView: View {
         // The opened letter is a full-screen page drawn inside the Journal's own stack rather than
         // a modal over it, so nothing else takes the bar away.
         if journalLetter != nil { return true }
+        // And the papers are a modal over the whole screen, scrim included (`791:5555` draws the
+        // bar hidden).
+        if journalPapers != nil { return true }
         return false
     }
 
@@ -252,8 +263,8 @@ struct KultaraRootView: View {
                     model: model,
                     language: language,
                     collections: collectionIDs,
-                    onOpenRun: { runID in
-                        journalLetter = model.letters.first { $0.id == runID }
+                    onOpenPapers: { runID in
+                        journalPapers = model.letters.first { $0.id == runID }
                     },
                     onOpenCollection: { collectionDestination = $0 })
             }
@@ -270,6 +281,24 @@ struct KultaraRootView: View {
         // picks the zoom up where it stopped: it enters a little over-size and settles, which is
         // the same motion the envelope's last beat was making.
         .overlay {
+            if let letter = journalPapers {
+                JournalPapersModal(
+                    letter: letter,
+                    language: language,
+                    onOpen: { kind in
+                        journalLetterSection = kind
+                        journalLetter = letter
+                        journalPapers = nil
+                    },
+                    onClose: { journalPapers = nil })
+                    // The papers arrive over-size and settle, picking up the zoom the envelope's
+                    // last beat was already making rather than sliding in from an edge.
+                    .transition(.asymmetric(
+                        insertion: .opacity.combined(with: .scale(scale: 1.18)),
+                        removal: .opacity.combined(with: .scale(scale: 0.96))))
+            }
+        }
+        .overlay {
             if let letter = journalLetter {
                 journalLetterScreen(letter)
                     .transition(.asymmetric(
@@ -278,6 +307,7 @@ struct KultaraRootView: View {
             }
         }
         .animation(.easeOut(duration: 0.42), value: journalLetter)
+        .animation(.easeOut(duration: 0.42), value: journalPapers)
     }
 
     /// The opened letter, full screen and scrollable.
@@ -291,6 +321,7 @@ struct KultaraRootView: View {
             JournalLetterView(
                 model: RunSummaryViewModel(run: run),
                 letter: letter,
+                section: journalLetterSection,
                 onClose: { journalLetter = nil })
         } else {
             Color.clear.onAppear { journalLetter = nil }

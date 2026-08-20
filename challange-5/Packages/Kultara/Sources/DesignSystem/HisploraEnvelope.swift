@@ -35,6 +35,66 @@ public enum HisploraEnvelopeStage: String, Sendable, CaseIterable, Comparable {
     public var isOpen: Bool { self > .sealed }
 }
 
+/// Which way round the sealed envelope is standing, and how far through turning (`791:5637`).
+///
+/// **The idle animation is a turn now, not only a nudge.** A sealed card wiggles to say it can be
+/// swiped; it turns to say there is something written on the other side — the stamps and the hand
+/// that addressed it. Four beats rather than two booleans, because the reader may tap "Unseal"
+/// mid-turn and the card has to finish getting back to its front before the flap can open: an
+/// envelope that opened while showing its back would be opening the wrong side of itself.
+///
+/// The angle is the card's own rotation about its vertical axis. `turningToFront` is 90 again
+/// rather than 270 on purpose — the card comes back the way it went, which is what "flip it back"
+/// means.
+public enum HisploraEnvelopeFlip: String, Sendable, CaseIterable, Equatable {
+    case front
+    case turningToBack
+    case back
+    case turningToFront
+
+    /// How far round the card is at this beat, in degrees.
+    public var angle: Double {
+        switch self {
+        case .front: 0
+        case .turningToBack, .turningToFront: 90
+        case .back: 180
+        }
+    }
+
+    /// Whether the reader is looking at the addressed side.
+    ///
+    /// The swap happens at the quarter turn, where the card is edge-on and neither face has any
+    /// width — which is what makes one picture become the other rather than cross-fade into it.
+    public var showsBack: Bool {
+        switch self {
+        case .front, .turningToBack: false
+        case .back, .turningToFront: true
+        }
+    }
+
+    public var isFront: Bool { self == .front }
+
+    /// The next beat of the idle turn.
+    public var next: HisploraEnvelopeFlip {
+        switch self {
+        case .front: .turningToBack
+        case .turningToBack: .back
+        case .back: .turningToFront
+        case .turningToFront: .front
+        }
+    }
+
+    /// The beats that bring the card back to its front from here — the shortest way, which from a
+    /// half-turn is back the way it came rather than on round.
+    public var returningToFront: [HisploraEnvelopeFlip] {
+        switch self {
+        case .front: []
+        case .turningToBack, .turningToFront: [.front]
+        case .back: [.turningToFront, .front]
+        }
+    }
+}
+
 /// How long each beat lasts, and what it lasts when the reader has asked for less movement.
 ///
 /// Reduce Motion does not skip the sequence — the opening *is* the content here, the way the
@@ -107,117 +167,208 @@ public struct HisploraEnvelopeSequence: Sendable, Equatable {
     /// materialising in front of the envelope.
     public static let pageRevealDuration: Duration = .milliseconds(200)
 
+
+    // MARK: - The idle turn (`791:5637`)
+
+    /// How long the card stands still before it turns itself over.
+    ///
+    /// Longer than the wiggle's interval: a nudge is a twitch and a turn is a whole movement, and
+    /// two of them on the same card at the same cadence would be a screen that never settles.
+    public static let flipInterval: Duration = .seconds(5.5)
+    /// A quarter turn — half the flip. Two of these make the turn, and the face swaps between them.
+    public static let flipHalfDuration: Duration = .milliseconds(320)
+    /// How long the addressed side is held before the card turns back.
+    public static let flipBackDwell: Duration = .milliseconds(1400)
+    /// How much depth the turn is drawn with. Enough for the card to read as a physical object
+    /// passing edge-on, not so much that its far edge stretches.
+    public static let flipPerspective: CGFloat = 0.4
+
+    /// How long a beat of the turn lasts. Zero throughout under Reduce Motion, where the card
+    /// simply does not turn — an idle animation is the one kind that has nothing to say if it is
+    /// collapsed to a cut, so `SealedLettersViewModel` skips the cycle entirely instead.
+    public func duration(ofFlip flip: HisploraEnvelopeFlip) -> Duration {
+        guard !rendersImmediately else { return .zero }
+        switch flip {
+        case .front: return Self.flipHalfDuration
+        case .turningToBack, .turningToFront: return Self.flipHalfDuration
+        case .back: return Self.flipBackDwell
+        }
+    }
+
+    /// The curve a beat of the turn moves on. Linear through the two quarter turns so the card
+    /// passes edge-on at a constant rate — easing each half separately makes the swap visible as a
+    /// hitch in the middle of one turn.
+    public func animation(ofFlip flip: HisploraEnvelopeFlip) -> Animation? {
+        guard !rendersImmediately else { return nil }
+        switch flip {
+        case .back: return .easeOut(duration: Self.flipHalfDuration.seconds)
+        default: return .linear(duration: Self.flipHalfDuration.seconds)
+        }
+    }
+
     /// The whole opening, end to end. Zero under Reduce Motion, which is the point.
     public var total: Duration {
         HisploraEnvelopeStage.allCases.reduce(Duration.zero) { $0 + duration(of: $1) }
     }
 }
 
-/// The envelope itself: a photographed paper object with a pocket, a flap and a wax seal, that a
-/// page can be drawn out of.
+/// The envelope itself: a photographed paper object with a pocket, a flap, a wax seal and an
+/// addressed back, that two papers can be drawn out of.
 ///
 /// **Every layer is a packaged export, and the composition is the code's.** The design draws the
-/// closed and the opened envelope as two separate frames; an app has to get from one to the other,
-/// so the flap is a layer with a hinge at its top edge rather than a second picture. The pocket
-/// front is the lower band of the same body export, drawn a second time over whatever is rising out
-/// of it — which is what makes the page look like it is coming from inside the paper instead of
-/// sliding in front of it.
-public struct HisploraEnvelope<Franking: View, Contents: View>: View {
+/// closed envelope, its back, and the opened one as separate frames; an app has to get from one to
+/// the next, so the flap is a layer with a hinge at its top edge rather than a second picture, the
+/// back is the same papers turned about their own centre, and the pocket front is the lower band of
+/// the body export drawn a second time over whatever is rising out of it — which is what makes the
+/// papers look like they are coming from inside the envelope instead of sliding in front of it.
+///
+/// **Two papers, not one** (`791:5585`). The frames put a trip summary and a history in the same
+/// pocket, each with its own tilt and its own travel: the summary comes almost all the way out and
+/// drifts left, the history rises about a quarter of the card and stays where it is. That is why
+/// this takes two content slots rather than one — a single slot with two things stacked in it could
+/// not give them different journeys.
+public struct HisploraEnvelope<Franking: View, Back: View, Paper: View, Companion: View>: View {
     @Environment(\.hisploraPalette) private var palette
 
     private let stage: HisploraEnvelopeStage
+    private let flip: HisploraEnvelopeFlip
     private let wiggles: Bool
     private let sequence: HisploraEnvelopeSequence
     private let franking: Franking
-    private let contents: Contents
+    private let back: Back
+    private let paper: Paper
+    private let companion: Companion
 
     @State private var wiggleAngle: Double = 0
-    /// The sheet's own rendered height. Measured rather than assumed: `contents` is whatever the
-    /// caller hands over, and every offset below is computed against the sheet's real size.
-    @State private var pageHeight: CGFloat = 0
 
     /// - Parameters:
+    ///   - flip: which way round the card is standing. Only meaningful while it is sealed — an
+    ///     envelope being opened is never turned, which `SealedLettersViewModel` guarantees by
+    ///     returning it to its front before the first beat of the opening.
     ///   - franking: what is stuck to the pocket — the picture, the stamps, the title.
-    ///   - contents: the page that rises out. Drawn behind the pocket at every beat before
-    ///     `rising`, so it is never visible until the envelope is open.
+    ///   - back: what is written on the other side: the stamps and the address (`791:5644`).
+    ///   - paper: the first sheet, which comes furthest out.
+    ///   - companion: the second, which rises behind it.
     public init(
         stage: HisploraEnvelopeStage,
+        flip: HisploraEnvelopeFlip = .front,
         wiggles: Bool = false,
         sequence: HisploraEnvelopeSequence = HisploraEnvelopeSequence(rendersImmediately: false),
         @ViewBuilder franking: () -> Franking,
-        @ViewBuilder contents: () -> Contents
+        @ViewBuilder back: () -> Back,
+        @ViewBuilder paper: () -> Paper,
+        @ViewBuilder companion: () -> Companion
     ) {
         self.stage = stage
+        self.flip = flip
         self.wiggles = wiggles
         self.sequence = sequence
         self.franking = franking()
-        self.contents = contents()
+        self.back = back()
+        self.paper = paper()
+        self.companion = companion()
     }
 
     public var body: some View {
         GeometryReader { proxy in
             let size = proxy.size
             ZStack {
-                // Behind everything once open, so the flap that has swung over the top of the card
-                // lands *behind* the paper rather than on the reader's side of it.
-                Group {
-                    if stage.isOpen { flap(size: size) }
-                    layer(HisploraEnvelopeMetrics.innerImage, size: size)
-                }
-                .opacity(envelopeOpacity)
-                .zIndex(0)
-
-                pageLayer(size: size)
-                    // **The paper is in front of the envelope once it is out of it.** Every beat up
-                    // to the rise, the pocket is drawn over the sheet — that is what makes it read
-                    // as coming from inside. On the zoom the sheet is at 2.1× and half a card wider
-                    // than the envelope, and the pocket band went on drawing a strip of paper
-                    // straight across the middle of it. It goes above from `zooming` on.
-                    .zIndex(stage >= .zooming ? 2 : 1)
-
-                Group {
-                    if stage.isOpen {
-                        // Open, only the pocket is in front of the reader: the lower band of the
-                        // body export, drawn over the page so the page reads as coming from inside
-                        // the paper. Drawing the *whole* body here would put a second copy of the
-                        // sheet over the first and print a visible seam along the mask's edge.
-                        layer(HisploraEnvelopeMetrics.bodyImage, size: size)
-                            .mask(alignment: .bottom) {
-                                Rectangle()
-                                    .frame(height: size.height
-                                           * (1 - HisploraEnvelopeMetrics.pocketTopRatio))
-                            }
-                    } else {
-                        // Closed, the body is whole and the flap is folded down over it.
-                        layer(HisploraEnvelopeMetrics.bodyImage, size: size)
-                        flap(size: size)
-                    }
-
-                    // Above the flap in both states, which is where the frame franks them: the
-                    // stamps are drawn over the fold (`511:1464`), and a picture half under a flap
-                    // reads as a clipping bug rather than as an envelope.
-                    franking
-                    seal(size: size)
-                }
-                .opacity(envelopeOpacity)
-                .zIndex(stage >= .zooming ? 1 : 2)
+                // **Both faces are always built, and one of them is hidden.** Swapping between two
+                // branches gives the card a new identity at the quarter turn, and the ambient beat
+                // animation cross-fades the two — which drew the front's wax seal ghosted over the
+                // addressed side for the length of the turn. Hiding one instead makes the swap the
+                // hard cut it has to be, and `.animation(nil, value: flip)` is what keeps the
+                // ambient animation from softening it back into a fade. Scoped to `flip` alone, so
+                // the flap, the papers and the zoom — all driven by `stage` — still animate.
+                frontFace(size: size)
+                    .opacity(flip.showsBack ? 0 : 1)
+                    .animation(nil, value: flip)
+                backFace(size: size)
+                    .opacity(flip.showsBack ? 1 : 0)
+                    .animation(nil, value: flip)
             }
             .frame(width: size.width, height: size.height)
+            // The card's own turn. The face swaps at the quarter turn, where this has squeezed both
+            // of them to no width at all.
+            .rotation3DEffect(
+                .degrees(flip.angle),
+                axis: (x: 0, y: 1, z: 0),
+                perspective: HisploraEnvelopeSequence.flipPerspective)
         }
         .aspectRatio(HisploraEnvelopeMetrics.aspectRatio, contentMode: .fit)
         .rotationEffect(.degrees(wiggleAngle))
         .task(id: wiggles) { await runWiggle() }
     }
 
+    // MARK: - The two faces
+
+    private func frontFace(size: CGSize) -> some View {
+        ZStack {
+            // Behind everything once open, so the flap that has swung over the top of the card
+            // lands *behind* the paper rather than on the reader's side of it.
+            Group {
+                if stage.isOpen { flap(size: size) }
+                layer(HisploraEnvelopeMetrics.innerImage, size: size)
+            }
+            .opacity(envelopeOpacity)
+            .zIndex(0)
+
+            papers(size: size)
+                // **The papers are in front of the envelope once they are out of it.** Every beat
+                // up to the rise, the pocket is drawn over them — that is what makes them read as
+                // coming from inside. On the zoom they are larger than the envelope, and the pocket
+                // band went on drawing a strip of paper straight across the middle of them.
+                .zIndex(stage >= .zooming ? 2 : 1)
+
+            Group {
+                // **The front is the whole body export in both states, open included.** It is cut
+                // with the pocket's own V — two wings rising to the top corners and a notch between
+                // them — which is exactly what an envelope shows once its flap is off the front.
+                // Masking it to a straight band across the middle, which is what this did, printed
+                // a horizontal seam no envelope has and hid the wings that make the object read as
+                // one; the papers are behind it either way, so they still come from inside.
+                layer(HisploraEnvelopeMetrics.bodyImage, size: size)
+                // Closed, the flap is folded down over the notch. Open, it has swung behind the
+                // card and is drawn there instead — see `frontFace`'s first group.
+                if !stage.isOpen { flap(size: size) }
+
+                // Above the flap in both states, which is where the frame franks them: the stamps
+                // are drawn over the fold (`511:1464`), and a picture half under a flap reads as a
+                // clipping bug rather than as an envelope.
+                franking
+                seal(size: size)
+            }
+            .opacity(envelopeOpacity)
+            .zIndex(stage >= .zooming ? 1 : 2)
+        }
+    }
+
+    /// The addressed side (`791:5641`).
+    ///
+    /// **The envelope's own paper, turned about its centre.** `791:5642` and `791:5643` are both
+    /// plain crumpled sheets at 179.8° — the back of this envelope is unbroken paper, which is why
+    /// only the inner sheet is drawn here and the body is not: the body export carries the pocket's
+    /// flap cutout, and rotated it printed a bright trapezoid and two notched corners across the
+    /// address. No third export, and there should never be one.
+    private func backFace(size: CGSize) -> some View {
+        layer(HisploraEnvelopeMetrics.innerImage, size: size)
+            .rotationEffect(.degrees(180))
+        .overlay { back }
+        .frame(width: size.width, height: size.height)
+        // Undoes the card's own half turn, so the address reads the right way round rather than
+        // mirrored.
+        .rotation3DEffect(.degrees(180), axis: (x: 0, y: 1, z: 0))
+    }
+
     // MARK: - Layers
 
     /// The envelope's own papers fall away across the zoom.
     ///
-    /// Not decoration: it is what makes the z-order swap above invisible. At the instant the sheet
-    /// goes in front of the pocket it is still barely larger than the envelope, and a bottom edge
+    /// Not decoration: it is what makes the z-order swap above invisible. At the instant the papers
+    /// go in front of the pocket they are still barely larger than the envelope, and a bottom edge
     /// appearing over the pocket in one frame reads as a glitch. Fading the paper out over the same
-    /// 1600ms the sheet grows through covers the swap, and matches what the beat is: the envelope
-    /// is finished with, and the page is on its way to the reader.
+    /// beat the sheets grow through covers the swap, and matches what the beat is: the envelope is
+    /// finished with, and the papers are on their way to the reader.
     private var envelopeOpacity: Double { stage >= .zooming ? 0 : 1 }
 
     @ViewBuilder private func layer(_ image: Image?, size: CGSize) -> some View {
@@ -247,6 +398,12 @@ public struct HisploraEnvelope<Franking: View, Contents: View>: View {
         let flapSize = CGSize(width: size.width,
                               height: size.height * HisploraEnvelopeMetrics.flapHeightRatio)
         return layer(HisploraEnvelopeMetrics.flapImage, size: flapSize)
+            // Past the fold the reader is looking at the *back* of the flap, standing away from
+            // the light the rest of the object is photographed in. Drawn at the export's own
+            // brightness it reads as a second, brighter envelope pitched behind the first — the
+            // "tent" over the top of the card. The shade is what puts it behind.
+            .brightness(stage.isOpen ? -0.14 : 0)
+            .saturation(stage.isOpen ? 0.8 : 1)
             .rotation3DEffect(
                 .degrees(stage.isOpen ? HisploraEnvelopeSequence.flapAngle : 0),
                 axis: (x: 1, y: 0, z: 0),
@@ -266,92 +423,42 @@ public struct HisploraEnvelope<Franking: View, Contents: View>: View {
             .rotationEffect(.degrees(stage.isOpen ? 22 : 0))
     }
 
-    /// The page, plus the cut that keeps it inside the paper.
+    /// The two sheets: tucked in the pocket, standing out of it, then growing toward the reader —
+    /// the three beats of `791:5585` → `791:5533`.
     ///
-    /// **The sheet is taller than the envelope holding it**, and it has to be: the card is
-    /// landscape and a letter is portrait. So "inside the pocket" cannot mean "within the card's
-    /// bounds" — it means *top edge below the pocket's lip*, with whatever hangs past the card's
-    /// bottom edge cut rather than drawn onto the brown behind it. Without the cut the sheet's
-    /// lower half stood clear of the envelope on the very first frame it became visible, which is
-    /// the bug this reads as.
-    ///
-    /// One `mask` whose rectangle moves, not a `mask` that comes and goes: switching between a
-    /// masked and an unmasked branch changes the view's identity and would restart the scale
-    /// animation halfway through the zoom.
-    private func pageLayer(size: CGSize) -> some View {
-        page(size: size)
-            .frame(width: size.width, height: size.height)
-            .mask(alignment: .bottom) {
-                Rectangle()
-                    .frame(height: size.height * 8)
-                    // Once the sheet is out of the paper there is nothing to cut it against, so the
-                    // rectangle drops far below the card and the mask stops doing anything.
-                    .offset(y: stage >= .zooming ? size.height * 4 : 0)
-            }
-    }
-
-    /// The page inside. It sits fully in the pocket until `rising`, then stands out of it, then
-    /// grows toward the reader — the three beats of `332:1252`.
-    private func page(size: CGSize) -> some View {
-        contents
-            .frame(width: size.width * HisploraEnvelopeMetrics.pageWidthRatio)
-            .background { pageHeightReader }
-            .opacity(stage >= .rising ? 1 : 0)
-            // Scoped to the opacity alone — everything below this line still moves on the ambient
-            // beat animation. Run on the beat's own long curve, the page cross-fades through the
-            // whole of its travel and reads as appearing in front of the envelope rather than
-            // coming out of it.
-            .animation(sequence.rendersImmediately
-                       ? nil
-                       : .linear(duration: HisploraEnvelopeSequence.pageRevealDuration.seconds),
-                       value: stage >= .rising)
-            .scaleEffect(stage >= .zooming ? HisploraEnvelopeMetrics.zoomScale : 1,
-                         anchor: .center)
-            .offset(y: pageOffset(cardHeight: size.height))
-    }
-
-    /// Reads the sheet's rendered height back out of layout.
-    ///
-    /// A `GeometryReader` in the background rather than `onGeometryChange`, which needs macOS 15 —
-    /// this package declares macOS 14 so the pure-logic suites run without a simulator
-    /// (`Package.swift`), and an iOS-only measurement would not compile there.
-    private var pageHeightReader: some View {
-        GeometryReader { proxy in
-            Color.clear
-                .onAppear { pageHeight = proxy.size.height }
-                .onChange(of: proxy.size.height) { _, height in pageHeight = height }
+    /// They are invisible until the envelope is open, and that is a correctness point rather than a
+    /// nicety: tucked, each sheet's head stands above the notch's vertex, so on a sealed envelope
+    /// it would show through the V the closed flap is covering.
+    private func papers(size: CGSize) -> some View {
+        ZStack {
+            slot(paper, at: .summary, size: size)
+            slot(companion, at: .history, size: size)
         }
+        .opacity(stage >= .dwelling ? 1 : 0)
+        // Scoped to the opacity alone — everything else moves on the ambient beat animation. Run on
+        // the beat's own long curve, the papers cross-fade through the whole of their travel and
+        // read as appearing in front of the envelope rather than coming out of it.
+        .animation(sequence.rendersImmediately
+                   ? nil
+                   : .linear(duration: HisploraEnvelopeSequence.pageRevealDuration.seconds),
+                   value: stage >= .dwelling)
+        .scaleEffect(stage >= .zooming ? HisploraEnvelopeMetrics.zoomScale : 1, anchor: .center)
+        // They drift back toward the middle as they grow, so a sheet at `zoomScale` stays on the
+        // screen it is growing into.
+        .offset(y: stage >= .zooming ? -size.height * HisploraEnvelopeMetrics.pageZoomRiseRatio : 0)
     }
 
-    /// Where the sheet's centre sits, measured from the card's own centre.
-    ///
-    /// **Anchored to the pocket, not to the card.** These used to be fractions of the card's
-    /// height — `+0.34` inside, `-0.62` risen — chosen against a sheet the size of the envelope. A
-    /// real `SealedLetterPage` is about 190 points tall against a 173-point card, so `-0.62` put
-    /// the *whole* sheet, bottom edge included, above the pocket's lip: a page hanging in front of
-    /// an envelope it was visibly not coming out of. Computing from the measured sheet keeps its
-    /// bottom edge in the pocket whatever the caller draws.
-    private func pageOffset(cardHeight: CGFloat) -> CGFloat {
-        let pocketLip = cardHeight * (HisploraEnvelopeMetrics.pocketTopRatio - 0.5)
-        // The card's own height until the sheet has been measured, so a first frame is never wilder
-        // than the envelope itself.
-        let half = max(pageHeight, cardHeight) / 2
-        switch stage {
-        case .sealed, .opening, .dwelling:
-            // Top edge level with the lip: every part of the sheet is behind the pocket front, and
-            // what falls past the card's bottom edge is cut by `pageLayer`.
-            return pocketLip + half
-        case .rising:
-            // Standing out, still held: the bottom edge stays inside the pocket band by
-            // `pageGripRatio` of its depth, so the paper is gripped rather than floating.
-            let pocketDepth = cardHeight * (1 - HisploraEnvelopeMetrics.pocketTopRatio)
-            return pocketLip + pocketDepth * HisploraEnvelopeMetrics.pageGripRatio - half
-        // It drifts back toward the middle as it grows. Held at the risen offset, a page at 2.1×
-        // is most of a phone tall with its centre a hundred points above the shelf, so the top of
-        // it leaves the screen — the zoom's last half second plays off-frame.
-        case .zooming:
-            return -cardHeight * HisploraEnvelopeMetrics.pageZoomRiseRatio
-        }
+    private func slot<Content: View>(
+        _ content: Content,
+        at slot: HisploraEnvelopeMetrics.PaperSlot,
+        size: CGSize
+    ) -> some View {
+        let width = size.width * HisploraEnvelopeMetrics.paperWidthRatio
+        let offset = stage >= .rising ? slot.risenOffset : slot.tuckedOffset
+        return content
+            .frame(width: width, height: width / HisploraEnvelopeMetrics.paperAspectRatio)
+            .rotationEffect(.degrees(slot.rotation))
+            .offset(x: offset.x * size.width, y: offset.y * size.height)
     }
 
     // MARK: - The wiggle
@@ -379,14 +486,21 @@ public struct HisploraEnvelope<Franking: View, Contents: View>: View {
     }
 }
 
-public extension HisploraEnvelope where Contents == EmptyView {
-    /// An envelope with nothing to draw out of it — the carousel's neighbours, and the empty state.
+public extension HisploraEnvelope where Back == EmptyView, Paper == EmptyView, Companion == EmptyView {
+    /// An envelope with nothing to draw out of it and nothing on its back — the carousel's
+    /// neighbours, and the empty state.
     init(
         stage: HisploraEnvelopeStage = .sealed,
         wiggles: Bool = false,
         @ViewBuilder franking: () -> Franking
     ) {
-        self.init(stage: stage, wiggles: wiggles, franking: franking) { EmptyView() }
+        self.init(stage: stage, wiggles: wiggles, franking: franking) {
+            EmptyView()
+        } paper: {
+            EmptyView()
+        } companion: {
+            EmptyView()
+        }
     }
 }
 
@@ -395,31 +509,89 @@ public extension HisploraEnvelope where Contents == EmptyView {
 /// testing without building a view to read them.
 public enum HisploraEnvelopeMetrics {
 
-    /// 290 × 173.999 in `511:1421`.
+    /// 290 × 173.999 in `511:1421`. `791:5549` redraws the same pocket at 339.814 × 202.714, which
+    /// is the same shape to within a percent — so the card keeps its ratio and the new frame's
+    /// numbers are converted against it below rather than the card being re-cut.
     public static let aspectRatio: CGFloat = 290.0 / 173.999
     /// The flap is 120.652 of the card's 173.999.
     public static let flapHeightRatio: CGFloat = 120.652 / 173.999
-    /// Where the pocket's lip falls. Below this line the body export is the front of the paper and
-    /// is drawn over whatever is coming out; above it, the reader is looking inside.
-    public static let pocketTopRatio: CGFloat = 0.56
+    /// Where the pocket's notch bottoms out, as a fraction of the card's height — the vertex of
+    /// the V the body export is cut with (220 of its 522 pixels).
+    ///
+    /// **Nothing masks anything by it any more.** It used to be the lip of a straight band cut out
+    /// of the body, which is what printed a horizontal seam across an open envelope; the export's
+    /// own alpha is the occlusion now. It is kept because it is where a tucked sheet stops being
+    /// visible, which is what the slot offsets below are set against.
+    public static let pocketNotchVertexRatio: CGFloat = 220.0 / 522.0
     /// The wax, 58 wide, struck at (117, 90) and 53.399 tall (`719:3292`). It ships on a square
     /// 58-point board with the wax centred on it, because `HisploraWaxSeal` fits a square — so the
     /// board's top edge is 2.3 above the wax's, and that is in the centre below.
     public static let sealSizeRatio: CGFloat = 58.0 / 290.0
     public static let sealCentre = CGPoint(x: (117 + 58.0 / 2) / 290.0,
                                            y: (90 + 53.399 / 2) / 173.999)
-    /// The page that comes out is narrower than the pocket that held it.
-    public static let pageWidthRatio: CGFloat = 0.62
-    /// How deep into the pocket the risen sheet's bottom edge stays, as a fraction of the pocket
-    /// band's own depth. How far the sheet stands *proud* is then whatever is left of it, which is
-    /// the right way round: a tall page rises further than a short one because there is more of it.
-    public static let pageGripRatio: CGFloat = 0.4
-    /// And where it settles while it zooms — nearer the middle, so a page at `zoomScale` stays on
-    /// the screen it is growing into.
-    public static let pageZoomRiseRatio: CGFloat = 0.16
-    /// And how much it grows on the last beat. `332:1252` sets the page at roughly twice the
-    /// envelope's own width by the end of the zoom.
-    public static let zoomScale: CGFloat = 2.1
+
+    /// A sheet is 172.5 wide against the pocket's 339.814 (`791:5595`).
+    public static let paperWidthRatio: CGFloat = 172.5 / 339.814
+    /// **The card's own shape, not the frame's crop of it.** `791:5595` cuts the sheet at
+    /// 172.5 × 113.5, which is the *head* of a 344 × 321 card — the export stops where the pocket
+    /// hides the rest. Drawn that way in the app the paper is a card with its picture and its
+    /// control sliced off, which is what a reader sees as "the asset is cut". The whole card is
+    /// drawn instead, at the card's own ratio, and the envelope hides whatever is still inside it —
+    /// the same object the modal opens, at a different size.
+    public static let paperAspectRatio: CGFloat =
+        HisploraJournalPaperMetrics.width / HisploraJournalPaperMetrics.height
+
+    /// Where each sheet sits, tucked and risen, as offsets from the card's own centre.
+    ///
+    /// Read off `791:5585` and `791:5533` and converted from the `open_letter` box — whose top is
+    /// the flap's tip — to the pocket, whose top-left is (0, 166.26) of that box and which is what
+    /// this view actually draws. The two sheets travel differently on purpose: the summary comes
+    /// nearly clear of the envelope and drifts left, the history rises about a quarter of the card
+    /// and stays put, which is what stops them reading as one object splitting in two.
+    public enum PaperSlot: String, Sendable, CaseIterable {
+        case summary
+        case history
+
+        /// The frame's own tilt, which each sheet keeps through its whole travel.
+        public var rotation: Double {
+            switch self {
+            case .summary: -5.64
+            case .history: 9.33
+            }
+        }
+
+        /// In the pocket, and peeking through the notch.
+        ///
+        /// **Re-authored against the V.** The old numbers put each sheet's head above a straight
+        /// band that no longer exists: the front is the whole cut envelope now, so what shows of a
+        /// tucked card is the strip standing above the wing it sits behind. Each sheet is a whole
+        /// card and the card is nearly square, so these are set from the card's own top edge rather
+        /// than converted out of the frame's crop.
+        public var tuckedOffset: CGPoint {
+            switch self {
+            case .summary: CGPoint(x: -0.17509, y: -0.02)
+            case .history: CGPoint(x: 0.21602, y: -0.04)
+            }
+        }
+
+        public var risenOffset: CGPoint {
+            switch self {
+            case .summary: CGPoint(x: -0.25454, y: -0.50)
+            case .history: CGPoint(x: 0.21602, y: -0.34)
+            }
+        }
+    }
+
+    /// And where the pair settles while it zooms — nearer the middle, so a sheet at `zoomScale`
+    /// stays on the screen it is growing into.
+    public static let pageZoomRiseRatio: CGFloat = 0.06
+    /// And how much they grow on the last beat, before the modal takes over (`791:5551`).
+    ///
+    /// Lower than the 2.1 a single page used to grow to, and lower again since each sheet became a
+    /// whole card rather than its head: two nearly-square cards spread across more than the
+    /// envelope's width, and anything larger walked them off the top and the sides of the screen
+    /// before the modal arrived.
+    public static let zoomScale: CGFloat = 1.3
 
     public static let bodyImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-body")
     public static let flapImage: Image? = HisploraWaxSealMetrics.image(named: "envelope-flap")

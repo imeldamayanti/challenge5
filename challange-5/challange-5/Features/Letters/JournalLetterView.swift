@@ -31,15 +31,28 @@ struct JournalLetterView: View {
     /// The shelf's own record of this walk — the hero picture and the franked stamps, which the
     /// summary model has no repository to look up.
     private let letter: SealedLetterPresentation
+    /// Which paper the reader opened the letter from (`791:5551`), and therefore where the page
+    /// starts.
+    ///
+    /// **The page is one page, not two.** The modal's two cards name two things a reader might have
+    /// come for — the walk, and the lore it unlocked — and both are already on this sheet, in that
+    /// order. Splitting it would mean two screens printing halves of the same set of snapshots, so
+    /// the history card scrolls to the first stop instead.
+    private let section: JournalPaperPresentation.Kind
     private let onClose: () -> Void
 
     init(model: RunSummaryViewModel,
          letter: SealedLetterPresentation,
+         section: JournalPaperPresentation.Kind = .summary,
          onClose: @escaping () -> Void) {
         self.model = model
         self.letter = letter
+        self.section = section
         self.onClose = onClose
     }
+
+    /// The anchor the history card scrolls to: the first stop, which is where the lore starts.
+    private var historyAnchor: String { "history" }
 
     /// The Run's language, never the app's. Switching the interface to English after finishing an
     /// Indonesian walk must not half-translate the page (`NFR-I18N-03`), and the snapshot only
@@ -53,11 +66,22 @@ struct JournalLetterView: View {
         // the packaged fonts and puts the palette in the environment.
         HisploraStage(ground: \.paperSheet, grain: true) {
             ZStack(alignment: .topTrailing) {
-                ScrollView {
-                    sheet
-                        .padding(.bottom, KultaraMetrics.xxl)
+                ScrollViewReader { scroll in
+                    ScrollView {
+                        sheet
+                            .padding(.bottom, KultaraMetrics.xxl)
+                    }
+                    .scrollIndicators(.hidden)
+                    .onAppear {
+                        guard section == .history else { return }
+                        // No animation: the reader asked for the lore, and watching the masthead
+                        // scroll past is the page answering a question they did not ask.
+                        //
+                        // Not `.top`: the sheet runs under the status bar, so a section landed
+                        // flush at the top of the viewport puts its heading under the clock.
+                        scroll.scrollTo(historyAnchor, anchor: UnitPoint(x: 0.5, y: 0.09))
+                    }
                 }
-                .scrollIndicators(.hidden)
                 // The paper runs under the status bar rather than stopping below it: a sheet that
                 // stops short of the top of the screen reads as a modal that failed to present.
                 // The sheet's own top padding is what keeps the words clear of the clock.
@@ -75,8 +99,12 @@ struct JournalLetterView: View {
             masthead
             if letter.heroImageURL != nil { hero }
             divider
-            ForEach(model.stops) { stop in
-                stopSection(stop)
+            ForEach(Array(model.stops.enumerated()), id: \.element.id) { index, stop in
+                if index == 0 {
+                    stopSection(stop).id(historyAnchor)
+                } else {
+                    stopSection(stop)
+                }
                 divider
             }
             stampsSection

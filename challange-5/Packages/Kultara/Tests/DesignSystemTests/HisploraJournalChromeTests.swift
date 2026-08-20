@@ -102,12 +102,12 @@ struct HisploraEnvelopeTests {
         #expect(HisploraEnvelopeSequence.wiggleInterval >= .seconds(3))
     }
 
-    @Test func thePocketLipFallsBelowTheFlapsHinge() {
-        // The page rises between the two: above the lip it is visible, below it the pocket's own
-        // paper is drawn over it. A lip above the flap's fold would show the page through the
-        // closed envelope.
-        #expect(HisploraEnvelopeMetrics.pocketTopRatio > 0)
-        #expect(HisploraEnvelopeMetrics.pocketTopRatio < HisploraEnvelopeMetrics.flapHeightRatio)
+    @Test func theNotchBottomsOutAboveTheFlapsFold() {
+        // The papers rise through the V the body is cut with. Its vertex sits above the flap's own
+        // fold, which is what lets a closed flap cover the notch completely.
+        #expect(HisploraEnvelopeMetrics.pocketNotchVertexRatio > 0)
+        #expect(HisploraEnvelopeMetrics.pocketNotchVertexRatio
+                < HisploraEnvelopeMetrics.flapHeightRatio)
     }
 
     @Test func theSealSitsInsideTheCard() {

@@ -17,6 +17,14 @@ struct SealedLetterPresentation: Sendable, Equatable, Identifiable {
     /// The stamps franked onto the pocket, in the order they were earned.
     let stamps: [StampPresentation]
     let heroImageURL: URL?
+    /// The two sheets this envelope holds (`791:5585`). Two rather than one as of the `791:*`
+    /// board, and built here rather than in the view for the reason everything else on this type
+    /// is: a card on a shelf is a value, and what is written on it is decided once.
+    let papers: [JournalPaperPresentation]
+    /// What is written on the back of the envelope (`791:5657`): a salutation, the walk's own
+    /// title, where it was walked and when. Four lines of decoration — the same facts are spoken
+    /// by `accessibilityLabel` and printed at full size on the papers.
+    let addressLines: [String]
     /// One spoken sentence for the whole card. A reader hears the walk, not "image, image, image".
     let accessibilityLabel: String
 
@@ -28,6 +36,8 @@ struct SealedLetterPresentation: Sendable, Equatable, Identifiable {
         isComplete: Bool,
         stamps: [StampPresentation],
         heroImageURL: URL?,
+        papers: [JournalPaperPresentation] = [],
+        addressLines: [String] = [],
         accessibilityLabel: String
     ) {
         self.id = id
@@ -37,6 +47,8 @@ struct SealedLetterPresentation: Sendable, Equatable, Identifiable {
         self.isComplete = isComplete
         self.stamps = stamps
         self.heroImageURL = heroImageURL
+        self.papers = papers
+        self.addressLines = addressLines
         self.accessibilityLabel = accessibilityLabel
     }
 }

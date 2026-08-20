@@ -20,8 +20,10 @@ struct SealedLettersView: View {
 
     private let model: SealedLettersViewModel
     let language: ContentLanguage
-    /// The walk an unsealed letter opens.
-    let onOpenRun: (UUID) -> Void
+    /// The letter whose papers an unsealed envelope hands over to — the modal `791:5551` draws.
+    /// Presented by the root rather than here, because the floating tab bar sits above this tab's
+    /// own content and a modal underneath it is not a modal.
+    let onOpenPapers: (UUID) -> Void
     /// The letter collections, which live in this tab (`FR-SIDE-08`) and are a museum screen.
     var collections: [(id: String, title: String)] = []
     var onOpenCollection: (String) -> Void = { _ in }
@@ -30,13 +32,13 @@ struct SealedLettersView: View {
         model: SealedLettersViewModel,
         language: ContentLanguage,
         collections: [(id: String, title: String)] = [],
-        onOpenRun: @escaping (UUID) -> Void,
+        onOpenPapers: @escaping (UUID) -> Void,
         onOpenCollection: @escaping (String) -> Void = { _ in }
     ) {
         self.model = model
         self.language = language
         self.collections = collections
-        self.onOpenRun = onOpenRun
+        self.onOpenPapers = onOpenPapers
         self.onOpenCollection = onOpenCollection
     }
 
@@ -53,8 +55,15 @@ struct SealedLettersView: View {
             }
             .padding(.bottom, KultaraMetrics.floatingTabBarClearance)
         }
-        .onAppear { model.reload() }
-        .onDisappear { model.cancelOpening() }
+        .onAppear {
+            model.reload()
+            // The sealed card turns itself over on a loop to show what is written on its back
+            // (`791:5637`). Never under Reduce Motion or VoiceOver — see `startFlipCycle`.
+            model.startFlipCycle(rendersImmediately: reduceMotion || voiceOverEnabled)
+        }
+        .onDisappear {
+            model.cancelOpening()
+        }
     }
 
     // MARK: - Header
@@ -140,9 +149,23 @@ struct SealedLettersView: View {
                             SealedLetterEnvelope(
                                 letter: letter,
                                 language: language,
-                                wiggles: index == model.selectedIndex && model.showsSwipeHint
+                                flip: index == model.selectedIndex ? model.flip : .front,
+                                // **The nudge runs on every sealed card, not only on a shelf worth
+                                // swiping.** It used to be gated on `showsSwipeHint`, which is
+                                // false while there is one letter — so the one walk a reader
+                                // finishes first sat perfectly still. The wiggle says *this is a
+                                // held object* as much as it says *swipe*, and it rides on top of
+                                // the turn rather than replacing it: the rock is the card's own
+                                // 2D lean, the turn is about its vertical axis.
+                                wiggles: index == model.selectedIndex && model.stage == .sealed
                                     && !reduceMotion && !voiceOverEnabled)
                                 .frame(width: cardWidth)
+                                // `791:5626` — "Tap envelope to open". The pill under the shelf
+                                // stays: it is the labelled control, and a tap on a picture is not
+                                // something VoiceOver announces on its own (`NFR-A11Y-05`).
+                                .onTapGesture {
+                                    if index == model.selectedIndex { unseal() }
+                                }
                                 // The centred card steps aside for the opening drawn over it, so
                                 // there is never a second copy of the same envelope on screen.
                                 .opacity(index == model.selectedIndex && isOpening ? 0 : 1)
@@ -155,8 +178,15 @@ struct SealedLettersView: View {
                         }
                     }
                     .scrollTargetLayout()
+                    // **The half-card gutter is padding, not a content margin.** As a
+                    // `contentMargins(_:for: .scrollContent)` the shelf drew its one envelope 42
+                    // points left of the middle — the margin moves the content but the resting
+                    // scroll offset is still taken from the content's own origin, so a shelf that
+                    // cannot scroll at all sat off-centre. Padding is part of the layout, so a
+                    // single card is centred by arithmetic rather than by where a scroll view
+                    // happens to come to rest.
+                    .padding(.horizontal, inset)
                 }
-                .contentMargins(.horizontal, inset, for: .scrollContent)
                 .scrollTargetBehavior(.viewAligned)
                 .scrollIndicators(.hidden)
                 .scrollDisabled(model.stage != .sealed)
@@ -174,6 +204,7 @@ struct SealedLettersView: View {
                         letter: letter,
                         language: language,
                         stage: model.stage,
+                        flip: model.flip,
                         sequence: sequence)
                         .frame(width: cardWidth)
                         .allowsHitTesting(false)
@@ -186,9 +217,15 @@ struct SealedLettersView: View {
         // animation against the stage being moved *to*, so the flap, the rise and the slow zoom no
         // longer share one 900ms ease.
         .animation(sequence.animation(of: model.stage), value: model.stage)
+        // The turn is its own sequence with its own beats, and it moves the whole card rather than
+        // anything inside it.
+        .animation(sequence.animation(ofFlip: model.flip), value: model.flip)
     }
 
     /// Whether the centred envelope is anywhere past closed.
+    ///
+    /// The turn is deliberately not part of this: a card turning over is still a sealed card on the
+    /// shelf, drawn by the carousel like every other one.
     private var isOpening: Bool { model.stage != .sealed }
 
     /// The timings this reader gets. Zero-length throughout under Reduce Motion or VoiceOver, where
@@ -203,7 +240,7 @@ struct SealedLettersView: View {
         #if canImport(UIKit)
         UIImpactFeedbackGenerator(style: .rigid).impactOccurred()
         #endif
-        model.unseal(rendersImmediately: reduceMotion || voiceOverEnabled, onFinish: onOpenRun)
+        model.unseal(rendersImmediately: reduceMotion || voiceOverEnabled, onFinish: onOpenPapers)
     }
 
     // MARK: - Nothing on the shelf yet

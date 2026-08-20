@@ -344,6 +344,22 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// not something VoiceOver can read (`NFR-A11Y-05`).
     case journalSwipeHint
     case journalCollectionsAction
+    /// What is written on the back of the envelope (`791:5657`), above the walk's own title, place
+    /// and date — the only line of the address that is not the walk's own data.
+    case journalEnvelopeSalutation
+
+    // Journal — the two papers inside the envelope (Figma `791:5568`, `791:5814`, `791:5551`)
+    case journalPaperSummaryEyebrow
+    /// Takes the quest's region: "Your journey through Badung".
+    case journalPaperSummaryTitle
+    case journalPaperSummaryAction
+    case journalPaperHistoryEyebrow
+    /// Takes the quest's region: "The Last Tales of Badung".
+    case journalPaperHistoryTitle
+    case journalPaperHistoryAction
+    /// The modal's close control, which is drawn as a cross and therefore has to be named
+    /// (`NFR-A11Y-05`).
+    case journalPapersClose
 
     // Profile — the Explorer's Card (Figma `547:2724`)
     case profileHeading

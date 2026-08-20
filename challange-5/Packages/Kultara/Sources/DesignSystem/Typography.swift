@@ -57,6 +57,15 @@ public enum KultaraTypography {
         /// The place name a story-flow screen carries in its top bar (`452:3136`), where the frame
         /// sets the serif rather than the sans the other bars use.
         case storyBarTitle
+        /// The title on the Journal's paper cards (`791:5572`, `791:5818`) — "Your journey through
+        /// Badung", "The Last Tales of Badung".
+        ///
+        /// New York Regular at 26.25, which is neither `storySection` (25, medium) nor
+        /// `onboardingDisplay` (30, regular): the frames set this one lighter than the first and
+        /// smaller than the second, and it is the masthead of an object rather than of a screen.
+        /// Its own role for the reason every other one is — one place decides what a piece of type
+        /// is, rather than a `.system(size:)` call inside a card.
+        case journalPaperTitle
         /// The hook typed onto the sheet in the typewriter (`81:588`).
         case typedSheet
         /// The two figures ruled beneath it: the distance and the duration.
@@ -86,7 +95,7 @@ public enum KultaraTypography {
             case .storyDisplay: .largeTitle
             // 25 and 17 as drawn; `.title2` and `.title3` are the two system styles those sit
             // between, and a text style is what makes them scale at all (`NFR-A11Y-01`).
-            case .storySection, .storyTaskTitle: .title2
+            case .storySection, .storyTaskTitle, .journalPaperTitle: .title2
             case .onboardingDisplay: .title
             case .storyPlaceMark, .storyBarTitle: .title3
             case .typedSheet: .footnote
@@ -106,7 +115,7 @@ public enum KultaraTypography {
             // Special Elite ships in one weight, and New York's display cut is drawn light on
             // purpose — the frames set both regular.
             case .storyDisplay, .typedSheet, .typedFigure, .storyBarTitle,
-                 .onboardingDisplay: .regular
+                 .onboardingDisplay, .journalPaperTitle: .regular
             // The three weights `452:3174`, `447:1896` and `447:1906` are drawn in. New York is
             // the system's own serif and ships every weight, so unlike Instrument Serif these are
             // real cuts rather than a synthesised smear.
@@ -127,7 +136,7 @@ public enum KultaraTypography {
             switch self {
             case .questTitleLarge, .questTitle, .sectionHeading: .serif
             case .storyDisplay, .storySection, .storyTaskTitle, .storyPlaceMark,
-                 .storyBarTitle, .onboardingDisplay: .displaySerif
+                 .storyBarTitle, .onboardingDisplay, .journalPaperTitle: .displaySerif
             case .typedSheet, .typedFigure: .typewriter
             default: .sans
             }
@@ -154,6 +163,7 @@ public enum KultaraTypography {
             case .storyDisplay: 38
             case .onboardingDisplay: 30
             case .storySection, .storyTaskTitle: 25
+            case .journalPaperTitle: 26
             case .storyPlaceMark, .storyBarTitle: 17
             // The frame types the sheet at 8.5 pt, because on the frame the sheet is a small
             // object inside a photograph. Reproduced literally it is unreadable, so the sheet is
@@ -184,6 +194,9 @@ public enum KultaraTypography {
             // The onboarding frames set the 30-point title untracked, unlike the 38-point display.
             case .onboardingDisplay: 0
             case .storySection, .storyTaskTitle: -0.5
+            // -0.7875 as drawn, at 26.25. Kept as the frame's own ratio rather than rounded to the
+            // neighbouring roles' -0.5.
+            case .journalPaperTitle: -0.79
             case .storyPlaceMark: -0.34
             case .storyBarTitle: -0.38
             case .typedSheet, .typedFigure: -0.34
@@ -229,6 +242,8 @@ public enum KultaraTypography {
             case .storyDisplay: -3
             case .onboardingDisplay: -2
             case .storySection, .storyTaskTitle, .storyPlaceMark, .storyBarTitle: -1
+            // The frames set this one solid — `leading-none`, a line box the height of the type.
+            case .journalPaperTitle: -3
             // 1.4 line height on the frame's sheet, which at this size is a few points of air.
             case .typedSheet: 3
             default: 0

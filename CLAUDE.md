@@ -571,6 +571,53 @@ auto-advancing and the login carrying a "Skip for now".
   touched first, and each row resumes its walk (`profileRunDestination`, the third `RunDestination`
   in `KultaraRootView`). Sidequests keep their own surfaces — the collection in the Journal and the
   nearby list. `ActivityPresentation` is now `InProgressQuestPresentation`.
+- **The Journal's envelope turns itself over, holds two papers, and hands over to a modal.**
+  Four frames from the New Hisplora board landed 2026-08-20: `791:5637` (the flip), `791:5585` (the
+  open envelope with both sheets), `791:5533` (the sheets rising) and `791:5551` (the modal). Five
+  things about it are load-bearing:
+  - **The franking moved to the back.** The sealed card on the shelf is bare paper and a wax seal
+    (`791:5601`); the stamps and the handwritten address are on the other side, which is what the
+    idle turn exists to show. Drawing them on both faces would make the turn say nothing.
+  - **Tapping open mid-turn returns the card to its front first.** The designer's rule, and not a
+    nicety: the flap and the wax are drawn on the front, so an opening that started on the back
+    would swing a flap the reader cannot see. `HisploraEnvelopeFlip.returningToFront` is the
+    shortest way home from each of the four beats, and `unseal` awaits it before the first beat of
+    the opening.
+  - **Reduce Motion stops the turn rather than collapsing it.** Every other sequence here runs its
+    beats in zero time so the screen still arrives where it was going; an idle turn has nowhere to
+    arrive, and collapsed to a cut it is a card that snaps to its back and stays there.
+  - **The back needs no new export.** It is `envelope-inner` at 180° and nothing else — drawing
+    `envelope-body` as well printed the pocket's flap cutout as a bright trapezoid across the
+    address.
+  - **An open envelope is the whole body export, not a band cut out of it.** The export carries the
+    pocket's own V — two wings to the top corners, a notch between them — so drawn whole it is what
+    a real envelope shows with its flap off the front, and the papers are occluded by its alpha.
+    Masking it to a straight band, which is what shipped first, printed a horizontal seam no
+    envelope has. `pocketTopRatio` is gone; `pocketNotchVertexRatio` describes the notch instead.
+    The open flap is drawn shaded (`brightness(-0.14)`), because past the fold the reader is looking
+    at its back.
+  - **The sheets in the pocket are whole `HisploraJournalPaperCard`s.** `791:5595`'s 172.5 × 113.5
+    is the *head* of a 344 × 321 card — the export stops where the pocket covers the sheet — so
+    cropping the view there too shipped a card with its picture and its control sliced off, visibly
+    so the moment the sheets rose clear. The envelope hides the rest, which is the pocket's job.
+  - **The shelf's gutter is padding, not a content margin.** As
+    `contentMargins(_:for: .scrollContent)` the one envelope sat 42 points left of centre: the
+    margin moves the content, the resting offset is still taken from the content's origin, and a
+    shelf with one card cannot scroll to correct it.
+  - **The sealed card's nudge is not gated on there being a shelf worth swiping.** It was gated on
+    `showsSwipeHint` (false with one letter), so the first walk a reader finished sat still. The
+    rock and the turn ride on top of each other — one is 2D, the other is about the vertical axis.
+  - **`clipped()` clips drawing, not touches.** The paper cards' torn sheet is drawn far larger than
+    the card, and the second card's copy of it swallowed every tap meant for the first card's
+    button — "Read Summary" did nothing while "Read History" worked. Decorative layers in
+    `HisploraJournalCard.swift` are `allowsHitTesting(false)`; a new one that forgets will
+    reintroduce the same defect.
+  The two papers are drawn, never exported: `JournalPaperPresentation` carries the eyebrow, the
+  title, the action and an artwork *name*, so a walk's own snapshots name it (`AD-4`, `FR-RUN-06`).
+  The two shipped artworks (`journal-summary-emblem`, `journal-history-plate`) are defaults in a
+  table in the app target, the same debt `StampArtworkResolver`'s place table is — and the history
+  plate is a photograph of a real painting with **no provenance recorded**, which is a content
+  decision with an owner before anything public.
 - **Unsealing a letter no longer redirects.** It used to push `runScreen`, which for a finished
   walk lands on the museum-catalogue summary — a second visual direction with a navigation bar,
   reached by an animation that had just spent four seconds saying *this is a letter*.

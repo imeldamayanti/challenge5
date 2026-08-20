@@ -62,6 +62,13 @@ public struct HisploraPalette: Sendable, Equatable {
     /// is a translucency over "whatever is behind it" is not a pair anyone measured. The flattened
     /// value is exactly what the frame composites to on this screen's one ground.
     public let trackDim: SRGBColor
+    /// The stock the Journal's two paper cards are printed on (`791:5568`, `791:5814`) — the sheets
+    /// that come out of the envelope and are read in the modal.
+    ///
+    /// Its own token rather than `paperLight` rounded to: the card is a torn sheet photographed
+    /// over a dark scrim, and the two creams sit on the same screen the moment a card is drawn
+    /// over the shelf. `#F5F1E5` is the frame's fill and this is where it is written down.
+    public let paperCard: SRGBColor
     /// The site-map screen's ground (`452:3028`). The only screen in the story flow that is not on
     /// a brown: the plan is a document, and the frame lays it on paper rather than on earth.
     public let mapGround: SRGBColor
@@ -103,6 +110,7 @@ public struct HisploraPalette: Sendable, Equatable {
         inkTicket: SRGBColor,
         trackWell: SRGBColor,
         trackDim: SRGBColor,
+        paperCard: SRGBColor,
         mapGround: SRGBColor,
         mapMarker: SRGBColor,
         inkCream: SRGBColor,
@@ -126,6 +134,7 @@ public struct HisploraPalette: Sendable, Equatable {
         self.inkTicket = inkTicket
         self.trackWell = trackWell
         self.trackDim = trackDim
+        self.paperCard = paperCard
         self.mapGround = mapGround
         self.mapMarker = mapMarker
         self.inkCream = inkCream
@@ -166,6 +175,7 @@ public struct HisploraPalette: Sendable, Equatable {
         inkTicket: SRGBColor(hex: "#34312E"),
         trackWell: SRGBColor(hex: "#8D7870"),     // 3.36:1 against a filled segment
         trackDim: SRGBColor(hex: "#926954"),      // 4.33:1 against a filled segment
+        paperCard: SRGBColor(hex: "#F5F1E5"),     // 15.02:1 under inkDark, 8.02:1 under brownMid
         mapGround: SRGBColor(hex: "#DFCDB5"),     // 11.95:1 under buttonFill
         mapMarker: SRGBColor(hex: "#B44934"),     // 4.31:1 on paperCream, 3.43:1 on mapGround
         inkCream: SRGBColor(hex: "#FDF2DE"),      // 9.63:1 on brownDeep, 8.11:1 on brownStone
@@ -182,7 +192,7 @@ public struct HisploraPalette: Sendable, Equatable {
         [("brownDeep", brownDeep), ("brownMid", brownMid), ("brownStone", brownStone),
          ("paperCream", paperCream), ("paperWarm", paperWarm), ("paperLight", paperLight),
          ("paperTicket", paperTicket), ("inkTicket", inkTicket),
-         ("trackWell", trackWell), ("trackDim", trackDim),
+         ("trackWell", trackWell), ("trackDim", trackDim), ("paperCard", paperCard),
          ("mapGround", mapGround), ("mapMarker", mapMarker),
          ("inkCream", inkCream), ("inkDusty", inkDusty),
          ("inkDark", inkDark), ("inkBody", inkBody), ("inkMuted", inkMuted),
@@ -212,7 +222,8 @@ public struct HisploraPalette: Sendable, Equatable {
 
         // Type on the four papers.
         for (name, paper) in [("paperCream", paperCream), ("paperWarm", paperWarm),
-                              ("paperLight", paperLight), ("paperSheet", paperSheet)] {
+                              ("paperLight", paperLight), ("paperSheet", paperSheet),
+                              ("paperCard", paperCard)] {
             pairs.append(ContrastPair(label: "inkDark on \(name)",
                                       foreground: inkDark, background: paper,
                                       requirement: .bodyText))
@@ -272,6 +283,15 @@ public struct HisploraPalette: Sendable, Equatable {
         // packaged art's own darker end, which is the conservative direction for both.
         pairs.append(ContrastPair(label: "brownMid on paperCream",
                                   foreground: brownMid, background: paperCream,
+                                  requirement: .bodyText))
+
+        // The Journal's paper card (`791:5568`): the eyebrow over its title is set in `brownMid`,
+        // and the card's one control is the near-black pill printed on the same sheet.
+        pairs.append(ContrastPair(label: "brownMid on paperCard",
+                                  foreground: brownMid, background: paperCard,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "buttonFill on paperCard",
+                                  foreground: buttonFill, background: paperCard,
                                   requirement: .bodyText))
 
         // The filled control: its label, and its boundary against the ground it sits on.
