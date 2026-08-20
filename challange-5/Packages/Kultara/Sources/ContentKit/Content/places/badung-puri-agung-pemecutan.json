@@ -112,6 +112,11 @@
       "kind": "documented",
       "citation": "BELUM DIVERIFIKASI — Denah tapak Puri Agung Pemecutan. Gambar ini ilustrasi hasil generasi, bukan survei: jarak, jumlah bangunan dan posisi gerbang di dalamnya belum diukur di lapangan dan belum dicocokkan dengan sumber pustaka mana pun.",
       "url": null
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Peta jalan sekitar Puri Agung Pemecutan. Gambar ini ilustrasi, bukan survei: nama jalan, arah dan jarak di dalamnya belum dicocokkan di lapangan maupun dengan sumber peta mana pun.",
+      "url": null
     }
   ],
   "consentRecordId": "badung-puri-agung-pemecutan",
@@ -123,5 +128,10 @@
     "asset": "places/badung-puri-agung-pemecutan/site-map.png",
     "aspectRatio": 1.1247,
     "sourceRef": 2
+  },
+  "approachMap": {
+    "asset": "places/badung-puri-agung-pemecutan/approach-map.png",
+    "aspectRatio": 1.5869,
+    "sourceRef": 3
   }
 }

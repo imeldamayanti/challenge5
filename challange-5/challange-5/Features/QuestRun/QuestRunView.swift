@@ -128,7 +128,24 @@ struct QuestRunView: View {
             questTitle: model.questTitle,
             onContinue: { model.advanceFromLocationVerified() },
             onBack: { dismiss() },
-            map: { routeMap })
+            map: { locationVerifiedMap })
+    }
+
+    /// What fills the parchment on `1:4458`: the checkpoint's own authored approach map where the
+    /// content tree ships one, and the run's projected route everywhere else.
+    ///
+    /// The fallback is not a placeholder — `RunRouteMapView` is what this slot drew before any Place
+    /// carried an approach map, and only `badung-puri-agung-pemecutan` carries one today. A drawing
+    /// of one checkpoint's streets shown at every checkpoint would be the screen asserting the walker
+    /// is somewhere they are not.
+    @ViewBuilder private var locationVerifiedMap: some View {
+        if let checkpoint = model.checkpoint, let approachMap = checkpoint.approachMap {
+            ApproachMapView(language: language,
+                            placeName: checkpoint.placeName,
+                            approachMap: approachMap)
+        } else {
+            routeMap
+        }
     }
 
     private var cutsceneIntro: some View {

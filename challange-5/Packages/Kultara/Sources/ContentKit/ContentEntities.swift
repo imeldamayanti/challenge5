@@ -170,6 +170,35 @@ public struct PlaceSiteMap: Codable, Sendable, Equatable, Hashable {
     }
 }
 
+/// The drawn map of the streets *around* a Place — the map on the "Location Verified" screen
+/// (`1:4458`), shown the moment a walker's fix lands at that checkpoint.
+///
+/// Same three fields as `PlaceSiteMap` and a separate type on purpose: a site plan is the inside of
+/// the grounds and an approach map is the outside of them, and a Place can honestly carry one
+/// without the other. Merging them would make the two screens fight over one asset.
+///
+/// **It carries a `sourceRef` for the same reason `PlaceSiteMap` does.** A street map is not
+/// decoration — it names real roads and asserts how they meet, which is a claim about a real place,
+/// so `FR-CP-05` applies. The screen prints the citation under the drawing, so an unsurveyed map
+/// whose citation begins `BELUM DIVERIFIKASI` says so where the walker can read it.
+///
+/// It is *not* a live map tile: the asset ships in the content bundle and renders in airplane mode,
+/// which is what `FR-MAP-01`/`FR-OFF-03` actually forbid the alternative of.
+public struct PlaceApproachMap: Codable, Sendable, Equatable, Hashable {
+    /// Path within the content bundle's `assets/`, checked by validator rule V14.
+    public let asset: String
+    /// Width ÷ height of the image, so the screen reserves the right space before decoding it.
+    public let aspectRatio: Double
+    /// Index into the owning Place's `sources`, checked by validator rule V3.
+    public let sourceRef: Int
+
+    public init(asset: String, aspectRatio: Double, sourceRef: Int) {
+        self.asset = asset
+        self.aspectRatio = aspectRatio
+        self.sourceRef = sourceRef
+    }
+}
+
 public struct Place: Codable, Sendable, Equatable, Identifiable {
     public let id: String
     /// `NFR-I18N-04` — a Place name renders in its official local form in both languages.
@@ -194,6 +223,9 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
     /// The drawn plan of these grounds, when content ships one. Optional because most Places will
     /// never have one — a market floor and a road junction are not buildings with a plan.
     public let siteMap: PlaceSiteMap?
+    /// The drawn map of the streets around these grounds, when content ships one. Optional for the
+    /// same reason `siteMap` is: most Places will never have one drawn.
+    public let approachMap: PlaceApproachMap?
 
     public init(
         id: String,
@@ -213,7 +245,8 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         sources: [Source],
         consentRecordId: String,
         mapPoint: MapPoint? = nil,
-        siteMap: PlaceSiteMap? = nil
+        siteMap: PlaceSiteMap? = nil,
+        approachMap: PlaceApproachMap? = nil
     ) {
         self.id = id
         self.nameOfficial = nameOfficial
@@ -233,6 +266,7 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         self.consentRecordId = consentRecordId
         self.mapPoint = mapPoint
         self.siteMap = siteMap
+        self.approachMap = approachMap
     }
 
     public init(from decoder: any Decoder) throws {
@@ -255,6 +289,7 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         consentRecordId = try c.decode(String.self, forKey: .consentRecordId)
         mapPoint = try c.decodeIfPresent(MapPoint.self, forKey: .mapPoint)
         siteMap = try c.decodeIfPresent(PlaceSiteMap.self, forKey: .siteMap)
+        approachMap = try c.decodeIfPresent(PlaceApproachMap.self, forKey: .approachMap)
     }
 }
 

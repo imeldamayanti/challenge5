@@ -27,3 +27,17 @@ struct SiteMapMarker: Sendable, Equatable, Identifiable {
     let x: Double
     let y: Double
 }
+
+/// The drawn map of the streets around a Place, resolved for the Location Verified screen
+/// (`1:4458`).
+///
+/// The citation rides with the image for the same reason it does on `SiteMapPresentation`: a street
+/// map names real roads and asserts how they meet, so `FR-CP-05` treats it as a claim, and a screen
+/// that has the drawing necessarily has the words about it.
+struct ApproachMapPresentation: Sendable, Equatable {
+    let imageURL: URL?
+    let aspectRatio: Double
+    /// The Place's own `Source.citation` for the map. Today's shipped map is an illustration and its
+    /// citation says so, beginning `BELUM DIVERIFIKASI`.
+    let citation: String
+}

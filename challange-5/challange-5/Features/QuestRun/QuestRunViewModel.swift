@@ -912,7 +912,8 @@ final class QuestRunViewModel {
             coordinate: place?.coordinate ?? Coordinate(lat: 0, lon: 0),
             arrivalRadiusM: place?.arrivalRadiusM ?? 75,
             isFinal: checkpoint.orderIndex == (orderedCheckpoints.last?.orderIndex ?? 0),
-            siteMap: place.flatMap(siteMap(for:)))
+            siteMap: place.flatMap(siteMap(for:)),
+            approachMap: place.flatMap(approachMap(for:)))
     }
 
     /// The Place's drawn plan, with its citation resolved (`452:3028`).
@@ -935,5 +936,20 @@ final class QuestRunViewModel {
             // where three things stand inside a real puri — which is precisely the claim the
             // citation above exists to qualify. Empty until content carries them.
             markers: [])
+    }
+
+    /// The Place's drawn approach map, with its citation resolved (`1:4458`).
+    ///
+    /// Nil rather than a map with an empty citation when the `sourceRef` does not resolve — the same
+    /// runtime half of V3 that `siteMap(for:)` above applies, and for the same reason: a drawing that
+    /// names real streets must not reach a walker with nothing said about where it came from.
+    private func approachMap(for place: Place) -> ApproachMapPresentation? {
+        guard let authored = place.approachMap,
+              place.sources.indices.contains(authored.sourceRef)
+        else { return nil }
+        return ApproachMapPresentation(
+            imageURL: (try? repository.assetURL(authored.asset)) ?? nil,
+            aspectRatio: authored.aspectRatio,
+            citation: place.sources[authored.sourceRef].citation)
     }
 }

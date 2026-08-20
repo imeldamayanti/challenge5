@@ -125,6 +125,10 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case locationVerifiedTitle
     case locationVerifiedBody
     case locationVerifiedContinue
+    /// The heading over the approach map's citation on `1:4458`.
+    case locationVerifiedMapSourceHeading
+    /// The approach map's accessibility label. One `%@`: the place's name.
+    case locationVerifiedMapAccessibility
     case locationNotThereTitle
     case locationNotThereBody
     case locationNotThereBack

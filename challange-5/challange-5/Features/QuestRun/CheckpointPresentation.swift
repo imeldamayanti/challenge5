@@ -36,4 +36,9 @@ struct CheckpointPresentation: Sendable, Equatable, Identifiable {
     /// are a temple wall, a market floor, a road junction and a museum — none of which the content
     /// tree carries a plan for, and none of which should show an empty frame where one would be.
     let siteMap: SiteMapPresentation?
+    /// The drawn map of the streets around these grounds, when the Place ships one (`1:4458`). Nil
+    /// for every stop the content tree carries no approach map for — the Location Verified screen
+    /// then falls back to the run's own projected route, which is what it drew before any place had
+    /// one.
+    let approachMap: ApproachMapPresentation?
 }

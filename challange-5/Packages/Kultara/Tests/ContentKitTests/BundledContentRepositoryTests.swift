@@ -61,8 +61,10 @@ struct BundledContentRepositoryTests {
         // Puri Agung Pemecutan's site plan and the third source that cites it (`452:3028`),
         // `2026.09.3` the sixth place and its sidequest, and `2026.09.4` replaced the region map
         // with the wide illustrated island of `275:2309` and re-authored every `mapPoint` onto it.
+        // `2026.09.6` added Puri Agung Pemecutan's approach map — the street drawing on `1:4458` —
+        // and the fourth source that cites it.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.4")
+        #expect(try repository.contentBundleVersion() == "2026.09.6")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)

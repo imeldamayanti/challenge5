@@ -154,10 +154,11 @@ struct LocationClueCard: View {
 ///
 /// Two deviations from the frame, both recorded rather than resolved by dropping something:
 ///
-/// - **The map is drawn, not photographed.** The frame pastes a street-map screenshot with three
-///   pins on it. `FR-MAP-01`/`FR-OFF-03` rule out map imagery, so what fills the slot is the same
-///   `RunRouteMapView` canvas the arrival screen uses — the caller passes it in, so this file keeps
-///   knowing nothing about routes.
+/// - **The map is authored, not photographed.** The frame pastes a street-map screenshot with three
+///   pins on it. `FR-MAP-01`/`FR-OFF-03` rule out live map imagery, not a bundled picture — so what
+///   fills the slot is the checkpoint's own `Place.approachMap` where content ships one
+///   (`ApproachMapView`, citation and all), and `RunRouteMapView`'s projected canvas everywhere
+///   else. The caller passes whichever, so this file keeps knowing nothing about routes or places.
 /// - **The scroll is the packaged parchment**, `HisploraParchmentSheet`. The frame draws a rod-and-
 ///   sheet scroll that ships nowhere in this project; the parchment is the same object drawn the
 ///   way the design system already draws it, and swapping in a real export is a change to that one
