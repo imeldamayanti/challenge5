@@ -250,6 +250,8 @@ struct LocationClueCard: View {
 ///   differences are visible at a glance, which is why the stand-in did not survive.
 struct LocationVerifiedScreen<MapContent: View>: View {
     @Environment(\.hisploraPalette) private var palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     let language: ContentLanguage
     /// The quest's title, for the header. Content, never a literal (`AD-4`, `FR-RUN-06`).
@@ -259,6 +261,17 @@ struct LocationVerifiedScreen<MapContent: View>: View {
     /// is already written (`FR-RUN-01`).
     let onBack: () -> Void
     @ViewBuilder let map: MapContent
+
+    /// Set on the first layout: the scroll arrives rolled shut and opens itself.
+    ///
+    /// The walk has already been recorded by the time this screen draws (`FR-RUN-01`), so nothing
+    /// waits on the movement — the Continue is live from the first frame and a walker who taps
+    /// through it loses nothing. Under Reduce Motion or VoiceOver the scroll is simply open: an
+    /// unrolling scroll says the same thing the heading above it already says in words
+    /// (`NFR-A11Y-05`).
+    @State private var isUnrolled = false
+
+    private var rendersOpenImmediately: Bool { reduceMotion || voiceOverEnabled }
 
     var body: some View {
         HisploraStage(ground: \.brownStone) {
@@ -277,7 +290,13 @@ struct LocationVerifiedScreen<MapContent: View>: View {
                         // lead genuinely wraps to three lines — so the gap closes to nothing and
                         // no further.
                         Spacer(minLength: 0)
-                        HisploraMapScroll { map }
+                        HisploraMapScroll(
+                            openFraction: isUnrolled || rendersOpenImmediately ? 1 : 0
+                        ) { map }
+                            .animation(
+                                reduceMotion ? nil
+                                    : .easeInOut(duration: HisploraMapScrollMetrics.openDuration),
+                                value: isUnrolled)
                             // The scroll runs x −19…420 on a 402-point screen while this column is
                             // the frame's 362. Escaping by the column's margin plus the bleed is
                             // what gets it to its drawn width; clipping it to the column would put
@@ -301,6 +320,7 @@ struct LocationVerifiedScreen<MapContent: View>: View {
                     .padding(.horizontal, 20)
                     .padding(.bottom, 30)
             }
+            .onAppear { isUnrolled = true }
         }
     }
 

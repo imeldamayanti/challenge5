@@ -73,7 +73,7 @@ struct TaskDetailScreen: View {
     let onOpenSiteMap: () -> Void
     let onBack: () -> Void
 
-    private static let margin: CGFloat = 20
+    private static let margin: CGFloat = TaskSheetLayout.margin
 
     var body: some View {
         HisploraStage(ground: \.brownStone) {
@@ -83,14 +83,14 @@ struct TaskDetailScreen: View {
             // sheet.
             VStack(spacing: 0) {
                 titleBar
-                // `447:1903` is a 4-point bar in a box padded 20, sitting at y = 114 under a
-                // title box ending at 108.
-                Spacer(minLength: 6)
+                // Every gap here is `TaskSheetLayout`'s, because the transition screen unrolls its
+                // parchment onto the same numbers — see that type for why the two must agree.
+                Spacer(minLength: TaskSheetLayout.titleToProgress)
                 progressBar
                 ScrollView {
                     VStack(spacing: 0) {
                         // The sheet is drawn at y = 190, 62 under the bar's box.
-                        Spacer(minLength: 62)
+                        Spacer(minLength: TaskSheetLayout.sheetTop)
                         sheet
                     }
                     .padding(.bottom, KultaraMetrics.xl)
@@ -143,7 +143,12 @@ struct TaskDetailScreen: View {
                 .padding(.horizontal, KultaraMetrics.minimumTapTarget + KultaraMetrics.sm)
                 .accessibilityAddTraits(.isHeader)
         }
-        .padding(.top, 13)
+        // Pinned rather than left to size itself: the row's height is one of the terms in
+        // `TaskSheetLayout.sheetTopInset`, and a row that grows by a point puts the transition's
+        // parchment a point off the sheet it hands over to. 44 is what the back arrow's tap target
+        // already makes it (`NFR-A11Y-06`).
+        .frame(height: TaskSheetLayout.titleBarHeight)
+        .padding(.top, TaskSheetLayout.titleBarTop)
     }
 
     @ViewBuilder private var heroCircle: some View {
@@ -176,7 +181,10 @@ struct TaskDetailScreen: View {
             total: Double(max(totalTasks, 1)))
             .progressViewStyle(.linear)
             .tint(palette.inkOnButton.color)
-            .padding(.vertical, 20)
+            // The frame's own 4 points, stated rather than inherited from the style's intrinsic
+            // height — same reason the title row above is pinned.
+            .frame(height: TaskSheetLayout.progressBarHeight)
+            .padding(.vertical, TaskSheetLayout.progressBarPadding)
             .accessibilityLabel(
                 String(format: UIStrings.string(.checkpointDetailProgressLabel, language),
                        completedTasks, totalTasks))

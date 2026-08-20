@@ -322,8 +322,17 @@ struct StoryRevealScreen: View {
 /// the whole screen is a real `Button` so VoiceOver reaches it as a control instead of as a picture
 /// with a caption, and its accessibility label names the place being walked to, which is the one
 /// thing the drawn screen leaves to the reader's memory.
+///
+/// **The tap opens it, and the opening is the transition.** `verticalscroll2.mp4` — the designer's
+/// render of this object — turns the tied roll level, loses the ribbon, and unrolls it into the
+/// parchment the task sheet is printed on. That is exactly the seam this screen is: `1:4586` on one
+/// side, `1:4711` on the other. So the sequence plays here and the screen hands over at the end of
+/// it, on the beat where the sheet is open and the page behind it is the same paper at the same
+/// width (`HisploraScrollUnsealStage`).
 struct StoryTransitionScreen: View {
     @Environment(\.hisploraPalette) private var palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     let language: ContentLanguage
     /// The place being walked to, from content. Not drawn — it is what VoiceOver is told this
@@ -331,48 +340,122 @@ struct StoryTransitionScreen: View {
     let placeName: String
     let onContinue: () -> Void
 
+    @State private var stage: HisploraScrollUnsealStage = .sealed
+
+    private var sequence: HisploraScrollUnsealSequence {
+        HisploraScrollUnsealSequence(rendersImmediately: reduceMotion || voiceOverEnabled)
+    }
+
     var body: some View {
         HisploraStage(ground: \.brownStone) {
-            Button(action: onContinue) {
-                VStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    scroll
-                    Spacer(minLength: 0)
-                    Text(UIStrings.string(.transitionTapToReveal, language))
-                        .font(.system(size: 17))
-                        .tracking(-0.34)
-                        .foregroundStyle(palette.inkDusty.color)
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
-                        // 788 of 874, which is 52 above the home indicator's own room.
-                        .padding(.bottom, 52)
+            Button(action: unseal) {
+                GeometryReader { proxy in
+                    let box = TaskSheetLayout.sheetBox(inStageOfHeight: proxy.size.height)
+                    ZStack(alignment: .top) {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: 0)
+                            Text(UIStrings.string(.transitionTapToReveal, language))
+                                .font(.system(size: 17))
+                                .tracking(-0.34)
+                                .foregroundStyle(palette.inkDusty.color)
+                                .multilineTextAlignment(.center)
+                                .fixedSize(horizontal: false, vertical: true)
+                                // The words are an instruction for a tap that has already happened.
+                                .opacity(stage == .sealed ? 1 : 0)
+                                // 788 of 874, which is 52 above the home indicator's own room.
+                                .padding(.bottom, 52)
+                        }
+                        .frame(maxWidth: .infinity)
+
+                        scroll(restingOffset: proxy.size.height / 2 - (box.top + box.height / 2))
+                            .frame(width: proxy.size.width - TaskSheetLayout.margin * 2,
+                                   height: box.height)
+                            .offset(y: box.top)
+                    }
+                    .frame(width: proxy.size.width, height: proxy.size.height)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            // One tap opens one scroll. A second one mid-sequence would start a second run of it and
+            // hand over twice.
+            //
+            // `allowsHitTesting` rather than `disabled`: a disabled button draws its label dimmed,
+            // and the label here is the whole opening — the parchment came off its rolls in a
+            // washed-out brown instead of cream, which reads as a rendering fault rather than as a
+            // control that is busy.
+            .allowsHitTesting(stage == .sealed)
             .accessibilityLabel(
                 "\(UIStrings.string(.transitionTapToReveal, language)) · \(placeName)")
         }
     }
 
-    /// `293:1599` — the scroll at its own size, then turned. See `TransitionScrollMetrics` for why
-    /// the turn is applied here rather than baked into the PNG.
+    /// Runs the beats, then hands over.
     ///
-    /// `rotationEffect` does not resize what it turns, so the layout still reserves the upright
-    /// picture's 264 × 252 rather than the turned 365 × 364 the frame draws. That is left alone
-    /// deliberately: the screen centres the scroll between two `Spacer`s on a 874-point ground, the
-    /// overflow is 56 points on each side, and there is far more slack than that above the caption.
-    /// Reserving the turned box would mean laying out against a size that changes with the angle.
-    @ViewBuilder private var scroll: some View {
+    /// Under Reduce Motion or VoiceOver every beat is zero-length, so this is the tap going straight
+    /// through to the task sheet — which is where it was going. The sequence is a door, not content
+    /// (`HisploraScrollUnsealSequence`).
+    private func unseal() {
+        guard stage == .sealed else { return }
+        guard !sequence.rendersImmediately else { return onContinue() }
+        Task { @MainActor in
+            var beat = stage.next
+            while let current = beat {
+                withAnimation(sequence.animation(of: current)) { stage = current }
+                try? await Task.sleep(for: sequence.duration(of: current))
+                beat = current.next
+            }
+            onContinue()
+        }
+    }
+
+    /// `293:1599`'s tied roll, and the parchment it becomes.
+    ///
+    /// The two are stacked and cross-faded at `unbinding`, where the roll has already grown to the
+    /// sheet's width: at that moment the two pictures are the same silhouette at the same size, which
+    /// is what makes it read as the ribbon coming off rather than as one image dissolving into
+    /// another.
+    ///
+    /// **The box this is drawn in is the task sheet's, not this screen's centre.** The unrolled
+    /// parchment therefore lands exactly where `TaskDetailScreen` draws its own — same width, same
+    /// head roll — and the hand-over is one picture becoming the same picture with words on it
+    /// (`TaskSheetLayout`). The tied roll still *rests* where `293:1595` puts it, on the screen's
+    /// centre line, and settles into the box as it grows: moving the resting picture would be
+    /// redrawing the frame to serve the animation.
+    private func scroll(restingOffset: CGFloat) -> some View {
+        ZStack {
+            sealedRoll
+                .offset(y: stage == .sealed ? restingOffset : 0)
+                .opacity(stage.showsSealedRoll ? 1 : 0)
+            HisploraParchmentUnroll(openFraction: stage.openFraction)
+                .opacity(stage.showsSealedRoll ? 0 : 1)
+        }
+    }
+
+    /// The tied roll at its drawn tilt, growing from its own width into the open sheet's.
+    ///
+    /// `rotationEffect` does not resize what it turns, so the layout reserves the upright picture's
+    /// 264 × 252 rather than the turned 365 × 364 the frame draws. That is left alone deliberately:
+    /// the screen centres the scroll between two `Spacer`s on a 874-point ground, the overflow is 56
+    /// points on each side, and there is far more slack than that above the caption. Reserving the
+    /// turned box would mean laying out against a size that changes with the angle.
+    @ViewBuilder private var sealedRoll: some View {
         if let image = TransitionScrollMetrics.image {
             image
                 .resizable()
                 .aspectRatio(TransitionScrollMetrics.aspectRatio, contentMode: .fit)
+                // Growing the frame rather than scaling the view: the width is what has to end up
+                // matching the parchment's, and a `scaleEffect` would leave the layout at the tied
+                // roll's size while the picture stood wider than it.
                 .containerRelativeFrame(.horizontal, alignment: .center) { width, _ in
-                    width * TransitionScrollMetrics.widthFraction
+                    stage == .sealed
+                        ? width * TransitionScrollMetrics.widthFraction
+                        : width - TaskSheetLayout.margin * 2
                 }
-                .rotationEffect(.degrees(TransitionScrollMetrics.rotationDegrees))
+                // Constant, not animated: the asset is drawn on a diagonal and this is what stands
+                // it level (`HisploraScrollUnsealSequence.sealedTiltDegrees`). Turning it to zero
+                // during the opening tips the level roll over onto that diagonal.
+                .rotationEffect(.degrees(HisploraScrollUnsealSequence.sealedTiltDegrees))
                 .accessibilityHidden(true)
         } else {
             // A missing picture must not take the way forward with it — the same rule the portrait
