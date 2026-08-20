@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// The three onboarding illustrations, exported whole from Figma `523:1946`, `523:1973` and
-/// `523:1999` (art groups `670:1692`, `670:1694`, `670:1749`).
+/// The three onboarding illustrations, exported whole from Figma `702:2068`, `702:1999` and
+/// `702:1980` (art groups `737:4729`, `737:4674`, `737:4649`).
 ///
 /// **Exported as flat pictures rather than rebuilt.** Each is a composite the frames assemble out
 /// of a photographed object plus a dozen rotated, shadowed, overlapping layers — three scrolls at
@@ -11,12 +11,19 @@ import SwiftUI
 /// shadows the frames draw, which is why the boxes below are a little larger than the art groups'
 /// own bounds.
 ///
-/// **These three files are 1× and want replacing.** They are contents-only renders, which is the
-/// only form the export came back in with a transparent background — the ordinary export composites
-/// the *frame's* fill behind the art, which on these frames is a cream sheet, so each picture
-/// arrived sitting on a cream card that does not exist in the design. A 3× export made from Figma's
-/// own export panel is a drop-in: same three names, same three boxes, and the fractions below are
-/// in points and do not move. Until then the art is soft on a 3× screen.
+/// **These three files are 3×, and their transparency is recovered rather than exported.** Figma
+/// returns exactly two things and neither is what is wanted on its own: an ordinary export at any
+/// scale composites the *frame's* cream fill behind the art, and a contents-only render is
+/// transparent but will not upscale past 1× whatever `maxDimension` asks for. So each picture is
+/// built from both — the 3× export supplies the colour, the 1× contents-only render supplies the
+/// alpha (resampled up), and the ground is divided back out of the colour
+/// (`art = (composite − (1 − α)·cream) / α`). The result is the design's own pixels at 3× with a
+/// real alpha channel, which matters because the shadows these frames draw are soft: keying the
+/// cream out by colour would have left a hard halo everywhere a shadow fades.
+///
+/// Quantised to a 256-colour palette afterwards (600 KB for the three, against 2.9 MB unquantised).
+/// That is a size decision on chrome, not on content: nothing here is a photograph of a real place
+/// that a walker is asked to recognise.
 ///
 /// **This is chrome, not content.** These pictures belong to the onboarding screens the way
 /// `KultaraTypewriter`'s machine belongs to the story preview: they illustrate what the app is,
@@ -29,11 +36,11 @@ import SwiftUI
 /// nowhere in the content tree. They are the frame's illustration of a task sheet, printed at a
 /// size no one reads, and nothing in the app renders from them (`AD-4`, `FR-RUN-06`).
 public enum HisploraOnboardingArt: String, Sendable, CaseIterable {
-    /// `670:1692` — the dancers before the temple gates.
+    /// `737:4729` — the dancers before the temple gates.
     case explore
-    /// `670:1694` — three task scrolls, fanned.
+    /// `737:4674` — three task scrolls, fanned.
     case quest
-    /// `670:1749` — five stamps under a wax seal.
+    /// `737:4649` — five stamps under a wax seal.
     case collection
 
     /// The packaged file's name. Kept apart from the case name so the app target can name a picture
@@ -50,8 +57,11 @@ public enum HisploraOnboardingArt: String, Sendable, CaseIterable {
     public var widthFraction: CGFloat {
         switch self {
         case .explore: 378.0 / 402.0
-        case .quest: 353.0 / 402.0
-        case .collection: 321.0 / 402.0
+        case .quest: 340.0 / 402.0
+        // `737:4649` is drawn 46 from the left and 31.67 from the right rather than centred. The
+        // 7-point offset is not reproduced: it reads as a mistake on a 402-point frame and as a
+        // worse one on any other width, and centring is what every other picture here does.
+        case .collection: 324.333 / 402.0
         }
     }
 
@@ -59,8 +69,8 @@ public enum HisploraOnboardingArt: String, Sendable, CaseIterable {
     public var aspectRatio: CGFloat {
         switch self {
         case .explore: 1134.0 / 831.0
-        case .quest: 1059.0 / 801.0
-        case .collection: 963.0 / 900.0
+        case .quest: 1020.0 / 771.0
+        case .collection: 973.0 / 822.0
         }
     }
 
@@ -100,25 +110,40 @@ public enum HisploraOnboardingArt: String, Sendable, CaseIterable {
     }()
 }
 
-/// The segmented bar the onboarding frames carry under the status bar (`523:2053`–`2056`): one
-/// 4-point rounded segment per screen, the reached ones in cream, the rest in `trackDim`.
+/// The segmented bar the onboarding frames carry under the status bar (`702:2079`–`2082`): one
+/// 4-point rounded segment per screen, the reached one in `buttonFill`, the rest in `trackDim`.
 ///
 /// Two things the frame does not do. The segments are drawn equal-width and flexible rather than at
-/// the frame's fixed 115 points, so a fourth screen — see `OnboardingViewModel` on why there is one
-/// — fits the same 362-point row without the bar running off the edge. And the whole row is one
-/// accessibility element carrying a spoken position, because a count of filled boxes is exactly the
-/// kind of meaning `NFR-A11Y-05` says shape must not carry alone. The caller supplies that string:
-/// this module has no localisation table (`NFR-I18N-01`).
+/// the frame's fixed 115 points, so the bar takes whatever `total` it is given without running off
+/// the 362-point row — onboarding is three screens again as of 2026-08-20, and was four before it.
+/// And the whole row is one accessibility element carrying a spoken position, because a count of
+/// filled boxes is exactly the kind of meaning `NFR-A11Y-05` says shape must not carry alone. The
+/// caller supplies that string: this module has no localisation table (`NFR-I18N-01`).
 public struct HisploraProgressBar: View {
     @Environment(\.hisploraPalette) private var palette
 
     private let current: Int
     private let total: Int
+    private let ink: KeyPath<HisploraPalette, SRGBColor>
+    private let track: KeyPath<HisploraPalette, SRGBColor>
     private let accessibilityLabel: String
 
-    public init(current: Int, total: Int, accessibilityLabel: String) {
+    /// - Parameters:
+    ///   - ink: the reached segment. Defaults to the near-black the redesigned frames set on cream.
+    ///   - track: the unreached ones. `trackDim` is that ink at 25% over `paperSheet`, flattened,
+    ///     and the pair is measured in `HisploraThemeTests` — a caller that overrides one of these
+    ///     is claiming a pair nobody measured, so both are named together or neither is.
+    public init(
+        current: Int,
+        total: Int,
+        ink: KeyPath<HisploraPalette, SRGBColor> = \.buttonFill,
+        track: KeyPath<HisploraPalette, SRGBColor> = \.trackDim,
+        accessibilityLabel: String
+    ) {
         self.current = current
         self.total = total
+        self.ink = ink
+        self.track = track
         self.accessibilityLabel = accessibilityLabel
     }
 
@@ -126,10 +151,12 @@ public struct HisploraProgressBar: View {
         HStack(spacing: KultaraMetrics.sm) {
             ForEach(0..<max(total, 1), id: \.self) { index in
                 Capsule()
-                    // The current segment alone, not everything up to it. `523:1985`–`1987` dim the
-                    // first *and* third segment on screen two, so the bar is a position indicator
-                    // rather than a fill gauge, and it is reproduced as drawn.
-                    .fill(index == current ? palette.inkCream.color : palette.trackDim.color)
+                    // The current segment alone, not everything up to it. `702:2080`–`2082` dim the
+                    // second *and* third segment on every screen the board draws, so the bar is a
+                    // position indicator rather than a fill gauge, and it is reproduced as drawn.
+                    .fill(index == current
+                          ? palette[keyPath: ink].color
+                          : palette[keyPath: track].color)
                     .frame(height: 4)
             }
         }

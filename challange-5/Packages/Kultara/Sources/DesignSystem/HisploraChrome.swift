@@ -57,11 +57,21 @@ public struct HisploraStage<Content: View>: View {
 /// The ring is not in the frame. A near-black pill on mid-brown measures 2.04:1, and WCAG 1.4.11
 /// wants 3:1 for a control's visual boundary — so the control gains a hairline rather than the
 /// ground being lightened. `HisploraThemeTests` holds both halves of that.
+///
+/// **On a cream ground the ring is wrong rather than merely unnecessary.** The same near-black on
+/// `paperSheet` measures 16.71:1, so the fill is its own boundary; drawing `buttonRing`'s tan
+/// hairline there would add an outline the design does not draw *and* that measures 2.47:1 on
+/// the ground — under the 3:1 the edge it is outlining clears twenty times over. `ring: nil` is that case, and it is a decision the caller makes because
+/// only the caller knows which ground the pill is standing on.
 public struct HisploraPillButtonStyle: ButtonStyle {
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.isEnabled) private var isEnabled
 
-    public init() {}
+    private let ring: KeyPath<HisploraPalette, SRGBColor>?
+
+    public init(ring: KeyPath<HisploraPalette, SRGBColor>? = \.buttonRing) {
+        self.ring = ring
+    }
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -73,9 +83,43 @@ public struct HisploraPillButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .frame(minHeight: KultaraMetrics.minimumTapTarget)
             .background(palette.buttonFill.color, in: Capsule())
-            .overlay(Capsule().stroke(palette.buttonRing.color, lineWidth: KultaraMetrics.hairline))
+            .overlay {
+                if let ring {
+                    Capsule().stroke(palette[keyPath: ring].color,
+                                     lineWidth: KultaraMetrics.hairline)
+                }
+            }
             .opacity(configuration.isPressed ? 0.85 : 1)
             .opacity(isEnabled ? 1 : 0.5)
+    }
+}
+
+/// The quiet escape hatch the redesigned onboarding frames set at the top right — underlined text,
+/// not a pill (`737:4731`, `737:4734`, `737:4741`).
+///
+/// It is a `ButtonStyle` rather than a styled `Text` with a gesture for the reason the Journal's
+/// sealed card is a `Button`: a picture or a label with a tap gesture is not something VoiceOver
+/// announces or activates. The underline is what carries "this is a link" for a reader who cannot
+/// separate `inkQuiet` from the body ink, so it is drawn rather than left to colour alone
+/// (`NFR-A11Y-05`), and the label is padded out to the 44-point target the 17-point type does not
+/// reach on its own (`NFR-A11Y-06`).
+public struct HisploraTextLinkButtonStyle: ButtonStyle {
+    @Environment(\.hisploraPalette) private var palette
+
+    private let ink: KeyPath<HisploraPalette, SRGBColor>
+
+    public init(ink: KeyPath<HisploraPalette, SRGBColor> = \.inkQuiet) {
+        self.ink = ink
+    }
+
+    public func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 17, weight: .semibold))
+            .tracking(-0.34)
+            .underline()
+            .foregroundStyle(palette[keyPath: ink].color)
+            .kultaraTapTarget()
+            .opacity(configuration.isPressed ? 0.6 : 1)
     }
 }
 
@@ -143,6 +187,13 @@ public struct HisploraPlainButtonStyle: ButtonStyle {
 
 public extension ButtonStyle where Self == HisploraPillButtonStyle {
     static var hisploraPill: HisploraPillButtonStyle { HisploraPillButtonStyle() }
+
+    /// The same pill with no hairline — see the type's note on why a cream ground drops it.
+    static var hisploraPillOnPaper: HisploraPillButtonStyle { HisploraPillButtonStyle(ring: nil) }
+}
+
+public extension ButtonStyle where Self == HisploraTextLinkButtonStyle {
+    static var hisploraTextLink: HisploraTextLinkButtonStyle { HisploraTextLinkButtonStyle() }
 }
 
 public extension ButtonStyle where Self == HisploraLightPillButtonStyle {

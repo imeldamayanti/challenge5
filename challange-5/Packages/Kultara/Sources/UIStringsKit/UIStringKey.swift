@@ -22,8 +22,13 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case onboardingProgress
     case onboardingExploreTitle
     case onboardingExploreBody
-    case onboardingPocketTitle
-    case onboardingPocketBody
+    /// The pocket-the-phone paragraph (`AD-1`).
+    ///
+    /// It was `onboardingPocketTitle`/`onboardingPocketBody` and belonged to an onboarding screen
+    /// until 2026-08-20, when that screen was removed for frame parity. Only the body had a second
+    /// caller — the `FR-START-04` safety notice, which prints it under the quest's own
+    /// `safetyNotes` — so the title went and this was renamed to say where it is now read.
+    case safetyPocketBody
     case onboardingQuestTitle
     case onboardingQuestBody
     case onboardingCollectionTitle

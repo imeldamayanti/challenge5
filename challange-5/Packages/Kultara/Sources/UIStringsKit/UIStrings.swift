@@ -31,10 +31,8 @@ public enum UIStrings {
         .onboardingExploreBody: LocalizedText(
             id: "Susuri kerajaan kuno, pura yang terlupakan, dan kisah tersembunyi yang jarang didengar wisatawan.",
             en: "Walk through ancient kingdoms, forgotten temples, and hidden stories that most tourists never hear about."),
-        .onboardingPocketTitle: LocalizedText(
-            id: "Simpan Ponsel Saat Berjalan",
-            en: "Pocket The Phone While You Walk"),
-        .onboardingPocketBody: LocalizedText(
+        // Printed by the `FR-START-04` safety notice, under the quest's authored `safetyNotes`.
+        .safetyPocketBody: LocalizedText(
             id: "Petunjuk dibaca sekali saat berhenti, lalu ponsel masuk kantong. Aplikasi ini dibuka di titik pemberhentian, bukan dibawa terbuka sepanjang jalan.",
             en: "You read the clue once while standing still, then the phone goes away. This app is opened at checkpoints, not carried open along the street."),
         .onboardingQuestTitle: LocalizedText(

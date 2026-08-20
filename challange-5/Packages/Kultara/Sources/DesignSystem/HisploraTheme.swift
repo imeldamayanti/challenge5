@@ -54,14 +54,25 @@ public struct HisploraPalette: Sendable, Equatable {
     /// The well of the segmented task progress bar (`452:3138`), which the filled segments are
     /// stamped into.
     public let trackWell: SRGBColor
-    /// The unfilled segment of the onboarding progress bar (`523:2054`–`2056`), which the frames
-    /// draw as 25% `inkCream` over `brownMid`.
+    /// The unfilled segment of the onboarding progress bar (`702:2081`, `702:2082`), which the
+    /// frames draw as 25% `buttonFill` over `paperSheet`.
     ///
     /// Flattened to an opaque value rather than left as an alpha, for the reason `KultaraPaperTexture`
     /// gives about the grain: `HisploraThemeTests` measures token pairs, and a pair one half of which
     /// is a translucency over "whatever is behind it" is not a pair anyone measured. The flattened
     /// value is exactly what the frame composites to on this screen's one ground.
+    ///
+    /// **Re-sampled 2026-08-20.** The onboarding redesign (`702:2068`, `702:1999`, `702:1980`)
+    /// moved the whole screen off `brownMid` and onto the cream `paperSheet`, so the wash the bar
+    /// is drawn as composites over a different ground and the flattened value moved with it —
+    /// `#926954` became `#C3BAAB`. The token is repointed rather than duplicated: the onboarding
+    /// bar is its only caller, and a second token for the ground nobody draws it on any more would
+    /// be a colour with no screen behind it.
     public let trackDim: SRGBColor
+    /// The underlined "Skip" the redesigned onboarding frames set at the top right
+    /// (`737:4731`, `737:4734`, `737:4741`): 75% `buttonFill` over `paperSheet`, flattened for the
+    /// same reason `trackDim` is.
+    public let inkQuiet: SRGBColor
     /// The stock the Journal's two paper cards are printed on (`791:5568`, `791:5814`) — the sheets
     /// that come out of the envelope and are read in the modal.
     ///
@@ -110,6 +121,7 @@ public struct HisploraPalette: Sendable, Equatable {
         inkTicket: SRGBColor,
         trackWell: SRGBColor,
         trackDim: SRGBColor,
+        inkQuiet: SRGBColor,
         paperCard: SRGBColor,
         mapGround: SRGBColor,
         mapMarker: SRGBColor,
@@ -134,6 +146,7 @@ public struct HisploraPalette: Sendable, Equatable {
         self.inkTicket = inkTicket
         self.trackWell = trackWell
         self.trackDim = trackDim
+        self.inkQuiet = inkQuiet
         self.paperCard = paperCard
         self.mapGround = mapGround
         self.mapMarker = mapMarker
@@ -174,7 +187,8 @@ public struct HisploraPalette: Sendable, Equatable {
         paperTicket: SRGBColor(hex: "#EFEBD7"),   // 10.79:1 under inkTicket
         inkTicket: SRGBColor(hex: "#34312E"),
         trackWell: SRGBColor(hex: "#8D7870"),     // 3.36:1 against a filled segment
-        trackDim: SRGBColor(hex: "#926954"),      // 4.33:1 against a filled segment
+        trackDim: SRGBColor(hex: "#C3BAAB"),      // 9.65:1 against a filled segment
+        inkQuiet: SRGBColor(hex: "#4F4B44"),      // 7.82:1 on paperSheet
         paperCard: SRGBColor(hex: "#F5F1E5"),     // 15.02:1 under inkDark, 8.02:1 under brownMid
         mapGround: SRGBColor(hex: "#DFCDB5"),     // 11.95:1 under buttonFill
         mapMarker: SRGBColor(hex: "#B44934"),     // 4.31:1 on paperCream, 3.43:1 on mapGround
@@ -192,7 +206,8 @@ public struct HisploraPalette: Sendable, Equatable {
         [("brownDeep", brownDeep), ("brownMid", brownMid), ("brownStone", brownStone),
          ("paperCream", paperCream), ("paperWarm", paperWarm), ("paperLight", paperLight),
          ("paperTicket", paperTicket), ("inkTicket", inkTicket),
-         ("trackWell", trackWell), ("trackDim", trackDim), ("paperCard", paperCard),
+         ("trackWell", trackWell), ("trackDim", trackDim), ("inkQuiet", inkQuiet),
+         ("paperSheet", paperSheet), ("paperCard", paperCard),
          ("mapGround", mapGround), ("mapMarker", mapMarker),
          ("inkCream", inkCream), ("inkDusty", inkDusty),
          ("inkDark", inkDark), ("inkBody", inkBody), ("inkMuted", inkMuted),
@@ -252,13 +267,22 @@ public struct HisploraPalette: Sendable, Equatable {
                                   foreground: paperCream, background: trackWell,
                                   requirement: .nonTextEssential))
 
-        // The onboarding progress bar (`523:2053`). Same argument as the task bar above: the pair
+        // The onboarding progress bar (`702:2079`). Same argument as the task bar above: the pair
         // *is* the bar's state. A walker who cannot tell a walked segment from an unwalked one is
         // being shown nothing, and the position is also spoken — the bar carries an "screen 2 of 4"
         // label, so the shape never carries the count alone (`NFR-A11Y-05`).
-        pairs.append(ContrastPair(label: "inkCream on trackDim",
-                                  foreground: inkCream, background: trackDim,
+        pairs.append(ContrastPair(label: "buttonFill on trackDim",
+                                  foreground: buttonFill, background: trackDim,
                                   requirement: .nonTextEssential))
+        // The same screens' underlined Skip, which is the one piece of type on them that is not set
+        // in the full-strength ink.
+        pairs.append(ContrastPair(label: "inkQuiet on paperSheet",
+                                  foreground: inkQuiet, background: paperSheet,
+                                  requirement: .bodyText))
+        // ...and their one action, a near-black pill printed on the same cream.
+        pairs.append(ContrastPair(label: "buttonFill on paperSheet",
+                                  foreground: buttonFill, background: paperSheet,
+                                  requirement: .bodyText))
 
         // The site-map screen (`452:3028`) — the one paper ground in the story flow.
         //

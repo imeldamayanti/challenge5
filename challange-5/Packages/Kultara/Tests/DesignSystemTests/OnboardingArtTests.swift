@@ -46,17 +46,49 @@ struct OnboardingProgressBarTests {
 
     private let palette = HisploraPalette.standard
 
-    /// The bar's own state, measured the way the task bar's is. `523:2054`–`2056` draw the unfilled
-    /// segments as 25% `inkCream` over `brownMid`; `trackDim` is that composite flattened, and the
-    /// pair it has to win is against a filled segment rather than against the ground.
+    /// The bar's own state, measured the way the task bar's is. `702:2081`–`2082` draw the unfilled
+    /// segments as 25% `buttonFill` over `paperSheet`; `trackDim` is that composite flattened, and
+    /// the pair it has to win is against a filled segment rather than against the ground.
     @Test func theDimSegmentIsTheDrawnWashFlattenedAndStillReadsAgainstAFilledOne() {
-        let asDrawn = blend(palette.inkCream, over: palette.brownMid, alpha: 0.25)
+        let asDrawn = blend(palette.buttonFill, over: palette.paperSheet, alpha: 0.25)
         // Flattened, not approximated: the two are the same colour, so they have no contrast at all
         // with each other. If someone replaces `trackDim` with a value picked beside the frame, this
         // is what says the token stopped being what the design draws.
         #expect(contrastRatio(palette.trackDim, asDrawn) <= 1.02,
                 "trackDim is \(palette.trackDim.hex), the drawn wash flattens to \(asDrawn.hex)")
-        #expect(contrastRatio(palette.inkCream, palette.trackDim) >= 3.0)
+        #expect(contrastRatio(palette.buttonFill, palette.trackDim) >= 3.0)
+    }
+
+    /// The redesign's ground swap, held as a value rather than as a memory.
+    ///
+    /// The wash is 25% of the ink over whatever the screen stands on, so moving onboarding from
+    /// `brownMid` to `paperSheet` moves the flattened value with it — `#926954` became `#C3BAAB`,
+    /// and the two are nowhere near each other. What this pins is the direction of the dependency:
+    /// if someone restores the brown composite because an older frame is open beside them, the bar
+    /// stops being what `702:2081` draws even though it would still pass its own contrast pair.
+    @Test func theDimSegmentMovedWithTheGroundRatherThanStayingOnTheBrownComposite() {
+        let onBrown = blend(palette.inkCream, over: palette.brownMid, alpha: 0.25)
+        let onCream = blend(palette.buttonFill, over: palette.paperSheet, alpha: 0.25)
+        #expect(contrastRatio(onBrown, onCream) > 2.0,
+                "the two grounds' composites are \(onBrown.hex) and \(onCream.hex)")
+        #expect(contrastRatio(palette.trackDim, onCream) <= 1.02)
+    }
+
+    /// The underlined Skip the redesign moved to the top right. It is the one piece of type on these
+    /// screens set below full strength, so it is the one that can fail — and it is body-sized.
+    @Test func theQuietSkipLinkIsTheDrawnWashFlattenedAndStillReadsAsBodyText() {
+        let asDrawn = blend(palette.buttonFill, over: palette.paperSheet, alpha: 0.75)
+        #expect(contrastRatio(palette.inkQuiet, asDrawn) <= 1.02,
+                "inkQuiet is \(palette.inkQuiet.hex), the drawn wash flattens to \(asDrawn.hex)")
+        #expect(contrastRatio(palette.inkQuiet, palette.paperSheet) >= 4.5)
+    }
+
+    /// The pill drops its hairline on cream, and that is a measurement rather than a preference:
+    /// the fill is its own boundary here, while `buttonRing` — measured on the browns — would be a
+    /// fainter outline than the edge it outlines.
+    @Test func theActionNeedsNoRingOnTheCreamGround() {
+        #expect(contrastRatio(palette.buttonFill, palette.paperSheet) >= 3.0)
+        #expect(contrastRatio(palette.buttonRing, palette.paperSheet) < 3.0)
     }
 
     /// Straight alpha compositing. `HisploraThemeTests` keeps its own copy for the same reason: the
