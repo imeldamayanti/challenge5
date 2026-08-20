@@ -175,16 +175,24 @@ struct QuestRunTests {
     /// `FR-START-02`'s plain-language location rationale screen was removed by request — the
     /// system permission prompt is now requested the moment the safety notice is acknowledged,
     /// with no explanation screen ahead of it. This guard now records that decision rather than
-    /// the requirement: acknowledging the safety notice goes straight to `.awaitingArrival` and
-    /// requests permission in the same step.
+    /// the requirement.
+    ///
+    /// It also guards a second, later decision: the screen behind the system prompt stays exactly
+    /// where it was — `.safetyNotice` here — rather than jumping to `.awaitingArrival` underneath
+    /// the dialog. Only once the walker actually answers it (simulated here by the provider firing
+    /// `onAuthorizationChange`) does the stage move on.
     @Test func acknowledgingTheSafetyNoticeRequestsPermissionImmediately() throws {
         let harness = try harness(authorization: .notRequested, safetyAcked: false)
         harness.model.advanceFromStoryPreview()
         #expect(!harness.provider.requestedPermission)
 
         harness.model.acknowledgeSafetyNotice()
-        #expect(harness.model.stage == .awaitingArrival)
+        #expect(harness.model.stage == .safetyNotice)
         #expect(harness.provider.requestedPermission)
+
+        harness.provider.authorization = .whenInUse
+        harness.provider.onAuthorizationChange?(.whenInUse)
+        #expect(harness.model.stage == .awaitingArrival)
     }
 
     @Test func anAlreadyAcknowledgedQuestGoesStraightToArrival() throws {

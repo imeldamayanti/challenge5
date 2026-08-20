@@ -57,8 +57,9 @@ struct TaskDetailTests {
         return Harness(model: model, provider: provider, quest: quest)
     }
 
-    /// The same walk, stopped at the sacred-Place notice — `1:4592`, the screen before the first
-    /// task. `atTaskList` walks straight past it.
+    /// The same walk, stopped at the sacred-Place notice — `1:4592`, now the screen right after the
+    /// story reveal, before the sealed-scroll transition and the first task. `atTaskList` walks
+    /// straight past it.
     private func atPlaceNotice() throws -> Harness {
         let repository = try BundledContentRepository()
         let quest = try #require(try repository.quests().first)
@@ -91,30 +92,34 @@ struct TaskDetailTests {
         return Harness(model: model, provider: provider, quest: quest)
     }
 
-    // MARK: - `1:4592` → `1:4711` → `1:4904`
+    // MARK: - `1:4592` → `1:4586` → `1:4711` → `1:4904`
 
-    /// The flow the board draws: the place notice hands over to the checkpoint's **first** task, not
-    /// to the task menu. The menu is what the walker reaches after resolving it.
-    @Test func thePlaceNoticeOpensTheFirstTaskRatherThanTheMenu() throws {
+    /// The reordered flow: the place notice hands over to the sealed-scroll transition, and the
+    /// transition is what opens the checkpoint's **first** task — not the task menu. The menu is
+    /// what the walker reaches after resolving it.
+    @Test func thePlaceNoticeHandsToTheTransitionWhichOpensTheFirstTask() throws {
         let harness = try atPlaceNotice()
         let first = try #require(harness.model.checkpoint?.tasks.first)
 
         harness.model.advanceFromPlaceNotice()
+        #expect(harness.model.stage == .transition)
 
+        harness.model.advanceFromTransition()
         #expect(harness.model.stage == .taskDetail(taskID: first.id))
         #expect(harness.model.firstTask?.id == first.id)
     }
 
-    /// Backing out of the first task returns to the notice it was opened from — not to the menu,
-    /// which the walker has not seen yet. The same sheet opened from a row backs out to the menu;
-    /// that is what `stageBeforeTaskDetail` is for.
-    @Test func backingOutOfTheFirstTaskReturnsToTheNoticeItCameFrom() throws {
+    /// Backing out of the first task returns to the transition it was opened from — not to the
+    /// menu, which the walker has not seen yet. The same sheet opened from a row backs out to the
+    /// menu; that is what `stageBeforeTaskDetail` is for.
+    @Test func backingOutOfTheFirstTaskReturnsToTheTransitionItCameFrom() throws {
         let harness = try atPlaceNotice()
         harness.model.advanceFromPlaceNotice()
+        harness.model.advanceFromTransition()
 
         harness.model.retreatFromStoryStage()
 
-        #expect(harness.model.stage == .placeNotice)
+        #expect(harness.model.stage == .transition)
     }
 
     /// And backing out of the menu returns to that first task rather than skipping over it back to

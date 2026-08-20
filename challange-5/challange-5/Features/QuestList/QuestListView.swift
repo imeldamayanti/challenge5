@@ -30,6 +30,9 @@ struct QuestListView: View {
     /// cannot see.
     @Binding private var surface: Surface
     @State private var mapScope: MapScope = .denpasar
+    /// DUMMY / TRY-OUT ONLY — see `DummyGulunganPreviewScreen`. Delete alongside it once the
+    /// gulungan-video review is done.
+    @State private var showsDummyGulunganPreview = false
 
     init(
         model: QuestListViewModel,
@@ -72,6 +75,10 @@ struct QuestListView: View {
         // full-bleed. The title above stays set for VoiceOver's rotor and for the back button of
         // whatever pushes on top of this.
         .kultaraHiddenNavigationBar()
+        // DUMMY / TRY-OUT ONLY — see the `showsDummyGulunganPreview` declaration above.
+        .sheet(isPresented: $showsDummyGulunganPreview) {
+            DummyGulunganPreviewScreen()
+        }
     }
 
     @ViewBuilder private var mapSurface: some View {
@@ -210,6 +217,14 @@ struct QuestListView: View {
                     NearbySideQuestList(
                         rows: nearby, language: language, onSelect: onOpenSideQuest)
                 }
+
+                // DUMMY / TRY-OUT ONLY — a temporary way into `DummyGulunganPreviewScreen` to
+                // review the `gulungan.mov` scroll-unroll video. Not a real feature entry point;
+                // remove this button and the sheet below once the review is done.
+                Button("View gulungan (dummy)") { showsDummyGulunganPreview = true }
+                    .buttonStyle(.plain)
+                    .kultaraFont(.body)
+                    .foregroundStyle(palette.seal.color)
 
                 // `FR-DONE-06` — completed walks are listed and re-openable before the Journal
                 // exists. Below the catalogue: these are finished, and they keep.

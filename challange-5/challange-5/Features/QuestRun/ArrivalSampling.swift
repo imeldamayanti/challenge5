@@ -38,6 +38,10 @@ final class ArrivalSampling {
     /// Called once the gate opens, by GPS or by the walker saying so. Set by the owner; nothing
     /// here knows what happens next.
     var onArrival: ((ArrivalMethod, Double?) -> Void)?
+    /// Every authorization decision, sampling or not — unlike `handleAuthorizationChange`, which
+    /// only reacts once `start()` has been called. Set by the owner to know when the system prompt
+    /// itself has been answered, before there is anything here to sample yet.
+    var onAuthorizationDecided: ((LocationAuthorizationSnapshot) -> Void)?
 
     // MARK: Observable state
 
@@ -81,6 +85,7 @@ final class ArrivalSampling {
         self.manualOverrideDelay = manualOverrideDelay
         self.locationProvider.onFix = { [weak self] fix in self?.handle(fix: fix) }
         self.locationProvider.onAuthorizationChange = { [weak self] status in
+            self?.onAuthorizationDecided?(status)
             self?.handleAuthorizationChange(status)
         }
     }

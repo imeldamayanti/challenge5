@@ -21,15 +21,15 @@ struct QuestRunView: View {
     /// in this target (`FR-MAP-01`, `PermissionCallBoundaryTests`).
     @Environment(\.openURL) private var openURL
     @Bindable private var model: QuestRunViewModel
-    /// `178-675` ("Location Checking") — the checking screen holds for a minimum 3 s before any
-    /// result is shown, so a fix that resolves (or fails to) in a fraction of a second never
-    /// flashes past before the walker can read it. Both flags only gate what `content`/`arrivalScreen`
-    /// draw; `model.stage` and `model.locationState` still change the moment the sampler decides,
-    /// so `RunEngine`'s timestamp and every ViewModel test are unaffected.
+    /// `1:4458` — the confirmed-arrival screen holds for a minimum 3 s once reached, so a walk that
+    /// arrives the instant sampling starts does not flash past "Location Verified" before the
+    /// walker can read it. This only gates what `content` draws; `model.stage` still flips the
+    /// moment arrival is recorded, so `RunEngine`'s timestamp and every ViewModel test are
+    /// unaffected. There is no equivalent timer for `.awaitingArrival` itself — see `content`'s
+    /// `.awaitingArrival` case: that one is gated purely on `model.locationState`, because a fixed
+    /// hold there means showing a *wrong* result (a stale or absent one) once the clock runs out
+    /// but the sampler is still genuinely checking.
     @State private var isLocationVerifiedRevealed = false
-    /// Same idea, for the result `arrivalScreen` draws inline — "Not Quite There" or the
-    /// permission-denied variant — while still inside `.awaitingArrival`.
-    @State private var isArrivalResultRevealed = false
 
     init(model: QuestRunViewModel) {
         self.model = model
@@ -94,21 +94,13 @@ struct QuestRunView: View {
             }
             .task(id: model.stage) {
                 switch model.stage {
-                case .awaitingArrival:
-                    isLocationVerifiedRevealed = false
-                    isArrivalResultRevealed = false
-                    try? await Task.sleep(for: .seconds(3))
-                    guard !Task.isCancelled else { return }
-                    isArrivalResultRevealed = true
                 case .locationVerified:
-                    isArrivalResultRevealed = false
                     isLocationVerifiedRevealed = false
                     try? await Task.sleep(for: .seconds(3))
                     guard !Task.isCancelled else { return }
                     isLocationVerifiedRevealed = true
                 default:
                     isLocationVerifiedRevealed = false
-                    isArrivalResultRevealed = false
                 }
             }
     }
@@ -118,7 +110,16 @@ struct QuestRunView: View {
         case .storyPreview: storyPreview
         case .safetyNotice: safetyNotice
         case .awaitingArrival:
-            if isArrivalResultRevealed { arrivalScreen } else { locationCheckingScreen }
+            // No timer here, deliberately: `arrivalScreen` only draws settled results
+            // (`.notThere`/`.denied`), never `.checking` itself, so the light checking screen has
+            // to stay up for exactly as long as the sampler is genuinely still checking — a fixed
+            // hold would either flash a screen shorter than the real wait or, worse, expire before
+            // a fix has landed and print "Location Checking…." over the brown map screen.
+            if model.locationState == .checking {
+                locationCheckingScreen
+            } else {
+                arrivalScreen
+            }
         case .locationVerified:
             if isLocationVerifiedRevealed { locationVerified } else { arrivalScreen }
         case .cutsceneIntro: cutsceneIntro
@@ -389,8 +390,8 @@ struct QuestRunView: View {
 
     // MARK: Arrival
 
-    /// `178:675` — shown for the fixed 3 s hold while `isArrivalResultRevealed` is still `false`,
-    /// before `arrivalScreen` takes over with whatever the sampler actually found.
+    /// `178:675` — shown for as long as `model.locationState == .checking`, before `arrivalScreen`
+    /// takes over with whatever the sampler actually found.
     private var locationCheckingScreen: some View {
         LocationCheckingScreen(language: language, onBack: { dismiss() })
     }
@@ -414,7 +415,7 @@ struct QuestRunView: View {
     /// layout that only works at one size fails `NFR-A11Y-04` at AX5 — at large sizes it scrolls
     /// instead of clipping.
     ///
-    /// Only reached once `isArrivalResultRevealed` is `true` — `locationCheckingScreen` covers the
+    /// Only reached once `model.locationState != .checking` — `locationCheckingScreen` covers the
     /// checking moment, so `model.locationState` here is always a settled result (`.notThere`,
     /// `.denied`, or `.verified` in passing), never `.checking` itself.
     private var arrivalScreen: some View {
