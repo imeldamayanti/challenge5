@@ -73,10 +73,35 @@ Second: a discovery map that looks better with a connection quietly makes the ap
 offline, which is the direction `AD-3` exists to push against. The fallback keeps this from becoming
 a broken screen, but it does not keep it from becoming a second-best one.
 
+## A second deviation rides with this one — `FR-ONB-04`
+
+> **FR-ONB-04** | Location permission **MUST NOT** be requested during onboarding; it is requested in
+> context at the first quest-start attempt.
+
+`QuestMapViewModel.prepareLocation` requests when-in-use authorization the first time the discovery
+map is opened, from `.notRequested` only.
+
+The ban itself is untouched — this is not onboarding. What the requirement additionally *states* is
+that the prompt happens at the first quest-start attempt, and there are now two in-context moments
+rather than one. A map whose whole purpose is to draw where you are standing, that silently draws no
+dot and explains nothing, was the bug this fixed; but "silently" is the fault, and asking is not the
+only cure. The alternative — draw no dot until the reader has started a quest, and say why — was
+rejected as worse, not as impossible.
+
+Proposed wording, if this is accepted:
+
+| ID | Text | Priority |
+|---|---|---|
+| FR-ONB-04 | Location permission **MUST NOT** be requested during onboarding. It is requested in context, at the first moment the reader asks for something that needs it — the first quest-start attempt, or the first opening of a map that draws their position — and **MUST NOT** be requested again after any answer. | P0 |
+
+`PermissionCallBoundaryTests.foregroundArrivalCalls` admits `QuestMapViewModel.swift` by name, with
+that reasoning inline, so the second caller is recorded rather than absorbed.
+
 ## What signing this requires
 
 1. An owner named, as `FR-START-04`'s amendment names af.
-2. PRD §5 edited to carry both rows, and §10's outstanding list updated.
+2. PRD §5 edited to carry both `FR-MAP-01` rows and the reworded `FR-ONB-04`, and §10's outstanding
+   list updated.
 3. `CLAUDE.md`'s "there is no `MKMapView` and there must never be one" note narrowed to the run map,
    which is what it will then mean.
 

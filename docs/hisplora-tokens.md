@@ -784,6 +784,21 @@ reason the fit is to the illustration rather than to Bali.
 The visible correction: `park23`'s `mapPoint` was a copy of Catur Muka's, 9 km from where the place
 actually is. It now sits on the Bukit isthmus.
 
+**The other five were missed, and were fixed at `2026.09.8`.** `bebek-tepi-sawah`, `citra-minang`,
+`mahen-living`, `sovereign-bali-hotel` and `taman-ngurah-rai` kept values from the portrait drawing —
+34 to 40 km out, all of them landing in the Bali Strait. Nothing showed it, because the region map
+draws one pin per quest start checkpoint and only one quest ships. They were re-authored the way this
+section describes, in the order it describes: solve the position from the fit (the six good Places
+agree on one origin to within 14 m), then look at where it lands on the drawing before writing it
+down. All five are Kuta and Tuban addresses and all five now sit on the isthmus beside `park23` —
+`citra-minang`, 120 m from `park23` in the world, lands 0.0005 and 0.001 from it on the paper, which
+is the cross-check that the fit is doing what it claims.
+
+`IllustratedMapGeoreferenceTests.everyAuthoredMapPointSitsWhereThePlaceIs` now scans every authored
+point at a 1.5 km tolerance. That is deliberately loose — about thirteen pixels of longitude here —
+because a point is still authored and may be nudged off the exact projection to clear a label or a
+coastline. The five were out by more than twenty times it.
+
 **What the frame draws that the code does not.** Three markers on `275:2309` name quests that do not
 exist in the content tree — "Where the Gods Come to Dance", "The Serpent's Tidal Shrine", "The
 Mother Temple's Forgotten Vow". The map renders one marker per shipped quest and there is one, so

@@ -546,24 +546,73 @@ auto-advancing and the login carrying a "Skip for now".
     px/°lon, 1206 px/°lat. It fits the *origin* only: five of the shipped places sit inside Denpasar,
     so a two-variable regression over that cluster would be unstable. The five agree on one origin to
     within fourteen metres, and `IllustratedMapGeoreferenceTests` asserts residuals under twenty.
-    **Places no drawn quest reaches are excluded on purpose** — several carry `mapPoint`s predating
-    this artwork that would drag the overlay tens of kilometres west.
+    Places no drawn quest reaches are excluded from the *fit*, which was originally a workaround:
+    five carried `mapPoint`s predating this artwork, **34 to 40 km out**, that would have dragged the
+    overlay across the Java Sea. **Those five are fixed as of `contentBundleVersion` 2026.09.8** —
+    `bebek-tepi-sawah`, `citra-minang`, `mahen-living`, `sovereign-bali-hotel`, `taman-ngurah-rai`,
+    all of them Kuta and Tuban addresses that now sit on the isthmus beside `park23`, where they
+    belong. `IllustratedMapGeoreferenceTests.everyAuthoredMapPointSitsWhereThePlaceIs` scans the
+    shipped bundle at a 1.5 km tolerance — about thirteen pixels of longitude on the drawing, enough
+    headroom to nudge a pin off a label and nowhere near enough to hide a point that was never placed
+    against this artwork. It reads live content deliberately: it is a *content* guard, the family
+    `BundledContentRepositoryTests` belongs to, not a requirement guard.
   - **Geography is right and the art is squashed, deliberately.** The drawing is stretched ~1.25×
     vertically against true scale, so placing its features at their real coordinates draws it at a
     different aspect ratio than the file's. Preserving the drawing's proportions instead puts the
     coastline up to eleven kilometres out at the island's ends, which is the error a reader sees.
+  - **The two controls are `UIButton`s inside the map's own container, not a SwiftUI layer over it.**
+    A `UIViewRepresentable` puts a real `UIView` in the hosting view, UIKit hit-tests it before
+    SwiftUI resolves anything drawn above, and a map view carries a great many greedy recognizers.
+    The symptom was exact: **the wand only worked if you held it**, and two taps in one place became
+    the map's own double-tap-to-zoom. Three attempts, and the two that failed are named in
+    `QuestMapControls.swift` so they are not tried again — one full-screen `UIHostingController`
+    (a lid: a SwiftUI hosting view hit-tests as itself across its whole bounds, so the map stopped
+    panning) and two small per-button hosting controllers (single taps worked, repeats still leaked).
+    `UIButton` has nothing to negotiate. The cost is that the liquid glass and the seal-filled circle
+    are re-made in UIKit — `UIVisualEffectView` with `UIGlassEffect` on iOS 26 and `UIBlurEffect`
+    below — rather than shared with the SwiftUI chrome. `PassthroughView` returns `nil` for anything
+    that is not one of the two buttons, or the container is a lid of its own.
+  - **The overlay is added once and never removed; the wand changes its opacity.** Adding and
+    removing it made the button feel like it was refusing taps — each toggle threw away every
+    rendered tile of a 1469 × 1071 drawing and rebuilt them, and a tap arriving during that work
+    waited for it. `canDraw` returns false at zero alpha, so keeping the layer costs the real mode
+    nothing. **A toggle now does no camera work whatsoever** — it sets the renderer's alpha and calls
+    `setNeedsDisplay`, and that is the entire operation, which is what makes it spammable.
   - **Three MapKit details are load-bearing and were each a visible bug first.** The overlay goes on
     at `.aboveLabels`, or Apple's own place names print across the chart. `IllustratedMapOverlay` and
     its renderer are `nonisolated`, or VectorKit reads `boundingMapRect` off its tile queue and the
     app dies on the way into the map. And the map sets `insetsLayoutMarginsFromSafeArea = false` and
     is positioned with `edgePadding: .zero`, or MapKit fits the region into the *unobscured* area and
     leaves a band of bare basemap the height of the home indicator's inset.
-  - **The fallback is a shipped screen, and there is no reachability check.** `mapViewDidFailLoadingMap`
-    hands the whole surface to `RegionMapView` (`AD-3` — nothing predicts the network;
-    `noModuleChecksReachability` still passes). The "real map is unavailable" notice is said only when
-    the reader had actually asked for the real map, since falling back while illustrated lands on very
-    nearly the same picture. Seen on iPhone 17 / iOS 26.5 —
-    `docs/screenshots/m13-map-illustrated-over-basemap.png`, `m13-map-real-basemap.png`.
+  - **The map is never unmounted, and there is no reachability check.** A failed tile load only
+    forces the chart on — the illustration needs no network, covers the viewport by construction and
+    is projected by arithmetic, so `FR-OFF-03` is met by what is drawn rather than by which screen is
+    mounted. **This replaced a real bug**: the screen used to swap the whole surface to
+    `RegionMapView`, which destroyed the `MKMapView`, so nothing could ever report a load succeeding
+    and the reader was stuck on the fallback for the session with the wand gone with it. `AD-3` is
+    intact — nothing predicts the network and `noModuleChecksReachability` still passes.
+  - **The dot is the app's own, and the map asks for permission to draw it.** `MKUserLocation` is
+    rendered by `UserLocationAnnotationView` hosting `HisploraPulsingMapMarker` at 18 points — the
+    seal-red dot in a cream ring with a breathing halo — because Apple's blue disc is the one object
+    on the chart belonging to a different picture, and is easy to lose on a map of a whole regency.
+    MapKit will not ask on the app's behalf, so `QuestMapViewModel.prepareLocation` requests
+    when-in-use **from `.notRequested` only**. That is a second in-context permission moment and
+    `FR-ONB-04` names one; it is a deviation, it is in the amendment doc, and it is unsigned.
+    `PermissionCallBoundaryTests` admits `QuestMapViewModel.swift` by name with the reason written
+    out. The map never calls `startUpdatingLocation` — that is arrival's (`NFR-BAT-04`).
+  - **Bali and nothing else, in *both* modes, set once and never touched again.** `cameraBoundary`
+    holds the centre on the paper, `cameraZoomRange` (derived from the chart's own width in metres)
+    stops a pinch pulling Java and Lombok into frame, and a correction on `regionDidChangeAnimated`
+    slides the last of the edge out of sight. The correction measures **how much basemap shows past
+    the paper**, not how far the rect moved — MapKit fits rather than adopts a rectangle, so
+    comparing rects never converges and the map twitches against itself.
+    **These were briefly applied and lifted per mode, and that was a bug**: three things moved the
+    camera on the way back to the chart, so a reader who had panned on the real map tapped the wand
+    and watched a zoom animation instead of a toggle — "it zooms like there's no toggle". Confining
+    both grounds is what leaves the toggle as *nothing but* a change of opacity. It costs the real
+    map its freedom to show Java and Lombok, which is deliberate and a one-line revert: this app is
+    a walk around Bali, and the basemap is here to say where in Bali a quest is. Seen on iPhone 17 /
+    iOS 26.5 — `docs/screenshots/m13-map-illustrated-over-basemap.png`, `m13-map-real-basemap.png`.
 - **The region map is `275:2309`'s wide fantasy island, and it scrolls both ways.** As of
   `contentBundleVersion` **2026.09.4** `maps/bali-illustrated.png` is a 1469 × 1071 landscape chart
   (`aspectRatio` 1.3716) in place of the 853 × 1844 portrait one. `RegionMapView` fills the
