@@ -96,11 +96,17 @@ struct KultaraFontTests {
         }
     }
 
-    @Test func onlyTheEyebrowIsSetInCaps() {
+    @Test func onlyTheEyebrowAndTheStampsFrankingAreSetInCaps() {
         // An all-caps chip label risks VoiceOver taking a short word for an initialism and spelling
         // it out, which `FR-CP-05` cannot afford; a capitalised title flattens proper nouns.
+        //
+        // The two franking roles are the exception `705:2776` adds, and they are safe from the
+        // spelling-out risk for a reason rather than by luck: `HisploraStampCard` ignores its
+        // children and speaks one label built from the un-cased strings. A third caps role that
+        // does not do that would be a real regression, which is why this list stays exhaustive
+        // rather than becoming a `contains`.
         let uppercased = KultaraTypography.Role.allCases.filter(\.isUppercased)
-        #expect(uppercased == [.eyebrow])
+        #expect(uppercased == [.eyebrow, .stampFranking, .stampFrankingDetail])
     }
 
     @Test func trackingIsNeverAppliedToAParagraph() {

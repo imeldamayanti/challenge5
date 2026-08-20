@@ -144,6 +144,24 @@ struct ExplorerCardView: View {
         .accessibilityElement(children: .combine)
     }
 
+    private func title(for filter: ExplorerCardPresentation.QuestFilter) -> String {
+        switch filter {
+        case .all: UIStrings.string(.profileQuestFilterAll, language)
+        case .unfinished: UIStrings.string(.profileQuestFilterUnfinished, language)
+        case .done: UIStrings.string(.profileQuestFilterDone, language)
+        }
+    }
+
+    /// Each filter says what would put something in *its* list. One empty line for three lists
+    /// would describe the wrong one twice.
+    private func emptyKey(for filter: ExplorerCardPresentation.QuestFilter) -> UIStringKey {
+        switch filter {
+        case .all: .profileQuestsAllEmpty
+        case .unfinished: .profileQuestsEmpty
+        case .done: .profileQuestsDoneEmpty
+        }
+    }
+
     private func title(for tab: ExplorerCardPresentation.Tab) -> String {
         switch tab {
         case .quests: UIStrings.string(.profileTabQuests, language)
@@ -156,35 +174,63 @@ struct ExplorerCardView: View {
 
     @ViewBuilder private var surface: some View {
         switch model.tab {
-        case .quests: inProgressQuests
+        case .quests: quests
         case .stamps: stamps
         case .badges: badges
         }
     }
 
-    @ViewBuilder private var inProgressQuests: some View {
-        if model.presentation.inProgressQuests.isEmpty {
-            empty(.profileQuestsEmpty)
-        } else {
-            LazyVStack(spacing: KultaraMetrics.md) {
-                ForEach(model.presentation.inProgressQuests) { quest in
-                    Button {
-                        onResumeRun(quest.id)
-                    } label: {
-                        // Never sealed: this tab lists only what is unfinished, so a completion
-                        // seal here would contradict the list it sits in.
-                        HisploraActivityCard(
-                            title: quest.title,
-                            detail: quest.detail,
-                            isComplete: false,
-                            completeLabel: UIStrings.string(.profileActivityComplete, language)
-                        ) {
-                            questMark
-                        }
+    @ViewBuilder private var quests: some View {
+        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
+            HisploraFilterChips(
+                options: ExplorerCardPresentation.QuestFilter.allCases,
+                selection: Binding(get: { model.questFilter }, set: { model.questFilter = $0 }),
+                title: title(for:))
+
+            let rows = model.visibleQuests
+            if rows.isEmpty {
+                empty(emptyKey(for: model.questFilter))
+            } else {
+                LazyVStack(spacing: KultaraMetrics.md) {
+                    ForEach(rows) { quest in
+                        questRow(quest)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityHint(UIStrings.string(.profileQuestResumeHint, language))
                 }
+            }
+        }
+    }
+
+    /// A row that resumes when there is something to resume, and a plain row when there is not.
+    /// A finished walk has nowhere to go from here — its record is the Journal's letter and its
+    /// badge — and a button that does nothing is worse than no button (`NFR-A11Y-05`).
+    @ViewBuilder private func questRow(_ quest: QuestRowPresentation) -> some View {
+        if let runID = quest.resumeRunID {
+            Button {
+                onResumeRun(runID)
+            } label: {
+                card(quest)
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint(UIStrings.string(.profileQuestResumeHint, language))
+        } else {
+            card(quest)
+        }
+    }
+
+    private func card(_ quest: QuestRowPresentation) -> some View {
+        HisploraActivityCard(
+            title: quest.title,
+            detail: quest.detail,
+            detailEmphasis: quest.detailEmphasis
+        ) {
+            // The wax seal on a finished row is the frame's own mark (`737:3971`); an unfinished
+            // one carries the sealed scroll the transition screen already draws (`293:1599`), so
+            // one drawn object stands for one idea rather than a glyph here and an illustration
+            // two screens away. Neither is spoken: the row's own line says which it is.
+            if quest.isComplete {
+                HisploraQuestSeal()
+            } else {
+                questMark
             }
         }
     }
@@ -211,7 +257,7 @@ struct ExplorerCardView: View {
         if model.presentation.stamps.isEmpty {
             empty(.profileStampsEmpty)
         } else {
-            LazyVGrid(columns: twoColumns, spacing: KultaraMetrics.xl) {
+            LazyVGrid(columns: stampColumns, spacing: 20) {
                 ForEach(model.presentation.stamps) { stamp in
                     HisploraStampCard(
                         title: stamp.placeName,
@@ -219,6 +265,11 @@ struct ExplorerCardView: View {
                         artworkName: stamp.artworkName)
                 }
             }
+            // `705:2769` insets the grid to 39 points from the screen's edge — 15 more than the
+            // 24 this scroll already pads by — which is what cuts each stamp to the 151.8 points
+            // the die is drawn at. The rows on the Quests tab are not inset like this; a stamp is
+            // an object on the sheet and a row is the sheet's own width.
+            .padding(.horizontal, 15)
         }
     }
 
@@ -234,6 +285,12 @@ struct ExplorerCardView: View {
                 }
             }
         }
+    }
+
+    /// 20 between the two columns, as `705:2769` sets them — the badges keep the wider gutter,
+    /// because a seal is a round object with air of its own and a stamp is a rectangle.
+    private var stampColumns: [GridItem] {
+        [GridItem(.flexible(), spacing: 20), GridItem(.flexible(), spacing: 20)]
     }
 
     private var twoColumns: [GridItem] {

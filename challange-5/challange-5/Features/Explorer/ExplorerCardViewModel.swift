@@ -15,6 +15,13 @@ final class ExplorerCardViewModel {
 
     private(set) var presentation: ExplorerCardPresentation = .empty
     var tab: ExplorerCardPresentation.Tab = .quests
+    /// Which walks the Quests tab is listing. Opens on everything, unfinished first — a reader who
+    /// has one walk open and none finished should not have to find a filter to see it.
+    var questFilter: ExplorerCardPresentation.QuestFilter = .all
+
+    var visibleQuests: [QuestRowPresentation] {
+        presentation.quests.filter(questFilter.includes)
+    }
 
     let language: ContentLanguage
 
@@ -66,19 +73,37 @@ final class ExplorerCardViewModel {
             BadgePresentation(id: award.id.uuidString, name: award.snapshotName, waxIndex: index)
         }
 
-        // The Quests tab: walks under way, most recently touched first. Not a list of everything
-        // the reader has ever done — a finished walk is a badge and a sealed letter already, and
-        // an abandoned one was explicitly put down (`FR-RUN-05`).
-        let inProgress = runs
+        // The Quests tab: walks under way first, then walks finished, each most recently touched
+        // first. An abandoned one appears in neither — it was explicitly put down (`FR-RUN-05`).
+        let unfinished = runs
             .filter { $0.state == .active }
             .sorted { $0.updatedAt > $1.updatedAt }
             .map { run in
-                InProgressQuestPresentation(
+                QuestRowPresentation(
                     id: run.id,
                     title: run.snapshotQuestTitle,
                     detail: String(
                         format: UIStrings.string(.checkpointProgress, language),
-                        run.reachedCount, run.checkpointCount))
+                        run.reachedCount, run.checkpointCount),
+                    isComplete: false,
+                    resumeRunID: run.id)
+            }
+        let finished = runs
+            .filter { $0.state == .completed }
+            .sorted { $0.updatedAt > $1.updatedAt }
+            .map { run in
+                // The region is content, not a snapshot, so a withdrawn quest leaves it empty — and
+                // an empty one drops the whole sentence rather than printing "completed at" with
+                // nothing after it.
+                let region = (try? repository.quest(id: run.questID))??.region ?? ""
+                return QuestRowPresentation(
+                    id: run.id,
+                    title: run.snapshotQuestTitle,
+                    detail: region.isEmpty
+                        ? UIStrings.string(.profileActivityComplete, language)
+                        : UIStrings.string(.profileQuestCompletedAt, language),
+                    detailEmphasis: region.isEmpty ? nil : region,
+                    isComplete: true)
             }
 
         presentation = ExplorerCardPresentation(
@@ -86,7 +111,7 @@ final class ExplorerCardViewModel {
             questCount: runs.filter { $0.state == .completed }.count,
             stampCount: stamps.count,
             badgeCount: badges.count,
-            inProgressQuests: inProgress,
+            quests: unfinished + finished,
             stamps: stamps,
             badges: badges)
     }

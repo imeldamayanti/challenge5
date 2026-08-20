@@ -28,6 +28,17 @@ public enum HisploraWaxSealMetrics {
     /// The envelope's closing seal, cast in the same crimson as the first badge.
     public static let envelopeSeal: Image? = image(named: "wax-seal")
 
+    /// The seal a finished walk is marked with on the Explorer's Card (`737:3971`) — the crimson
+    /// wax with a candi bentar struck into it.
+    ///
+    /// A second export rather than `badge-seal-crimson` reused: that one is a blank seal, and this
+    /// one carries the gate. The frame draws it 58 × 53.4, which is the export's own ratio.
+    public static let questSeal: Image? = image(named: "quest-seal")
+
+    /// 58 × 53.399 as the frame sets it — wider than it is tall, so a square frame would letterbox
+    /// it or crop the wax.
+    public static let questSealSize = CGSize(width: 58, height: 53.399)
+
     /// Loaded once from the package bundle, for the reason given on `PortraitFrameMetrics`: a
     /// dropped resource becomes a value the fallback branches on rather than a blank screen.
     public static func image(named name: String) -> Image? {
@@ -49,7 +60,7 @@ public enum HisploraWaxSealMetrics {
     /// Every seal this module ships, so a test fails when one stops shipping rather than the app
     /// quietly falling back to a drawn disc.
     public static var allResourceNames: [String] {
-        ["wax-seal"] + Wax.allCases.map(\.resourceName)
+        ["wax-seal", "quest-seal"] + Wax.allCases.map(\.resourceName)
     }
 
     public static var allAreAvailable: Bool {

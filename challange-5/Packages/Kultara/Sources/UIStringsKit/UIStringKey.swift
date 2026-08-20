@@ -429,7 +429,19 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case profileTabStamps
     case profileTabBadges
     case profileActivityComplete
+    /// The head of a finished row's line — "You completed this quest at", with the region set a
+    /// weight up after it (`705:2833`). Two halves rather than a format string so no entry in this
+    /// table has to carry a trailing space.
+    case profileQuestCompletedAt
+    /// The three-way filter over the Quests tab: everything, the walks still open, the walks done.
+    case profileQuestFilterAll
+    case profileQuestFilterUnfinished
+    case profileQuestFilterDone
     case profileQuestsEmpty
+    /// Shown under the Done filter, where `profileQuestsEmpty` would describe the wrong list.
+    case profileQuestsDoneEmpty
+    /// ...and under All, where neither of the other two is true yet.
+    case profileQuestsAllEmpty
     /// Spoken on a Quests-tab row, which resumes the walk it names.
     case profileQuestResumeHint
     case profileStampsEmpty

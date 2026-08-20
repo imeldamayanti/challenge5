@@ -583,6 +583,18 @@ public enum UIStrings {
         .profileTabStamps: LocalizedText(id: "Stempel", en: "Stamps"),
         .profileTabBadges: LocalizedText(id: "Lencana", en: "Badges"),
         .profileActivityComplete: LocalizedText(id: "Selesai", en: "Completed"),
+        .profileQuestCompletedAt: LocalizedText(
+            id: "Kamu menyelesaikan perjalanan ini di",
+            en: "You completed this quest at"),
+        .profileQuestFilterAll: LocalizedText(id: "Semua", en: "All"),
+        .profileQuestFilterUnfinished: LocalizedText(id: "Belum Selesai", en: "Unfinished"),
+        .profileQuestFilterDone: LocalizedText(id: "Selesai", en: "Done"),
+        .profileQuestsDoneEmpty: LocalizedText(
+            id: "Perjalanan yang sudah kamu selesaikan muncul di sini.",
+            en: "Walks you have finished show up here."),
+        .profileQuestsAllEmpty: LocalizedText(
+            id: "Perjalanan yang kamu mulai muncul di sini.",
+            en: "Walks you start show up here."),
         .profileQuestsEmpty: LocalizedText(
             id: "Perjalanan yang sudah kamu mulai tapi belum selesai muncul di sini.",
             en: "Walks you have started but not finished show up here."),

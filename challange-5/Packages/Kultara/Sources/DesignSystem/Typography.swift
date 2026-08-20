@@ -114,6 +114,22 @@ public enum KultaraTypography {
         /// title in a two-column grid; setting it in `body` would drop the face the frames name
         /// things in. One role, one decision, as the rest of this table works.
         case editorialLabel
+        /// The place's name franked across the foot of a stamp (`705:2776`, `705:2783`) — "BADUNG
+        /// MARKET", "MAOSPAHIT". New York Bold, set in caps as the frames frank it.
+        ///
+        /// Its own role rather than `storyPlaceMark` shrunk at the call site: that one is the
+        /// standfirst of a screen and this one is printing on an object, and the stamp is drawn at a
+        /// fixed die-cut ratio, so what fits inside the franking band is a decision the table has to
+        /// own. 13.34 as drawn, which is `.footnote`.
+        case stampFranking
+        /// The region under it — "BADUNG, BALI". SF Pro Regular in caps, the smallest role in the
+        /// table.
+        ///
+        /// **Set larger than drawn.** The frame prints it at 8.34 points; `.caption2` is 11, and
+        /// going below that on a real screen is the readability failure `NFR-A11Y-01` exists to
+        /// prevent. Deviation recorded in `docs/hisplora-tokens.md`, the same way the typed sheet's
+        /// 8.5-point copy is.
+        case stampFrankingDetail
 
         public var textStyle: Font.TextStyle {
             switch self {
@@ -138,7 +154,9 @@ public enum KultaraTypography {
             case .journalLetterTitle: .largeTitle
             case .journalTapHint: .body
             case .onboardingDisplay: .title
-            case .storyPlaceMark, .storyBarTitle, .journalStatValue: .title3
+            case .storyPlaceMark, .storyBarTitle: .title3
+            case .stampFranking: .footnote
+            case .stampFrankingDetail: .caption2
             case .typedSheet: .footnote
             case .typedFigure: .title3
             case .editorialLabel: .body
@@ -166,7 +184,8 @@ public enum KultaraTypography {
             // real cuts rather than a synthesised smear.
             case .storySection: .medium
             case .storyTaskTitle: .semibold
-            case .storyPlaceMark: .bold
+            case .storyPlaceMark, .stampFranking: .bold
+            case .stampFrankingDetail: .regular
             }
         }
 
@@ -182,7 +201,7 @@ public enum KultaraTypography {
             case .questTitleLarge, .questTitle, .sectionHeading: .serif
             case .storyDisplay, .storySection, .storyTaskTitle, .storyPlaceMark,
                  .storyBarTitle, .onboardingDisplay, .journalPaperTitle,
-                 .journalLetterTitle, .journalBandHeading: .displaySerif
+                 .journalLetterTitle, .stampFranking: .displaySerif
             case .typedSheet, .typedFigure: .typewriter
             default: .sans
             }
@@ -213,6 +232,8 @@ public enum KultaraTypography {
             case .journalPaperTitle: 26
             case .journalBandHeading: 25
             case .storyPlaceMark, .storyBarTitle: 17
+            case .stampFranking: 13
+            case .stampFrankingDetail: 11
             // The frame types the sheet at 8.5 pt, because on the frame the sheet is a small
             // object inside a photograph. Reproduced literally it is unreadable, so the sheet is
             // set at a size a person can read and scales from there (`NFR-A11Y-01`). Deviation
@@ -255,16 +276,23 @@ public enum KultaraTypography {
             case .storyPlaceMark: -0.34
             case .storyBarTitle: -0.38
             case .typedSheet, .typedFigure: -0.34
+            // The frames frank both lines untracked; opening caps further at 11 points would cost
+            // the band the width it has.
+            case .stampFranking, .stampFrankingDetail: 0
             }
         }
 
-        /// Caps are for the eyebrow and nothing else. A capitalised sentence is slower to read; a
-        /// capitalised quest title would flatten the proper nouns the content is made of; and an
-        /// all-caps chip label risks VoiceOver taking a short word for an initialism and spelling
-        /// it out, which `FR-CP-05` cannot afford.
+        /// Caps are for the eyebrow and the two franking roles, and nothing else. A capitalised
+        /// sentence is slower to read; a capitalised quest title would flatten the proper nouns the
+        /// content is made of; and an all-caps chip label risks VoiceOver taking a short word for an
+        /// initialism and spelling it out, which `FR-CP-05` cannot afford.
+        ///
+        /// The franking is exempt from that last risk rather than lucky: `HisploraStampCard` ignores
+        /// its children and speaks one label built from the un-cased strings, so what a reader hears
+        /// is "Badung Market, Badung, Bali" however the paper is printed.
         public var isUppercased: Bool {
             switch self {
-            case .eyebrow: true
+            case .eyebrow, .stampFranking, .stampFrankingDetail: true
             default: false
             }
         }

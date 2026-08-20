@@ -128,6 +128,22 @@ public struct HisploraPalette: Sendable, Equatable {
     /// over a dark scrim, and the two creams sit on the same screen the moment a card is drawn
     /// over the shelf. `#F5F1E5` is the frame's fill and this is where it is written down.
     public let paperCard: SRGBColor
+    /// The Explorer's Card's quest row (`705:2827`) — a white 50% wash over `paperSheet`, which is
+    /// what a row printed on the card's own sheet composites to.
+    ///
+    /// Flattened rather than left as a translucency, for the reason `trackDim` and `inkQuiet` give:
+    /// `HisploraThemeTests` measures token pairs, and half a pair that is "white over whatever is
+    /// behind it" is not a pair anyone measured. It is *lighter* than the sheet it lies on, which
+    /// is the opposite direction from `paperTicket` (`452:3132`'s row, drawn darker than its brown
+    /// ground) — the two rows are the same idea on two grounds, and collapsing them would put one
+    /// screen's layering on the other.
+    public let paperRow: SRGBColor
+    /// The stamp's own paper (`705:2771`'s `Vector`), which the design cuts from white.
+    ///
+    /// Not `paperLight` rounded to: the Stamps tab lays six of these on `paperSheet`, and a stamp
+    /// in the same cream as the sheet stops reading as a die-cut object stuck onto it. White is
+    /// what the export is filled with and this is where it is written down.
+    public let paperStamp: SRGBColor
     /// The site-map screen's ground (`452:3028`). The only screen in the story flow that is not on
     /// a brown: the plan is a document, and the frame lays it on paper rather than on earth.
     public let mapGround: SRGBColor
@@ -171,6 +187,8 @@ public struct HisploraPalette: Sendable, Equatable {
         trackDim: SRGBColor,
         inkQuiet: SRGBColor,
         paperCard: SRGBColor,
+        paperRow: SRGBColor,
+        paperStamp: SRGBColor,
         mapGround: SRGBColor,
         mapMarker: SRGBColor,
         inkCream: SRGBColor,
@@ -206,6 +224,8 @@ public struct HisploraPalette: Sendable, Equatable {
         self.trackDim = trackDim
         self.inkQuiet = inkQuiet
         self.paperCard = paperCard
+        self.paperRow = paperRow
+        self.paperStamp = paperStamp
         self.mapGround = mapGround
         self.mapMarker = mapMarker
         self.inkCream = inkCream
@@ -258,6 +278,8 @@ public struct HisploraPalette: Sendable, Equatable {
         trackDim: SRGBColor(hex: "#C3BAAB"),      // 9.65:1 against a filled segment
         inkQuiet: SRGBColor(hex: "#4F4B44"),      // 7.82:1 on paperSheet
         paperCard: SRGBColor(hex: "#F5F1E5"),     // 15.02:1 under inkDark, 8.02:1 under brownMid
+        paperRow: SRGBColor(hex: "#FEF8EE"),      // 12.32:1 under inkTicket, 9.28:1 under inkBody
+        paperStamp: SRGBColor(hex: "#FFFFFF"),    // 16.86:1 under inkDark, 6.80:1 under inkMuted
         mapGround: SRGBColor(hex: "#DFCDB5"),     // 11.95:1 under buttonFill
         mapMarker: SRGBColor(hex: "#B44934"),     // 4.31:1 on paperCream, 3.43:1 on mapGround
         inkCream: SRGBColor(hex: "#FDF2DE"),      // 9.63:1 on brownDeep, 8.11:1 on brownStone
@@ -286,6 +308,7 @@ public struct HisploraPalette: Sendable, Equatable {
          ("paperTicket", paperTicket), ("inkTicket", inkTicket),
          ("trackWell", trackWell), ("trackDim", trackDim), ("inkQuiet", inkQuiet),
          ("paperSheet", paperSheet), ("paperCard", paperCard),
+         ("paperRow", paperRow), ("paperStamp", paperStamp),
          ("mapGround", mapGround), ("mapMarker", mapMarker),
          ("inkCream", inkCream), ("inkDusty", inkDusty), ("inkGilt", inkGilt),
          ("paperTrip", paperTrip), ("paperTile", paperTile), ("brownBand", brownBand),
@@ -345,6 +368,23 @@ public struct HisploraPalette: Sendable, Equatable {
         for (name, ink) in [("inkTicket", inkTicket), ("inkBody", inkBody), ("inkMuted", inkMuted)] {
             pairs.append(ContrastPair(label: "\(name) on paperTicket",
                                       foreground: ink, background: paperTicket,
+                                      requirement: .bodyText))
+        }
+
+        // The Explorer's Card's quest row (`705:2827`): its title, and the line under it that says
+        // where the walk was finished. Both are measured, because a row is only as legible as the
+        // quieter of the two things printed on it.
+        for (name, ink) in [("inkTicket", inkTicket), ("inkBody", inkBody)] {
+            pairs.append(ContrastPair(label: "\(name) on paperRow",
+                                      foreground: ink, background: paperRow,
+                                      requirement: .bodyText))
+        }
+
+        // The franking on a stamp (`705:2776`): the place's name and its region, printed on the
+        // stamp's white paper rather than on the card's sheet.
+        for (name, ink) in [("inkDark", inkDark), ("inkMuted", inkMuted)] {
+            pairs.append(ContrastPair(label: "\(name) on paperStamp",
+                                      foreground: ink, background: paperStamp,
                                       requirement: .bodyText))
         }
 

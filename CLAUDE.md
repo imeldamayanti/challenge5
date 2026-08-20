@@ -742,11 +742,28 @@ auto-advancing and the login carrying a "Skip for now".
   id → asset stem is **a table in the app target, not a field on `Place`**. A sixth authored place
   gets an empty window until that table is edited, which is the honest fallback and also the debt.
   `docs/hisplora-tokens.md` has the extraction detail.
-- **The Profile tab's Quests surface lists unfinished walks, not sidequests.** It used to list
-  `SideQuestRecord`s, which are not quests; it now lists Runs with `state == .active`, most recently
-  touched first, and each row resumes its walk (`profileRunDestination`, the third `RunDestination`
-  in `KultaraRootView`). Sidequests keep their own surfaces — the collection in the Journal and the
-  nearby list. `ActivityPresentation` is now `InProgressQuestPresentation`.
+- **The Profile tab's Quests surface lists walks — both kinds — behind a filter, and never
+  sidequests.** It listed `SideQuestRecord`s once, which are not quests; then Runs with
+  `state == .active` only. `705:2824` lists *finished* walks instead, and both readings are right
+  about a different reader, so as of 2026-08-20 the list carries both and a three-way filter (All /
+  Unfinished / Done, `HisploraFilterChips`) says which. Four things about it:
+  - **`all` puts the unfinished ones first**, because a walk still open is the thing a reader opens
+    their own card to act on and a finished one is a record.
+  - **Only an unfinished row resumes.** Profile is the only route back into a walk in progress
+    (`profileRunDestination`, the third `RunDestination` in `KultaraRootView`); a finished walk's
+    record is its letter and its badge, so its row is not a button at all.
+  - **A finished row reads "You completed this quest at <region>"**, and the region is content
+    rather than a snapshot — no `Run` carries one. A withdrawn quest leaves it empty, and the row
+    prints "Completed" rather than a sentence ending in "at".
+  - **The row is `705:2827`'s object now**: white 50% over the sheet (`paperRow`), a square
+    `brownMid` hairline instead of a corner radius, and the wax seal (`quest-seal.png`, `737:3971`)
+    at the foot-right where the checkmark symbol used to be at the head-left. `ActivityPresentation`
+    became `InProgressQuestPresentation` and is now `QuestRowPresentation`.
+- **The Profile tab's stamps are `705:2767`'s object.** White paper (`paperStamp`), the franking in
+  two new caps roles (`stampFranking`, `stampFrankingDetail`), the window and the caption placed by
+  fractions of the die rather than by points, and `705:2769`'s drop shadow — which the envelope's
+  26-point franking deliberately does not get. The perforation is still drawn rather than exported,
+  for the reason `HisploraStampShape` gives.
 - **The Journal's envelope turns itself over, holds two papers, and hands over to a modal.**
   Four frames from the New Hisplora board landed 2026-08-20: `791:5637` (the flip), `791:5585` (the
   open envelope with both sheets), `791:5533` (the sheets rising) and `791:5551` (the modal). Five

@@ -14,26 +14,45 @@ struct ExplorerCardPresentation: Sendable, Equatable {
         var id: String { rawValue }
     }
 
+    /// What the Quests tab is showing. The frame draws one list of finished walks; the reader also
+    /// needs the unfinished ones, because Profile is the only route back into a walk in progress —
+    /// so the list gains a filter rather than the tab gaining a second heading.
+    ///
+    /// `all` puts the unfinished ones first: a walk still open is the thing a reader opens their own
+    /// card to act on, and a finished one is a record.
+    enum QuestFilter: String, Sendable, CaseIterable, Identifiable {
+        case all, unfinished, done
+        var id: String { rawValue }
+
+        func includes(_ quest: QuestRowPresentation) -> Bool {
+            switch self {
+            case .all: true
+            case .unfinished: !quest.isComplete
+            case .done: quest.isComplete
+            }
+        }
+    }
+
     /// What the card is headed with. There is no account in this build, so this is a role and not
     /// a name — see `.profileExplorerName`.
     let name: String
     let questCount: Int
     let stampCount: Int
     let badgeCount: Int
-    let inProgressQuests: [InProgressQuestPresentation]
+    let quests: [QuestRowPresentation]
     let stamps: [StampPresentation]
     let badges: [BadgePresentation]
 
     static let empty = ExplorerCardPresentation(
         name: "", questCount: 0, stampCount: 0, badgeCount: 0,
-        inProgressQuests: [], stamps: [], badges: [])
+        quests: [], stamps: [], badges: [])
 
     init(
         name: String,
         questCount: Int,
         stampCount: Int,
         badgeCount: Int,
-        inProgressQuests: [InProgressQuestPresentation],
+        quests: [QuestRowPresentation],
         stamps: [StampPresentation],
         badges: [BadgePresentation]
     ) {
@@ -41,36 +60,58 @@ struct ExplorerCardPresentation: Sendable, Equatable {
         self.questCount = questCount
         self.stampCount = stampCount
         self.badgeCount = badgeCount
-        self.inProgressQuests = inProgressQuests
+        self.quests = quests
         self.stamps = stamps
         self.badges = badges
     }
 }
 
-/// One row on the Quests tab: a walk the reader started and has not finished.
+/// One row on the Quests tab: a walk the reader has under way, or one they have finished
+/// (`705:2827`).
 ///
-/// **Unfinished only, and that is the whole list.** A finished walk is already told twice — as a
-/// badge on the third tab and as a sealed letter in the Journal — so repeating it here would make
-/// the tab a second Journal. What no other surface answers is "what am I part-way through", which
-/// is what a reader opens their own card to find out.
+/// **Both, since 2026-08-20, and filtered rather than split.** The tab used to list unfinished
+/// walks only, on the argument that a finished one is already a badge and a sealed letter. The
+/// frame lists finished ones, and both readings are right about a different reader — so the list
+/// carries both and a three-way filter says which. What the tab must not lose is the resume: it is
+/// the only route back into a walk in progress, which is why an unfinished row still carries the
+/// Run's id and a finished one does not.
 ///
 /// Every word comes from the Run's own snapshots (`FR-DONE-05`, `FR-RUN-06`), so a walk keeps
-/// naming itself after a content correction and after the quest is withdrawn underneath it.
+/// naming itself after a content correction and after the quest is withdrawn underneath it. The
+/// one exception is `detailEmphasis`, the region, which no Run snapshots — it is read from content
+/// and comes back empty for a withdrawn quest, which the row prints as a plain "Completed" rather
+/// than as a sentence with nothing after "at".
 ///
 /// Sidequests used to be listed here and no longer are. They are not quests — `FR-SIDE-04`
 /// encounters have their own surfaces in the Journal's collection and the nearby list — and a row
 /// of them under a tab called "Quests" said they were part of the walk.
-struct InProgressQuestPresentation: Sendable, Equatable, Identifiable {
-    /// The Run's id, which is also what the row opens.
+struct QuestRowPresentation: Sendable, Equatable, Identifiable {
+    /// The Run's id. Identity only — what the row *opens* is `resumeRunID`, which a finished walk
+    /// does not have.
     let id: UUID
     let title: String
-    /// "3 of 5 checkpoints", already formatted.
+    /// "3 of 5 checkpoints" for an unfinished walk; "You completed this quest at" for a finished
+    /// one, with the place in `detailEmphasis`.
     let detail: String
+    let detailEmphasis: String?
+    let isComplete: Bool
+    /// Non-nil only while the walk is still open.
+    let resumeRunID: UUID?
 
-    init(id: UUID, title: String, detail: String) {
+    init(
+        id: UUID,
+        title: String,
+        detail: String,
+        detailEmphasis: String? = nil,
+        isComplete: Bool,
+        resumeRunID: UUID? = nil
+    ) {
         self.id = id
         self.title = title
         self.detail = detail
+        self.detailEmphasis = detailEmphasis
+        self.isComplete = isComplete
+        self.resumeRunID = resumeRunID
     }
 }
 
