@@ -71,8 +71,9 @@ struct PlaceNoticeScreen: View {
     /// straight sides stand at x = 24 and x = 381, so the panel is inset `plaqueInset`; the bullets
     /// run x = 66…339, which is `plaqueColumn` inside that; and the description runs x = 90…332, a
     /// further `descriptionIndent` in on the leading edge and `descriptionTrail` on the trailing one.
-    /// The mock-up indents its prose past its own list and that reads as deliberate — a lead
-    /// paragraph set narrower than the points under it — so it is reproduced rather than tidied away.
+    /// The bulleted rules share that same `descriptionIndent`/`descriptionTrail` column — the bullet
+    /// glyph hangs inside a fixed-width leading slot rather than widening it — so the description,
+    /// the "Before you explore" heading and every rule's label all start and end at the same edges.
     private static let margin: CGFloat = 20
     private static let plaqueInset: CGFloat = 22
     private static let plaqueColumn: CGFloat = 44
@@ -198,6 +199,7 @@ struct PlaceNoticeScreen: View {
                     rule(UIStrings.string(.previewPhotoPolicy, language), photoPolicyText, index: 1)
                 }
                 .padding(.top, KultaraMetrics.sm)
+                .padding(.trailing, Self.descriptionTrail)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -206,11 +208,17 @@ struct PlaceNoticeScreen: View {
     /// One bulleted rule, staggered in behind the ones before it. Under Reduce Motion or VoiceOver
     /// the stagger collapses to nothing — every rule is simply there once `showsPoints` flips,
     /// which for those readers is at the same moment the description itself appears.
+    ///
+    /// The bullet sits in a fixed `descriptionIndent`-wide column rather than the natural gap an
+    /// `HStack` spacing would give it, so the label text lines up with the description and the
+    /// "Before you explore" heading above it at the same left edge regardless of how wide "•"
+    /// renders at the active Dynamic Type size.
     private func rule(_ label: String, _ value: String, index: Int) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: KultaraMetrics.sm) {
+        HStack(alignment: .firstTextBaseline, spacing: 0) {
             Text("•")
                 .font(.system(size: 15))
                 .foregroundStyle(palette.inkBody.color)
+                .frame(width: Self.descriptionIndent, alignment: .leading)
                 .accessibilityHidden(true)
             Text("\(label): \(value)")
                 .font(.system(size: 15))

@@ -100,8 +100,11 @@ challange_5`.
 | `xcodebuild test -only-testing:challange-5Tests` | 193 tests / 19 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
-**Three `swift test` failures are pre-existing on this branch and are not yours.** None is in a
-file the Figma port touched, and all three reproduce in a clean worktree:
+**Four `swift test` failures are pre-existing on this branch and are not yours.** None is in a
+file the Figma port touched, and the first three reproduce in a clean worktree (the fourth is
+newer — observed only on this branch's manifest state, not separately re-verified against a clean
+worktree, but it is pure content-version drift unrelated to any Swift code, so there is no reason
+to expect it's branch-specific):
 
 - `PlaqueGeometryTests.theCornerIsAScoopArcedAboutTheCornerPointItself` — 2 issues, the plate's corner
   geometry in `PlaquePanel.swift`.
@@ -112,6 +115,9 @@ file the Figma port touched, and all three reproduce in a clean worktree:
   `suppressingAPlaceRemovesOnlyItsOwnSidequest` — 4 issues. The bundle grew a sixth place
   (`park23`), its sidequest and a second collection at `2026.09.3`; the assertions still say five
   and one. Stale expectations about a content change, not a defect.
+- `BundledContentRepositoryTests.exposesTheContentBundleVersionAQuestRunWouldPin` — 1 issue, same
+  family as the two above: it asserts `contentBundleVersion == "2026.09.4"`, but the manifest has
+  since moved to `"2026.09.5"`. Fix the assertion (or bump-document it), not the manifest.
 
 `FloatingTabBarClearanceTests` was a **third** pre-existing break of a different kind: the test was
 committed without the `KultaraMetrics` API it exercises, so the whole package suite failed to compile
@@ -746,7 +752,7 @@ auto-advancing and the login carrying a "Skip for now".
   that still does not exist in the content tree and still cannot be authored without consent records
   and citations. Screens render from `ContentKit` by ID; never bake those names in (`AD-4`,
   `FR-RUN-06`).
-- `Support/UIStrings.swift:338` still describes the content as "data contoh dengan tempat fiktif".
+- `Packages/Kultara/Sources/UIStringsKit/UIStrings.swift:557` still describes the content as "data contoh dengan tempat fiktif".
   That string is now wrong and needs a product decision, not a content edit.
 - **`FR-CP-05` has an undocumented exception, and it is still open.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**, which lists it as outstanding with no owner named (§10). It needs an amendment or a signed exception with an owner. `FR-START-04`'s comparable exception *was* signed on 2026-08-16 (owner af); this one was not, and the two are not a package.
 - **The redesigned onboarding has been seen on iPhone 17 / iOS 26.5**, all three screens, from a

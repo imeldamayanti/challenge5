@@ -77,22 +77,28 @@ struct TaskDetailScreen: View {
 
     var body: some View {
         HisploraStage(ground: \.brownStone) {
-            ScrollView {
-                VStack(spacing: 0) {
-                    titleBar
-                    // `447:1903` is a 4-point bar in a box padded 20, sitting at y = 114 under a
-                    // title box ending at 108.
-                    Spacer(minLength: 6)
-                    progressBar
-                    // The sheet is drawn at y = 190, 62 under the bar's box.
-                    Spacer(minLength: 62)
-                    sheet
+            // The title bar and progress bar are a fixed header, not scrolling content — only
+            // `sheet` scrolls. Mirrors `LocationVerifiedScreen`'s header/`ScrollView` split rather
+            // than putting the bar inside the scrolled `VStack`, which let it scroll off with the
+            // sheet.
+            VStack(spacing: 0) {
+                titleBar
+                // `447:1903` is a 4-point bar in a box padded 20, sitting at y = 114 under a
+                // title box ending at 108.
+                Spacer(minLength: 6)
+                progressBar
+                ScrollView {
+                    VStack(spacing: 0) {
+                        // The sheet is drawn at y = 190, 62 under the bar's box.
+                        Spacer(minLength: 62)
+                        sheet
+                    }
+                    .padding(.bottom, KultaraMetrics.xl)
+                    .frame(maxWidth: .infinity)
                 }
-                .padding(.horizontal, Self.margin)
-                .padding(.bottom, KultaraMetrics.xl)
-                .frame(maxWidth: .infinity)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollBounceBehavior(.basedOnSize)
+            .padding(.horizontal, Self.margin)
             // `1:4827` replaces the map hint with Submit once a photograph is waiting. One inset,
             // not two stacked: the frame draws a single control at that distance from the home
             // indicator, and a hint under a primary action reads as a second action.

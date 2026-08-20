@@ -21,6 +21,15 @@ struct QuestRunView: View {
     /// in this target (`FR-MAP-01`, `PermissionCallBoundaryTests`).
     @Environment(\.openURL) private var openURL
     @Bindable private var model: QuestRunViewModel
+    /// `1:4458` — the confirmed-arrival screen holds for a minimum 3 s once reached, so a walk that
+    /// arrives the instant sampling starts does not flash past "Location Verified" before the
+    /// walker can read it. This only gates what `content` draws; `model.stage` still flips the
+    /// moment arrival is recorded, so `RunEngine`'s timestamp and every ViewModel test are
+    /// unaffected. There is no equivalent timer for `.awaitingArrival` itself — see `content`'s
+    /// `.awaitingArrival` case: that one is gated purely on `model.locationState`, because a fixed
+    /// hold there means showing a *wrong* result (a stale or absent one) once the clock runs out
+    /// but the sampler is still genuinely checking.
+    @State private var isLocationVerifiedRevealed = false
 
     init(model: QuestRunViewModel) {
         self.model = model
@@ -29,9 +38,18 @@ struct QuestRunView: View {
     private var language: ContentLanguage { model.language }
 
     /// The story-flow stages carry their own heading and their own back control, on their own
-    /// ground. The rule itself lives on the view model, because `KultaraRootView` has to answer
-    /// the same question one frame earlier — before this model is built.
-    private var isOnStoryFlow: Bool { QuestRunViewModel.isStoryFlow(model.stage) }
+    /// ground. The museum navigation bar over them is cream on brown and it clips the eyebrow
+    /// underneath it, so on those stages it goes away entirely.
+    private var isOnStoryFlow: Bool {
+        switch model.stage {
+        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
+             .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .questExplanation,
+             .stampAward, .transition:
+            true
+        case .safetyNotice, .atCheckpoint, .finished:
+            false
+        }
+    }
 
     var body: some View {
         content
@@ -84,15 +102,36 @@ struct QuestRunView: View {
                 KultaraThemeProvider { manualOverrideSheet }
                     .kultaraManualOverrideSheetPresentation()
             }
+            .task(id: model.stage) {
+                switch model.stage {
+                case .locationVerified:
+                    isLocationVerifiedRevealed = false
+                    try? await Task.sleep(for: .seconds(3))
+                    guard !Task.isCancelled else { return }
+                    isLocationVerifiedRevealed = true
+                default:
+                    isLocationVerifiedRevealed = false
+                }
+            }
     }
 
     @ViewBuilder private var content: some View {
         switch model.stage {
         case .storyPreview: storyPreview
         case .safetyNotice: safetyNotice
-        case .locationNotice: locationNotice
-        case .awaitingArrival: arrivalScreen
-        case .locationVerified: locationVerified
+        case .awaitingArrival:
+            // No timer here, deliberately: `arrivalScreen` only draws settled results
+            // (`.notThere`/`.denied`), never `.checking` itself, so the light checking screen has
+            // to stay up for exactly as long as the sampler is genuinely still checking — a fixed
+            // hold would either flash a screen shorter than the real wait or, worse, expire before
+            // a fix has landed and print "Location Checking…." over the brown map screen.
+            if model.locationState == .checking {
+                locationCheckingScreen
+            } else {
+                arrivalScreen
+            }
+        case .locationVerified:
+            if isLocationVerifiedRevealed { locationVerified } else { arrivalScreen }
         case .cutsceneIntro: cutsceneIntro
         case .cutscenePortrait: cutscenePortrait
         case .approachTransition: approachTransition
@@ -390,30 +429,13 @@ struct QuestRunView: View {
         }
     }
 
-    /// `FR-START-02` — the explanation comes before the system prompt, never after it.
-    private var locationNotice: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
-                KultaraEyebrow(UIStrings.string(.settingsLocationHeading, language))
-                Text(UIStrings.string(.runStartLocationTitle, language))
-                    .kultaraFont(.questTitleLarge)
-                    .foregroundStyle(palette.ink.color)
-                    .accessibilityAddTraits(.isHeader)
-                Text(UIStrings.string(.runStartLocationBody, language))
-                    .kultaraFont(.body)
-                    .foregroundStyle(palette.ink.color)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button(UIStrings.string(.runStartLocationContinue, language)) {
-                    model.acknowledgeLocationNoticeAndRequestPermission()
-                }
-                .buttonStyle(.seal)
-            }
-            .padding(KultaraMetrics.lg)
-            .kultaraFloatingTabBarClearance()
-        }
-    }
-
     // MARK: Arrival
+
+    /// `178:675` — shown for as long as `model.locationState == .checking`, before `arrivalScreen`
+    /// takes over with whatever the sampler actually found.
+    private var locationCheckingScreen: some View {
+        LocationCheckingScreen(language: language, onBack: { dismiss() })
+    }
 
     /// The arrival screen, rebuilt to match frame `223:2004` ("Not Quite There") element for
     /// element: back arrow, title, lead, the map slot, and the two actions. Nothing else.
@@ -433,6 +455,10 @@ struct QuestRunView: View {
     /// lays out pixel for pixel. It is a `ScrollView` rather than absolute placement because a
     /// layout that only works at one size fails `NFR-A11Y-04` at AX5 — at large sizes it scrolls
     /// instead of clipping.
+    ///
+    /// Only reached once `model.locationState != .checking` — `locationCheckingScreen` covers the
+    /// checking moment, so `model.locationState` here is always a settled result (`.notThere`,
+    /// `.denied`, or `.verified` in passing), never `.checking` itself.
     private var arrivalScreen: some View {
         HisploraStage(ground: \.brownStone) {
             ScrollView {

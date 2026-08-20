@@ -1,6 +1,8 @@
 // Restored by m7 step 9 from b597b5b^ (Tests/AppFeaturesTests/QuestRunTests.swift).
 // Last, because its failure would be a real finding rather than a wiring problem.
-// FR-START-02/04/08/09, FR-ARR-01/03, FR-DONE-01/03/04, FR-TASK-07, FR-RUN-04, NFR-BAT-04.
+// FR-START-04/08/09, FR-ARR-01/03, FR-DONE-01/03/04, FR-TASK-07, FR-RUN-04, NFR-BAT-04.
+// FR-START-02's location rationale screen was removed from this flow by request (still guarded
+// in SideQuestFlowViewModelTests, which is unaffected).
 import Foundation
 import Testing
 @testable import challange_5
@@ -120,7 +122,7 @@ struct QuestRunTests {
         return false
     }
 
-    // MARK: - FR-START-02/04/04a
+    // MARK: - FR-START-04/04a
 
     /// `FR-START-04a` — the load-bearing half, and the half that admits no exception: nothing is
     /// sampled, nothing is asked of the system, and nothing is written to a Run until the safety
@@ -171,17 +173,27 @@ struct QuestRunTests {
         #expect(resumed.stage != .storyPreview)
     }
 
-    @Test func theLocationExplanationComesBeforeTheSystemPrompt() throws {
+    /// `FR-START-02`'s plain-language location rationale screen was removed by request — the
+    /// system permission prompt is now requested the moment the safety notice is acknowledged,
+    /// with no explanation screen ahead of it. This guard now records that decision rather than
+    /// the requirement.
+    ///
+    /// It also guards a second, later decision: the screen behind the system prompt stays exactly
+    /// where it was — `.safetyNotice` here — rather than jumping to `.awaitingArrival` underneath
+    /// the dialog. Only once the walker actually answers it (simulated here by the provider firing
+    /// `onAuthorizationChange`) does the stage move on.
+    @Test func acknowledgingTheSafetyNoticeRequestsPermissionImmediately() throws {
         let harness = try harness(authorization: .notRequested, safetyAcked: false)
         harness.model.advanceFromStoryPreview()
-        harness.model.acknowledgeSafetyNotice()
-        #expect(harness.model.stage == .locationNotice)
-        // FR-ONB-04 — still nothing asked of the system at this point.
         #expect(!harness.provider.requestedPermission)
 
-        harness.model.acknowledgeLocationNoticeAndRequestPermission()
-        #expect(harness.model.stage == .awaitingArrival)
+        harness.model.acknowledgeSafetyNotice()
+        #expect(harness.model.stage == .safetyNotice)
         #expect(harness.provider.requestedPermission)
+
+        harness.provider.authorization = .whenInUse
+        harness.provider.onAuthorizationChange?(.whenInUse)
+        #expect(harness.model.stage == .awaitingArrival)
     }
 
     @Test func anAlreadyAcknowledgedQuestGoesStraightToArrival() throws {
