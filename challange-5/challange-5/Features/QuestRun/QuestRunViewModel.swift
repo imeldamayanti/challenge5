@@ -12,10 +12,8 @@ final class QuestRunViewModel {
 
     enum Stage: Equatable {
         /// `81:588` — the hook, typed out, with the walk's distance and duration under it. The
-        /// board opens the flow here, before the notices.
+        /// board opens the flow here, before the arrival gate.
         case storyPreview
-        /// `FR-START-04` — acknowledged before the first Run of this quest.
-        case safetyNotice
         case awaitingArrival
         /// `1:4458` ("Location Verified" on the New Hisplora board) — the fix landed, inside the
         /// radius and precise enough, and the walk says so on its own screen before the story
@@ -217,8 +215,8 @@ final class QuestRunViewModel {
 
     private static func initialStage(run: Run?) -> Stage {
         if let run {
-            // A walk already under way has been through both notices. Showing them again on every
-            // resume would turn a safety notice into a dialog people learn to dismiss.
+            // A walk already under way is past the hook. A resumed one never sees it again — it
+            // is an opening, not a gate.
             switch run.state {
             case .completed, .abandoned: return .finished
             default: return run.hasArrivedAtCurrentCheckpoint ? .atCheckpoint : .awaitingArrival
@@ -229,43 +227,11 @@ final class QuestRunViewModel {
         return .storyPreview
     }
 
-    /// Which stages are drawn on the Hisplora ground, carrying their own heading and their own
-    /// back control. The museum navigation bar over them is cream on brown and it clips the
-    /// eyebrow underneath it, so on those stages it goes away entirely.
-    ///
-    /// The rule lives here rather than in the view because two callers need it: the view, and the
-    /// host that has to know the answer *before* this model exists (see `opensOnStoryFlow`).
-    static func isStoryFlow(_ stage: Stage) -> Bool {
-        switch stage {
-        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
-             .approachTransition, .storyReveal, .placeNotice, .checkpointDetail, .taskDetail,
-             .questExplanation, .stampAward, .transition:
-            true
-        case .safetyNotice, .atCheckpoint, .finished:
-            false
-        }
-    }
-
-    /// Whether a run screen opened for this Run lands on a story stage, answerable without
-    /// building the model.
-    ///
-    /// The model is built in `onAppear`, so the pushed screen draws a placeholder first. A
-    /// placeholder that does not already hide the navigation bar gets the stack's default one, and
-    /// the walker sees a bar appear and vanish as the story preview arrives. Asking here keeps
-    /// that answer and `initialStage` from drifting apart.
-    static func opensOnStoryFlow(existingRun: Run?) -> Bool {
-        isStoryFlow(initialStage(run: existingRun))
-    }
-
-    /// Leaving the hook for the notice. `FR-START-04` still gates the system prompt; the
-    /// plain-language location rationale that used to sit between them (`FR-START-02`) is gone by
-    /// request, so acknowledging the safety notice now goes straight into requesting permission.
+    /// Leaving the hook straight for the arrival gate. Both notices that used to sit here —
+    /// `FR-START-04`'s safety notice and `FR-START-02`'s location rationale — are gone by request;
+    /// nothing precedes the system permission prompt any more.
     func advanceFromStoryPreview() {
-        if !preferences.safetyNoticeAckedQuestIDs.contains(quest.id) {
-            stage = .safetyNotice
-        } else {
-            beginArrival()
-        }
+        beginArrival()
     }
 
     // MARK: Derived
@@ -346,19 +312,12 @@ final class QuestRunViewModel {
         return (a, b)
     }
 
-    var safetyNotes: String { quest.safetyNotes.value(for: language) }
-
     var presenceConfirmationTitle: String {
         String(format: UIStrings.string(.runStartConfirmTitle, language),
                placeName(for: currentCheckpoint))
     }
 
-    // MARK: Preflight — FR-START-04
-
-    func acknowledgeSafetyNotice() {
-        preferences.safetyNoticeAckedQuestIDs.insert(quest.id)
-        beginArrival()
-    }
+    // MARK: Preflight
 
     /// Set only while the very first system permission prompt is up, so
     /// `sampling.onAuthorizationDecided` knows this particular decision is the one it is waiting

@@ -1,8 +1,9 @@
 // Restored by m7 step 9 from b597b5b^ (Tests/AppFeaturesTests/QuestRunTests.swift).
 // Last, because its failure would be a real finding rather than a wiring problem.
-// FR-START-04/08/09, FR-ARR-01/03, FR-DONE-01/03/04, FR-TASK-07, FR-RUN-04, NFR-BAT-04.
-// FR-START-02's location rationale screen was removed from this flow by request (still guarded
-// in SideQuestFlowViewModelTests, which is unaffected).
+// FR-START-08/09, FR-ARR-01/03, FR-DONE-01/03/04, FR-TASK-07, FR-RUN-04, NFR-BAT-04.
+// FR-START-02's location rationale and FR-START-04's safety notice were both removed from this
+// flow by request. `FR-START-02` is unaffected for the sidequest flow, which never had a safety
+// notice of its own to begin with (`s0` D3).
 import Foundation
 import Testing
 @testable import challange_5
@@ -122,14 +123,15 @@ struct QuestRunTests {
         return false
     }
 
-    // MARK: - FR-START-04/04a
+    // MARK: - Preflight (FR-START-02, FR-START-04 removed)
 
-    /// `FR-START-04a` — the load-bearing half, and the half that admits no exception: nothing is
-    /// sampled, nothing is asked of the system, and nothing is written to a Run until the safety
-    /// notice has been acknowledged. The pre-M8 form of this test asserted the weaker claim that the
-    /// notice was the *first screen*; the amendment permits a narrative screen ahead of it, so the
-    /// guard moved to what the requirement actually protects.
-    @Test func theSafetyNoticeComesBeforeAnySamplingPermissionOrRunWrite() throws {
+    /// Both the location rationale (`FR-START-02`) and the safety notice (`FR-START-04`) were
+    /// removed from this flow by request. What is left of them: the story preview stays inert —
+    /// nothing sampled, nothing asked of the system, no Run written — until the walker leaves
+    /// it, and the screen behind the system permission prompt stays put — `.storyPreview` here —
+    /// until the walker actually answers it (simulated here by the provider firing
+    /// `onAuthorizationChange`), rather than jumping to `.awaitingArrival` underneath the dialog.
+    @Test func theStoryPreviewStaysInertUntilTheSystemPromptIsAnswered() throws {
         let harness = try harness(authorization: .notRequested, safetyAcked: false)
 
         // The opening screen is narrative. It asks nothing and starts nothing.
@@ -145,11 +147,14 @@ struct QuestRunTests {
         #expect(!harness.provider.requestedPermission)
 
         harness.model.advanceFromStoryPreview()
-        #expect(harness.model.stage == .safetyNotice)
-        #expect(!harness.provider.isSampling)
-        #expect(!harness.provider.requestedPermission)
+        #expect(harness.model.stage == .storyPreview)
+        #expect(harness.provider.requestedPermission)
         #expect(harness.model.run == nil)
         #expect(try harness.store.runs().isEmpty)
+
+        harness.provider.authorization = .whenInUse
+        harness.provider.onAuthorizationChange?(.whenInUse)
+        #expect(harness.model.stage == .awaitingArrival)
     }
 
     /// The amendment is narrow: it licenses a screen that asks nothing, not a general permission to
@@ -173,33 +178,10 @@ struct QuestRunTests {
         #expect(resumed.stage != .storyPreview)
     }
 
-    /// `FR-START-02`'s plain-language location rationale screen was removed by request — the
-    /// system permission prompt is now requested the moment the safety notice is acknowledged,
-    /// with no explanation screen ahead of it. This guard now records that decision rather than
-    /// the requirement.
-    ///
-    /// It also guards a second, later decision: the screen behind the system prompt stays exactly
-    /// where it was — `.safetyNotice` here — rather than jumping to `.awaitingArrival` underneath
-    /// the dialog. Only once the walker actually answers it (simulated here by the provider firing
-    /// `onAuthorizationChange`) does the stage move on.
-    @Test func acknowledgingTheSafetyNoticeRequestsPermissionImmediately() throws {
-        let harness = try harness(authorization: .notRequested, safetyAcked: false)
-        harness.model.advanceFromStoryPreview()
-        #expect(!harness.provider.requestedPermission)
-
-        harness.model.acknowledgeSafetyNotice()
-        #expect(harness.model.stage == .safetyNotice)
-        #expect(harness.provider.requestedPermission)
-
-        harness.provider.authorization = .whenInUse
-        harness.provider.onAuthorizationChange?(.whenInUse)
-        #expect(harness.model.stage == .awaitingArrival)
-    }
-
     @Test func anAlreadyAcknowledgedQuestGoesStraightToArrival() throws {
         let harness = try harness()
-        // Straight past both notices — but still through the narrative opening, which is the one
-        // screen the amendment permits ahead of them.
+        // Straight to arrival — but still through the narrative opening, the one screen ahead of
+        // the gate. Authorization is already granted here, so there is no prompt to wait on.
         harness.model.advanceFromStoryPreview()
         #expect(harness.model.stage == .awaitingArrival)
     }
