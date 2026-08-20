@@ -789,9 +789,23 @@ exist in the content tree — "Where the Gods Come to Dance", "The Serpent's Tid
 Mother Temple's Forgotten Vow". The map renders one marker per shipped quest and there is one, so
 it draws one. `275:2178`'s four cards are a different case: three of them ship as
 `PlaceholderQuestCard`, which is drawn like a card, cannot be tapped, and says so — see
-`PlaceholderQuestCatalog`. The frame's two liquid-glass buttons on the map (`rectangle.stack.fill`,
-`wand.and.sparkles`) are also not built: neither has a behaviour behind it, and the screen already
-has its way back.
+`PlaceholderQuestCatalog`.
+
+**`wand.and.sparkles` is built as of 2026-08-20; `rectangle.stack.fill` still is not.** The wand
+swaps the discovery map's ground — the illustrated chart drawn over a live basemap (`275:2309`), or
+the basemap alone with the same markers on it (`276:2520`) — which is a behaviour the two frames
+between them actually specify. The stack button has none: nothing anywhere says what it does, and a
+control whose behaviour is invented is worse than one that is missing. With it unbuilt the wand
+takes the upper of the two slots (x 334, 48 square, 20 points off the trailing edge) rather than
+floating below a gap where a control the reader never saw would have been. The frames' component is
+iOS 26 liquid glass and the deployment target is 18.0, so it is `glassEffect` where that exists and
+`.regularMaterial` below — not a hand-painted approximation of a system material.
+
+The chart's placement on the world is `RunEngine.IllustratedMapGeoreference`, and it is these same
+960 px/°lon and 1206 px/°lat read the other way: the rates fix the drawing's span, and the authored
+`mapPoint`s fix its origin. The 1.24× vertical stretch recorded above is why the picture is drawn
+about 1.25× wider than its own proportions once its features sit at their real coordinates.
+Squashing the art is the cheaper error; see CLAUDE.md's Known state bullet.
 
 ### `719:3285` — the envelope, redrawn
 

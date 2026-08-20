@@ -67,6 +67,13 @@ public enum UIStrings {
             en: "No quest matches that search."),
         .questListMapTab: LocalizedText(id: "Peta", en: "Map"),
         .questListListTab: LocalizedText(id: "Daftar", en: "List"),
+        .questMapShowIllustrated: LocalizedText(id: "Tampilkan peta bergambar",
+                                                en: "Show the illustrated map"),
+        .questMapShowReal: LocalizedText(id: "Tampilkan peta sebenarnya",
+                                        en: "Show the real map"),
+        .questMapOfflineNotice: LocalizedText(
+            id: "Peta sebenarnya butuh koneksi. Yang tampil peta bergambar.",
+            en: "The real map needs a connection. Showing the illustrated map."),
         .mapUnavailable: LocalizedText(
             id: "Peta wilayah belum ikut di versi konten ini.",
             en: "This content version ships no region map."),

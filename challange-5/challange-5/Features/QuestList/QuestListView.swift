@@ -83,7 +83,10 @@ struct QuestListView: View {
 
     @ViewBuilder private var mapSurface: some View {
         if let mapModel {
-            RegionMapView(
+            // `275:2309` and `276:2520` are one screen with two grounds, so the discovery map is
+            // `QuestMapScreen` rather than either frame alone. It falls back to `RegionMapView` —
+            // the illustrated surface that needs no network — when the basemap does not load.
+            QuestMapScreen(
                 model: mapModel,
                 onSelect: { questID in
                     surface = .list

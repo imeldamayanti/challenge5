@@ -1,5 +1,6 @@
 import ContentKit
 import Foundation
+import RunEngine
 import SwiftUI
 
 @MainActor
@@ -10,6 +11,12 @@ final class RegionMapViewModel {
     let pins: [RegionMapPin]
     let mapImageURL: URL?
     let aspectRatio: Double
+
+    /// Where the illustration sits on the real world, so a live basemap can be drawn under it.
+    ///
+    /// Nil when no drawn quest reaches a Place carrying a `mapPoint` — the discovery map then has
+    /// nothing honest to place the artwork by, and draws no overlay rather than an invented one.
+    let georeference: IllustratedMapGeoreference?
 
     /// The centre of the pin cluster, so the map can open showing the pins rather than whichever
     /// corner of the illustration happens to sit at the scroll origin. Bali's south coast is two
@@ -103,8 +110,26 @@ final class RegionMapViewModel {
                 title: title,
                 placeName: placeName,
                 point: point,
+                coordinate: place.coordinate,
                 // NFR-A11Y-02: a marker is a control, so it says what it is and where it starts.
                 accessibilityLabel: "\(title) — \(placeName)")
         }
+
+        // Anchored on **every** Place the drawn quests walk through, not on the pins alone. A
+        // single anchor fits without complaint and cannot disagree with itself; five that were
+        // each eyeballed onto the same drawing agree to within fourteen metres, and the moment one
+        // is nudged the fit says so. Places no drawn quest reaches are deliberately excluded —
+        // several carry `mapPoint`s that predate this artwork and would drag the overlay tens of
+        // kilometres west.
+        let anchors: [IllustratedMapGeoreference.Anchor] = quests
+            .flatMap(\.checkpoints)
+            .compactMap { checkpoint in
+                guard let place = (try? repository.place(id: checkpoint.placeId)) ?? nil,
+                      let point = place.mapPoint
+                else { return nil }
+                return IllustratedMapGeoreference.Anchor(point: point, coordinate: place.coordinate)
+            }
+
+        georeference = IllustratedMapGeoreference.fittedToBaliIllustration(anchors: anchors)
     }
 }

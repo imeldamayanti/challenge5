@@ -134,12 +134,59 @@ struct PermissionCallBoundaryTests {
         #expect(offenders.isEmpty, "\(offenders)")
     }
 
-    @Test func theAppDoesNotDrawMapsFromLiveTiles() throws {
-        // FR-MAP-01 / FR-OFF-03: the route display must not depend on live map tiles, and MapKit
-        // exposes no public offline tile cache. The region map renders a shipped illustration and
-        // the run map projects route.geojson onto a Canvas (RunRouteMapView).
-        let offenders = try Self.occurrences(of: ["import MapKit", "MKMapView", "Map("],
-                                             under: Self.appTarget)
+    /// The three files of the discovery map's live basemap, and nothing else.
+    ///
+    /// **This list is a narrowing of an outright ban, and the reason is written down rather than
+    /// implied.** `FR-MAP-01` bans live map tiles for *in-quest* use, on the stated ground that
+    /// MapKit exposes no public offline tile cache — so a walk cannot depend on one. Choosing a
+    /// walk is not walking it: the discovery map stands `275:2309`'s chart over a live basemap
+    /// (`276:2520`) and falls back to the illustrated surface the moment the basemap does not load.
+    /// The PRD amendment scoping the requirement to in-quest use is drafted at
+    /// `docs/prd-amendments/fr-map-01-discovery-basemap.md` and **is not signed**; until it is,
+    /// this list is the record of exactly how far the exception reaches.
+    ///
+    /// Matched on file NAME for the same reason `arrivalOwningFiles` is: moving one of these
+    /// between folders keeps the guard green, and a *new* file reaching for MapKit turns it red.
+    /// That is the sensitivity that matters — the danger is a fourth caller, not a rename.
+    static let liveBasemapOwningFiles: Set<String> = [
+        "QuestBaseMapView.swift",
+        "IllustratedMapOverlay.swift",
+        "QuestMapAnnotation.swift",
+    ]
+
+    static let liveMapTileCalls = ["import MapKit", "MKMapView", "Map("]
+
+    @Test func onlyTheDiscoveryBasemapDrawsMapsFromLiveTiles() throws {
+        let offenders = try Self.occurrences(of: Self.liveMapTileCalls, under: Self.appTarget)
+            .filter { offender in
+                !Self.liveBasemapOwningFiles.contains { offender.hasPrefix($0 + ":") }
+            }
+        #expect(offenders.isEmpty, "\(offenders)")
+    }
+
+    /// The line that actually matters, asserted separately so narrowing the one above can never
+    /// widen this one by accident.
+    ///
+    /// `FR-MAP-01`/`FR-OFF-03` are about the walk. `RunRouteMapView` projects the authored
+    /// `route.geojson` onto a `Canvas` and must never become a MapKit view — a walker inside a
+    /// covered market with no signal still has to be able to see where the next checkpoint is.
+    @Test func theRunItselfNeverDrawsAMapFromLiveTiles() throws {
+        let run = Self.appTarget
+            .appendingPathComponent("Features")
+            .appendingPathComponent("QuestRun")
+        let offenders = try Self.occurrences(of: Self.liveMapTileCalls, under: run)
+        #expect(offenders.isEmpty, "\(offenders)")
+    }
+
+    /// And no package target may reach for it at all. `ContentKit` and `RunEngine` are Foundation
+    /// layers, `DesignSystem` knows nothing about geography, and the exception above is a decision
+    /// the app target owns.
+    @Test func noPackageTargetDrawsMapsFromLiveTiles() throws {
+        var offenders: [String] = []
+        for target in ["ContentKit", "RunEngine", "DesignSystem"] {
+            offenders += try Self.occurrences(of: Self.liveMapTileCalls,
+                                              under: Self.packageTarget(target))
+        }
         #expect(offenders.isEmpty, "\(offenders)")
     }
 

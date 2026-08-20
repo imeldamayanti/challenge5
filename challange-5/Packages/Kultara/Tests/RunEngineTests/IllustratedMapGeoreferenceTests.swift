@@ -1,0 +1,88 @@
+import ContentKit
+import Testing
+@testable import RunEngine
+
+/// The five Places `badung-empat-wajah` walks, as they are authored today: the real coordinate and
+/// the `mapPoint` that was eyeballed onto `275:2309`'s chart. These are the anchors the discovery
+/// map fits its overlay from, so this suite is what stands between an author nudging a pin and the
+/// illustration silently sliding off Bali.
+private let badungAnchors: [IllustratedMapGeoreference.Anchor] = [
+    .init(point: MapPoint(x: 0.6419, y: 0.7021), coordinate: Coordinate(lat: -8.6595, lon: 115.2077)),
+    .init(point: MapPoint(x: 0.6425, y: 0.6993), coordinate: Coordinate(lat: -8.6570, lon: 115.2085)),
+    .init(point: MapPoint(x: 0.6444, y: 0.6960), coordinate: Coordinate(lat: -8.6540, lon: 115.2115)),
+    .init(point: MapPoint(x: 0.6474, y: 0.6954), coordinate: Coordinate(lat: -8.6535, lon: 115.2160)),
+    .init(point: MapPoint(x: 0.6481, y: 0.6982), coordinate: Coordinate(lat: -8.6560, lon: 115.2172)),
+]
+
+@Suite struct IllustratedMapGeoreferenceTests {
+
+    @Test func theAuthoredPointsAgreeOnOneOriginToWithinTwentyMetres() {
+        let fit = IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors)
+        let georeference = try! #require(fit)
+
+        for anchor in badungAnchors {
+            let residual = georeference.residualMetres(for: anchor)
+            #expect(residual < 20,
+                    "anchor at \(anchor.point) is \(residual) m from where the fit puts it")
+        }
+    }
+
+    /// The load-bearing consequence of the fit: the drawing, placed so its features land at their
+    /// real coordinates, covers Bali. A fit that has slipped puts the island off the paper, and
+    /// this is the assertion that notices before a user does.
+    @Test func theFittedImageCoversTheIsland() {
+        let georeference = try! #require(
+            IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors))
+
+        // `HisploraBaliGeoData.baliBounds` — the island, outlying islands included.
+        #expect(georeference.northWest.lon < 114.40)
+        #expect(georeference.southEast.lon > 115.75)
+        #expect(georeference.northWest.lat > -8.05)
+        #expect(georeference.southEast.lat < -8.90)
+    }
+
+    /// 1469 ÷ 960 and 1071 ÷ 1206. The spans are what the overlay's rectangle is built from, so
+    /// they are pinned rather than left to arithmetic nobody re-checks.
+    @Test func theSpansComeFromTheMeasuredRates() {
+        let georeference = try! #require(
+            IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors))
+
+        #expect(abs(georeference.lonSpanDegrees - 1.53021) < 0.0001)
+        #expect(abs(georeference.latSpanDegrees - 0.88806) < 0.0001)
+    }
+
+    /// The drawing is stretched vertically against true scale, and this is the number that says by
+    /// how much. Placed so geography is right, the picture is drawn about 1.25× wider than its own
+    /// proportions — the deviation `docs/hisplora-tokens.md` records, asserted rather than trusted.
+    @Test func theArtIsStretchedAboutOneAndAQuarterAgainstTrueScale() {
+        let georeference = try! #require(
+            IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors))
+
+        let stretch = georeference.pixelsPerDegreeLat / georeference.pixelsPerDegreeLon
+        #expect(abs(stretch - 1.25625) < 0.0001)
+    }
+
+    @Test func aPointAndACoordinateRoundTrip() {
+        let georeference = try! #require(
+            IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors))
+
+        let point = MapPoint(x: 0.31, y: 0.62)
+        let back = georeference.point(for: georeference.coordinate(at: point))
+
+        #expect(abs(back.x - point.x) < 1e-9)
+        #expect(abs(back.y - point.y) < 1e-9)
+    }
+
+    /// No anchors means no honest placement, and the caller draws no overlay at all. An
+    /// illustration placed at an invented latitude is a map that lies.
+    @Test func noAnchorsYieldsNoGeoreferenceRatherThanAGuess() {
+        #expect(IllustratedMapGeoreference.fittedToBaliIllustration(anchors: []) == nil)
+    }
+
+    @Test func aDegenerateImageYieldsNoGeoreference() {
+        #expect(IllustratedMapGeoreference.fitted(
+            imageWidthPx: 0, imageHeightPx: 1071,
+            pixelsPerDegreeLon: 960, pixelsPerDegreeLat: 1206,
+            anchors: badungAnchors) == nil)
+    }
+}

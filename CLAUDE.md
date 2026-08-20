@@ -329,7 +329,14 @@ These are the places where a reasonable-looking change silently breaks a guarant
 - **Tasks never gate progression.** `blocksProgression` must be `false` for all content (`AD-2`, rule V8). Photos are keepsakes; the GPS radius is the gate.
 - **Arrival needs the accuracy check, not just the distance check.** `FR-ARR-01` is two conditions, and the second is the load-bearing one: without `horizontalAccuracy <= radius`, a 500 m cell-tower fix unlocks a 75 m checkpoint from the next neighbourhood. It is also why the manual override is mandatory rather than a nicety (`FR-START-10`) — inside a covered market the accuracy test fails legitimately and often.
 - **A completed Run stays writable for reading and answering.** The final checkpoint completes the walk the instant it is reached (`FR-DONE-01`), while the walker is still standing there with the closing reflection unanswered. `markLoreOpened` and `recordTaskResult` therefore accept `completed` as well as `active`; gating them on `active` makes completion swallow the ending that `FR-TASK-07` requires.
-- **The run map is drawn, never tiled.** `FR-MAP-01`/`FR-OFF-03` rule out live map tiles, so there is no `MKMapView` and there must never be one. `RunRouteMapView` projects the authored `route.geojson` onto a `Canvas` via `RunEngine.RouteProjection`, which shares `Geo.earthRadiusM` with `Geo.distanceM` so the drawn length and the printed distance cannot disagree. `Place.mapPoint` is *not* usable here — it is authored against the stylised island illustration and means nothing at street scale.
+- **The *run* map is drawn, never tiled.** `FR-MAP-01`/`FR-OFF-03` rule out live map tiles during a
+  walk, so there is no `MKMapView` under `Features/QuestRun/` and there must never be one.
+  **The *discovery* map has one as of 2026-08-20**, and that is a scoped deviation with an
+  unsigned amendment — see the Known state bullet and
+  `docs/prd-amendments/fr-map-01-discovery-basemap.md`.
+  `PermissionCallBoundaryTests` now names the three files allowed to touch MapKit and fails on a
+  fourth, asserts separately that `Features/QuestRun/` touches none, and asserts that no package
+  target does either. `RunRouteMapView` projects the authored `route.geojson` onto a `Canvas` via `RunEngine.RouteProjection`, which shares `Geo.earthRadiusM` with `Geo.distanceM` so the drawn length and the printed distance cannot disagree. `Place.mapPoint` is *not* usable here — it is authored against the stylised island illustration and means nothing at street scale.
 
 ## Invariants the restored guards hold again
 
@@ -520,6 +527,43 @@ auto-advancing and the login carrying a "Skip for now".
   highest-priority two: Catur Muka's seed coordinate is in the **wrong quadrant** (~293 m out, right
   neighbourhood), and Museum Bali's `entryCost: 0` renders as "Gratis"/"Free" for a museum that
   sells a ticket.
+- **The discovery map is one map with two grounds, and the wand swaps them.** `275:2309` and
+  `276:2520` are not two screens: `Features/Map/Real/QuestMapScreen.swift` stands the illustrated
+  chart over a live `MKMapView` as an `MKOverlay`, and `wand.and.sparkles` adds and removes that
+  overlay. The camera, the markers and the user's own position are shared, so the toggle changes the
+  ground and nothing else. Six things about it:
+  - **`FR-MAP-01` bans a live MapKit view for in-quest use and this is not that**, but the amendment
+    scoping it that way is **drafted and unsigned** —
+    `docs/prd-amendments/fr-map-01-discovery-basemap.md`, no owner named. Until it is signed this is
+    shipped code without a requirement behind it, and the guard above is the only record of how far
+    it reaches.
+  - **Live location is real, not projected.** `showsUserLocation` on the basemap is the whole reason
+    the basemap is there — a dot placed by projecting a coordinate onto a stylised drawing is the
+    thing `MapPoint`'s rule forbids, and this sidesteps it rather than bending it. `Place.mapPoint`
+    stays authored and stays what the offline surface draws by.
+  - **The chart is placed by `RunEngine.IllustratedMapGeoreference`**, which solves the drawing's
+    lat/lon box from the authored `mapPoint`s at the rates `docs/hisplora-tokens.md` measured — 960
+    px/°lon, 1206 px/°lat. It fits the *origin* only: five of the shipped places sit inside Denpasar,
+    so a two-variable regression over that cluster would be unstable. The five agree on one origin to
+    within fourteen metres, and `IllustratedMapGeoreferenceTests` asserts residuals under twenty.
+    **Places no drawn quest reaches are excluded on purpose** — several carry `mapPoint`s predating
+    this artwork that would drag the overlay tens of kilometres west.
+  - **Geography is right and the art is squashed, deliberately.** The drawing is stretched ~1.25×
+    vertically against true scale, so placing its features at their real coordinates draws it at a
+    different aspect ratio than the file's. Preserving the drawing's proportions instead puts the
+    coastline up to eleven kilometres out at the island's ends, which is the error a reader sees.
+  - **Three MapKit details are load-bearing and were each a visible bug first.** The overlay goes on
+    at `.aboveLabels`, or Apple's own place names print across the chart. `IllustratedMapOverlay` and
+    its renderer are `nonisolated`, or VectorKit reads `boundingMapRect` off its tile queue and the
+    app dies on the way into the map. And the map sets `insetsLayoutMarginsFromSafeArea = false` and
+    is positioned with `edgePadding: .zero`, or MapKit fits the region into the *unobscured* area and
+    leaves a band of bare basemap the height of the home indicator's inset.
+  - **The fallback is a shipped screen, and there is no reachability check.** `mapViewDidFailLoadingMap`
+    hands the whole surface to `RegionMapView` (`AD-3` — nothing predicts the network;
+    `noModuleChecksReachability` still passes). The "real map is unavailable" notice is said only when
+    the reader had actually asked for the real map, since falling back while illustrated lands on very
+    nearly the same picture. Seen on iPhone 17 / iOS 26.5 —
+    `docs/screenshots/m13-map-illustrated-over-basemap.png`, `m13-map-real-basemap.png`.
 - **The region map is `275:2309`'s wide fantasy island, and it scrolls both ways.** As of
   `contentBundleVersion` **2026.09.4** `maps/bali-illustrated.png` is a 1469 × 1071 landscape chart
   (`aspectRatio` 1.3716) in place of the 853 × 1844 portrait one. `RegionMapView` fills the

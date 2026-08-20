@@ -47,6 +47,9 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case questListMapTab
     case questListListTab
     case mapUnavailable
+    case questMapShowIllustrated
+    case questMapShowReal
+    case questMapOfflineNotice
     case labelRegion
     case labelDistance
     case labelWalkingTime
