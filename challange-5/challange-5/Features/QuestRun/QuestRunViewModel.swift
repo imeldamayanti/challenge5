@@ -227,6 +227,34 @@ final class QuestRunViewModel {
         return .storyPreview
     }
 
+    /// Which stages are drawn on the Hisplora ground, carrying their own heading and their own
+    /// back control. The museum navigation bar over them is cream on brown and it clips the
+    /// eyebrow underneath it, so on those stages it goes away entirely.
+    ///
+    /// The rule lives here rather than in the view because two callers need it: the view, and the
+    /// host that has to know the answer *before* this model exists (see `opensOnStoryFlow`).
+    static func isStoryFlow(_ stage: Stage) -> Bool {
+        switch stage {
+        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
+             .approachTransition, .storyReveal, .placeNotice, .checkpointDetail, .taskDetail,
+             .questExplanation, .stampAward, .transition:
+            true
+        case .atCheckpoint, .finished:
+            false
+        }
+    }
+
+    /// Whether a run screen opened for this Run lands on a story stage, answerable without
+    /// building the model.
+    ///
+    /// The model is built in `onAppear`, so the pushed screen draws a placeholder first. A
+    /// placeholder that does not already hide the navigation bar gets the stack's default one, and
+    /// the walker sees a bar appear and vanish as the story preview arrives. Asking here keeps
+    /// that answer and `initialStage` from drifting apart.
+    static func opensOnStoryFlow(existingRun: Run?) -> Bool {
+        isStoryFlow(initialStage(run: existingRun))
+    }
+
     /// Leaving the hook straight for the arrival gate. Both notices that used to sit here —
     /// `FR-START-04`'s safety notice and `FR-START-02`'s location rationale — are gone by request;
     /// nothing precedes the system permission prompt any more.

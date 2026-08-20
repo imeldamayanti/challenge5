@@ -40,16 +40,10 @@ struct QuestRunView: View {
     /// The story-flow stages carry their own heading and their own back control, on their own
     /// ground. The museum navigation bar over them is cream on brown and it clips the eyebrow
     /// underneath it, so on those stages it goes away entirely.
-    private var isOnStoryFlow: Bool {
-        switch model.stage {
-        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
-             .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .questExplanation,
-             .stampAward, .transition:
-            true
-        case .atCheckpoint, .finished:
-            false
-        }
-    }
+    /// One rule, on the model, because the host has to answer the same question before this view's
+    /// model exists (`QuestRunViewModel.opensOnStoryFlow`). Two copies of the switch are two things
+    /// to remember to update when a stage is added.
+    private var isOnStoryFlow: Bool { QuestRunViewModel.isStoryFlow(model.stage) }
 
     var body: some View {
         content
