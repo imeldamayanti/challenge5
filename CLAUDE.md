@@ -643,6 +643,15 @@ auto-advancing and the login carrying a "Skip for now".
   back from `f88eb4c` (`origin/FE`), with `isOnStoryFlow` now delegating to the model's one rule
   rather than keeping a duplicate. None of this is new behaviour — it is what the bullet below
   already described, restored so the target builds.
+- **`isStoryFlow` and `opensOnStoryFlow` live on `QuestRunViewModel`, and the second is derived from
+  the first.** Merge `2160796` dropped both — along with `approachTransitionDuration`,
+  `advanceFromApproachTransition()` and `initialStage`'s signature — and the app target stopped
+  compiling, because `KultaraRootView.RunDestination` has to know whether a pushed run screen lands
+  on a story stage *before* the model exists (a museum bar that appears for one frame and vanishes
+  under the story preview is worse than no bar). They were then restored twice, on two branches, and
+  merging left the file with two copies of each. The pair that survives is
+  `opensOnStoryFlow(existingRun:) = isStoryFlow(initialStage(run:))` — one rule, read two ways. A
+  second copy that restates the rule is exactly how the two drift apart, so do not add one.
 - **A map with a beating dot stands between the cutscene and the story, and it leaves on its own.**
   `187:1103` is back as `approachTransition` — `cutscenePortrait` → `approachTransition` →
   `storyReveal`, on the walk's first checkpoint only, since it is the cutscene that it lands. It is

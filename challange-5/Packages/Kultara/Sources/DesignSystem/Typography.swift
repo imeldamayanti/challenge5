@@ -155,6 +155,9 @@ public enum KultaraTypography {
             case .journalTapHint: .body
             case .onboardingDisplay: .title
             case .storyPlaceMark, .storyBarTitle: .title3
+            // 21 as drawn, which is `.title3`'s 20 — the nearest style, and a style is what makes
+            // a counter scale with the reader's text size at all (`NFR-A11Y-01`).
+            case .journalStatValue: .title3
             case .stampFranking: .footnote
             case .stampFrankingDetail: .caption2
             case .typedSheet: .footnote
