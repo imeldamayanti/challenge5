@@ -42,7 +42,8 @@ so the next import is not another archaeology exercise.
 | `paperTicket` | `#EFEBD7` | the quest-row ticket on `452:3132` |
 | `inkTicket` | `#34312E` | that row's title |
 | `trackWell` | `#8D7870` | the well of the segmented task bar, `452:3138` |
-| `trackDim` | `#926954` | the unfilled segment of the onboarding bar, `523:2054`–`2056` — the frame's 25% `inkCream` over `brownMid`, flattened |
+| `trackDim` | `#C3BAAB` | the unfilled segment of the onboarding bar, `702:2081`–`2082` — the frame's 25% `buttonFill` over `paperSheet`, flattened. **Re-sampled 2026-08-20**: it was `#926954` while onboarding stood on `brownMid` |
+| `inkQuiet` | `#4F4B44` | the underlined Skip at the top right of the onboarding frames, `737:4731`/`4734`/`4741` — 75% `buttonFill` over `paperSheet`, flattened |
 | `mapGround` | `#DFCDB5` | ground: the site-map screen `452:3028` — the one paper ground in the flow |
 | `mapMarker` | `#B44934` | the marker dots on the site plan, `452:3032`–`3034` |
 | `inkCream` | `#FDF2DE` | headings on the brown grounds |
@@ -89,9 +90,10 @@ it cannot quietly start carrying text.
 
 ## Deviations from the frames
 
-Twelve, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `447:1880` and
+Fourteen, all recorded rather than argued. Deviations 6–9 came from `452:3132`, `447:1880` and
 `452:3028` on 2026-08-17; deviation 10 came from `452:2651` on 2026-08-18; 11 and 12 came from the
-three onboarding frames on 2026-08-18.
+first onboarding board on 2026-08-18 and were re-stated against the second on 2026-08-20; 13 and 14
+came from that second board, `702:2068` / `702:1999` / `702:1980`.
 
 1. **`inkDusty` was lightened.** As drawn it is `#AA9B8E`, which measures 3.34:1 on `brownStone` —
    it carries the lead paragraph under the cutscene's title, so it is held to body text.
@@ -210,27 +212,54 @@ three onboarding frames on 2026-08-18.
     reproduced exactly: leading inset 16, no trailing inset, filled by height so the drawing runs
     off the right edge, opening on its leading edge rather than centred.
 
-11. **Onboarding is four screens, not the frames' three.** `523:1946`, `523:1973` and `523:1999`
-    are Explore / Quest / Collection, and none of them explains that the phone goes in a pocket
-    between checkpoints. `FR-ONB-03` is a P0 MUST and `AD-1` is the safety model of the product, so
-    that screen survives the redesign; `FR-ONB-02` allows four, so nothing had to be traded for it.
-    It is the second of the four — a walker who taps Skip on screen three has still been told — and
-    it is the one screen whose picture is an SF Symbol in a ruled circle rather than an export,
-    because inventing an illustration would make it read as a fourth Figma screen, which it is not.
-    Two screens from the old onboarding were dropped with no requirement behind them: the
+11. **Onboarding is the frames' three screens, and `FR-ONB-03` is the price.** `702:2068`,
+    `702:1999` and `702:1980` are Explore / Quest / Collection — as `523:1946`, `523:1973` and
+    `523:1999` were before them — and none of them explains that the phone goes in a pocket between
+    checkpoints. A fourth screen carrying it stood second from 2026-08-18 until **2026-08-20, when
+    the owner asked for exact frame parity and it was removed on that instruction**. This entry is
+    therefore no longer a deviation from the frames; it is a deviation from the PRD, recorded here
+    because that is worse and easier to lose.
+
+    The paragraph itself survives: the `FR-START-04` safety notice, which the walker must
+    acknowledge before the first Run of every quest, already printed it under the quest's authored
+    `safetyNotes` and still does. The string moved from `onboardingPocketBody` to
+    **`safetyPocketBody`**; the title and `OnboardingIllustration.symbol` went with the screen. What
+    is lost is the timing — a walker who never starts a quest is never told — and `FR-ONB-03` is a
+    P0 MUST that wants an amendment or a signed exception with an owner.
+
+    Two screens from the *old* onboarding were dropped earlier with no requirement behind them: the
     accuracy-label screen (the labels are on every lore block, where `FR-CP-05` puts them) and the
     still-in-use screen (dress and photo rules are shown before any task, where `FR-TASK-05` puts
     them).
 
 12. **The onboarding bar's segments are flexible, and it is a position indicator.** The frames draw
-    three fixed 115-point segments; a fourth screen at that width runs off the row, so the segments
-    are equal and flexible instead. What is *not* changed is which one is lit: `523:1985`–`1987` dim
-    the first **and** third segment on screen two, so the bar marks position rather than filling as
-    it goes, and it is reproduced that way. The unfilled segment's 25% cream over `brownMid` is
-    flattened into `trackDim` rather than left as an alpha, because the suite measures token pairs
-    and a translucency over "whatever is behind it" is not a pair anyone measured; against a filled
-    segment it is 4.33:1. The row carries a spoken "Screen 2 of 4", so the count is never in the
-    shape alone (`NFR-A11Y-05`).
+    three fixed 115-point segments; the segments are equal and flexible instead, so the bar takes
+    whatever `total` it is given without running off the row — which is what let it carry a fourth
+    screen between 2026-08-18 and 2026-08-20 and carry three again now. What is *not* changed is which one is lit: `702:2080`–`2082` dim
+    every segment but one, so the bar marks position rather than filling as it goes, and it is
+    reproduced that way. The unfilled segment's 25% ink over the ground is flattened into `trackDim`
+    rather than left as an alpha, because the suite measures token pairs and a translucency over
+    "whatever is behind it" is not a pair anyone measured; against a filled segment it is 9.65:1.
+    The row carries a spoken "Screen 2 of 4", so the count is never in the shape alone
+    (`NFR-A11Y-05`).
+
+13. **The onboarding pill loses its ring.** `HisploraPillButtonStyle` adds a hairline the frames
+    never draw, because a near-black pill on `brownMid` measures 2.04:1 and WCAG 1.4.11 wants 3:1
+    for a control's boundary (deviation 3). On the redesign's cream the same pill measures 16.71:1
+    — the fill *is* the boundary — while `buttonRing` measures 2.47:1 there, so keeping the ring
+    would add an outline fainter than the edge it outlines. The style takes `ring:` and onboarding
+    passes `nil`; `theActionNeedsNoRingOnTheCreamGround` holds both halves.
+
+14. **Skip is a top-right link on every screen, including the last.** The earlier board drew it as
+    a footer pill beside Next, which forced it off `523:1999` — there Skip and "Begin Your First
+    Quest" do the same thing, so drawing both offered a choice that is not one. `737:4731`,
+    `737:4734` and `737:4741` move it into the header on all three, where it reads as leaving
+    rather than as the second way forward, and it can therefore be drawn everywhere. Two things
+    were added to the frame's text: it is a real `Button` rather than a tapped label, so VoiceOver
+    announces and activates it, and its 17-point box is padded out to the 44-point target
+    (`NFR-A11Y-05`, `NFR-A11Y-06`). The frames' zero-opacity Skip pill in the footer (`702:2075`,
+    `702:2010`) is reproduced as what it looks like — a half-width Next — rather than as an
+    invisible control, which VoiceOver would still find.
 
 ## Assets shipped from the file
 
@@ -240,9 +269,9 @@ three onboarding frames on 2026-08-18.
 | `typewriter.png` | `DesignSystem/Resources/Images` | the machine, cropped from the photograph at 47% height so the drawn sheet joins it |
 | `quest-parchment.png` | `DesignSystem/Resources/Images` | `447:1886`, the sheet the task is printed on |
 | `quest-scroll.png` | `DesignSystem/Resources/Images` | the rolled scroll — a list row's icon at 48, and the map hint's glyph at 32, tilted 41.6° |
-| `onboarding-explore.png` | `DesignSystem/Resources/Images` | `670:1692`, the dancers — **1×, wants replacing, see below** |
-| `onboarding-quest.png` | `DesignSystem/Resources/Images` | `670:1694`, three fanned task scrolls — **1×, wants replacing** |
-| `onboarding-collection.png` | `DesignSystem/Resources/Images` | `670:1749`, five stamps under a wax seal — **1×, wants replacing** |
+| `onboarding-explore.png` | `DesignSystem/Resources/Images` | `737:4729`, the dancers — 3×, alpha recovered, see below |
+| `onboarding-quest.png` | `DesignSystem/Resources/Images` | `737:4674`, three fanned task scrolls — 3×, alpha recovered |
+| `onboarding-collection.png` | `DesignSystem/Resources/Images` | `737:4649`, five stamps under a wax seal — 3×, alpha recovered |
 | `story-divider.png` | `DesignSystem/Resources/Images` | `447:1887`'s flourish, **converted to an alpha mask** — see below |
 | `SpecialElite-Regular.ttf` | `DesignSystem/Resources/Fonts` | Apache 2.0, licence shipped beside it |
 | `<place>-stamp1…3.png` × 5 places | `DesignSystem/Resources/Images` | the fifteen stamp illustrations, composited out of the SVGs at 480 × 519 — see below |
@@ -261,15 +290,31 @@ places it in a 99 × 116 box against its own 447/558, and **FILL-crops** it rath
 `SideQuestWatchCardView` reproduces that with `.scaledToFill()` plus `.clipped()`, so the top and
 bottom of the scrollwork are cut by ~3% exactly as the frame cuts them.
 
-**The three onboarding pictures are 1× and want a hand export.** Same failure mode as the divider
-below, in the other direction: `download_assets` at 3× composites the *frame's* fill behind the art,
-and on these three frames that is a cream sheet — so each picture arrived opaque, sitting on a cream
-card that does not exist in the design (`#FEF8F8` on `523:1946`, `#EEE7D2` on the other two, read out
-of the corner pixel). The only transparent form the tool returns is a contents-only render, which it
-will not upscale past the node's own size. So what ships is 378×277, 353×267 and 321×300 — exactly
-the frames' boxes, shadows included, at 1×, and soft on a 3× screen. A 3× export made from Figma's
-own export panel is a drop-in replacement: same three names, same three boxes, and the fractions in
-`HisploraOnboardingArt` are in points and do not move.
+**The three onboarding pictures are 3×, and their transparency is arithmetic rather than exported.**
+Figma returns two things and neither is what is wanted alone. `download_assets` at 3× composites the
+*frame's* fill behind the art, and on these frames that is a cream sheet — so each picture arrives
+opaque on a cream card that does not exist in the design (`#FCF2DE`, read out of the corner pixel;
+one unit off the `#FDF2DE` the screen is actually painted, which is enough to print a rectangle).
+`get_screenshot` with `contentsOnly` is transparent but will not upscale past the node's own size,
+whatever `maxDimension` asks for — that was re-tested on 2026-08-20 and the 1× ceiling is still
+there.
+
+So each file is built from both. The 3× export supplies the colour, the 1× contents-only render
+supplies the alpha resampled up, and the ground is divided back out:
+`art = (composite − (1 − α)·cream) / α`. Alpha upscales forgivingly — these mattes are mostly 0 or 1
+with soft shadow ramps — while the colour stays the design's own pixels at full resolution. Keying
+the cream out by colour instead would have left a hard halo everywhere a shadow fades, which is the
+whole reason the shadows are drawn.
+
+Two details are load-bearing. **Alpha is never quantised**: `explore` and `collection` are reduced to
+a 256-colour palette for size (334 KB and 213 KB against 1.4 MB and 1.2 MB), but the octree merges
+near-zero alpha into an entry at 1–2/255, and a "transparent" ground carrying alpha 2 over black
+darkens the cream by two units — a visible rectangle, which is exactly what shipped for one build
+before it was measured. The `tRNS` chunk is floored to 0 below 8 after saving. And `quest` is **not**
+quantised (345 KB): it is a smooth cream gradient, which is the one thing 256 colours band.
+
+The boxes are the exports' own, shadows included — 378×277, 340×257 and 324.33×274 — and the
+fractions in `HisploraOnboardingArt` are in points.
 
 **`story-divider.png` is not the frame's pixels.** Figma exports that node with the containing
 frame's `#808080` backdrop baked in, so the file as exported is a solid grey bar with a faint
@@ -1006,6 +1051,150 @@ And one thing the same pass restored: **the sealed card's nudge runs on every sh
 worth swiping.** It was gated on `showsSwipeHint`, which is false while there is a single letter — so
 the first walk a reader finishes sat perfectly still. The rock is the card's own 2D lean and the turn
 is about its vertical axis, so the two ride on top of each other rather than replacing one another.
+
+## The shelf rebuilt around the envelope (`791:5601`, 2026-08-20)
+
+One frame, and it re-orders the whole Journal tab. The screen used to be a heading, a carousel, the
+letter's title under it and a full-width "Unseal the Journey" pill at the foot. `791:5601` puts the
+title **above** the envelope, prints what to do with it under that, marks the shelf's position with
+a row of dots, and removes the pill entirely.
+
+| Frame layer | Node | Where |
+|---|---|---|
+| "Sealed Letters" | `791:5629` | x 24, y 82 — SF Pro Display Semibold 25 / 34, tracking 0.38, `#151311` |
+| the letter's title | `791:5626` | a 332-wide box at y 231 — New York Extra Large Regular **Italic** 35, tracking −0.7, solid |
+| "Tap envelope to open" | `791:5627` | y 317 — SF Pro Display Medium 17 / 1.4, tracking −0.51, `#6E2717` |
+| the envelope | `791:5612` | 290 × 174 at y 375, centred, with its neighbours at 226 wide and mostly off-screen |
+| the shelf's position | `791:5632` | four 8-point dots on a 12-point pitch at y 584 — `#444444` inked, `#D9D9D9` idle |
+
+### Three new type roles
+
+| Role | Set as | Why not an existing one |
+|---|---|---|
+| `journalShelfHeading` | sans, `.title2`, semibold, tracking 0.38 | the frame takes the display serif *off* the screen's own name |
+| `journalLetterTitle` | display serif, `.largeTitle`, regular, **italic**, 35, tracking −0.7, solid | `storyDisplay` is 38 and upright; this one is smaller and leans |
+| `journalTapHint` | sans, `.body`, medium, tracking −0.51 | there was no 17-point medium in the table, and this is a hint rather than a control's label |
+
+`journalLetterTitle` is the first `displaySerif` role the frames set leaning, which is why
+`KultaraFonts` now applies `isItalic` on that branch as well as on `.serif`. A role that declares
+its italic and is then drawn upright is a table that lies about what it decides.
+
+### One new string
+
+`journalTapToOpen` — "Ketuk amplop untuk membuka" / "Tap envelope to open". `journalUnsealAction`
+stays: it is the envelope's spoken name now (see below), not a button's label.
+
+### The pill's removal is an accessibility change, not a layout one
+
+A picture with an `onTapGesture` is not a control VoiceOver announces or can activate
+(`NFR-A11Y-05`). So the card carries `.isButton`, the pill's own label as its accessibility label,
+and an `accessibilityAction`; the frame's words are printed above it for everyone else. The swipe
+hint (`journalSwipeHint`) survives only as that element's accessibility *hint*, and only on a shelf
+with more than one letter — the frame draws the swipe as four dots, and a row of unlabelled circles
+is not information anyone can hear.
+
+### One paper, front and back
+
+`envelope-body` and `envelope-flap` are photographed a good deal darker than `envelope-inner` —
+means of `#8A6E47` and `#5A472D` against `#D6C1A1`. Nothing had noticed while the two faces were
+never on screen together; the idle turn puts them a third of a second apart, and the card visibly
+changed colour halfway round. Re-grading the two dark exports means a per-channel gain of
+1.55 / 1.75 / 2.26, which clips every highlight in the crumple. So the shape is taken from one
+export and the paper from the other: `paperLayer(shapedBy:)` draws `envelope-inner` masked to the
+body's or the flap's alpha.
+
+What keeps the object readable once every surface is the same sheet is what does it on a real
+envelope: the flap's fold throws a shadow (0.22 closed, 0.18 open), the pocket's lip throws one when
+open (0.28), and the inside is a shade darker than the front (`brightness(-0.05)`).
+
+### Smoother, specifically
+
+- **The idle turn's quarter-beats were both `.linear`** — a card that starts at full speed, stops
+  dead at the half-turn and starts again. The beat that leaves a face now eases *in* and the beat
+  that arrives at one eases *out*, so the two halves join at the fastest point of the movement
+  rather than at a stop. The face swap still happens at the quarter turn, where the card has no
+  width.
+- **The opening's beats are `.smooth` rather than `.easeOut`/`.easeInOut`** — the spring-based curve
+  with no bounce, which is the shape those two were reaching for without the flat middle that made
+  the rise look dragged at a constant rate.
+- **The nudge is two beats and a spring, not four keyframes.** It stepped through +1.6°, −1.6°,
+  +0.8°, 0 on four 130 ms eases, every one of them coming to a full stop before the next began — a stutter
+  rather than a rock. It now leans once and is let go.
+
+### The open frame is a still, not a keyframe (`791:5585`, `791:5591`) — tried and reverted
+
+The two frames do not draw the same envelope in the same place:
+
+| | sealed (`791:5601`) | open (`791:5585`) |
+|---|---|---|
+| the card | 290 × 174, centred at (201, 462) | pocket 339.85 × 202.71, centred at (201, 535.8) |
+| the letter's title | y 231, with "Tap envelope to open" under it | y 119, and no hint |
+| "Sealed Letters" | y 82 | not on the frame at all |
+
+Same centre line, 1.172 times the size, 73.8 points lower. Animating the card into that — with the
+title rising 112 points to meet it and the header stepping off — was built, run, and taken out
+again. **It reads as the envelope lurching out from under the reader's finger at the exact moment
+they tap it.** Three things moving at once, one of them the thing that was just touched, is not a
+letter opening; it is a screen rearranging itself.
+
+The open frame is a still of an open envelope laid out for a screen that has no header on it. It is
+not a keyframe of the movement between the two states, and treating it as one is the mistake. The
+opening holds the card exactly where it stands, swings the flap, and lets the title and the hint
+step back out of the flap's way — which is what the shelf shipped with at `8d892e8` and what it goes
+back to.
+
+`openScale` and `openDropRatio` were metrics for about an hour and are gone again, rather than left
+as unused constants documenting a thing the code does not do.
+
+### The gap between the flap and the card
+
+A flap hinged at `anchor: .top` ought to keep that edge nailed to the card, and it does not. At
+168° with `perspective: 0.45` the whole plane is displaced away from the hinge by roughly
+`height · sin(12°) · perspective` — about ten points at the size this ships — and the page showed
+through as a bright line straight across the middle of the object, between the flap and the body.
+
+Everything cheap was tried first and none of it moved the line: the export's own feathered top rows
+(two or three of 362, well under a point), the order of `brightness`/`saturation` against the
+rotation, and the flap's `shadow` — which *should* be applied after the rotation, because a shadow
+belongs where the flap ends up rather than being carried around by it, and now is. What closes it is
+`flapHingeOverlapRatio`: the swung flap is pushed 12 points of the card's 174 back down onto the
+card. The overlap is invisible — the envelope's own paper is drawn after the flap and covers it —
+and it is a ratio because the displacement scales with the card.
+
+### The turn was being clipped, and the fix is one line
+
+`ScrollView` clips its content. The turn is a `rotation3DEffect` with perspective, so the near edge
+of a card at 90° is drawn *wider* than the card's own frame — and the shelf's content is exactly as
+wide as its viewport, so the addressed side lost a vertical strip off its right-hand edge every time
+it came round. The nudge did the same to the corners. `.scrollClipDisabled()` — nothing on this
+shelf needs the clip, because the neighbours it would cut are off-screen anyway.
+
+### Slower, because smoother was not enough
+
+2.9 s was the other failure mode of the halving recorded above: the flap, the card's move into its
+open position and the sheets' rise all landed inside a second and a half, and no curve makes
+movement that quick read as paper. The beats keep their proportions and give back about half of what
+was taken — 820 / 1300 / 1150 / 1250 ms, 4.52 s end to end — and the turn's quarter beats went from
+320 to 420 ms on a 6 s cycle. `theFullOpeningIsShortEnoughToSitThroughAndSlowEnoughToRead` is a band
+now rather than a ceiling: a test that only says "no longer than" cannot fail the way this did.
+
+### Deviations
+
+- **The heading is `.title2` (22) where the frame sets 25.** Sans roles take the system's size for
+  their text style, which is what makes them scale at all; `.title` (28) is the other side of 25 and
+  would out-shout the letter's own title beneath it.
+- **The idle dot is `inkBody` at 25%, not a `#D9D9D9` token.** A palette token is a colour something
+  is measured against, and a decorative pip is not.
+- **The header keeps its second child.** `791:5630` is a hidden instance in exactly that slot, and
+  the collections have to be reachable from this tab (`FR-SIDE-08`) — this is the one place the
+  design leaves for them.
+- **The title is set through the type table, not as `Font.custom("New York Extra Large", size: 35)`.**
+  The frame's own export names the face and a literal size; a literal size does not scale, which is
+  the one thing `NFR-A11Y-01` will not have. `journalLetterTitle` is the same face — `.system(design:
+  .serif)` *is* New York, and at 35 points iOS picks the Extra Large optical cut itself — at the
+  frame's size, tracking, leading and italic, and it scales.
+- **The title and the hint both fade the moment the envelope opens.** `791:5585` keeps the title by
+  moving it, and moving things during the opening is what the section above records as a mistake.
 
 ## Seen rendering
 
