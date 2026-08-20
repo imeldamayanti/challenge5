@@ -46,7 +46,7 @@ struct QuestRunView: View {
              .storyReveal, .placeNotice, .checkpointDetail, .taskDetail, .questExplanation,
              .stampAward, .transition:
             true
-        case .safetyNotice, .atCheckpoint, .finished:
+        case .atCheckpoint, .finished:
             false
         }
     }
@@ -108,7 +108,6 @@ struct QuestRunView: View {
     @ViewBuilder private var content: some View {
         switch model.stage {
         case .storyPreview: storyPreview
-        case .safetyNotice: safetyNotice
         case .awaitingArrival:
             // No timer here, deliberately: `arrivalScreen` only draws settled results
             // (`.notThere`/`.denied`), never `.checking` itself, so the light checking screen has
@@ -121,7 +120,12 @@ struct QuestRunView: View {
                 arrivalScreen
             }
         case .locationVerified:
-            if isLocationVerifiedRevealed { locationVerified } else { arrivalScreen }
+            // Never `arrivalScreen` as the fallback here: `arriveAtCurrentCheckpoint()` calls
+            // `sampling.finish()`, which resets `status` to `.idle` — so `model.locationState`
+            // reads `.checking` again the instant arrival is confirmed, and `arrivalScreen` would
+            // print "Location Checking…." for a beat on an arrival that already succeeded.
+            // `locationCheckingScreen` has no such dependency, so it is the correct hold here too.
+            if isLocationVerifiedRevealed { locationVerified } else { locationCheckingScreen }
         case .cutsceneIntro: cutsceneIntro
         case .cutscenePortrait: cutscenePortrait
         case .storyReveal: storyReveal
@@ -356,36 +360,6 @@ struct QuestRunView: View {
             language: language,
             placeName: model.currentPlaceName,
             onContinue: { model.advanceFromTransition() })
-    }
-
-    // MARK: Preflight
-
-    /// `NFR-SAFE-03` — traffic, pavements, and the pocket-the-phone model, acknowledged before the
-    /// first Run of this quest.
-    private var safetyNotice: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
-                KultaraEyebrow(UIStrings.string(.previewSafetyHeading, language))
-                Text(UIStrings.string(.runStartSafetyTitle, language))
-                    .kultaraFont(.questTitleLarge)
-                    .foregroundStyle(palette.ink.color)
-                    .accessibilityAddTraits(.isHeader)
-                Text(model.safetyNotes)
-                    .kultaraFont(.body)
-                    .foregroundStyle(palette.ink.color)
-                    .fixedSize(horizontal: false, vertical: true)
-                Text(UIStrings.string(.onboardingPocketBody, language))
-                    .kultaraFont(.body)
-                    .foregroundStyle(palette.ink.color)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button(UIStrings.string(.runStartSafetyAck, language)) {
-                    model.acknowledgeSafetyNotice()
-                }
-                .buttonStyle(.seal)
-            }
-            .padding(KultaraMetrics.lg)
-            .kultaraFloatingTabBarClearance()
-        }
     }
 
     // MARK: Arrival
