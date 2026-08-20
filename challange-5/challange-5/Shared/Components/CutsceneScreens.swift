@@ -27,16 +27,20 @@ import UIStringsKit
 /// flow moves itself on to `187:866`. Nothing is tapped in the drawn design; the picture coming
 /// out from under the hand *is* the transition.
 ///
-/// Three things the frame does not draw and this screen has anyway, all of them requirements:
+/// Two things the frame does not draw and this screen has anyway, both of them requirements:
 ///
 /// - Under Reduce Motion or VoiceOver the picture is uncovered from the first frame, because a rub
 ///   is not an animation anyone can opt out of and it is not a control a screen reader can find
-///   (`NFR-A11Y-04`, `NFR-A11Y-05`).
-/// - After ten seconds without a finished reveal, the explicit action appears. A gesture with no
-///   drawn control is a dead end for whoever does not try it, and this flow has no other way past
-///   this screen.
+///   (`NFR-A11Y-04`, `NFR-A11Y-05`). **That is the only case that draws a button**, and it has to
+///   stay: with the cover already gone there is no gesture left to make, so without it those
+///   readers reach a screen with no way out of it.
 /// - The quest's own title sits in the header, as `447:1870` draws it — from content, never the
 ///   name the frame bakes in (`AD-4`, `FR-RUN-06`).
+///
+/// The rub used to grow a fallback button after ten seconds, for whoever did not think to try the
+/// gesture. It is gone at the designer's instruction — the drawn design has no such control and the
+/// hint under the frame is what tells the walker what to do. The cost is real and is theirs to
+/// carry: a walker who never swipes has no other way forward.
 struct CutsceneIntroScreen: View {
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -50,11 +54,7 @@ struct CutsceneIntroScreen: View {
     let onAdvance: () -> Void
     let onBack: () -> Void
 
-    /// How long the screen waits before drawing the way past the gesture.
-    private static let explicitActionAppearsAfter = Duration.seconds(10)
-
     @State private var hasAdvanced = false
-    @State private var showsExplicitAction = false
 
     /// The rub is skipped outright for the same two settings `HisploraScratchReveal` reads, so the
     /// action has to be there from the start rather than after the wait.
@@ -79,23 +79,25 @@ struct CutsceneIntroScreen: View {
                             .foregroundStyle(palette.inkDusty.color)
                             .multilineTextAlignment(.center)
                             .fixedSize(horizontal: false, vertical: true)
+                            // Sits further under the frame than the stack's own rhythm puts it:
+                            // the hint is an instruction about the picture above it, and with no
+                            // control beneath it any more, the gap is what separates the two.
+                            .padding(.top, KultaraMetrics.xl)
                     }
                     .padding(.top, KultaraMetrics.xl)
                     .padding(.bottom, KultaraMetrics.lg)
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                if showsExplicitAction || !rubIsAvailable {
+                // Only where the rub cannot happen at all. Under Reduce Motion or VoiceOver the
+                // picture is uncovered from the first frame and there is no gesture to make, so
+                // without this the screen has no way out for those readers
+                // (`NFR-A11Y-04`, `NFR-A11Y-05`).
+                if !rubIsAvailable {
                     Button(UIStrings.string(.cutsceneRevealAction, language), action: advanceOnce)
                         .buttonStyle(.hisploraPill)
-                        .transition(.opacity)
                 }
             }
             .padding(KultaraMetrics.lg)
-            .animation(.easeInOut(duration: 0.25), value: showsExplicitAction)
-            .task {
-                try? await Task.sleep(for: Self.explicitActionAppearsAfter)
-                showsExplicitAction = true
-            }
         }
     }
 
@@ -124,9 +126,13 @@ struct CutsceneIntroScreen: View {
     /// the ornament: rubbing the carved gold away would say the frame is what is being uncovered.
     private var revealableFrame: some View {
         KultaraPortraitFrame(accessibilityLabel: portraitLabel) {
-            HisploraScratchReveal(onComplete: advanceAfterReveal) {
-                HisploraPortraitContent(url: portraitURL)
-            }
+            HisploraScratchReveal(
+                onComplete: advanceAfterReveal,
+                content: { HisploraPortraitContent(url: portraitURL) },
+                // The cover is the same photograph with its resolution destroyed, not a wash over
+                // it: the walker is meant to see that there is a picture there and that it is not
+                // legible yet. A flat grey plate reads as an empty frame, which is what shipped.
+                cover: { HisploraPortraitCover(url: portraitURL) })
         }
         // The reveal is a gesture on a picture, and VoiceOver reaches it as the button below.
         .accessibilityHint(UIStrings.string(.cutsceneSwipeHint, language))
@@ -266,6 +272,33 @@ struct HisploraPortraitContent: View {
             // No picture is a legitimate state, not an error: the sample content ships no
             // portrait, and the frame is still the design's object. The reveal over an empty
             // opening is a wash lifting off a flat ground — undramatic, but not broken.
+            Rectangle().fill(Color.black.opacity(0.18))
+        }
+    }
+}
+
+/// The same picture at a resolution the eye cannot resolve — `98:1588`'s covered frame, which the
+/// walker rubs off to reach `223:1987`.
+///
+/// It is deliberately *the photograph*, not a curtain over it. The composition, the colour and the
+/// light all stay where they are and only the detail goes, so the frame reads as holding something
+/// before a finger has touched it, and the rub reads as bringing that same thing into focus.
+///
+/// `.interpolation(.none)` is load-bearing: the picture is decoded at a couple of dozen pixels
+/// across and drawn at frame size, and SwiftUI's default smoothing would blend the blocks straight
+/// back into the blur this replaces.
+struct HisploraPortraitCover: View {
+    let url: URL?
+
+    var body: some View {
+        if let url, let image = BundledImage.pixelated(url) {
+            image
+                .interpolation(.none)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        } else {
+            // Nothing to spoil. Matches `HisploraPortraitContent`'s own empty state, so an
+            // absent picture does not turn the cover into the only thing on the screen.
             Rectangle().fill(Color.black.opacity(0.18))
         }
     }

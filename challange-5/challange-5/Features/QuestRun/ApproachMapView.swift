@@ -27,6 +27,12 @@ struct ApproachMapView: View {
     let language: ContentLanguage
     let placeName: String
     let approachMap: ApproachMapPresentation
+    /// Whether the authored marker pulses over the drawing — `187:1103`'s beating dot.
+    ///
+    /// Off by default, so `1:4458` keeps the still map it was drawn with. The pulse says *walk to
+    /// here*, which is the transition screen's whole sentence and would be a second instruction on
+    /// a screen whose own sentence is that the fix has landed.
+    var pulsesAtMarker: Bool = false
 
     var body: some View {
         drawing
@@ -41,17 +47,44 @@ struct ApproachMapView: View {
                 // PEMECUTAN" sits in the bottom-left corner of the shipped one — and cropping to
                 // fill a slot cuts the names off the places the map exists to point at.
                 .aspectRatio(approachMap.aspectRatio, contentMode: .fit)
+                // Attached to the *fitted* view rather than after the `maxWidth` frame below: the
+                // aspect ratio makes this box the drawing's own drawn rect, and the marker's
+                // fractions are fractions of the drawing. Reading the wider frame instead would
+                // slide the dot sideways by half the slack.
+                .overlay { marker }
                 .frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.xs))
-                .accessibilityLabel(
-                    String(format: UIStrings.string(.locationVerifiedMapAccessibility, language),
-                           placeName))
+                .accessibilityLabel(String(format: UIStrings.string(mapLabelKey, language),
+                                           placeName))
         } else {
             RoundedRectangle(cornerRadius: KultaraMetrics.xs)
                 .fill(palette.inkDusty.color.opacity(0.15))
                 .aspectRatio(approachMap.aspectRatio, contentMode: .fit)
                 .frame(maxWidth: .infinity)
                 .accessibilityHidden(true)
+        }
+    }
+
+    /// Whether the dot is actually on the paper — asked in one place, because the accessibility
+    /// label and the overlay must not disagree about it. A screen that asked for the dot over a map
+    /// whose content carries no point still draws the plain map, and must still be described as one.
+    private var drawsMarker: Bool { pulsesAtMarker && approachMap.marker != nil }
+
+    /// The dot is the difference between this map and `1:4458`'s, so it is named rather than left
+    /// to colour and motion (`NFR-A11Y-05`).
+    private var mapLabelKey: UIStringKey {
+        drawsMarker ? .approachTransitionMapAccessibility : .locationVerifiedMapAccessibility
+    }
+
+    /// The beating dot over the authored point. Nothing is drawn when the screen did not ask for
+    /// it, or when the content carries no point — the second case is the honest one, not a
+    /// fallback to the middle of the paper.
+    @ViewBuilder private var marker: some View {
+        if drawsMarker, let point = approachMap.marker {
+            GeometryReader { proxy in
+                HisploraPulsingMapMarker()
+                    .position(x: proxy.size.width * point.x, y: proxy.size.height * point.y)
+            }
         }
     }
 }

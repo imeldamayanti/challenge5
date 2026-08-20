@@ -304,6 +304,15 @@ public enum ContentValidator {
                         rule: .v14, path: path,
                         message: "approachMap aspectRatio is \(approachMap.aspectRatio); must be greater than zero."))
                 }
+                // The pulsing dot's home on the drawing. Range only, the same thing V15 checks of
+                // `mapPoint` and for the same reason: whether the point lands on the right street
+                // is a question about the illustration, which no rule can answer. A point outside
+                // the image would put the dot off the paper entirely, and that a rule can.
+                if let marker = approachMap.marker, !marker.isInsideImage {
+                    findings.append(ValidationFinding(
+                        rule: .v14, path: path,
+                        message: "approachMap marker is (\(marker.x), \(marker.y)); both must be within 0–1."))
+                }
             }
 
             // V13 — FR-ARR-07

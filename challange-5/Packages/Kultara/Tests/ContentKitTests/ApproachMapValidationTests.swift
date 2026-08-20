@@ -90,6 +90,45 @@ struct ApproachMapValidationTests {
         })
     }
 
+    // MARK: - V14 · the marker has to be on the paper
+
+    @Test func anApproachMapWithNoMarkerIsNotAFinding() {
+        // The dot is optional and the map shipped before it existed. A Place whose point has not
+        // been read off the drawing yet renders the plain map, which is the honest fallback.
+        #expect(!findings(bundle(Self.valid)).contains {
+            $0.rule == .v14 && $0.message.contains("marker")
+        })
+    }
+
+    @Test(arguments: [MapPoint(x: -0.01, y: 0.5), MapPoint(x: 1.01, y: 0.5),
+                      MapPoint(x: 0.5, y: -0.01), MapPoint(x: 0.5, y: 1.01),
+                      MapPoint(x: 12, y: 40)])
+    func v14RejectsAMarkerOutsideTheDrawing(_ point: MapPoint) {
+        // Range only, the same thing V15 checks of `mapPoint` and for the same reason: whether the
+        // dot lands on the right street is a question about the illustration, which no rule can
+        // answer. Off the paper entirely a rule can — and `(12, 40)` is what a real coordinate
+        // written into this field looks like, which is the mistake most worth catching.
+        let offPaper = PlaceApproachMap(
+            asset: "places/place-a/approach-map.png", aspectRatio: 1.5869, sourceRef: 0,
+            marker: point)
+        #expect(findings(bundle(offPaper)).contains {
+            $0.rule == .v14 && $0.message.contains("marker")
+        })
+    }
+
+    @Test func aMarkerOnTheEdgeOfTheDrawingIsAccepted() {
+        // The bounds are inclusive: a place drawn hard against the edge of the chart is a drawing
+        // decision, not a mistake.
+        for point in [MapPoint(x: 0, y: 0), MapPoint(x: 1, y: 1)] {
+            let edge = PlaceApproachMap(
+                asset: "places/place-a/approach-map.png", aspectRatio: 1.5869, sourceRef: 0,
+                marker: point)
+            #expect(!findings(bundle(edge)).contains {
+                $0.rule == .v14 && $0.message.contains("marker")
+            })
+        }
+    }
+
     // MARK: - Decoding
 
     @Test func aPlaceWithNoApproachMapKeyDecodes() throws {
@@ -102,6 +141,18 @@ struct ApproachMapValidationTests {
         #expect(decoded.asset == "places/x/approach.png")
         #expect(decoded.aspectRatio == 1.5)
         #expect(decoded.sourceRef == 2)
+        #expect(decoded.marker == nil)
+    }
+
+    @Test func anApproachMapCarryingAMarkerDecodesIt() throws {
+        let json = """
+        {"asset":"places/x/approach.png","aspectRatio":1.5,"sourceRef":2,
+         "marker":{"x":0.234,"y":0.7919}}
+        """
+        let decoded = try JSONDecoder().decode(PlaceApproachMap.self, from: Data(json.utf8))
+        let marker = try #require(decoded.marker)
+        #expect(marker.x == 0.234)
+        #expect(marker.y == 0.7919)
     }
 
     @Test func anApproachMapRoundTripsThroughEncoding() throws {
@@ -126,6 +177,22 @@ struct ShippedApproachMapTests {
         #expect(place.sources.indices.contains(approachMap.sourceRef))
         #expect(approachMap.aspectRatio > 0)
         _ = try repository.assetURL(approachMap.asset)
+    }
+
+    @Test func theShippedApproachMapCarriesTheMarkerTheTransitionScreenPulsesOver() throws {
+        // `187:1103` puts a beating dot on this drawing, and the point it beats over is authored
+        // here rather than projected from `coordinate` — the chart's street grid is stylised, so a
+        // real projection would land the dot on the wrong road while looking exact.
+        //
+        // Read live, like the two tests around it, because the claim is about *this* drawing: the
+        // value was read off the illustration's own marker for this Place, and replacing the
+        // artwork means reading it off again.
+        let repository = try BundledContentRepository()
+        let place = try #require(try repository.place(id: "badung-puri-agung-pemecutan"))
+        let approachMap = try #require(place.approachMap)
+        let marker = try #require(approachMap.marker)
+
+        #expect(marker.isInsideImage)
     }
 
     @Test func theShippedApproachMapsCitationSaysItIsUnverified() throws {

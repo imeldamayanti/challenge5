@@ -39,11 +39,12 @@ struct TaskDetailTests {
         provider.emit(offsetMetres: 5, accuracy: 10)
 
         // Bounded rather than `while`: a stage that returns itself should fail the suite, not hang it.
-        for _ in 0..<9 where model.stage != .checkpointDetail {
+        for _ in 0..<11 where model.stage != .checkpointDetail {
             switch model.stage {
             case .locationVerified: model.advanceFromLocationVerified()
             case .cutsceneIntro: model.advanceFromCutsceneIntro()
             case .cutscenePortrait: model.advanceFromCutscenePortrait()
+            case .approachTransition: model.advanceFromApproachTransition()
             case .storyReveal: model.advanceFromStoryReveal()
             case .transition: model.advanceFromTransition()
             case .placeNotice: model.advanceFromPlaceNotice()
@@ -76,11 +77,12 @@ struct TaskDetailTests {
         if model.stage == .awaitingArrival, !provider.isSampling { model.screenAppeared() }
         provider.emit(offsetMetres: 5, accuracy: 10)
 
-        for _ in 0..<8 where model.stage != .placeNotice {
+        for _ in 0..<10 where model.stage != .placeNotice {
             switch model.stage {
             case .locationVerified: model.advanceFromLocationVerified()
             case .cutsceneIntro: model.advanceFromCutsceneIntro()
             case .cutscenePortrait: model.advanceFromCutscenePortrait()
+            case .approachTransition: model.advanceFromApproachTransition()
             case .storyReveal: model.advanceFromStoryReveal()
             case .transition: model.advanceFromTransition()
             default: break
@@ -277,7 +279,7 @@ struct TaskDetailTests {
         harness.model.advanceFromCheckpointDetail()
         harness.model.advance()
         harness.provider.emit(offsetMetres: 5, accuracy: 10)
-        for _ in 0..<9 where harness.model.stage != .checkpointDetail {
+        for _ in 0..<11 where harness.model.stage != .checkpointDetail {
             switch harness.model.stage {
             case .locationVerified: harness.model.advanceFromLocationVerified()
             case .storyReveal: harness.model.advanceFromStoryReveal()

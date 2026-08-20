@@ -191,11 +191,25 @@ public struct PlaceApproachMap: Codable, Sendable, Equatable, Hashable {
     public let aspectRatio: Double
     /// Index into the owning Place's `sources`, checked by validator rule V3.
     public let sourceRef: Int
+    /// Where this Place stands **on this drawing**, in fractions of the image's own width and
+    /// height — what the transition screen's pulsing dot is placed over.
+    ///
+    /// Authored, not derived, for the same reason `Place.mapPoint` is: the approach map is a
+    /// hand-drawn chart with a stylised street grid, and projecting `coordinate` onto it would put
+    /// the dot somewhere wrong while looking precise. The value is read off the drawing at the
+    /// marker the illustration already carries for this Place, so the dot pulses over the pin
+    /// rather than beside it.
+    ///
+    /// Optional, and absent means no dot. A map whose marker has not been read off the drawing yet
+    /// renders exactly as it did before this field existed, which is the honest fallback —
+    /// defaulting to the centre would be the screen asserting where a real place stands.
+    public let marker: MapPoint?
 
-    public init(asset: String, aspectRatio: Double, sourceRef: Int) {
+    public init(asset: String, aspectRatio: Double, sourceRef: Int, marker: MapPoint? = nil) {
         self.asset = asset
         self.aspectRatio = aspectRatio
         self.sourceRef = sourceRef
+        self.marker = marker
     }
 }
 

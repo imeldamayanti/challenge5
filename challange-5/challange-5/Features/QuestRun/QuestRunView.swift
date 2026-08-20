@@ -35,6 +35,16 @@ struct QuestRunView: View {
 
     var body: some View {
         content
+            // One screen swaps for the next in place, so without this the change is a hard cut —
+            // most visible leaving the cutscene, where the walker has just uncovered a picture and
+            // the frame vanishes mid-look. A cross-fade rather than a slide: these stages are not
+            // a stack and nothing here moves in a direction (`isOnStoryFlow` even hides the
+            // navigation bar), so a push would claim a spatial relationship the flow does not have.
+            //
+            // Each stage still runs its own entrance — the typewriter, the scroll, the reveal's own
+            // fade — on top of this.
+            .transition(.opacity)
+            .animation(.easeInOut(duration: 0.35), value: model.stage)
             .kultaraSpeckledGround(palette.paper)
             .navigationTitle(isOnStoryFlow ? "" : model.quest.title.value(for: language))
             .kultaraInlineNavigationTitle()
@@ -85,6 +95,7 @@ struct QuestRunView: View {
         case .locationVerified: locationVerified
         case .cutsceneIntro: cutsceneIntro
         case .cutscenePortrait: cutscenePortrait
+        case .approachTransition: approachTransition
         case .storyReveal: storyReveal
         case .placeNotice: placeNotice
         case .checkpointDetail: checkpointDetail
@@ -172,6 +183,19 @@ struct QuestRunView: View {
             subtitle: nil,
             hook: model.hookText,
             onStart: { model.advanceFromCutscenePortrait() },
+            onBack: { model.retreatFromStoryStage() })
+    }
+
+    /// `187:1103` — the approach map with a dot beating over the first place, between the cutscene
+    /// and the reveal. It moves itself on; the chevron is what leaves it early.
+    private var approachTransition: some View {
+        ApproachTransitionScreen(
+            language: language,
+            questTitle: model.questTitle,
+            region: model.quest.region,
+            placeName: model.currentPlaceName,
+            approachMap: model.checkpoint?.approachMap,
+            onAdvance: { model.advanceFromApproachTransition() },
             onBack: { model.retreatFromStoryStage() })
     }
 

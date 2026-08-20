@@ -238,6 +238,9 @@ public enum UIStrings {
         .transitionSteppingInto: LocalizedText(
             id: "Melangkah ke titik pertama %@", en: "Stepping into the first place of %@"),
         .transitionContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
+        .approachTransitionMapAccessibility: LocalizedText(
+            id: "Peta jalan di sekitar %@, dengan titik yang menandai tempatnya",
+            en: "Street map of the area around %@, with a dot marking the place"),
         .transitionTapToReveal: LocalizedText(id: "Ketuk untuk membuka", en: "Tap to reveal"),
         .placeNoticeBeforeExplore: LocalizedText(
             id: "Sebelum menjelajah:", en: "Before you explore:"),

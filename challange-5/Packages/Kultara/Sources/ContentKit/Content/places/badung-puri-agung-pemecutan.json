@@ -132,6 +132,10 @@
   "approachMap": {
     "asset": "places/badung-puri-agung-pemecutan/approach-map.png",
     "aspectRatio": 1.5869,
-    "sourceRef": 3
+    "sourceRef": 3,
+    "marker": {
+      "x": 0.234,
+      "y": 0.7919
+    }
   }
 }

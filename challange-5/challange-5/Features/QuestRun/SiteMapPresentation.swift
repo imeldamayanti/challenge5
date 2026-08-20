@@ -1,3 +1,4 @@
+import ContentKit
 import Foundation
 
 /// The drawn plan of a Place's grounds, resolved for the site-map screen (`452:3028`).
@@ -39,4 +40,8 @@ struct SiteMapMarker: Sendable, Equatable, Identifiable {
 struct ApproachMapPresentation: Sendable, Equatable {
     let imageURL: URL?
     let aspectRatio: Double
+    /// Where the Place stands on this drawing, in fractions of the image — what the transition
+    /// screen's pulsing dot sits over. Nil where the content has not read the point off the drawing,
+    /// and the map then draws with no dot at all rather than with one guessed at.
+    let marker: MapPoint?
 }

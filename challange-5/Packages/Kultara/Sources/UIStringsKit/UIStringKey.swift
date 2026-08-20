@@ -146,6 +146,10 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case storyRevealJourneyLead
     case transitionSteppingInto
     case transitionContinue
+    /// `187:1103`'s map, when the beating dot is over it. A separate label from
+    /// `locationVerifiedMapAccessibility` because the dot is the difference between the two
+    /// screens' maps and it must not be the colour and the motion that say so (`NFR-A11Y-05`).
+    case approachTransitionMapAccessibility
     /// `293:1595` — the only words on the transition screen.
     case transitionTapToReveal
     // The place notice — `50:137` ("Quest") — and the checkpoint's task menu — `452:3132`
