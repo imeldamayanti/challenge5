@@ -15,6 +15,14 @@ import UIStringsKit
 ///
 /// The frames are 402 × 874 with every child placed by x/y. Rebuilt as stacks: a layout that only
 /// works at one size fails `NFR-A11Y-04` at AX5 on a small device.
+///
+/// **`LocationCheckingScreen` is a fourth, later addition** — `178:675` on the separate Ngalcer
+/// board, replacing `81:617`'s brown checking state with its own quiet paper screen for the
+/// checking moment specifically. `paperLight`/`inkDark`/`inkMuted` were sampled and measured for
+/// this frame before the screen itself was built, which is why they were already sitting in
+/// `HisploraPalette` unused. `LocationState.checking` and this file's brown `LocationStateHeading`
+/// rendering of it stay — `SideQuestArrivalView` still shows `.checking` inline on the brown
+/// ground, and nothing asked for that flow to change too.
 
 /// Which of the three the arrival screen is currently showing.
 enum LocationState {
@@ -74,6 +82,82 @@ struct LocationStateHeading: View {
         case .notThere: .locationNotThereBody
         case .denied: .runStartLocationDeniedBody
         }
+    }
+}
+
+/// `178:675` ("Location Checking" on the Ngalcer board) — the arrival screen's checking moment,
+/// as its own quiet paper screen rather than a state folded into the brown `arrivalScreen`.
+/// `QuestRunView` shows this for the fixed 3 s hold before `arrivalScreen` reveals whatever the
+/// sampler actually found; nothing here reads `LocationState` because there is only one thing to
+/// say while checking, and no map or actions belong on a screen that never resolves anything.
+///
+/// **The blue location glyph is rebuilt from SF Symbols, not shipped as art.** The frame's icon is
+/// Apple's own Location Services badge — the same rounded-square-and-arrow iOS already draws in
+/// Settings and in the system permission prompt this screen appears right after
+/// (`Services/LocationService.swift`'s `requestWhenInUseAuthorization`) — so reproducing it as
+/// `location.fill` on a blue ground keeps it resolution-independent rather than shipping a fourth
+/// copy of an icon iOS already owns.
+struct LocationCheckingScreen: View {
+    @Environment(\.hisploraPalette) private var palette
+
+    let language: ContentLanguage
+    let onBack: () -> Void
+
+    var body: some View {
+        HisploraStage(ground: \.paperLight) {
+            VStack(spacing: 0) {
+                HStack {
+                    HisploraBackButton(
+                        accessibilityLabel: UIStrings.string(.locationNotThereBack, language),
+                        ink: \.inkDark,
+                        action: onBack)
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 13)
+
+                // `178:679`'s title sits at y = 437 of an 874-tall frame; 292 is what remains once
+                // the back row's own 57 points (13 padding + the 44-point tap target) come out.
+                Spacer(minLength: 292)
+                glyph
+                // 437 − (349 + 63.19): the title starts 25 under the glyph's own box.
+                Spacer(minLength: 25)
+                VStack(spacing: 8) {
+                    Text(UIStrings.string(.locationCheckingTitle, language))
+                        .font(.system(size: 25))
+                        .tracking(-0.5)
+                        .foregroundStyle(palette.inkDark.color)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .accessibilityAddTraits(.isHeader)
+                    Text(UIStrings.string(.locationCheckingBody, language))
+                        .font(.system(size: 17))
+                        .tracking(-0.51)
+                        .foregroundStyle(palette.inkMuted.color)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(.horizontal, 20)
+        }
+    }
+
+    /// `178:681` — a 63-point rounded square, reproduced in SF Symbols rather than shipped as a
+    /// PNG (see the type doc above).
+    private var glyph: some View {
+        RoundedRectangle(cornerRadius: 16, style: .continuous)
+            .fill(LinearGradient(
+                colors: [Color(red: 0.36, green: 0.68, blue: 0.98),
+                         Color(red: 0.09, green: 0.48, blue: 0.98)],
+                startPoint: .topLeading, endPoint: .bottomTrailing))
+            .frame(width: 63.19, height: 63.19)
+            .overlay {
+                Image(systemName: "location.fill")
+                    .font(.system(size: 26, weight: .semibold))
+                    .foregroundStyle(.white)
+            }
+            // Decoration: the header right below already says what is happening.
+            .accessibilityHidden(true)
     }
 }
 

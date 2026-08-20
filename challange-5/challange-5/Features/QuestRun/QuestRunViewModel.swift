@@ -16,8 +16,6 @@ final class QuestRunViewModel {
         case storyPreview
         /// `FR-START-04` — acknowledged before the first Run of this quest.
         case safetyNotice
-        /// `FR-START-02` — the plain-language explanation that precedes the system prompt.
-        case locationNotice
         case awaitingArrival
         /// `1:4458` ("Location Verified" on the New Hisplora board) — the fix landed, inside the
         /// radius and precise enough, and the walk says so on its own screen before the story
@@ -220,16 +218,14 @@ final class QuestRunViewModel {
         return .storyPreview
     }
 
-    /// Leaving the hook for the notices. The order after it is unchanged: `FR-START-04` before
-    /// `FR-START-02` before any sampling.
+    /// Leaving the hook for the notice. `FR-START-04` still gates the system prompt; the
+    /// plain-language location rationale that used to sit between them (`FR-START-02`) is gone by
+    /// request, so acknowledging the safety notice now goes straight into requesting permission.
     func advanceFromStoryPreview() {
         if !preferences.safetyNoticeAckedQuestIDs.contains(quest.id) {
             stage = .safetyNotice
-        } else if sampling.authorization == .notRequested {
-            stage = .locationNotice
         } else {
-            stage = .awaitingArrival
-            beginSampling()
+            beginArrival()
         }
     }
 
@@ -318,17 +314,19 @@ final class QuestRunViewModel {
                placeName(for: currentCheckpoint))
     }
 
-    // MARK: Preflight — FR-START-02/04
+    // MARK: Preflight — FR-START-04
 
     func acknowledgeSafetyNotice() {
         preferences.safetyNoticeAckedQuestIDs.insert(quest.id)
-        stage = sampling.authorization == .notRequested ? .locationNotice : .awaitingArrival
-        if stage == .awaitingArrival { beginSampling() }
+        beginArrival()
     }
 
-    func acknowledgeLocationNoticeAndRequestPermission() {
+    /// `FR-ONB-04` — permission is asked only once, on the transition into the arrival screen.
+    private func beginArrival() {
         stage = .awaitingArrival
-        sampling.requestWhenInUseAuthorization()
+        if sampling.authorization == .notRequested {
+            sampling.requestWhenInUseAuthorization()
+        }
         beginSampling()
     }
 

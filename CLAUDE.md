@@ -96,12 +96,15 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 482 tests / 61 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
-| `xcodebuild test -only-testing:challange-5Tests` | 164 tests / 18 suites — view models, presentation, UI strings, host linkage | Yes |
-| `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
+| `swift test` (from `Packages/Kultara`) | 511 tests / 64 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `xcodebuild test -only-testing:challange-5Tests` | 180 tests / 18 suites — view models, presentation, UI strings, host linkage | Yes |
+| `xcodebuild test -only-testing:challange-5UITests` | 13 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
-**Three `swift test` failures are pre-existing on this branch and are not yours.** None is in a
-file the Figma port touched, and all three reproduce in a clean worktree:
+**Four `swift test` failures are pre-existing on this branch and are not yours.** None is in a
+file the Figma port touched, and the first three reproduce in a clean worktree (the fourth is
+newer — observed only on this branch's manifest state, not separately re-verified against a clean
+worktree, but it is pure content-version drift unrelated to any Swift code, so there is no reason
+to expect it's branch-specific):
 
 - `PlaqueGeometryTests.theCornerIsAScoopArcedAboutTheCornerPointItself` — 2 issues, the plate's corner
   geometry in `PlaquePanel.swift`.
@@ -112,6 +115,9 @@ file the Figma port touched, and all three reproduce in a clean worktree:
   `suppressingAPlaceRemovesOnlyItsOwnSidequest` — 4 issues. The bundle grew a sixth place
   (`park23`), its sidequest and a second collection at `2026.09.3`; the assertions still say five
   and one. Stale expectations about a content change, not a defect.
+- `BundledContentRepositoryTests.exposesTheContentBundleVersionAQuestRunWouldPin` — 1 issue, same
+  family as the two above: it asserts `contentBundleVersion == "2026.09.4"`, but the manifest has
+  since moved to `"2026.09.5"`. Fix the assertion (or bump-document it), not the manifest.
 
 `FloatingTabBarClearanceTests` was a **third** pre-existing break of a different kind: the test was
 committed without the `KultaraMetrics` API it exercises, so the whole package suite failed to compile
@@ -356,16 +362,26 @@ Still unguarded:
   outstanding, no owner named). `theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources` does *not*
   cover it — that test asserts on `CheckpointPresentation`, which still carries every accuracy label
   and citation. The omission is in the view.
-- **`AccessibilityXXXL` occlusion, and the test is now red.**
-  `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` fails at
+- **`AccessibilityXXXL` occlusion, and the test is now red — and as of 2026-08-19 so is its
+  default-size sibling.** `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` fails at
   `DiscoveryFlowUITests.swift:105` — "Profile did not offer a way into the app preferences" — which
   is the *existence* check, before the scroll-into-reach loop it was given. At the largest content
   size the tap on the floating bar's Profile does not switch the tab, so the Explorer's Card is
   never on screen to be scrolled. **Verified pre-existing on this branch**: the same test fails
   identically in a clean worktree at `a1d914c`, so it is not the stamp/journal/profile work.
-  `testQuestListAndSettingsAreReachable` walks the same Profile → Settings path at the default size
-  and is green, which is what narrows it to the size. `resetLocalData` already carries a one-retry
-  workaround for exactly this mistimed-tab-bar-tap failure; `openSettings` does not.
+  `testQuestListAndSettingsAreReachable` was documented as walking the same Profile → Settings path
+  at the default size and being green — **that is no longer true**: as of the `rapihin-struktur`
+  feature-folder reorg it fails identically, same line, same message, reproduced twice
+  (`.claude/plans/feature-folder-reorg.plan.md`'s Task 9 execution record). This cannot be the reorg
+  itself — that branch is a pure `git mv` with zero `.swift` content change, verified by blob hash —
+  so the mistimed-tab-bar-tap flake has widened to hit the default size too, and the "narrows it to
+  the size" reasoning below no longer holds cleanly; both tests now share the same failure mode.
+  `resetLocalData` already carries a one-retry workaround for exactly this mistimed-tab-bar-tap
+  failure; `openSettings` does not, and is the more urgent fix now that it blocks two tests instead
+  of one. A third UI test, `testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow`, was also
+  observed failing (`DiscoveryFlowUITests.swift:227`, "A map marker did not open the story flow") in
+  the same run but has not been re-run standalone to confirm it reproduces the way the other two
+  were confirmed to.
 
 ## Two visual directions, split at a screen boundary
 
@@ -602,7 +618,7 @@ auto-advancing and the login carrying a "Skip for now".
   that still does not exist in the content tree and still cannot be authored without consent records
   and citations. Screens render from `ContentKit` by ID; never bake those names in (`AD-4`,
   `FR-RUN-06`).
-- `Support/UIStrings.swift:338` still describes the content as "data contoh dengan tempat fiktif".
+- `Packages/Kultara/Sources/UIStringsKit/UIStrings.swift:557` still describes the content as "data contoh dengan tempat fiktif".
   That string is now wrong and needs a product decision, not a content edit.
 - **`FR-CP-05` has an undocumented exception, and it is still open.** The Story Reveal pages render lore without the accuracy chip or citation. That was a deliberate product decision (`m8-qa-fixes.plan.md`, Decisions taken, item 2) and is recorded in code comments and `docs/hisplora-tokens.md` — but **not yet in the PRD**, which lists it as outstanding with no owner named (§10). It needs an amendment or a signed exception with an owner. `FR-START-04`'s comparable exception *was* signed on 2026-08-16 (owner af); this one was not, and the two are not a package.
 - The story flow has been seen rendering on iPhone 17 / iOS 26.5: story preview, both cutscenes, story reveal, place notice, and — on 2026-08-17 — the task list, the task sheet and the site plan (screenshots in `docs/screenshots/m9-*.png`). The "Simulate arrival anywhere" toggle does not respond to synthesized taps from the simulator MCP; drive arrival with `xcrun simctl location <udid> set -8.6595,115.2077` instead — the start checkpoint of `badung-empat-wajah` (Puri Agung Pemecutan — an unverified seed coordinate), with `ArrivalEvaluator` unmodified. **A resumed walk lands on `.atCheckpoint` and skips every story stage**, so reaching them from a desk needs a fresh install (`xcrun simctl uninstall com.umar.hisplora`), not a relaunch. The transition screen is still unseen.

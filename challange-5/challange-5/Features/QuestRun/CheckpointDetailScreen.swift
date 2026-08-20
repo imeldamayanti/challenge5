@@ -45,29 +45,35 @@ struct CheckpointDetailScreen: View {
 
     var body: some View {
         HisploraStage(ground: \.brownStone) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    titleBar
-                    // The bar is drawn at y = 141 and the title's box ends at 109, so 32 of air —
-                    // and the stamp hangs 20 above the bar's own top edge, which is why the two are
-                    // one overlaid row rather than two stacked ones.
-                    Spacer(minLength: 32)
-                    progressRow
-                    // 224 − 181: the heading's box starts 43 under the bar.
-                    Spacer(minLength: 43)
-                    Text(UIStrings.string(.checkpointDetailAllTasks, language))
-                        .kultaraFont(.storySection)
-                        .foregroundStyle(palette.inkCream.color)
-                        .accessibilityAddTraits(.isHeader)
-                    // 269 − 253.
-                    Spacer(minLength: 16)
-                    rows
+            // The title bar and progress row are a fixed header, not scrolling content — only the
+            // task list scrolls. Mirrors `LocationVerifiedScreen`'s header/`ScrollView` split rather
+            // than putting the bar inside the scrolled `VStack`, which let it scroll off with the
+            // list.
+            VStack(alignment: .leading, spacing: 0) {
+                titleBar
+                // The bar is drawn at y = 141 and the title's box ends at 109, so 32 of air —
+                // and the stamp hangs 20 above the bar's own top edge, which is why the two are
+                // one overlaid row rather than two stacked ones.
+                Spacer(minLength: 32)
+                progressRow
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 0) {
+                        // 224 − 181: the heading's box starts 43 under the bar.
+                        Spacer(minLength: 43)
+                        Text(UIStrings.string(.checkpointDetailAllTasks, language))
+                            .kultaraFont(.storySection)
+                            .foregroundStyle(palette.inkCream.color)
+                            .accessibilityAddTraits(.isHeader)
+                        // 269 − 253.
+                        Spacer(minLength: 16)
+                        rows
+                    }
+                    .padding(.bottom, KultaraMetrics.xl)
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                .padding(.horizontal, Self.margin)
-                .padding(.bottom, KultaraMetrics.xl)
-                .frame(maxWidth: .infinity, alignment: .leading)
+                .scrollBounceBehavior(.basedOnSize)
             }
-            .scrollBounceBehavior(.basedOnSize)
+            .padding(.horizontal, Self.margin)
             // Pinned rather than stacked after the frame's 224-point gap: `452:3194` sits at a fixed
             // distance from the home indicator, so anchoring it there keeps it where it is drawn no
             // matter how many rows the list has or how far the words wrap.
