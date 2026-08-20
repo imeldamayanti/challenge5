@@ -88,6 +88,7 @@ struct QuestListView: View {
             // the illustrated surface that needs no network — when the basemap does not load.
             QuestMapScreen(
                 model: mapModel,
+                map: QuestMapViewModel(locationProvider: makeLocationProvider?()),
                 onSelect: { questID in
                     surface = .list
                     onSelect(questID)

@@ -75,6 +75,48 @@ private let badungAnchors: [IllustratedMapGeoreference.Anchor] = [
 
     /// No anchors means no honest placement, and the caller draws no overlay at all. An
     /// illustration placed at an invented latitude is a map that lies.
+    /// **Every authored `mapPoint` in the shipped bundle, against the drawing it is authored on.**
+    ///
+    /// This reads live content on purpose, and it is not the mistake CLAUDE.md warns about. That
+    /// warning is about *requirement* guards — a rule about `FR-*` that reads the bundle changes
+    /// meaning every time an author edits JSON. This is a *content* guard, the same family as
+    /// `BundledContentRepositoryTests`, and reading the bundle is the only way it can do its job.
+    ///
+    /// It exists because five Places shipped with `mapPoint`s that were **34 to 40 km out** —
+    /// placeholder values authored against the older portrait drawing. They were invisible for as
+    /// long as they were: the region map draws one pin per quest start checkpoint, only one quest
+    /// ships, and none of the five ever rendered. They stopped being invisible when
+    /// `IllustratedMapGeoreference` started fitting the overlay's place in the world from authored
+    /// points, and the fix for them was arithmetic. The fix for *the next one* is this.
+    ///
+    /// The tolerance is 1.5 km, which is about 13 pixels of longitude on a 1469-pixel drawing. A
+    /// point is still authored, not derived — a pin may be nudged off the exact projection to clear
+    /// a label or a coastline, and that headroom is what the tolerance is for. What it will not
+    /// tolerate is a point that was never placed against this artwork at all: the five were out by
+    /// more than twenty times this.
+    @Test func everyAuthoredMapPointSitsWhereThePlaceIs() throws {
+        let repository = try BundledContentRepository()
+        let places = try repository.bundle().places
+        let anchors = places.compactMap { place in
+            place.mapPoint.map {
+                IllustratedMapGeoreference.Anchor(point: $0, coordinate: place.coordinate)
+            }
+        }
+
+        #expect(anchors.count >= 6, "The scan would be near-vacuous with fewer anchors than this.")
+
+        let georeference = try #require(
+            IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors))
+
+        for place in places {
+            guard let point = place.mapPoint else { continue }
+            let residual = georeference.residualMetres(
+                for: .init(point: point, coordinate: place.coordinate))
+            #expect(residual < 1_500,
+                    "\(place.id) is \(Int(residual)) m from where its mapPoint puts it")
+        }
+    }
+
     @Test func noAnchorsYieldsNoGeoreferenceRatherThanAGuess() {
         #expect(IllustratedMapGeoreference.fittedToBaliIllustration(anchors: []) == nil)
     }

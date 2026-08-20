@@ -22,17 +22,25 @@ struct QuestBaseMapView: UIViewRepresentable {
     let georeference: IllustratedMapGeoreference?
     let illustration: UIImage?
     let showsIllustration: Bool
+    let showsUserLocation: Bool
     let palette: KultaraPalette
+    let hisploraPalette: HisploraPalette
+    let userLocationLabel: String
+    let showsWandControl: Bool
+    let wandLabel: String
+    let closeLabel: String
+    let onToggleMode: () -> Void
+    let onClose: (() -> Void)?
     let onSelect: (String) -> Void
     let onBasemapFailure: () -> Void
     let onBasemapRecovery: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
 
-    func makeUIView(context: Context) -> MKMapView {
+    func makeUIView(context: Context) -> UIView {
         let map = MKMapView()
         map.delegate = context.coordinator
-        map.showsUserLocation = true
+        map.showsUserLocation = showsUserLocation
         // `FR-MAP-03`: this is a map, not a navigation aid. No user-tracking mode that turns the
         // screen into a heading-up follow view, and no compass calling for one.
         map.userTrackingMode = .none
@@ -42,6 +50,8 @@ struct QuestBaseMapView: UIViewRepresentable {
         map.isRotateEnabled = false
         map.register(QuestMapAnnotationView.self,
                      forAnnotationViewWithReuseIdentifier: QuestMapAnnotationView.reuseIdentifier)
+        map.register(UserLocationAnnotationView.self,
+                     forAnnotationViewWithReuseIdentifier: UserLocationAnnotationView.reuseIdentifier)
         // The screen is full-bleed and MapKit is not told so by `ignoresSafeArea` alone: left to
         // its own layout margins it fits a region into the *unobscured* area and lets the rest of
         // the viewport run past it, which drew a band of bare basemap under the chart's south
@@ -51,18 +61,70 @@ struct QuestBaseMapView: UIViewRepresentable {
 
         map.setRegion(Self.openingRegion(for: pins), animated: false)
         context.coordinator.apply(to: map, from: self, isInitial: true)
-        return map
+
+        // The controls are a sibling of the map inside one container, not a SwiftUI layer over the
+        // representable. See `QuestMapControlsHost` — this is what makes a tap on the wand a tap on
+        // the wand rather than a race against the map's gesture recognizers.
+        let container = UIView()
+        container.addSubview(map)
+        map.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            map.topAnchor.constraint(equalTo: container.topAnchor),
+            map.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            map.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            map.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+        ])
+
+        let host = QuestMapControlsHost(controls: controls)
+        context.coordinator.map = map
+        context.coordinator.controlsHost = host
+
+        container.addSubview(host.container)
+        host.container.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            host.container.topAnchor.constraint(equalTo: container.topAnchor),
+            host.container.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            host.container.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            host.container.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+        ])
+
+        return container
     }
 
-    func updateUIView(_ map: MKMapView, context: Context) {
+    func updateUIView(_ container: UIView, context: Context) {
         context.coordinator.parent = self
+        context.coordinator.controlsHost?.update(controls)
+        guard let map = context.coordinator.map else { return }
         context.coordinator.apply(to: map, from: self, isInitial: false)
+    }
+
+    private var controls: QuestMapControls {
+        QuestMapControls(
+            showsWand: showsWandControl,
+            palette: palette,
+            wandLabel: wandLabel,
+            closeLabel: closeLabel,
+            onToggle: onToggleMode,
+            onClose: onClose)
     }
 
     /// Opens on the quests rather than on the island. A discovery map whose first frame is open sea
     /// makes the reader pan before it tells them anything — the same reason `RegionMapViewModel`
     /// carries a pin centroid.
     static let minimumOpeningSpan: Double = 0.32
+
+    /// How far out the camera may go while the chart is the ground: the distance at which the paper
+    /// still fills a screen. Past it the reader is looking at Java, Lombok and a rectangle of Bali
+    /// floating between them, which is not a map of anywhere.
+    ///
+    /// Derived from the chart's own width in metres rather than typed as a constant, so re-cutting
+    /// the artwork to a different span moves the limit with it.
+    static func zoomedOutLimit(for chart: IllustratedMapOverlay) -> CLLocationDistance {
+        let rect = chart.boundingMapRect
+        let west = MKMapPoint(x: rect.minX, y: rect.midY)
+        let east = MKMapPoint(x: rect.maxX, y: rect.midY)
+        return west.distance(to: east)
+    }
 
     static func openingRegion(for pins: [RegionMapPin]) -> MKCoordinateRegion {
         guard let first = pins.first else {
@@ -100,19 +162,27 @@ struct QuestBaseMapView: UIViewRepresentable {
     final class Coordinator: NSObject, MKMapViewDelegate {
 
         var parent: QuestBaseMapView
+        weak var map: MKMapView?
+        var controlsHost: QuestMapControlsHost?
         private var overlay: IllustratedMapOverlay?
+        private weak var renderer: IllustratedMapOverlayRenderer?
         private var installedQuestIDs: Set<String> = []
         private var isShowingIllustration = false
         /// The opening clamp runs once from `makeUIView`, before the map has been laid out, so the
         /// region it reads is a guess at the viewport's aspect and the chart's south edge lands a
         /// dozen points short. This re-runs it on the first region change after layout, once.
         private var hasSettledOpeningRegion = false
+        private var isCorrectingRegion = false
 
         init(_ parent: QuestBaseMapView) {
             self.parent = parent
         }
 
         func apply(to map: MKMapView, from view: QuestBaseMapView, isInitial: Bool) {
+            if map.showsUserLocation != view.showsUserLocation {
+                map.showsUserLocation = view.showsUserLocation
+            }
+
             let wanted = Set(view.pins.map(\.questID))
             if installedQuestIDs != wanted {
                 map.removeAnnotations(map.annotations.compactMap { $0 as? QuestMapAnnotation })
@@ -127,45 +197,40 @@ struct QuestBaseMapView: UIViewRepresentable {
             }
 
             guard let overlay else { return }
-            if view.showsIllustration != isShowingIllustration || isInitial {
-                isShowingIllustration = view.showsIllustration
 
-                // The chart is a sheet of paper, not a world. Left unbounded, a pan south runs off
-                // its edge and the screen fills with bare basemap below the coastline — which is
-                // the same failure `RegionMapView` clamps its own pan against, one layer down. The
-                // boundary holds the *centre* inside the paper; `keepingTheChartUnderTheViewport`
-                // is what keeps its edges off screen at the opening zoom.
+            // **The overlay is added once and never removed.** Adding and removing it was what made
+            // the wand feel like it was refusing taps: each toggle threw away every rendered tile of
+            // a 1469 × 1071 drawing and rebuilt them, and a second tap arriving during that work had
+            // to wait for it. The layer stays; only its opacity changes, and `canDraw` returns false
+            // at zero so the real mode costs nothing to keep it around.
+            if !map.overlays.contains(where: { $0 === overlay }) {
+                map.addOverlay(overlay, level: .aboveLabels)
+
+                // **Bali and nothing else, in both modes, set once and never touched again.**
                 //
-                // Lifted in the real mode: the basemap is a world, and clamping it to the drawing's
-                // rectangle would be inventing an edge that is not there.
-                map.cameraBoundary = view.showsIllustration
-                    ? MKMapView.CameraBoundary(mapRect: overlay.boundingMapRect)
-                    : nil
-                // The layer is added and removed rather than faded. `MKOverlayRenderer.alpha` is
-                // not animatable — driving it would mean redrawing the whole chart a dozen times a
-                // toggle — and a layer switch that cuts is what a layer switch looks like.
-                if view.showsIllustration {
-                    if !map.overlays.contains(where: { $0 === overlay }) {
-                        // `.aboveLabels`, not `.aboveRoads`. Below the labels, Apple's own place
-                        // names print across the chart — "Denpasar" and a department store were
-                        // set over the illustration on the first run of this — and a fantasy map
-                        // with the real map's typography on it is neither of the two things it is
-                        // trying to be. In the real mode the overlay is removed and the labels
-                        // come back.
-                        map.addOverlay(overlay, level: .aboveLabels)
-                    }
-                } else {
-                    map.removeOverlay(overlay)
-                }
-
-                if view.showsIllustration {
-                    map.setVisibleMapRect(
-                        Self.keepingTheChartUnderTheViewport(map.visibleMapRect,
-                                                             chart: overlay.boundingMapRect),
-                        edgePadding: .zero,
-                        animated: !isInitial)
-                }
+                // These used to be applied and lifted on every toggle, and that is what made the
+                // wand look like it was zooming the map instead of switching it. Three things moved
+                // the camera on the way back to the chart — the boundary pulling the centre in, the
+                // zoom range pulling the scale in, and the correction — so a reader who had panned
+                // or zoomed while on the real map tapped the wand and watched an animation instead
+                // of a toggle. The ground did change; the eye followed the zoom.
+                //
+                // Confining both grounds is what makes the toggle *nothing but* a change of opacity,
+                // which is the property being asked for. It costs the real map its freedom to show
+                // Java and Lombok — deliberate, and a one-line revert if that is wanted: this app is
+                // a walk around Bali, and the basemap is here to say where in Bali a quest is.
+                map.cameraBoundary = MKMapView.CameraBoundary(mapRect: overlay.boundingMapRect)
+                map.cameraZoomRange = MKMapView.CameraZoomRange(
+                    maxCenterCoordinateDistance: QuestBaseMapView.zoomedOutLimit(for: overlay))
+                correct(map, to: overlay, animated: false)
             }
+
+            guard view.showsIllustration != isShowingIllustration || isInitial else { return }
+            isShowingIllustration = view.showsIllustration
+
+            // The whole of what a toggle does. No camera work, so it cannot be mistaken for one.
+            renderer?.alpha = view.showsIllustration ? 1 : 0
+            renderer?.setNeedsDisplay()
         }
 
         /// Slides the viewport until the drawing covers it, where the drawing is big enough to.
@@ -217,11 +282,23 @@ struct QuestBaseMapView: UIViewRepresentable {
             guard let illustrated = overlay as? IllustratedMapOverlay else {
                 return MKOverlayRenderer(overlay: overlay)
             }
-            return IllustratedMapOverlayRenderer(overlay: illustrated)
+            let made = IllustratedMapOverlayRenderer(overlay: illustrated)
+            made.alpha = isShowingIllustration ? 1 : 0
+            renderer = made
+            return made
         }
 
         func mapView(_ mapView: MKMapView,
                      viewFor annotation: any MKAnnotation) -> MKAnnotationView? {
+            if annotation is MKUserLocation {
+                let view = mapView.dequeueReusableAnnotationView(
+                    withIdentifier: UserLocationAnnotationView.reuseIdentifier,
+                    for: annotation) as? UserLocationAnnotationView
+                view?.install(palette: parent.hisploraPalette,
+                              spokenLabel: parent.userLocationLabel)
+                return view
+            }
+
             guard let quest = annotation as? QuestMapAnnotation else { return nil }
 
             let view = mapView.dequeueReusableAnnotationView(
@@ -241,13 +318,57 @@ struct QuestBaseMapView: UIViewRepresentable {
         }
 
         func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
-            guard !hasSettledOpeningRegion, isShowingIllustration, let overlay else { return }
+            guard !hasSettledOpeningRegion, let overlay else { return }
             hasSettledOpeningRegion = true
-            mapView.setVisibleMapRect(
-                Self.keepingTheChartUnderTheViewport(mapView.visibleMapRect,
-                                                     chart: overlay.boundingMapRect),
+            correct(mapView, to: overlay, animated: false)
+        }
+
+        /// Slides a finished pan or pinch back onto the paper.
+        ///
+        /// At the *end* of the gesture rather than during it. Correcting continuously fights the
+        /// finger — the map stops where the touch does not — and the boundary and zoom range have
+        /// already kept the gesture close, so what is left to correct is a few points of edge.
+        func mapView(_ mapView: MKMapView, regionDidChangeAnimated animated: Bool) {
+            // The change this is hearing about is the correction's own. Clearing the flag here
+            // rather than beside the call is what makes one gesture produce one correction:
+            // released synchronously, the animation's own region changes come back through this
+            // method and start another.
+            if isCorrectingRegion {
+                isCorrectingRegion = false
+                return
+            }
+            guard let overlay else { return }
+            correct(mapView, to: overlay, animated: true)
+        }
+
+        /// `setVisibleMapRect` reports a region change of its own, so this has two ways of not
+        /// calling itself forever, and both are needed.
+        ///
+        /// The flag covers the synchronous re-entry. The overflow test covers the asynchronous one:
+        /// MapKit fits the rectangle it is given rather than adopting it exactly, so comparing the
+        /// corrected rect against the one that comes back never converges and the map twitches
+        /// against itself. What is measured instead is the thing the correction exists to remove —
+        /// **how much basemap is showing past the edge of the paper** — and once that is under a
+        /// couple of screen points there is nothing left to do.
+        private func correct(_ map: MKMapView, to chart: IllustratedMapOverlay, animated: Bool) {
+            guard !isCorrectingRegion, map.bounds.width > 0 else { return }
+            // An un-laid-out map reports a rect that means nothing, and a correction computed from
+            // it snaps the camera somewhere the reader did not ask for.
+
+            let visible = map.visibleMapRect
+            let paper = chart.boundingMapRect
+
+            let overflow = max(
+                paper.minX - visible.minX, visible.maxX - paper.maxX,
+                paper.minY - visible.minY, visible.maxY - paper.maxY)
+            let tolerance = (visible.width / Double(map.bounds.width)) * 2
+            guard overflow > tolerance else { return }
+
+            isCorrectingRegion = true
+            map.setVisibleMapRect(
+                Self.keepingTheChartUnderTheViewport(visible, chart: paper),
                 edgePadding: .zero,
-                animated: false)
+                animated: animated)
         }
 
         func mapViewDidFailLoadingMap(_ mapView: MKMapView, withError error: any Error) {

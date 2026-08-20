@@ -64,8 +64,11 @@ struct BundledContentRepositoryTests {
         // `2026.09.6` added Puri Agung Pemecutan's approach map — the street drawing on `1:4458` —
         // and the fourth source that cites it, and `2026.09.7` read that drawing's own marker for
         // the Place off the illustration, so `187:1103` has a point to beat its dot over.
+        // `2026.09.8` re-authored the five `mapPoint`s that were never placed against `275:2309` at
+        // all — leftovers from the portrait drawing, 34 to 40 km out, invisible for as long as no
+        // quest reached those Places. `IllustratedMapGeoreferenceTests` now guards the whole set.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.7")
+        #expect(try repository.contentBundleVersion() == "2026.09.8")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)

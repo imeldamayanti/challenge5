@@ -68,6 +68,19 @@ struct PermissionCallBoundaryTests {
     static let arrivalOwningFiles: Set<String> = [
         "LocationService.swift",
         "QuestRunViewModel.swift",
+        // **A different kind of caller, admitted deliberately and recorded as such.** The three
+        // above own *arrival*; this one owns nothing of the sort — it is the discovery map asking
+        // for location so it can draw a dot for where the reader is standing.
+        //
+        // `FR-ONB-04` bans the prompt during onboarding and says it is asked at the first
+        // quest-start attempt. It does not ban a second in-context moment, and a map that draws no
+        // dot and explains nothing was the bug this fixed — but the requirement names one moment
+        // and there are now two, so this is a deviation and not a reading. It is written down in
+        // `docs/prd-amendments/fr-map-01-discovery-basemap.md` and is **unsigned**.
+        //
+        // It asks only from `.notRequested`, and only `requestWhenInUseAuthorization` — the map
+        // never calls `startUpdatingLocation`; `MKMapView.showsUserLocation` does its own.
+        "QuestMapViewModel.swift",
         "ArrivalSampling.swift",
         "SideQuestFlowViewModel.swift",
     ]

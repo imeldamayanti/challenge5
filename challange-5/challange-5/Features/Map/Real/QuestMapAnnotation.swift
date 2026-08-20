@@ -119,3 +119,70 @@ struct QuestMapMarker: View {
         .accessibilityHidden(true)
     }
 }
+
+/// Where the reader is, drawn in this app's own hand rather than in MapKit's.
+///
+/// Apple's blue disc is legible, but on the illustrated chart it is the one object on the paper
+/// that belongs to a different picture — and at the scale this map opens, it is also small enough
+/// to lose against a coastline. This is `HisploraPulsingMapMarker`, the same dot the approach
+/// screen beats, at a size that reads on a map of a whole regency: the seal-red dot inside a cream
+/// ring, with a halo that breathes out and fades.
+///
+/// The halo is decoration and the ring is the legibility (`NFR-A11Y-05`) — the dot keeps a hard
+/// cream boundary against both grounds whether or not the animation is running, and
+/// `HisploraPulsingMapMarker` already stops the ring rather than the dot under Reduce Motion.
+final class UserLocationAnnotationView: MKAnnotationView {
+
+    static let reuseIdentifier = "UserLocationAnnotationView"
+
+    /// The still dot is this across; the halo reaches 2.6× it. Apple's own is about 22 points
+    /// including its ring, and this reads a little larger deliberately — the chart is busy.
+    private static let dotDiameter: CGFloat = 18
+
+    private var host: UIHostingController<UserLocationMarker>?
+
+    override init(annotation: (any MKAnnotation)?, reuseIdentifier: String?) {
+        super.init(annotation: annotation, reuseIdentifier: reuseIdentifier)
+        let extent = Self.dotDiameter * 2.6
+        frame = CGRect(x: 0, y: 0, width: extent, height: extent)
+        backgroundColor = .clear
+        // The dot marks a point, so it stays centred on it — no `centerOffset`, unlike the quest
+        // markers, whose drawing hangs off a building.
+        canShowCallout = false
+        isEnabled = false
+        isAccessibilityElement = true
+        accessibilityTraits = .updatesFrequently
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not used") }
+
+    func install(palette: HisploraPalette, spokenLabel: String) {
+        guard host == nil else {
+            accessibilityLabel = spokenLabel
+            return
+        }
+
+        let controller = UIHostingController(
+            rootView: UserLocationMarker(diameter: Self.dotDiameter, palette: palette))
+        controller.view.backgroundColor = .clear
+        controller.view.isUserInteractionEnabled = false
+        controller.view.frame = bounds
+
+        addSubview(controller.view)
+        host = controller
+
+        accessibilityLabel = spokenLabel
+    }
+}
+
+struct UserLocationMarker: View {
+
+    let diameter: CGFloat
+    let palette: HisploraPalette
+
+    var body: some View {
+        HisploraPulsingMapMarker(diameter: diameter)
+            .environment(\.hisploraPalette, palette)
+    }
+}

@@ -13,6 +13,7 @@ import UIStringsKit
 struct QuestMapScreen: View {
 
     @Environment(\.kultaraPalette) private var palette
+    @Environment(\.hisploraPalette) private var hisplora
 
     private let model: RegionMapViewModel
     @State private var map: QuestMapViewModel
@@ -22,7 +23,7 @@ struct QuestMapScreen: View {
 
     init(
         model: RegionMapViewModel,
-        map: QuestMapViewModel = QuestMapViewModel(),
+        map: QuestMapViewModel,
         onSelect: @escaping (String) -> Void,
         onClose: (() -> Void)? = nil
     ) {
@@ -33,83 +34,49 @@ struct QuestMapScreen: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            surface
-            controls
-        }
+        surface
         .overlay(alignment: .bottom) { offlineNotice }
-        .task { await loadIllustration() }
+        .task {
+            map.prepareLocation()
+            await loadIllustration()
+        }
         .kultaraHiddenNavigationBar()
     }
 
-    /// With no basemap there is nothing for the chart to stand on, so the screen hands over to the
-    /// surface that never needed one. `RegionMapView` reads the authored `mapPoint`s, ships its own
-    /// artwork, and has always worked in airplane mode (`FR-OFF-03`, `AD-3`).
-    @ViewBuilder private var surface: some View {
-        if map.usesOfflineSurface {
-            RegionMapView(model: model, onSelect: onSelect, onClose: onClose)
-        } else {
-            QuestBaseMapView(
-                pins: model.pins,
-                georeference: model.georeference,
-                illustration: illustration,
-                showsIllustration: map.showsIllustrationOverlay,
-                palette: palette,
-                onSelect: onSelect,
-                onBasemapFailure: { map.basemapDidFail() },
-                onBasemapRecovery: { map.basemapDidLoad() })
-                .ignoresSafeArea()
-                .overlay(alignment: .topLeading) { closeButton }
-        }
-    }
-
-    /// `276:2556`/`276:2557` sit at x 334 in a 402-point frame — 20 points off the trailing edge,
-    /// 48 points square. With the stack button unbuilt the wand takes the upper slot rather than
-    /// floating below a gap where a control the reader never saw would have been.
-    @ViewBuilder private var controls: some View {
-        if !map.usesOfflineSurface && model.georeference != nil && illustration != nil {
-            Button { map.toggleMode() } label: {
-                Image(systemName: "wand.and.sparkles")
-                    .font(.system(size: 19, weight: .semibold))
-                    .foregroundStyle(palette.seal.color)
-                    .frame(width: 48, height: 48)
-                    .background { glass }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(UIStrings.string(
+    /// **The map is never unmounted, and that is the fix for a bug rather than a preference.**
+    ///
+    /// This screen used to swap the whole surface to `RegionMapView` when a tile load failed. That
+    /// destroyed the `MKMapView`, so `mapViewDidFinishLoadingMap` could never fire again and the
+    /// screen stayed on the fallback for the rest of the session — with the wand gone with it,
+    /// because the control was gated on the same flag. One dropped tile and the reader could not get
+    /// back to either map.
+    ///
+    /// Now the failure only forces the chart on. The illustration needs no network, it covers the
+    /// viewport by construction, and the projection under it is arithmetic — so `FR-OFF-03` is met
+    /// by what is drawn rather than by which screen is mounted, and the moment tiles answer again
+    /// the map recovers on its own.
+    private var surface: some View {
+        QuestBaseMapView(
+            pins: model.pins,
+            georeference: model.georeference,
+            illustration: illustration,
+            showsIllustration: map.showsIllustrationOverlay,
+            showsUserLocation: map.showsUserLocation,
+            palette: palette,
+            hisploraPalette: hisplora,
+            userLocationLabel: UIStrings.string(.questMapUserLocation, model.language),
+            // The chart has to be loaded and placed before the wand can offer to hide it.
+            showsWandControl: model.georeference != nil && illustration != nil,
+            wandLabel: UIStrings.string(
                 map.showsIllustrationOverlay ? .questMapShowReal : .questMapShowIllustrated,
-                model.language))
-            .padding(.trailing, 20)
-            .padding(.top, KultaraMetrics.xxl)
-        }
-    }
-
-    /// The frames' component is iOS 26's liquid glass. The deployment target is 18.0, so the
-    /// button is drawn in the closest thing every supported version has and upgraded where the
-    /// real material exists — rather than shipping a hand-painted approximation of a system
-    /// material to everyone.
-    @ViewBuilder private var glass: some View {
-        if #available(iOS 26.0, *) {
-            Circle().fill(.clear).glassEffect(in: Circle())
-        } else {
-            Circle().fill(.regularMaterial)
-        }
-    }
-
-    @ViewBuilder private var closeButton: some View {
-        if let onClose {
-            Button(action: onClose) {
-                Image(systemName: "chevron.left")
-                    .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(palette.inkOnSeal.color)
-                    .frame(width: KultaraMetrics.minimumTapTarget,
-                           height: KultaraMetrics.minimumTapTarget)
-                    .background(palette.sealFill.color, in: Circle())
-            }
-            .accessibilityLabel(UIStrings.string(.questListListTab, model.language))
-            .padding(.leading, KultaraMetrics.lg)
-            .padding(.top, KultaraMetrics.xxl)
-        }
+                model.language),
+            closeLabel: UIStrings.string(.questListListTab, model.language),
+            onToggleMode: { map.toggleMode() },
+            onClose: onClose,
+            onSelect: onSelect,
+            onBasemapFailure: { map.basemapDidFail() },
+            onBasemapRecovery: { map.basemapDidLoad() })
+            .ignoresSafeArea()
     }
 
     @ViewBuilder private var offlineNotice: some View {

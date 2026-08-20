@@ -53,8 +53,17 @@ nonisolated final class IllustratedMapOverlay: NSObject, MKOverlay {
 /// defaults to main-actor isolation — the override has to match the framework's.
 nonisolated final class IllustratedMapOverlayRenderer: MKOverlayRenderer {
 
+    /// Asked once per tile and cached, so `setNeedsDisplay()` is what makes a change of `alpha`
+    /// take effect. Answering `false` at zero is the whole reason the overlay can stay added while
+    /// the real map is the ground: MapKit stops asking for tiles rather than compositing a
+    /// 1469 × 1071 drawing at zero opacity.
+    override func canDraw(_ mapRect: MKMapRect, zoomScale: MKZoomScale) -> Bool {
+        alpha > 0.01
+    }
+
     override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
-        guard let overlay = overlay as? IllustratedMapOverlay,
+        guard alpha > 0.01,
+              let overlay = overlay as? IllustratedMapOverlay,
               let cgImage = overlay.image.cgImage
         else { return }
 

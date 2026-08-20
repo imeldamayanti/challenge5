@@ -50,6 +50,7 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case questMapShowIllustrated
     case questMapShowReal
     case questMapOfflineNotice
+    case questMapUserLocation
     case labelRegion
     case labelDistance
     case labelWalkingTime

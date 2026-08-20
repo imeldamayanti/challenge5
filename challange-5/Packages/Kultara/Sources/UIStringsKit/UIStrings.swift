@@ -74,6 +74,7 @@ public enum UIStrings {
         .questMapOfflineNotice: LocalizedText(
             id: "Peta sebenarnya butuh koneksi. Yang tampil peta bergambar.",
             en: "The real map needs a connection. Showing the illustrated map."),
+        .questMapUserLocation: LocalizedText(id: "Lokasi kamu", en: "Your location"),
         .mapUnavailable: LocalizedText(
             id: "Peta wilayah belum ikut di versi konten ini.",
             en: "This content version ships no region map."),

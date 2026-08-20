@@ -1,4 +1,7 @@
 import ContentKit
+import Foundation
+import MapKit
+import RunEngine
 import Testing
 @testable import challange_5
 
@@ -36,22 +39,38 @@ struct QuestMapTests {
         #expect(model.showsIllustrationOverlay)
     }
 
-    /// `AD-3`/`FR-OFF-03`: a basemap that does not load hands the screen to the surface that never
-    /// needed one. Nothing predicts the failure — the model only records one that happened.
-    @Test func aBasemapThatFailsHandsOverToTheOfflineSurface() {
+    /// **The regression this suite exists for.** The screen used to swap the whole surface out
+    /// when a tile load failed, which destroyed the `MKMapView` — so nothing could ever report a
+    /// load succeeding, and the reader was stuck on the fallback for the rest of the session with
+    /// the wand gone too. The map is never unmounted now, and recovery is a fact the model records
+    /// rather than a screen it has no way back from.
+    @Test func aBasemapThatFailsAndThenAnswersComesBack() {
         let model = QuestMapViewModel()
-        #expect(!model.usesOfflineSurface)
 
         model.basemapDidFail()
-        #expect(model.usesOfflineSurface)
+        #expect(model.basemapFailed)
 
         model.basemapDidLoad()
-        #expect(!model.usesOfflineSurface)
+        #expect(!model.basemapFailed)
     }
 
-    /// Falling back while illustrated lands on very nearly the same picture, so saying a real map
-    /// was lost would announce a loss the reader cannot see. It is said only when the reader had
-    /// asked for the thing that went missing.
+    /// `FR-OFF-03`/`AD-3`: with no tiles the chart is the whole of what there is to see, so the
+    /// failure forces it on whichever mode the reader had chosen. It needs no network — a shipped
+    /// asset and some arithmetic — and it covers the viewport by construction.
+    @Test func aBasemapThatFailsForcesTheChartOnInEitherMode() {
+        let model = QuestMapViewModel()
+        model.toggleMode()
+        #expect(!model.showsIllustrationOverlay)
+
+        model.basemapDidFail()
+        #expect(model.showsIllustrationOverlay)
+
+        model.basemapDidLoad()
+        #expect(!model.showsIllustrationOverlay)
+    }
+
+    /// Falling back while illustrated lands on exactly the picture the reader asked for, so saying
+    /// a real map was lost would announce a loss nobody can see.
     @Test func theOfflineNoticeIsSaidOnlyWhenTheRealGroundWasTheOneAskedFor() {
         let model = QuestMapViewModel()
 
@@ -60,6 +79,54 @@ struct QuestMapTests {
 
         model.toggleMode()
         #expect(model.showsOfflineNotice)
+    }
+
+    // MARK: Location
+
+    /// MapKit will not ask on the app's behalf, so a dot promised before there is permission for one
+    /// draws nothing and explains nothing.
+    @Test func theDotIsDrawnOnlyOncePermissionExists() {
+        let provider = TestMapLocationProvider(authorization: .notRequested)
+        let model = QuestMapViewModel(locationProvider: provider)
+        model.prepareLocation()
+        #expect(!model.showsUserLocation)
+
+        // The answer arrives after the prompt, on the manager's own schedule. The dot appears when
+        // it does, without the reader having to leave the map and come back.
+        provider.change(to: .whenInUse)
+        #expect(model.showsUserLocation)
+    }
+
+    @Test func aDeniedAnswerDrawsNoDot() {
+        let provider = TestMapLocationProvider(authorization: .denied)
+        let model = QuestMapViewModel(locationProvider: provider)
+        model.prepareLocation()
+
+        #expect(!model.showsUserLocation)
+    }
+
+    /// `FR-ONB-04` is about not asking before there is a reason. Opening a map that draws where you
+    /// are is a reason; opening it a second time is not a new one.
+    @Test func permissionIsAskedForOnceAndNeverAgainAfterAnAnswer() {
+        let provider = TestMapLocationProvider(authorization: .notRequested)
+        let model = QuestMapViewModel(locationProvider: provider)
+
+        model.prepareLocation()
+        #expect(provider.requestCount == 1)
+
+        provider.change(to: .denied)
+        model.prepareLocation()
+        #expect(provider.requestCount == 1)
+    }
+
+    /// The map draws the dot; it never drives the sampler. `startUpdatingLocation` belongs to
+    /// arrival (`NFR-BAT-04`), and `MKMapView.showsUserLocation` does its own.
+    @Test func theMapNeverStartsTheArrivalSampler() {
+        let provider = TestMapLocationProvider(authorization: .whenInUse)
+        let model = QuestMapViewModel(locationProvider: provider)
+        model.prepareLocation()
+
+        #expect(!provider.isStarted)
     }
 
     /// `276:2520` opens on the quests, not on the island. A discovery map whose first frame is open
@@ -91,5 +158,27 @@ struct QuestMapTests {
 
         #expect(region.center.latitude < -8.0)
         #expect(region.center.longitude > 114.0)
+    }
+}
+
+@MainActor
+private final class TestMapLocationProvider: LocationProviding {
+    var authorization: LocationAuthorizationSnapshot
+    var onFix: ((LocationFix) -> Void)?
+    var onAuthorizationChange: ((LocationAuthorizationSnapshot) -> Void)?
+    private(set) var requestCount = 0
+    private(set) var isStarted = false
+
+    init(authorization: LocationAuthorizationSnapshot) {
+        self.authorization = authorization
+    }
+
+    func requestWhenInUseAuthorization() { requestCount += 1 }
+    func start(target: Coordinate) { isStarted = true }
+    func stop() { isStarted = false }
+
+    func change(to snapshot: LocationAuthorizationSnapshot) {
+        authorization = snapshot
+        onAuthorizationChange?(snapshot)
     }
 }

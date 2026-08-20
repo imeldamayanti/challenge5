@@ -1,3 +1,4 @@
+import ContentKit
 import Foundation
 import Observation
 
@@ -20,13 +21,21 @@ final class QuestMapViewModel {
     /// offers — not the other way round.
     private(set) var mode: Mode = .illustrated
 
-    /// True once MapKit has reported a load that failed. **Not a reachability flag** — nothing here
-    /// asks whether the network is up, which is the check `AD-3` exists to prevent. This is the
-    /// record of a request that was made and did not come back.
+    /// True once MapKit has reported a load that failed, false again once one succeeds.
+    ///
+    /// **Not a reachability flag** — nothing here asks whether the network is up, which is the check
+    /// `AD-3` exists to prevent. This is the record of a request that was made and did not come
+    /// back, and of a later one that did.
     private(set) var basemapFailed = false
 
-    init(mode: Mode = .illustrated) {
+    private(set) var authorization: LocationAuthorizationSnapshot = .notRequested
+
+    private let locationProvider: (any LocationProviding)?
+
+    init(mode: Mode = .illustrated, locationProvider: (any LocationProviding)? = nil) {
         self.mode = mode
+        self.locationProvider = locationProvider
+        authorization = locationProvider?.authorization ?? .notRequested
     }
 
     func toggleMode() {
@@ -41,15 +50,49 @@ final class QuestMapViewModel {
         basemapFailed = false
     }
 
-    /// What the screen draws. With no basemap there is nothing for the chart to stand on, so the
-    /// screen falls back to the illustrated surface that never needed one — `RegionMapView`, which
-    /// reads the authored `mapPoint`s and has always worked in airplane mode (`FR-OFF-03`).
-    var usesOfflineSurface: Bool { basemapFailed }
+    // MARK: Location
 
-    var showsIllustrationOverlay: Bool { mode == .illustrated }
+    /// Asks for location the first time the map is opened, and only then.
+    ///
+    /// **This is a second in-context permission moment and `FR-ONB-04` names only one.** That
+    /// requirement bans the prompt during onboarding and says it is asked at the first quest-start
+    /// attempt; a map that draws a dot for where you are is the other honest place to ask, and a map
+    /// that silently draws no dot is the bug this fixes. The deviation is recorded in
+    /// `docs/prd-amendments/fr-map-01-discovery-basemap.md` and is **unsigned**.
+    ///
+    /// Only from `.notRequested`. A refusal is an answer, and asking again on every appearance is
+    /// how an app teaches people to refuse it permanently in Settings.
+    func prepareLocation() {
+        guard let locationProvider else { return }
+
+        locationProvider.onAuthorizationChange = { [weak self] snapshot in
+            self?.authorization = snapshot
+        }
+        authorization = locationProvider.authorization
+
+        if authorization == .notRequested {
+            locationProvider.requestWhenInUseAuthorization()
+        }
+    }
+
+    /// MapKit will not ask on the app's behalf, so promising a dot before there is permission for
+    /// one draws nothing and explains nothing.
+    var showsUserLocation: Bool {
+        authorization == .whenInUse || authorization == .always
+    }
+
+    // MARK: What the screen draws
+
+    /// The chart, whenever the mode asks for it **or** the basemap is not answering.
+    ///
+    /// The illustration needs no network — it is a shipped asset drawn into a rectangle, and the
+    /// projection under it is arithmetic — so with no tiles it is the whole of what there is to see,
+    /// and it covers the viewport by construction. `FR-OFF-03` is met by drawing it rather than by
+    /// swapping the screen out.
+    var showsIllustrationOverlay: Bool { mode == .illustrated || basemapFailed }
 
     /// Said only when the fallback actually took something away. Falling back while illustrated
-    /// lands on very nearly the same picture, and announcing a loss the reader cannot see is worse
-    /// than saying nothing.
+    /// lands on exactly the picture the reader asked for, and announcing a loss nobody can see is
+    /// worse than saying nothing.
     var showsOfflineNotice: Bool { basemapFailed && mode == .real }
 }
