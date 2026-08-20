@@ -96,8 +96,8 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 541 tests / 69 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
-| `xcodebuild test -only-testing:challange-5Tests` | 193 tests / 19 suites — view models, presentation, UI strings, host linkage | Yes |
+| `swift test` (from `Packages/Kultara`) | 549 tests / 70 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `xcodebuild test -only-testing:challange-5Tests` | 203 tests / 20 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
 **Four `swift test` failures are pre-existing on this branch and are not yours.** None is in a
@@ -540,6 +540,16 @@ auto-advancing and the login carrying a "Skip for now".
   resolves. Replacing it with a real survey is a content change and nothing else. The frame's three
   marker dots are **not** drawn: nothing authors them, and inventing coordinates would be the app
   asserting where three things stand inside a real puri.
+- **The `approachTransition` wiring was missing from this branch and has been restored.** As of
+  2026-08-20 the app target did not compile: the `d7b02e0` merge kept `QuestRunViewModel.Stage`'s
+  `approachTransition` case and both screens that render it, but lost
+  `advanceFromApproachTransition`, `approachTransitionDuration`, the `cutscenePortrait` →
+  `approachTransition` hand-off, the back case, `isStoryFlow` and `opensOnStoryFlow`. The same merge
+  left `initialStage` with three parameters its body never reads while the call site still passed
+  one, and left `QuestRunView` carrying a second copy of the story-flow switch. All of it is put
+  back from `f88eb4c` (`origin/FE`), with `isOnStoryFlow` now delegating to the model's one rule
+  rather than keeping a duplicate. None of this is new behaviour — it is what the bullet below
+  already described, restored so the target builds.
 - **A map with a beating dot stands between the cutscene and the story, and it leaves on its own.**
   `187:1103` is back as `approachTransition` — `cutscenePortrait` → `approachTransition` →
   `storyReveal`, on the walk's first checkpoint only, since it is the cutscene that it lands. It is
@@ -724,13 +734,73 @@ auto-advancing and the login carrying a "Skip for now".
 - **Unsealing a letter no longer redirects.** It used to push `runScreen`, which for a finished
   walk lands on the museum-catalogue summary — a second visual direction with a navigation bar,
   reached by an animation that had just spent four seconds saying *this is a letter*.
-  `Features/Letters/JournalLetterView.swift` now opens the letter full screen over the shelf as a scrollable
-  page: the same `RunSummaryViewModel` snapshots (lore claims with their accuracy labels and
-  citations, the walker's written answers, the pinned content version) set as a paper sheet on the
-  printed brown ground, with the earned stamps at the foot. `KultaraRootView.journalRunDestination`
-  is gone; `journalLetter: SealedLetterPresentation?` drives a `fullScreenCover`. The lore claims
-  are drawn in that file rather than by `LoreClaimList` because that component reads
-  `\.kultaraPalette`, which is not this screen's palette.
+  `KultaraRootView.journalRunDestination` is gone; `journalLetter: SealedLetterPresentation?` drives
+  a full-screen overlay over the shelf.
+- **The letter is two pages now, and `JournalLetterView` is only the switch between them.**
+  `791:6414` ("Trip Summary") and `791:6537` ("History") landed 2026-08-20 as
+  `Features/Letters/TripSummaryScreen.swift` and `TripHistoryScreen.swift`, with `TripPageChrome.swift`
+  (bar, counter tile, place card, gilt medallion) and `TripFrameLayout.swift` (the frame canvas)
+  beside them. Before those frames existed both paper cards opened one page at two scroll offsets;
+  the board drew each half as its own screen, so the split is now real. Nine things about them:
+  - **Every ground on both pages is speckled, and the scroll's underlay is two-tone.**
+    `TripFrameBand` takes an `SRGBColor` token and paints it through `kultaraSpeckledGround`, so no
+    band is the one rectangle on the page without the grain every other Hisplora screen has. And
+    because a scroll view overscrolls past its content, `overscrollBleed(top:bottom:)` hangs a
+    rectangle of each end's token above and below the *content* — one colour behind the whole scroll
+    printed a cream strip under the closing band, and a two-tone one behind the *viewport* stayed
+    put while the page moved, repainting the counters' ground halfway down a scroll.
+  - **They are set at the frames' point sizes, not at type roles, and neither responds to Dynamic
+    Type.** The owner asked for the frames reproduced exactly, and a role that scales cannot hold a
+    15-point label beside a 21-point figure at the drawn ratio. `journalBandHeading` and
+    `journalStatValue` exist for the reflowing fallback page, not for these two.
+  - **The History page is drawn at the frame's 402-point coordinates and scaled**, band by band,
+    rather than composed out of stacks (`TripFrame`, `TripFrameBand`, `TripFramePage`). It is an
+    editorial spread — cut-outs behind paragraphs at chosen angles, a portrait bleeding off the left
+    margin with an arrow drawn at it — and as stacks it becomes *a* layout, not *this* one. The
+    canvas carries a spoken label with every word in reading order, because the composition says
+    nothing to a reader who cannot see it. The Trip Summary still reflows: its contents are the
+    walk's.
+  - **The History page's prose is `QuestHistoryText`, a per-quest table in the app target.** Same
+    shape and same debt as `StampArtworkResolver.slugsByPlaceID`: a second quest gets no History
+    page until somebody edits that file, and falls back to `TripHistoryChapters` — the walk's own
+    lore snapshots with their accuracy labels and citations.
+  - **The Badung page's nine paragraphs carry no citations, and the portrait no consent record.**
+    That page breaks `FR-CP-05` and `FR-CP-06`, deliberately, at the owner's instruction of
+    2026-08-20 — the reasoning being that History is the quest's own story rather than something the
+    walker collects. Three things have to happen before anything public and they are listed in
+    `docs/hisplora-tokens.md`: citations for every sentence, a licence record for `history-king` and
+    `history-plate`, and a decision about `sticker-3-32`, a plaque with one quest's title printed
+    into it. This sits beside the `docs/consent-log.md` blockers, not instead of them.
+  - **The three counts on the summary are the Run's.** `RunSummaryViewModel` gained
+    `placesExploredCount`, `memoriesCount` and `durationMinutes`; a skip is a resolution and not a
+    memory (`AD-2`), an empty field is not one either, and the duration floors at one minute.
+    `TripPagesTests` holds all three.
+  - **The Trip Collection is the quest's legend plus the walker's own photographs.** The frames draw
+    five medallions of one painted portrait captioned with invented object names; what ships keeps
+    the mounts and changes their contents — `791:6482`'s portrait in the featured slot (from
+    `QuestHistoryText.legend`, per quest), then one medallion per photograph the walk actually
+    produced, captioned with the place. Three photographs give three medallions; none gives the
+    legend alone. `RunSummaryViewModel.capturedPhotos` carries paths and
+    `PhotoStore.image(atRelativePath:)` reads them back against `Documents`, returning `nil` for a
+    photograph deleted from Settings (`FR-SET-02`).
+  - **The share control is a real `ShareLink` handing over plain text.** The recap card
+    (`FR-DONE-06`) is still unbuilt; the glyph both frames draw would otherwise be a promise the
+    screen cannot keep. When the card exists it replaces the `item` and the bar does not change.
+  - **The walker's written answers are on the summary's place cards**, where the frames draw only a
+    count of "memories". Dropping the one thing on the page nobody authored would have been the
+    silent loss in this redesign.
+  - **Back goes to the papers modal, not to the shelf.** Both pages are reached through `791:5551`,
+    so the way back from one is the choice that opened it — otherwise a reader who finished the
+    summary has to unseal the envelope again to reach the history.
+- **Eighteen paper cut-outs and eight page illustrations ship, about 7 MB.** `791:6917` is a hundred
+  stickers; `DesignSystem/HisploraSticker.swift` packages the eighteen the two pages place
+  (`sticker-N-NN.png`, keeping the section's own numbering) plus `HisploraTripArtwork`'s plate,
+  portrait, torn scrap, pen rule, arrow, emblem and two medallion frames.
+  `HisploraStickerTests` pins the count so the set cannot drift silently. Two extraction notes: a
+  Figma **node export is not the layer** — `791:6577`'s torn scrap exports with the section's cream
+  baked in and prints as a rectangle across the painting, so the layer's raw image is what ships —
+  and the medallion windows are the frames' own insets, with the stamp set into them and the gilt
+  frame drawn over.
 - **The Journal's opening was clipped and is not any more.** The envelope's last two beats put the
   page two thirds of a card above itself and then grew it 2.1×, all inside a `ScrollView` that
   clips — so the top of the page was cut off mid-zoom. The opening is now drawn as a sibling of the

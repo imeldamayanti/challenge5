@@ -23,10 +23,6 @@ struct RunSummaryView: View {
                 }
                 awardsSection
                 nextInFlowSection
-                Text(model.snapshotNote)
-                    .kultaraFont(.metadata)
-                    .foregroundStyle(palette.inkMuted.color)
-                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(KultaraMetrics.lg)
             .kultaraFloatingTabBarClearance()

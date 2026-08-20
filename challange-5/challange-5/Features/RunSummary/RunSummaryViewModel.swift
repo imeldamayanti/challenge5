@@ -80,11 +80,57 @@ final class RunSummaryViewModel {
                run.reachedCount, run.checkpointCount)
     }
 
-    /// Names the pinned version, because a summary that silently disagrees with the current app is
-    /// worse than one that says why (`AD-4`).
-    var snapshotNote: String {
-        String(format: UIStrings.string(.summarySnapshotNote, language), run.contentVersion)
+    var wasAbandoned: Bool { run.state == .abandoned }
+
+    // MARK: - The three counts on the Trip Summary (`791:6494`)
+
+    /// How many checkpoints the walk actually reached — `791:6502`.
+    var placesExploredCount: Int { run.reachedCount }
+
+    /// How many tasks the walker resolved with something of their own — `791:6523`.
+    ///
+    /// A skip is a resolution and not a memory (`AD-2`), and neither is an empty field, so both are
+    /// counted out. A photograph counts even when nothing was written beside it: the picture is the
+    /// keepsake.
+    var memoriesCount: Int {
+        run.orderedCheckpointResults.reduce(0) { total, result in
+            total + result.taskResults.filter { task in
+                guard !task.skipped else { return false }
+                if let text = task.text, !text.isEmpty { return true }
+                return task.photoRelativePath != nil
+            }.count
+        }
     }
 
-    var wasAbandoned: Bool { run.state == .abandoned }
+    /// The photographs the walker took, in the order they were taken — `791:6460` and its
+    /// siblings, the Trip Collection's grid.
+    ///
+    /// **The collection is what the walker made, not what the app gave them.** The frame draws five
+    /// medallions of the same painted portrait and captions them with invented names; what the walk
+    /// actually produced is the pictures they stopped and took, so the grid is exactly as long as
+    /// that list — three photographs, three medallions, and a walk with none shows the legend alone.
+    /// A skipped photo task contributes nothing (`AD-2`).
+    ///
+    /// The path is carried, never the image: loading fifteen JPEGs to build a presentation model
+    /// would put file IO in a type whose whole point is that it does none.
+    var capturedPhotos: [(id: String, placeName: String, relativePath: String)] {
+        run.orderedCheckpointResults.flatMap { result in
+            result.taskResults.compactMap { task in
+                guard !task.skipped, let path = task.photoRelativePath else { return nil }
+                return (id: task.id.uuidString, placeName: result.snapshotPlaceName, relativePath: path)
+            }
+        }
+    }
+
+    /// How long the walk took, in whole minutes — `791:6532`.
+    ///
+    /// End to end, from the moment the Run was written to the moment it was finished; a walk still
+    /// under way measures to the last thing that touched it, which is the same fact the Journal's
+    /// shelf sorts on. Floored at 1 rather than shown as 0: a finished walk took *some* time, and a
+    /// summary that says it took none reads as a bug rather than as a fast walker.
+    var durationMinutes: Int {
+        let end = run.completedAt ?? run.abandonedAt ?? run.updatedAt
+        let seconds = max(0, end.timeIntervalSince(run.startedAt))
+        return max(1, Int((seconds / 60).rounded()))
+    }
 }

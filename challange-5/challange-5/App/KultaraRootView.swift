@@ -334,7 +334,15 @@ struct KultaraRootView: View {
                 model: RunSummaryViewModel(run: run),
                 letter: letter,
                 section: journalLetterSection,
-                onClose: { journalLetter = nil })
+                photoStore: environment.photoStore,
+                // Back to the papers, not out to the shelf. The two pages are reached *through*
+                // `791:5551`, so the way back from one is the choice that opened it — a reader who
+                // finished the summary and wants the history should not have to unseal the envelope
+                // again to get at it.
+                onClose: {
+                    journalLetter = nil
+                    journalPapers = letter
+                })
         } else {
             Color.clear.onAppear { journalLetter = nil }
         }

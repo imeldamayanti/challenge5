@@ -15,6 +15,13 @@ protocol PhotoStore: AnyObject {
     /// `FR-SET-02`. Returns how many photographs went, so the confirmation can name what was
     /// removed.
     @discardableResult func deleteAll() throws -> Int
+    /// Reads one back by the relative path `save` returned.
+    ///
+    /// `nil` is a real state and stays one: a photograph deleted from Settings (`FR-SET-02`) or
+    /// lost to a partial restore leaves a `TaskResult` still holding its path, and a summary that
+    /// crashed or drew a broken-image glyph over that would be worse than one that simply has one
+    /// fewer picture on it.
+    func image(atRelativePath path: String) -> UIImage?
 }
 
 enum PhotoStoreError: Error, CustomStringConvertible {
@@ -43,6 +50,9 @@ final class InMemoryPhotoStore: PhotoStore {
         savedCount = 0
         return count
     }
+
+    /// Nothing was ever written, so nothing reads back.
+    func image(atRelativePath path: String) -> UIImage? { nil }
 }
 
 /// One JPEG per photograph under `Documents/sidequest-photos/`, downscaled before it is written.
@@ -98,6 +108,14 @@ final class FilePhotoStore: PhotoStore {
             try? FileManager.default.removeItem(at: directory.appendingPathComponent(name))
         }
         return names.count
+    }
+
+    /// The paths `save` hands out are relative to `Documents`, which is where they are resolved
+    /// against — never stored absolute (`NFR-REL-05`).
+    func image(atRelativePath path: String) -> UIImage? {
+        let base = directory.deletingLastPathComponent()
+        guard let data = try? Data(contentsOf: base.appendingPathComponent(path)) else { return nil }
+        return UIImage(data: data)
     }
 
     private static func downscaled(_ image: UIImage, maxLongEdge: CGFloat) -> UIImage {

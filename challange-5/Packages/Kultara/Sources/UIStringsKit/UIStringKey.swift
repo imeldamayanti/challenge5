@@ -280,7 +280,6 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case summaryOpenAction
     case summaryStampsHeading
     case summaryReflectionHeading
-    case summarySnapshotNote
     case runAbandonAction
     case runAbandonConfirmTitle
     case runAbandonConfirmBody
@@ -377,6 +376,41 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// The modal's close control, which is drawn as a cross and therefore has to be named
     /// (`NFR-A11Y-05`).
     case journalPapersClose
+
+    // The two pages a paper opens — Trip Summary (`791:6414`) and History (`791:6537`).
+    /// Both pages' back control, which is a chevron and therefore has to be named
+    /// (`NFR-A11Y-05`). Its own key rather than a reuse of `storyRevealBack`: that one is a
+    /// labelled control inside the run, and its Indonesian reads "Sebelumnya" — "previous" — which
+    /// is what a story page's back means and not what leaving a finished letter means.
+    case tripPageBack
+    /// `791:6493` — the heading over the three counts.
+    case tripJourneyHeading
+    /// `791:6501` — how many checkpoints the walk actually reached.
+    case tripPlacesExplored
+    /// `791:6521` — how many tasks the walker resolved with something of their own: a written
+    /// answer or a photograph. A skip is a resolution and not a memory (`AD-2`), so it is not
+    /// counted.
+    case tripMemories
+    /// `791:6524` — the word after that count.
+    case tripMemoriesUnit
+    /// `791:6530` — how long the walk took, start to finish.
+    case tripDuration
+    /// `791:6533` — the unit after that count. Minutes, because the walks are 45 of them.
+    case tripDurationUnit
+    /// `791:6418` — the brown band's heading, over one card per place reached.
+    case tripPiecesHeading
+    /// `791:6485` — the italic serif line over the featured medallion's name.
+    case tripCollectionLegend
+    /// The share control in both pages' bars (`791:6490`, `791:6542`), which is a glyph and
+    /// therefore has to be named (`NFR-A11Y-05`).
+    case tripShare
+    /// `791:6453` — the tan band's heading, over the stamps the walk earned.
+    case tripCollectionHeading
+    /// A checkpoint the walk reached without its lore ever being opened. The History page says so
+    /// rather than printing a place name over an empty chapter.
+    case tripHistoryNoLore
+    /// `791:6593` — the last line of the History page, under which the walk's own seal is stamped.
+    case tripHistoryClosing
 
     // Profile — the Explorer's Card (Figma `547:2724`)
     case profileHeading

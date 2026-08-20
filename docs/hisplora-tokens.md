@@ -1196,6 +1196,263 @@ now rather than a ceiling: a test that only says "no longer than" cannot fail th
 - **The title and the hint both fade the moment the envelope opens.** `791:5585` keeps the title by
   moving it, and moving things during the opening is what the section above records as a mistake.
 
+## The two pages a paper opens — Trip Summary and History (2026-08-20)
+
+`791:6414` ("Trip Summary") and `791:6537` ("History") are the two screens the Journal's papers
+modal opens, and `791:6917` ("Section 1") is the sheet of paper cut-outs they scatter.
+
+Until these frames existed the two cards opened *one* page at two scroll offsets — the walk and the
+lore it unlocked are both records of one Run, and splitting them would have meant two screens
+printing halves of one set of snapshots. The board then drew each half as its own screen with its
+own masthead, its own grounds and its own furniture: the summary's counters and stamp collection
+have nowhere to live on a lore page, and the history's alternating bands have nothing to do with a
+set of counts. `JournalLetterView` is now the switch between `TripSummaryScreen` and
+`TripHistoryScreen`, and nothing else.
+
+### Seven new palette tokens
+
+| Token | Value | Where it was sampled | Measured |
+|---|---|---|---|
+| `inkGilt` | `#FFDE7C` | `791:6422` — a place's name on the brown card | 8.08:1 on `brownBand`, 7.22:1 on `brownMid`, 8.46:1 on `brownDeep` |
+| `inkGiltDeep` | `#F3C029` | `791:6567` — the History band's one emphasised phrase | 5.08:1 on `brownStone` |
+| `paperTrip` | `#F3EEE1` | `791:6415` — the page both screens print on | 14.55:1 under `inkDark` |
+| `paperTile` | `#F6F3EC` | `791:6495` — the counter tile, lighter than the sheet under it | 8.99:1 under `brownStone`, 16.7:1 under `buttonFill` |
+| `brownBand` | `#603B28` | `791:6417` — "The Pieces You Found" | 8.80:1 under `inkCream` |
+| `paperTan` | `#D8BEA1` | `791:6452` — "Trip Collection" | 9.47:1 under `inkDark` |
+| `inkCard` | `#E3CBBE` | `791:6423` — the italic line on the brown card | 6.30:1 on `brownBand` |
+| `inkCreamWhite` | `#FFFBF3` | `791:6567` — the dark band's type | 7.98:1 on `brownSmoke` |
+| `brownSmoke` | `#564D48` | `791:6566`, `791:6591` — the History page's two dark bands | 7.98:1 under `inkCreamWhite` |
+| `inkFragments` | `#C9C1B8` | `791:6593` — the closing line | 4.63:1 on `brownSmoke` |
+
+Two golds rather than one. `inkGilt` is the Trip Summary's brown band; `inkGiltDeep` is the History
+page, where the same amber is also the colour of the hand-drawn ring around the king's name — the
+one place on either page where type and artwork have to match, and folding the two into one made
+them stop matching. Neither is a reuse of `highlight`, which is documented as deliberately unmeasured
+as type and measures 4.44:1 on `brownMid` — large text passes, body fails by a hair.
+
+`paperTrip` and `paperTile` are both new because they appear *on the same screen*: the counter tiles
+are drawn a shade lighter than the sheet they lie on, which one cream cannot express. Three inks the
+frames draw are deliberately not tokens: `#474040` and `#1A1A1A` are `inkBody` and `inkDark` to
+within a step, and `#808080` — the unit after a counter's figure — measures 3.56:1 on `paperTile`,
+under the 4.5 body text wants, so the theme yields to the threshold and the unit ships in `inkMuted`
+(`NFR-A11Y-03`, the same move `inkDusty` made). `#564D48`, the History page's dark band, **is its own token.** It shipped as `brownStone`
+(`#58453E`) for one pass and that was wrong in a way that showed on device: the story flow's stone
+is a red-brown and this is a neutral warm grey, so the band read as a different material from the
+one the frame draws. Its inks moved with it — `inkGiltDeep` is 4.19:1 here and is therefore held to
+*large text*, which the 21-point italic serif it sets genuinely is; and the closing line's drawn
+`#BDB3AA` measures 4.00:1, so `inkFragments` is the nearest passing value (`inkDusty` is 4.28:1 and
+also short).
+
+### Two new type roles
+
+| Role | Cut | Frame |
+|---|---|---|
+| `journalBandHeading` | New York Medium **Italic**, 25, tracking −0.75, `.title2` | `791:6418`, `791:6453` |
+| `journalStatValue` | SF Pro **Bold**, `.title3`, tracking −0.63 | `791:6502`, `791:6523`, `791:6532` |
+
+They exist for the reflowing fallback page. **The two shipped pages do not use them** — see the next
+section for why.
+
+### The pages are set at the frame's point sizes, not at type roles
+
+The owner asked on 2026-08-20 for both frames reproduced exactly, and a role that scales with
+Dynamic Type cannot reproduce a 15-point label beside a 21-point figure at the ratio somebody drew.
+So `TripPageChrome`, `TripSummaryScreen` and `TripHistoryScreen` set `.system(size:weight:design:)`
+with the frames' own tracking and line heights, and **neither page responds to Dynamic Type**.
+
+The History page goes further: it is laid out at the frame's own 402-point coordinates and scaled by
+`width / 402` (`TripFrameLayout.swift`). That page is an editorial spread — cut-outs tucked behind
+paragraphs at chosen angles, a portrait bleeding off the left margin with an arrow drawn pointing at
+it, a band of dark paper the text sits inside — and rebuilt as stacks it becomes *a* layout rather
+than *this* one. The whole canvas therefore carries a spoken label with every word on it in reading
+order, because a reader who cannot see it gets nothing from the composition.
+
+The Trip Summary still reflows: its contents are the walk's, and a place name is as long as it is.
+
+### The cut-outs and the eight page illustrations
+
+`791:6917` is a hundred loose stickers. **Eighteen ship** — exactly what the two pages place,
+resampled to three times the size they are drawn at — alongside eight page illustrations
+(`HisploraTripArtwork`): the plate, the portrait, the torn scrap, the pen rule, the arrow, the
+summary's emblem and the two gilt medallion frames. Together about 7 MB. `Package.swift` copies
+`Resources/Images` wholesale, so anything in that directory is in every user's bundle;
+`HisploraStickerTests` pins the count so the set cannot drift silently in either direction.
+
+Two extraction notes worth keeping:
+
+- **`sheet-3-05`'s portrait and `791:6577`'s torn scrap have to come from the layer, not the node
+  export.** The node export of the scrap bakes the section's cream behind it and prints as a hard
+  rectangle across the painting. `download_assets`' `rawImages` is the layer with its alpha.
+- **The medallion windows are the frame's own insets**, `(20.94, 21.98) 96.836 × 123.531` in the
+  134 × 167.5 frame and `(23, 12) 102 × 124` in the 147 × 147 one. The stamp the walk earned is set
+  into that window and the gilt frame drawn over it, so the composition is the design's and the
+  picture is the walker's.
+
+> **Sourcing: a recorded decision, not a resolved one.** Four cut-outs letter something into the
+> picture — `sheet-3-32` reads "THE LAST TALES OF BADUNG", `sheet-2-26` is a building signed "MUSEUM
+> BALI", `sheet-2-02` is a chart lettered "BALI" — and `history-king` is a likeness of a named
+> historical figure. The History page's nine paragraphs (`QuestHistoryText`) are the frame's own
+> words about the fall of Badung, and they carry no citations, so that page breaks the rule every
+> other passage in this app follows (`FR-CP-05`, `FR-CP-06`). It ships because the owner asked for
+> the frames reproduced exactly on 2026-08-20, on the grounds that the History page is the quest's
+> own story rather than something the walker collects.
+>
+> What has to happen before anything public, in order:
+> 1. A citation for every sentence in `QuestHistoryText.badungEmpatWajah`, or the page falls back to
+>    `TripHistoryChapters`, which already renders sourced lore.
+> 2. A consent or licence record for `history-king`, and for `history-plate`.
+> 3. A decision about `sheet-3-32`: it names one quest inside a picture, so a second quest either
+>    gets its own plaque or the closing band sets its title in type (which `TripHistoryChapters`
+>    already does).
+>
+> This sits beside the existing `docs/consent-log.md` blockers, not instead of them.
+
+### What the frames draw that these two screens do not
+
+- **The History page's nine paragraphs.** `791:6537` is a hand-written account of the fall of
+  Badung — the Dutch expedition, the date, the Puputan, the last king named. Not one sentence of it
+  is in the content tree and none of it can be authored without citations and consent records. The
+  page prints the lore the walk actually unlocked, snapshotted into the Run at each checkpoint.
+- **A one-line summary per place** (`791:6423` and its four siblings). Nothing in `ContentKit`
+  authors a hook of that shape; adding a field would be a schema change, a validator rule, a
+  `contentBundleVersion` bump and five newly sourced passages. The card prints the opening of the
+  place's own first lore snapshot, clipped to three lines.
+- **Five collectibles called "The Iron Statue" and "Ancient Script"**, and a featured medallion
+  captioned with a real person's name. The Trip Collection keeps the frame's gilt medallions and
+  sets the stamp the walk earned into each one's window — the same objects the Journal and the
+  Explorer's Card already show, in the design's own frames.
+- **The share control in both bars.** The share card is not built. A button that does nothing is
+  worse than an absent one: it is a promise the screen cannot keep, and VoiceOver would announce it
+  as an available action.
+- **The mocked counts, 5 / 7 / 45.** Places explored is `reachedCount`; memories is how many tasks
+  the walker resolved with a written answer or a photograph (a skip is a resolution and not a
+  memory, `AD-2`); duration is start to finish, floored at one minute. `TripPagesTests` guards all
+  three.
+
+### The colophon is gone
+
+Both pages carried a line naming the content version the walk was snapshotted at
+(`summarySnapshotNote`), added here on the `AD-4` reasoning that a page which silently disagrees
+with the current app is worse than one that says why. The owner removed it on 2026-08-20; the string
+key, the `RunSummaryViewModel.snapshotNote` property and all three call sites — both Journal pages
+and the museum `RunSummaryView` — went with it.
+
+The guarantee itself is untouched: every page still renders `Run.checkpointResults`' snapshots and
+never a content lookup, so `FR-DONE-04` and `FR-DONE-05` hold exactly as before. What is gone is the
+page *saying so*. If a walker ever reports a summary that disagrees with the app, the version it was
+written at is still on the Run and still in the store — it is just no longer on screen.
+
+### Two things added that the frames do not draw
+
+- **The accuracy label and the citations on every History claim.** The Story Reveal's `FR-CP-05`
+  exception is a decision about one screen with a named owner; extending it by inference is what
+  `s0` D6 forbids. This is the record of a walk, and a record carries its provenance.
+- **The walker's written answers**, on the Trip Summary's place cards. The frames draw a count of
+  "memories" and stop. `JournalPaperPresentation.Kind` splits the two papers as *where the reader
+  went and what they wrote down* against *the lore they unlocked*, so the answers belong beside the
+  place — and a redesign that silently dropped the one thing on the page nobody authored would lose
+  the walker's own hand.
+
+### Three layout traps, all found on device
+
+- **A `.fill` image inside `.frame(height:)` reports the width its own proportion wants**, and
+  `.frame(maxWidth: .infinity)` around it does not take that back. The History page laid itself out
+  to its landscape plate: every paragraph ran off both edges and the back chevron went off the left
+  of the screen entirely. Every window on both pages is now a `Color.clear` at the intended size
+  with the picture poured into its overlay.
+- **A trailing decoration with a fixed ideal width wins the row against a label that is
+  `maxWidth: .infinity`,** and `layoutPriority` does not change that — an infinite ideal is not an
+  ideal. "Places Explored" wrapped onto two lines beside a row of stamps nobody reads. The stamps
+  shrank from the frame's 29.3 points to 24; the words are the tile.
+- **A Figma node export is not the layer.** `791:6577`'s torn scrap exported with the section's
+  cream baked in behind it and printed as a hard rectangle across the painting under it. The layer's
+  own raw image, from `download_assets`' `rawImages`, has the alpha the tear needs.
+
+### The History canvas drops 108 of the frame's top, not 62
+
+62 is the status bar the frame draws and the device supplies. The other 46 is air the frame needs
+and the app does not: on the frame the bar is a *graphic* with the masthead floating clear of it,
+while in the app it is a real 44-point control sitting directly above the canvas — so reproducing
+the frame's y literally left a visibly empty band under the bar. `TripHistoryScreen.topTrim` takes
+both, which puts the masthead 38 below the bar, the same figure `TripSummaryScreen` sets its own at.
+Everything below the masthead keeps the frame's spacing exactly; only the top gap moves.
+
+### The Trip Collection is the legend plus the walker's own photographs
+
+`791:6480` and its four siblings draw five gilt medallions of the same painted portrait, captioned
+"The Legends / I Gusti Ngurah Made Agung", "The Iron Statue" and "Ancient Script" three times over.
+The last four name objects that exist nowhere in the content tree. What ships keeps the frames'
+mounts and changes what is in them:
+
+- **The featured medallion is the quest's legend** — `791:6482`'s portrait in `791:6483`'s tall
+  frame, under "The Legends" and the sitter's name. That is a fact about the *quest*, so it comes
+  from `QuestHistoryText.legend` keyed by quest id, beside the History page's prose and under the
+  same recorded sourcing decision. A quest with no entry shows no legend at all rather than
+  borrowing another walk's portrait.
+- **The grid is one medallion per photograph the walker actually took**, captioned with the place
+  they took it at, alternating the round and oval mounts down the page as the frames do. Three
+  photographs give three medallions; a walk with none shows the legend on its own, which is the
+  honest empty state — a collection is what somebody collected. `RunSummaryViewModel.capturedPhotos`
+  carries paths, never images, so the presentation model still does no file IO;
+  `PhotoStore.image(atRelativePath:)` is the new read-back, resolved against `Documents` and
+  returning `nil` for a photograph deleted from Settings (`FR-SET-02`) rather than drawing a broken
+  glyph.
+- **The window is an `Ellipse`, not a rounded rectangle.** The mounts are oval and a photograph
+  clipped to a corner radius shows its corners through them.
+
+### The share control is a `ShareLink`, and it shares text
+
+Both frames draw the glyph (`791:6490`, `791:6542`) and the recap card `FR-DONE-06` describes is
+still unbuilt. Rather than ship the glyph as a dead promise or leave it out, the control hands the
+system sheet a plain-text recap: the page's headline, the walk's own title, and the three counts on
+the summary — the History page hands over its prose. It works offline (`AD-3`) and needs no
+rendering pipeline. When the card is built it replaces the `item` and the bar does not change.
+
+### Every ground on both pages is speckled, and the ground under the scroll is two-tone
+
+Two bugs with one cause: the pages were painting flat `Color`s.
+
+- **`TripFrameBand` takes an `SRGBColor` token, not a `Color`,** and paints it through
+  `kultaraSpeckledGround`. A band that painted the flat colour was the one rectangle on the page
+  without the grain every other Hisplora screen has — visible the moment a cream band met the
+  stage's own speckled ground at a seam. `TripFrameGround` does the same for the parts that are a
+  ground rather than a band: the dark rectangle inside `791:6564`, and each half of the underlay.
+- **A scroll view overscrolls past its content and shows whatever is behind it.** Both pages begin
+  on cream and end on a different ground — dark paper on History, tan on the Summary — so one colour
+  behind the whole scroll is wrong at one end: a rubber-band at the foot printed a cream strip under
+  the closing band.
+
+  **The fix hangs off the content, and the first attempt hung off the viewport.** A half-and-half
+  ground behind the scroll view fixes the strip and introduces a worse bug: anything behind the
+  viewport stays put while the page moves, so every part of the content that is not itself opaque
+  changes colour mid-scroll — on the Trip Summary the "Your Journey" counters sat on cream at the
+  top of a scroll and on tan a moment later. `overscrollBleed(top:bottom:)` puts a rectangle of each
+  token above and below the *content* instead, so each one travels with the end it belongs to and is
+  only ever seen while that end is being pulled away from. `.background` neither affects layout nor
+  clips, so neither rectangle adds scrollable height, and the scroll view's own clip hides them.
+
+### Every ground on both pages is speckled, and the ground under the scroll is two-tone
+
+Two bugs with one cause: the pages were painting flat `Color`s.
+
+- **`TripFrameBand` takes an `SRGBColor` token, not a `Color`,** and paints it through
+  `kultaraSpeckledGround`. A band that painted the flat colour was the one rectangle on the page
+  without the grain every other Hisplora screen has — visible the moment a cream band met the
+  stage's own speckled ground at a seam. `TripFrameGround` does the same for the parts that are a
+  ground rather than a band: the dark rectangle inside `791:6564`, and each half of the underlay.
+- **A scroll view overscrolls past its content and shows whatever is behind it.** Both pages begin
+  on cream and end on a different ground — dark paper on History, tan on the Summary — so one colour
+  behind the whole scroll is wrong at one end: a rubber-band at the foot printed a cream strip under
+  the closing band. `TripPageGround` paints the top half in the first band's token and the bottom
+  half in the last band's, split at the halfway mark because no overscroll ever reaches it.
+
+### The back control goes to the papers, not to the shelf
+
+Both pages are reached *through* `791:5551`, so the way back from one is the choice that opened it.
+Closing used to drop the reader onto the Journal shelf, which meant a reader who finished the
+summary and wanted the history had to unseal the envelope again. `KultaraRootView` now clears
+`journalLetter` and re-presents `journalPapers` in the same gesture.
+
 ## Seen rendering
 
 **`452:3132`, `447:1880` and `452:3028` were verified on iPhone 17 / iOS 26.5 on 2026-08-17**,
@@ -1248,3 +1505,20 @@ byte-identical on a screen that was visibly animating — so the turn has to be 
 (`recordVideo`) and stepped through with `ffmpeg` rather than sampled with stills. And a resumed
 shelf never re-runs the opening, so the beats between `dwelling` and `zooming` are only reachable by
 unsealing again.
+
+**`791:6414` and `791:6537` were verified on iPhone 17 / iOS 26.5 on 2026-08-20**, from a fresh
+install with one completed five-checkpoint walk on the shelf: the summary's masthead, emblem and
+three counters, the brown band with a card per place and the walker's own answers on it, the tan
+Trip Collection with the gilt medallions and a six-cut-out scatter; then all eight bands of the
+History page — the plate and the frangipani, the three paragraphs and the pen rule, the procession
+over the dark band with `Puputan Badung.` in gilt, the portrait with the drawn ring around the
+king's name, the torn scrap on the second plate, the five-cut-out scatter, and the plaque under its
+wax seal. The back control was tapped from both pages and returned to `791:5551`'s modal.
+Screenshots are in `docs/screenshots/m13-*.png`.
+
+Reaching them from a desk does not need a walked route. `FileRunStore` writes one JSON document per
+Run into `Library/Application Support/Kultara/runs` in the app container, so a completed Run
+generated from the shipped content and copied in with
+`xcrun simctl get_app_container <udid> com.umar.hisplora data` puts a letter on the shelf directly.
+That is a fixture for looking at a screen, not a way to test the engine — nothing about arrival,
+ordering or awards is exercised by it.

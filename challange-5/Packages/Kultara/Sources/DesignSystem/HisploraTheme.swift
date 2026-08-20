@@ -43,6 +43,54 @@ public struct HisploraPalette: Sendable, Equatable {
     public let inkCream: SRGBColor
     public let inkDusty: SRGBColor
 
+    /// The gilt the Trip Summary sets a place's name in on the brown band (`791:6422`), and the
+    /// gilt the History screen sets its one emphasised phrase in on the dark band (`791:6567`).
+    ///
+    /// **A token rather than `highlight`, because this one is read.** `highlight` is drawn
+    /// annotation and is documented as deliberately unmeasured as type; it measures 4.44:1 on
+    /// `brownMid`, which clears large text and fails body by a hair. The frames' own `#FFDE7C`
+    /// clears body on all three browns, so it is the value that ships and the one the pairs below
+    /// measure. The History band's slightly deeper `#F3C029` is folded into it: two golds a step
+    /// apart on two screens is a palette with a duplicate, not a design with two decisions.
+    public let inkGilt: SRGBColor
+
+    // The two pages a Journal paper opens — `791:6414` and `791:6537`. Their grounds are a step off
+    // the ones the story flow already had, and on these screens the difference is visible because
+    // two of them sit on the same page: the summary's counter tiles are drawn a shade lighter than
+    // the sheet they lie on, which is a relationship a single cream cannot express.
+    /// `791:6415` — the page both screens are printed on.
+    public let paperTrip: SRGBColor
+    /// `791:6495` — the rounded tile a counter sits in, lighter than `paperTrip` under it.
+    public let paperTile: SRGBColor
+    /// `791:6417` — "The Pieces You Found", a shade deeper and redder than `brownMid`.
+    public let brownBand: SRGBColor
+    /// `791:6452` — "Trip Collection", a warmer tan than the site plan's `mapGround`.
+    public let paperTan: SRGBColor
+    /// `791:6423` — the italic line under a place's name on the brown card.
+    public let inkCard: SRGBColor
+    /// `791:6567` — the near-white the History page's dark band is set in.
+    public let inkCreamWhite: SRGBColor
+    /// `791:6567` and `791:6574` — the deeper amber the History page sets its one emphasised phrase
+    /// in, and the colour of the hand-drawn ring around the king's name.
+    ///
+    /// A second gold beside `inkGilt`, which the Trip Summary's brown band uses. They are a step
+    /// apart and they never appear on the same screen; folding them into one was tried and the
+    /// History page's annotation stopped matching the drawn ring beside it, which is the one place
+    /// on either page where type and artwork have to be the same colour.
+    public let inkGiltDeep: SRGBColor
+    /// `791:6566` and `791:6591` — the dark paper the History page sets two of its bands on.
+    ///
+    /// It shipped as `brownStone` for one release and that was wrong in a way that showed: the
+    /// story flow's stone is a red-brown (`#58453E`) and this is a neutral warm grey, so the band
+    /// read as a different material from the one the frame draws.
+    public let brownSmoke: SRGBColor
+    /// `791:6593` — the closing line on that band.
+    ///
+    /// The frame draws `#BDB3AA`, which measures 4.00:1 on `brownSmoke` and fails body text; the
+    /// nearest passing value is what ships, the same move `inkDusty` made. `inkDusty` itself is not
+    /// reused here: it is 4.28:1 on this ground, also short.
+    public let inkFragments: SRGBColor
+
     /// The quest-row card on `452:3132` — a shade warmer and lighter than `paperCream`, drawn as a
     /// ticket rather than as a sheet. Kept as its own token instead of rounded into `paperCream`
     /// because the two sit on the same screen: the stamp's cream and the rows' cream differ, and
@@ -127,6 +175,16 @@ public struct HisploraPalette: Sendable, Equatable {
         mapMarker: SRGBColor,
         inkCream: SRGBColor,
         inkDusty: SRGBColor,
+        inkGilt: SRGBColor,
+        paperTrip: SRGBColor,
+        paperTile: SRGBColor,
+        brownBand: SRGBColor,
+        paperTan: SRGBColor,
+        inkCard: SRGBColor,
+        inkCreamWhite: SRGBColor,
+        inkGiltDeep: SRGBColor,
+        brownSmoke: SRGBColor,
+        inkFragments: SRGBColor,
         inkDark: SRGBColor,
         inkBody: SRGBColor,
         inkMuted: SRGBColor,
@@ -152,6 +210,16 @@ public struct HisploraPalette: Sendable, Equatable {
         self.mapMarker = mapMarker
         self.inkCream = inkCream
         self.inkDusty = inkDusty
+        self.inkGilt = inkGilt
+        self.paperTrip = paperTrip
+        self.paperTile = paperTile
+        self.brownBand = brownBand
+        self.paperTan = paperTan
+        self.inkCard = inkCard
+        self.inkCreamWhite = inkCreamWhite
+        self.inkGiltDeep = inkGiltDeep
+        self.brownSmoke = brownSmoke
+        self.inkFragments = inkFragments
         self.inkDark = inkDark
         self.inkBody = inkBody
         self.inkMuted = inkMuted
@@ -194,6 +262,16 @@ public struct HisploraPalette: Sendable, Equatable {
         mapMarker: SRGBColor(hex: "#B44934"),     // 4.31:1 on paperCream, 3.43:1 on mapGround
         inkCream: SRGBColor(hex: "#FDF2DE"),      // 9.63:1 on brownDeep, 8.11:1 on brownStone
         inkDusty: SRGBColor(hex: "#D0B5AE"),      // moved from the drawn #AA9B8E; 4.67:1 on brownStone
+        inkGilt: SRGBColor(hex: "#FFDE7C"),       // 7.22:1 on brownMid, 8.46:1 on brownDeep
+        paperTrip: SRGBColor(hex: "#F3EEE1"),     // 14.55:1 under inkDark
+        paperTile: SRGBColor(hex: "#F6F3EC"),     // 8.99:1 under brownStone
+        brownBand: SRGBColor(hex: "#603B28"),     // 8.80:1 under inkCream
+        paperTan: SRGBColor(hex: "#D8BEA1"),      // 9.47:1 under inkDark
+        inkCard: SRGBColor(hex: "#E3CBBE"),       // 6.30:1 on brownBand
+        inkCreamWhite: SRGBColor(hex: "#FFFBF3"), // 9.67:1 on brownStone
+        inkGiltDeep: SRGBColor(hex: "#F3C029"),   // 5.08:1 on brownStone, 4.19:1 on brownSmoke
+        brownSmoke: SRGBColor(hex: "#564D48"),    // 7.98:1 under inkCreamWhite
+        inkFragments: SRGBColor(hex: "#C9C1B8"),  // moved from the drawn #BDB3AA; 4.63:1 on brownSmoke
         inkDark: SRGBColor(hex: "#1D1D1D"),       // 14.18:1 on paperLight
         inkBody: SRGBColor(hex: "#444444"),       // 7.17:1 on paperWarm
         inkMuted: SRGBColor(hex: "#5E5A5A"),      // 5.72:1 on paperLight
@@ -209,7 +287,11 @@ public struct HisploraPalette: Sendable, Equatable {
          ("trackWell", trackWell), ("trackDim", trackDim), ("inkQuiet", inkQuiet),
          ("paperSheet", paperSheet), ("paperCard", paperCard),
          ("mapGround", mapGround), ("mapMarker", mapMarker),
-         ("inkCream", inkCream), ("inkDusty", inkDusty),
+         ("inkCream", inkCream), ("inkDusty", inkDusty), ("inkGilt", inkGilt),
+         ("paperTrip", paperTrip), ("paperTile", paperTile), ("brownBand", brownBand),
+         ("paperTan", paperTan), ("inkCard", inkCard), ("inkCreamWhite", inkCreamWhite),
+         ("inkGiltDeep", inkGiltDeep), ("brownSmoke", brownSmoke),
+         ("inkFragments", inkFragments),
          ("inkDark", inkDark), ("inkBody", inkBody), ("inkMuted", inkMuted),
          ("buttonFill", buttonFill), ("inkOnButton", inkOnButton), ("buttonRing", buttonRing),
          ("highlight", highlight)]
@@ -233,12 +315,19 @@ public struct HisploraPalette: Sendable, Equatable {
             pairs.append(ContrastPair(label: "inkDusty on \(name)",
                                       foreground: inkDusty, background: ground,
                                       requirement: .bodyText))
+            // The gilt is a place's name on `791:6420`'s card and the History band's one
+            // emphasised phrase — both of them words, so both held to body text rather than to the
+            // large-text allowance their 19 and 21 points could claim.
+            pairs.append(ContrastPair(label: "inkGilt on \(name)",
+                                      foreground: inkGilt, background: ground,
+                                      requirement: .bodyText))
         }
 
         // Type on the four papers.
         for (name, paper) in [("paperCream", paperCream), ("paperWarm", paperWarm),
                               ("paperLight", paperLight), ("paperSheet", paperSheet),
-                              ("paperCard", paperCard)] {
+                              ("paperCard", paperCard),
+                              ("paperTrip", paperTrip), ("paperTile", paperTile)] {
             pairs.append(ContrastPair(label: "inkDark on \(name)",
                                       foreground: inkDark, background: paper,
                                       requirement: .bodyText))
@@ -317,6 +406,51 @@ public struct HisploraPalette: Sendable, Equatable {
         pairs.append(ContrastPair(label: "buttonFill on paperCard",
                                   foreground: buttonFill, background: paperCard,
                                   requirement: .bodyText))
+
+        // `791:6414`'s brown band and `791:6537`'s dark one. Every ink either page prints on a
+        // ground of its own, measured as body text — the band headings are 25 pt but the card
+        // subtitles beside them are 15, and a band is only as legible as its smallest line.
+        for (name, ink) in [("inkCream", inkCream), ("inkGilt", inkGilt), ("inkCard", inkCard)] {
+            pairs.append(ContrastPair(label: "\(name) on brownBand",
+                                      foreground: ink, background: brownBand,
+                                      requirement: .bodyText))
+        }
+        pairs.append(ContrastPair(label: "inkCreamWhite on brownStone",
+                                  foreground: inkCreamWhite, background: brownStone,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "inkGiltDeep on brownStone",
+                                  foreground: inkGiltDeep, background: brownStone,
+                                  requirement: .bodyText))
+        // `791:6566`'s band. `inkGiltDeep` is held to large text and *only* here: the phrase it
+        // sets is 21-point italic serif, which clears WCAG's 18-point threshold — and it is 4.19:1
+        // on this ground, so claiming body for it would be claiming something it does not do.
+        pairs.append(ContrastPair(label: "inkCreamWhite on brownSmoke",
+                                  foreground: inkCreamWhite, background: brownSmoke,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "inkFragments on brownSmoke",
+                                  foreground: inkFragments, background: brownSmoke,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "inkGilt on brownSmoke",
+                                  foreground: inkGilt, background: brownSmoke,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "inkGiltDeep on brownSmoke",
+                                  foreground: inkGiltDeep, background: brownSmoke,
+                                  requirement: .largeText))
+        // The counter figures on `791:6495`'s tile, and the labels above them.
+        pairs.append(ContrastPair(label: "buttonFill on paperTile",
+                                  foreground: buttonFill, background: paperTile,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "brownStone on paperTile",
+                                  foreground: brownStone, background: paperTile,
+                                  requirement: .bodyText))
+        // The Trip Collection's captions, on the tan (`791:6464`). `inkMuted` is deliberately
+        // absent: it measures 3.72:1 here, well under body text, so nothing quiet is set on this
+        // ground — the captions are `inkDark` and the eyebrow is `brownMid`.
+        for (name, ink) in [("inkDark", inkDark), ("inkBody", inkBody), ("brownMid", brownMid)] {
+            pairs.append(ContrastPair(label: "\(name) on paperTan",
+                                      foreground: ink, background: paperTan,
+                                      requirement: .bodyText))
+        }
 
         // The filled control: its label, and its boundary against the ground it sits on.
         pairs.append(ContrastPair(label: "inkOnButton on buttonFill",

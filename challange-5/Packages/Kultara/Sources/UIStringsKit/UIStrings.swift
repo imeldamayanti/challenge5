@@ -367,9 +367,6 @@ public enum UIStrings {
         .summaryOpenAction: LocalizedText(id: "Buka ringkasan", en: "Open the summary"),
         .summaryStampsHeading: LocalizedText(id: "Stempel dan lencana", en: "Stamps and badges"),
         .summaryReflectionHeading: LocalizedText(id: "Catatanmu", en: "What you wrote"),
-        .summarySnapshotNote: LocalizedText(
-            id: "Ringkasan ini menyimpan teks yang kamu baca saat itu, versi konten %@. Perbaikan konten setelahnya tidak mengubahnya.",
-            en: "This summary holds the text you read at the time, content version %@. Later corrections do not rewrite it."),
         .runAbandonAction: LocalizedText(id: "Hentikan perjalanan", en: "End this walk"),
         .runAbandonConfirmTitle: LocalizedText(
             id: "Hentikan perjalanan ini?", en: "End this walk?"),
@@ -543,6 +540,27 @@ public enum UIStrings {
             id: "Kisah Terakhir %@", en: "The Last Tales of %@"),
         .journalPaperHistoryAction: LocalizedText(id: "Baca Sejarah", en: "Read History"),
         .journalPapersClose: LocalizedText(id: "Tutup", en: "Close"),
+
+        // MARK: Journal — the two pages a paper opens
+        .tripPageBack: LocalizedText(id: "Kembali", en: "Back"),
+        .tripJourneyHeading: LocalizedText(id: "Perjalananmu", en: "Your Journey"),
+        .tripPlacesExplored: LocalizedText(id: "Tempat Dijelajahi", en: "Places Explored"),
+        .tripMemories: LocalizedText(id: "Kenangan", en: "Memories"),
+        .tripMemoriesUnit: LocalizedText(id: "terkumpul", en: "collected"),
+        .tripDuration: LocalizedText(id: "Durasi", en: "Duration"),
+        .tripDurationUnit: LocalizedText(id: "menit", en: "mins"),
+        .tripPiecesHeading: LocalizedText(
+            id: "Serpihan yang Kamu Temukan", en: "The Pieces You Found"),
+        .tripCollectionLegend: LocalizedText(id: "Sang Legenda", en: "The Legends"),
+        .tripShare: LocalizedText(id: "Bagikan", en: "Share"),
+        .tripCollectionHeading: LocalizedText(
+            id: "Koleksi Perjalanan", en: "Trip Collection"),
+        .tripHistoryNoLore: LocalizedText(
+            id: "Kamu sampai di tempat ini, tapi ceritanya belum sempat dibuka.",
+            en: "You reached this place, but its story was never opened."),
+        .tripHistoryClosing: LocalizedText(
+            id: "Kamu sudah mengumpulkan serpihan-serpihan itu.",
+            en: "You have gathered those fragments."),
 
         // MARK: Profile — the Explorer's Card
         .profileHeading: LocalizedText(id: "Kartu Penjelajah", en: "Explorer’s Card"),
