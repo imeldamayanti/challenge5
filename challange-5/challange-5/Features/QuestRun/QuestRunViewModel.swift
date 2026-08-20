@@ -215,12 +215,43 @@ final class QuestRunViewModel {
         }
     }
 
-    private static func initialStage(
-        run: Run?,
-        quest: Quest,
-        preferences: any AppPreferencesStore,
-        authorization: LocationAuthorizationSnapshot
-    ) -> Stage {
+    /// Whether a stage is drawn on the Hisplora ground with its own header, which is what decides
+    /// that the museum navigation bar goes away over it.
+    ///
+    /// On the model rather than in `QuestRunView`, so it is a rule a test can hold: a new story
+    /// stage left out of the list gets a cream-on-brown bar clipping its heading, and that is a
+    /// defect nobody sees until the screen is on a device.
+    static func isStoryFlow(_ stage: Stage) -> Bool {
+        switch stage {
+        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
+             .approachTransition, .storyReveal, .placeNotice, .checkpointDetail, .taskDetail,
+             .questExplanation, .stampAward, .transition:
+            true
+        case .safetyNotice, .atCheckpoint, .finished:
+            false
+        }
+    }
+
+    /// Whether the run screen will open on a story-flow stage, answerable before a view model
+    /// exists.
+    ///
+    /// `KultaraRootView.RunDestination` needs it while it is still holding a `Run` and a quest id:
+    /// the museum navigation bar is decided by the placeholder, and a bar that appears for one
+    /// frame and then vanishes under the story preview is worse than no bar. It reads the same two
+    /// facts `initialStage(run:quest:preferences:authorization:)` reads — a fresh walk opens on the
+    /// hook, a resumed one on arrival or at the checkpoint, a finished one on the summary — so the
+    /// two must be changed together.
+    static func opensOnStoryFlow(existingRun: Run?) -> Bool {
+        guard let existingRun else { return true }   // `.storyPreview`
+        switch existingRun.state {
+        case .completed, .abandoned: return false    // `.finished`, the museum summary
+        default: return !existingRun.hasArrivedAtCurrentCheckpoint   // `.awaitingArrival`
+        }
+    }
+
+    /// Which stage a walk opens on. `opensOnStoryFlow(existingRun:)` answers the same question
+    /// from outside and the two must be changed together.
+    private static func initialStage(run: Run?) -> Stage {
         if let run {
             // A walk already under way has been through both notices. Showing them again on every
             // resume would turn a safety notice into a dialog people learn to dismiss.
@@ -484,7 +515,30 @@ final class QuestRunViewModel {
 
     func advanceFromCutsceneIntro() { stage = .cutscenePortrait }
 
-    func advanceFromCutscenePortrait() { stage = .storyReveal }
+    /// The cutscene lands on the approach map (`187:1103`) rather than on the reveal.
+    ///
+    /// Only ever from here, which is the "first checkpoint only" rule expressed as a route rather
+    /// than as a condition: the cutscene itself is shown once per walk, so a stage reachable only
+    /// from it is reachable only at the checkpoint the cutscene introduced.
+    func advanceFromCutscenePortrait() { stage = .approachTransition }
+
+    /// How long `187:1103` holds before it moves itself on.
+    ///
+    /// On the view rather than in a timer here — `ApproachTransitionScreen` waits inside a `.task`,
+    /// so backing out cancels the wait instead of leaving a timer to fire onto a screen the walker
+    /// has left. Under VoiceOver the clock does not run at all and the screen draws a Continue: a
+    /// screen that reads itself out and then vanishes mid-sentence has no right duration.
+    static let approachTransitionDuration: Duration = .seconds(5)
+
+    /// Leaving the approach map for the reveal.
+    ///
+    /// Refuses to move a stage it is not on, which is not defensive tidiness: the wait is a
+    /// cancellable `.task`, and a cancellation that loses the race would otherwise advance a stage
+    /// the walker has already backed out of.
+    func advanceFromApproachTransition() {
+        guard stage == .approachTransition else { return }
+        stage = .storyReveal
+    }
 
     /// A sacred Place explains itself before any task is offered (`FR-TASK-05`), straight off the
     /// story reveal; every other checkpoint goes straight to the sealed-scroll transition.
@@ -681,7 +735,14 @@ final class QuestRunViewModel {
         // chevron on `98:1588` fell to `default: break` and did nothing at all.
         case .cutsceneIntro: stage = .locationVerified
         case .cutscenePortrait: stage = .cutsceneIntro
-        case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .cutscenePortrait : .storyReveal
+        // Back to the cutscene, not to the map: the map moves itself on after five seconds, so
+        // returning to it would bounce the walker straight forward again.
+        case .approachTransition: stage = .cutscenePortrait
+        // Back to the approach map on the walk's first checkpoint, because that is the screen the
+        // reveal was reached from there. It re-runs its own five seconds and moves forward again,
+        // which is why `.approachTransition` retreats one further to the cutscene rather than back
+        // to the reveal — two taps leave, one does not trap.
+        case .storyReveal: stage = hasShownCutscene && currentIndex == 0 ? .approachTransition : .storyReveal
         case .transition: stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .storyReveal
         case .placeNotice: stage = .storyReveal
         // The menu now sits *after* the first task, so backing out of it returns to that task

@@ -62,6 +62,24 @@ public struct HisploraStampShape: Shape {
     }
 }
 
+/// Where the printing sits on the paper, as fractions of the die (`705:2771`).
+///
+/// Fractions rather than points, for the reason the perforation is a count rather than a pitch:
+/// the same object is set at 26 points on the envelope, 151 on the Explorer's Card and 216 on
+/// the stamp award, and a margin fixed in points would be a hairline on one and a border on
+/// another.
+enum HisploraStampFranking {
+    /// 6.37% of the width, left and right — the white margin the window and the caption both
+    /// stand inside.
+    static let margin: CGFloat = 0.0637
+    static let topMargin: CGFloat = 0.0547
+    static let bottomMargin: CGFloat = 0.0851
+    /// The window runs from 5.47% to 74.93% of the height.
+    static let windowHeight: CGFloat = 0.6946
+    /// The air between the window and the name under it.
+    static let gap: CGFloat = 0.0394
+}
+
 /// One franked stamp: a picture over a caption, on perforated paper.
 ///
 /// **The picture is a slot, not an asset.** The design fills these four with illustrations of
@@ -107,48 +125,69 @@ public struct HisploraStampCard<Picture: View>: View {
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
-            ZStack {
-                Rectangle().fill(palette.paperWarm.color)
-                picture
-            }
-            // The window takes whatever the fixed outer ratio leaves after the caption, rather than
-            // holding a ratio of its own and pushing the card taller. That is what makes every
-            // stamp in the grid the same object at the same size.
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .clipped()
+        paper
+            .aspectRatio(Self.aspectRatio, contentMode: .fit)
+            // White, as the export is filled. The window's own aged cream shows only where a place
+            // has no drawing, which is what an unfranked stamp looks like.
+            .background(palette.paperStamp.color)
+            // Even-odd, not the default non-zero. The path is a rectangle plus a run of circles
+            // straddling its edges; under non-zero they union into the body and the card comes out a
+            // plain rectangle, which is what shipped before this was caught on device. Under even-odd
+            // the half of each circle inside the rectangle is subtracted and the half outside is
+            // added — a bump with a notch beside it, which is what a perforation is.
+            .clipShape(HisploraStampShape(), style: FillStyle(eoFill: true))
+            // `705:2769`'s own drop shadow — the grid is lifted off the sheet as a stack of stuck-on
+            // objects. Only on the franked size: on the envelope these are 26 points across and a
+            // shadow at that scale is dirt on the paper.
+            .shadow(color: showsFranking ? .black.opacity(0.25) : .clear, radius: 1.5, y: 2)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(title), \(subtitle)")
+    }
 
-            if showsFranking {
-            VStack(alignment: .leading, spacing: 1) {
-                // The franking, in the two roles the table already has for exactly this: the
-                // museum label over its apparatus. The design sets the name in the display serif's
-                // bold cut; `eyebrow` is the sans equivalent, and the reason to prefer it is that
-                // the serif ships in one weight (see `Role.weight`).
-                Text(title)
-                    .kultaraFont(.eyebrow)
-                    .foregroundStyle(palette.inkDark.color)
-                Text(subtitle)
-                    .kultaraFont(.caption)
-                    .foregroundStyle(palette.inkMuted.color)
+    @ViewBuilder private var paper: some View {
+        if showsFranking {
+            GeometryReader { proxy in
+                let size = proxy.size
+                VStack(alignment: .leading, spacing: 0) {
+                    window
+                        .frame(height: size.height * HisploraStampFranking.windowHeight)
+                    Spacer(minLength: size.height * HisploraStampFranking.gap)
+                    franking
+                }
+                .padding(.horizontal, size.width * HisploraStampFranking.margin)
+                .padding(.top, size.height * HisploraStampFranking.topMargin)
+                .padding(.bottom, size.height * HisploraStampFranking.bottomMargin)
+                .frame(width: size.width, height: size.height, alignment: .top)
             }
-            .lineLimit(2)
-            .minimumScaleFactor(0.7)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, KultaraMetrics.sm)
-            .padding(.vertical, KultaraMetrics.xs)
-            }
+        } else {
+            window.padding(2)
         }
-        .padding(showsFranking ? KultaraMetrics.xs : 2)
-        .aspectRatio(Self.aspectRatio, contentMode: .fit)
-        .background(palette.paperLight.color)
-        // Even-odd, not the default non-zero. The path is a rectangle plus a run of circles
-        // straddling its edges; under non-zero they union into the body and the card comes out a
-        // plain rectangle, which is what shipped before this was caught on device. Under even-odd
-        // the half of each circle inside the rectangle is subtracted and the half outside is
-        // added — a bump with a notch beside it, which is what a perforation is.
-        .clipShape(HisploraStampShape(), style: FillStyle(eoFill: true))
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("\(title), \(subtitle)")
+    }
+
+    private var window: some View {
+        ZStack {
+            Rectangle().fill(palette.paperWarm.color)
+            picture
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .clipped()
+    }
+
+    private var franking: some View {
+        // The two roles the table cuts for exactly this: the display serif's bold in caps over the
+        // sans at the smallest size it is legible at. Both scale with the reader's text size and
+        // shrink before they wrap, because the die does not grow with them.
+        VStack(alignment: .leading, spacing: 0) {
+            Text(title)
+                .kultaraFont(.stampFranking)
+                .foregroundStyle(palette.inkDark.color)
+            Text(subtitle)
+                .kultaraFont(.stampFrankingDetail)
+                .foregroundStyle(palette.inkMuted.color)
+        }
+        .lineLimit(1)
+        .minimumScaleFactor(0.6)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 

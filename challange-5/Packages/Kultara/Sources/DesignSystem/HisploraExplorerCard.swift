@@ -129,69 +129,180 @@ public struct HisploraTabStrip<Tab: Hashable & Identifiable>: View {
     }
 }
 
+// MARK: - The filter chips
+
+/// A one-line filter over the list beneath it — All / Unfinished / Done on the Quests tab.
+///
+/// **Not in any frame, and a sibling of `HisploraTabStrip` rather than a second one.** The strip
+/// above switches *surfaces* and is drawn as ruled labels; this switches what one surface is
+/// listing, so it is drawn as chips — two controls that look alike would say the two do the same
+/// thing. Selected state is a fill *and* a weight, never colour alone (`NFR-A11Y-05`), and each
+/// chip carries `.isSelected` rather than leaving a reader to infer the group.
+public struct HisploraFilterChips<Option: Hashable & Identifiable>: View {
+    @Environment(\.hisploraPalette) private var palette
+
+    private let options: [Option]
+    private let title: (Option) -> String
+    @Binding private var selection: Option
+
+    public init(options: [Option], selection: Binding<Option>, title: @escaping (Option) -> String) {
+        self.options = options
+        self._selection = selection
+        self.title = title
+    }
+
+    public var body: some View {
+        // Centred under the strip: the chips are a control for the list below them and not a
+        // heading of it, and a short row of three pushed to one edge reads as the head of a column
+        // that is not there.
+        HStack(spacing: KultaraMetrics.sm) {
+            Spacer(minLength: 0)
+            ForEach(options) { option in
+                let isSelected = option == selection
+                Button {
+                    selection = option
+                } label: {
+                    Text(title(option))
+                        .font(.system(size: 15, weight: isSelected ? .semibold : .regular))
+                        .foregroundStyle(isSelected
+                                         ? palette.inkOnButton.color
+                                         : palette.inkBody.color)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .padding(.horizontal, KultaraMetrics.md)
+                        .padding(.vertical, KultaraMetrics.sm)
+                        .background(isSelected ? palette.buttonFill.color : palette.paperRow.color,
+                                    in: Capsule())
+                        .overlay(
+                            Capsule().stroke(palette.brownMid.color.opacity(isSelected ? 0 : 0.5),
+                                             lineWidth: KultaraMetrics.hairline))
+                        .frame(minHeight: KultaraMetrics.minimumTapTarget)
+                        .contentShape(Capsule())
+                }
+                .buttonStyle(.plain)
+                .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
+            }
+            Spacer(minLength: 0)
+        }
+    }
+}
+
 // MARK: - The activity card
 
-/// One completed activity on the Quests tab: a mark, a name, what it asked for, and a seal saying
-/// it is done (`547:2727`).
+/// One walk on the Quests tab: what it was called, a line saying where it stands, and the mark that
+/// stands for it (`705:2827`).
+///
+/// **A ruled row on white, not a rounded cream card.** `705:2824` redraws this object: the fill is
+/// a white wash over the card's own sheet (`paperRow`), the boundary is a hairline of `brownMid`
+/// rather than a corner radius, and the mark moves from the head of the row to its foot-right,
+/// where the frame franks it with the wax seal a finished walk earns.
 public struct HisploraActivityCard<Mark: View>: View {
     @Environment(\.hisploraPalette) private var palette
 
     private let title: String
     private let detail: String
-    private let isComplete: Bool
-    private let completeLabel: String
+    private let detailEmphasis: String?
+    private let markLabel: String?
     private let mark: Mark
 
-    /// - Parameter completeLabel: what VoiceOver says for the seal. `DesignSystem` carries no
-    ///   string table (`NFR-I18N-01`), so the caller localises it.
+    /// - Parameter detailEmphasis: the tail of the detail line, set a weight up — the frame prints
+    ///   "You completed this quest at **Badung**", and the place is the half of that sentence a
+    ///   reader is actually scanning for. Joined with a space rather than interpolated, so no
+    ///   string in the table has to carry a trailing one.
+    /// - Parameter markLabel: what VoiceOver calls the mark. `nil` — the shipped case — hides it,
+    ///   because the seal repeats what the detail line already says in words and the row is one
+    ///   element. `DesignSystem` carries no string table (`NFR-I18N-01`), so a caller that does
+    ///   have something else to say localises it.
     public init(
         title: String,
         detail: String,
-        isComplete: Bool,
-        completeLabel: String,
+        detailEmphasis: String? = nil,
+        markLabel: String? = nil,
         @ViewBuilder mark: () -> Mark
     ) {
         self.title = title
         self.detail = detail
-        self.isComplete = isComplete
-        self.completeLabel = completeLabel
+        self.detailEmphasis = detailEmphasis
+        self.markLabel = markLabel
         self.mark = mark()
     }
 
     public var body: some View {
         HStack(spacing: KultaraMetrics.md) {
-            mark
-                .frame(width: 48, height: 48)
-                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
                 Text(title)
                     .font(.system(size: 17, weight: .semibold))
-                    .foregroundStyle(palette.inkDark.color)
+                    .foregroundStyle(palette.inkTicket.color)
                     .fixedSize(horizontal: false, vertical: true)
-                Text(detail)
+                detailLine
                     .font(.system(size: 15, weight: .light))
                     .foregroundStyle(palette.inkBody.color)
                     .fixedSize(horizontal: false, vertical: true)
             }
+            .padding(.vertical, KultaraMetrics.xs)
             .frame(maxWidth: .infinity, alignment: .leading)
-            if isComplete {
-                // Shape and text, never colour on its own (`NFR-A11Y-05`) — the seal is named to
-                // VoiceOver by the label the caller supplies.
-                Image(systemName: "checkmark.seal.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(palette.brownDeep.color)
-                    .accessibilityLabel(completeLabel)
-            }
+
+            markView
         }
         .padding(KultaraMetrics.lg)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(palette.paperCream.color, in: RoundedRectangle(cornerRadius: 12))
+        .background(palette.paperRow.color)
+        // Square, and drawn as a boundary rather than a shadow — the frame rules these rows off
+        // from a sheet they are only a shade lighter than, so losing the rule loses the row.
+        .overlay(
+            Rectangle()
+                .stroke(palette.brownMid.color.opacity(0.5), lineWidth: KultaraMetrics.hairline))
+    }
+
+    private var detailLine: Text {
+        guard let detailEmphasis, !detailEmphasis.isEmpty else { return Text(detail) }
+        return Text(detail) + Text(" ") + Text(detailEmphasis).fontWeight(.medium)
+    }
+
+    @ViewBuilder private var markView: some View {
+        let size = HisploraWaxSealMetrics.questSealSize
+        mark
+            .frame(width: size.width, height: size.height)
+            .modifier(MarkLabel(label: markLabel))
+    }
+}
+
+/// Names the mark to VoiceOver, or takes it out of the tree. A modifier rather than two branches in
+/// the body so the mark is one view in both cases.
+private struct MarkLabel: ViewModifier {
+    let label: String?
+
+    func body(content: Content) -> some View {
+        if let label {
+            content.accessibilityLabel(label)
+        } else {
+            content.accessibilityHidden(true)
+        }
     }
 }
 
 public extension HisploraActivityCard where Mark == EmptyView {
-    init(title: String, detail: String, isComplete: Bool, completeLabel: String) {
-        self.init(title: title, detail: detail, isComplete: isComplete,
-                  completeLabel: completeLabel) { EmptyView() }
+    init(title: String, detail: String, detailEmphasis: String? = nil) {
+        self.init(title: title, detail: detail, detailEmphasis: detailEmphasis) { EmptyView() }
+    }
+}
+
+/// The wax seal a finished walk is franked with (`737:3971`), or a ruled disc when the export is
+/// not packaged — the fallback every drawn object in this module carries, so a dropped resource
+/// costs the picture rather than the row.
+public struct HisploraQuestSeal: View {
+    @Environment(\.hisploraPalette) private var palette
+
+    public init() {}
+
+    public var body: some View {
+        if let seal = HisploraWaxSealMetrics.questSeal {
+            seal.resizable().aspectRatio(contentMode: .fit)
+        } else {
+            Circle()
+                .fill(palette.brownDeep.color)
+                .overlay(Circle().stroke(palette.buttonRing.color,
+                                         lineWidth: KultaraMetrics.hairline))
+        }
     }
 }

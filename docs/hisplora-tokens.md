@@ -1196,6 +1196,80 @@ now rather than a ceiling: a test that only says "no longer than" cannot fail th
 - **The title and the hint both fade the moment the envelope opens.** `791:5585` keeps the title by
   moving it, and moving things during the opening is what the section above records as a mistake.
 
+## The Explorer's Card's Quests and Stamps tabs (`705:2824`, `705:2767`, 2026-08-20)
+
+Two frames redraw surfaces that already shipped. Nothing on either is new *information* — every row
+and every stamp still comes from the reader's own Runs (`FR-DONE-05`, `FR-RUN-06`) — so what
+follows is paint, type and one new packaged picture.
+
+### Two new tokens
+
+| Token | Value | Where it came from | Measured |
+|---|---|---|---|
+| `paperRow` | `#FEF8EE` | `705:2827` — white at 50% over `paperSheet`, flattened | 12.32:1 under `inkTicket`, 9.28:1 under `inkBody` |
+| `paperStamp` | `#FFFFFF` | `705:2771`'s `Vector`, which is filled white | 16.86:1 under `inkDark`, 6.80:1 under `inkMuted` |
+
+Flattened rather than left as translucencies, for the reason `trackDim` and `inkQuiet` give: the
+suite measures token pairs, and half a pair that is "white over whatever is behind it" is not a pair
+anyone measured.
+
+`paperRow` is *lighter* than the sheet it lies on; `paperTicket` (`452:3132`'s quest row) is darker
+than its brown ground. Same idea, two grounds, two tokens — collapsing them would put one screen's
+layering on the other.
+
+The row's boundary is **not** a token. `705:2827` rules it in `brownMid` at 50%, which flattens to
+about 2.5:1 on the row's own paper — under the 3:1 a control's boundary wants, and it is not the
+control's boundary: the row is named and hinted by its own type, and the rule is what separates two
+near-identical creams. Tokenising it would enumerate a contrast claim the screen does not make.
+
+### Two new type roles
+
+| Role | Face | Style | Drawn at |
+|---|---|---|---|
+| `stampFranking` | New York Bold, caps | `.footnote` | 13.343 |
+| `stampFrankingDetail` | SF Pro Regular, caps | `.caption2` | 8.339 |
+
+**One deviation.** The region line is drawn at 8.34 points and is set at `.caption2` (11) instead —
+below that, on a real screen, is the readability failure `NFR-A11Y-01` exists to prevent, and the
+same argument the typed sheet's 8.5-point copy already carries.
+
+These are the first caps roles besides `eyebrow`, which had a stated reason to be alone: an all-caps
+short word risks VoiceOver spelling it out as an initialism. The franking is exempt because
+`HisploraStampCard` ignores its children and speaks one label built from the *un-cased* strings —
+"Badung Market, Badung, Bali" however the paper is printed.
+`TypographyTests.onlyTheEyebrowAndTheStampsFrankingAreSetInCaps` keeps the list exhaustive so a
+third caps role has to be argued for rather than added.
+
+### One new packaged picture
+
+`quest-seal.png` (232 × 214, drawn at 58 × 53.4) — `737:3971`, the crimson wax with a candi bentar
+struck into it, which is the mark a finished walk carries on its row. A second export rather than
+`badge-seal-crimson` reused: that one is a blank seal and this one carries the gate.
+
+**Its ground was keyed out, and that is not a liberty.** Figma exports the group opaque — the source
+raster has white baked in, which is invisible in the frame because the frame's row is nearly white
+and visible here for the same reason. The white field is flood-filled from the border only, so the
+medallion's own cream interior (`#F4DFB8`) is untouched, and the one-pixel antialiased rim is ramped
+rather than cut, which is what stops the wax getting a hard white edge.
+
+### What the frames draw that the code still does not
+
+- **The portrait and the name "Umar".** There are no accounts in this build and nothing has asked
+  the reader who they are (`FR-ONB-01`), so the roundel stays empty and the card names the reader by
+  what they are. Unchanged by these frames, and the reason is unchanged with it.
+- **`705:2769`'s six stamps.** The grid renders what the reader has earned; six is what the frame
+  needed to fill a page.
+
+### One thing the frames do not draw, added anyway
+
+`705:2824` lists **finished** walks; the tab shipped listing **unfinished** ones, because Profile is
+the only route back into a walk in progress. Both readings are right about a different reader, so
+the list carries both behind a three-way filter — All / Unfinished / Done, `HisploraFilterChips`,
+centred under the strip. Chips rather than a second ruled strip: `HisploraTabStrip` switches
+surfaces, and two controls that look alike would say they do the same thing. Only an unfinished row
+carries something to resume; a finished walk's record is its letter and its badge, and a row that
+looks tappable and is not is worse than a row that does not.
+
 ## Seen rendering
 
 **`452:3132`, `447:1880` and `452:3028` were verified on iPhone 17 / iOS 26.5 on 2026-08-17**,
@@ -1205,6 +1279,13 @@ intro (the scratch reveal needs real drag paths) → cutscene portrait → story
 → **All Quest** → **the task sheet** → **the site plan**, pinched to zoom and closed back to the
 sheet. Screenshots are in `docs/screenshots/m9-*.png`. The grey-bar divider bug above was found
 on that pass and nowhere else — no test could have seen it.
+
+**`705:2824` and `705:2767` were verified on iPhone 17 / iOS 26.5 on 2026-08-20** — both tabs, with
+one finished walk and one walk two checkpoints in, in `docs/screenshots/m13-profile-quests.png` and
+`m13-profile-stamps.png`. The records were seeded as two `FileRunStore` documents in the simulator's
+container rather than walked, and were deleted afterwards; what the screenshots show is the
+rendering, not a walk anyone took. The keyed-out white behind the wax seal was found on that pass
+and nowhere else.
 
 **`452:2651` was verified on iPhone 17 / iOS 26.5 on 2026-08-18** — the filled plan, dragged to its
 right edge and pinched to zoom, in `docs/screenshots/m10-site-map-full.png` and
