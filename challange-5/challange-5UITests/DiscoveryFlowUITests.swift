@@ -102,7 +102,23 @@ final class DiscoveryFlowUITests: XCTestCase {
         let confirm = app.buttons["Delete"]
         if confirm.waitForExistence(timeout: timeout) { confirm.tap() }
 
-        app.buttons["Quests"].firstMatch.tap()
+        // **Leave Settings by its Back button, not by tapping a tab.**
+        //
+        // Settings is pushed over the tab bar, so `app.buttons["Quests"].tap()` was hitting a bar
+        // that is behind it and doing nothing — the app stayed on Settings, and every later tap in
+        // the test landed behind the same screen. That is the whole of the long-standing
+        // "Profile did not offer a way into the app preferences" failure: by the time
+        // `openSettings` ran, the app was *already on Settings*, where "Settings" is the title
+        // static text and not a button, so the button lookup could never succeed.
+        //
+        // It was read for weeks as a tab-bar or Dynamic Type problem. It is neither: the tab bar is
+        // a real `Button` with a `contentShape` and a minimum tap target, and it works — it was
+        // simply not on top.
+        let back = app.buttons["Back"].firstMatch
+        if back.waitForExistence(timeout: timeout) { back.tap() }
+
+        let quests = app.buttons["Quests"].firstMatch
+        if quests.waitForExistence(timeout: timeout) { quests.tap() }
     }
 
     /// Settings is no longer a tab: the flow reaches it as Profile → App preferences.
@@ -125,8 +141,11 @@ final class DiscoveryFlowUITests: XCTestCase {
             profile.tap()
             preferences = app.buttons["Settings"].firstMatch
         }
-        XCTAssertTrue(preferences.waitForExistence(timeout: timeout),
-                      "Profile did not offer a way into the app preferences")
+        XCTAssertTrue(preferences.waitForExistence(timeout: timeout), """
+            Profile did not offer a way into the app preferences.
+            Buttons on screen: \(app.buttons.allElementsBoundByIndex.map(\.label))
+            Static texts: \(app.staticTexts.allElementsBoundByIndex.prefix(12).map(\.label))
+            """)
 
         // `exists` is not `isHittable`. At the largest accessibility size the profile's two
         // controls run past the fold and the lower one lands under the floating tab bar, so the

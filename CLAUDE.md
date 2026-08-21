@@ -369,25 +369,29 @@ Still unguarded:
   outstanding, no owner named). `theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources` does *not*
   cover it — that test asserts on `CheckpointPresentation`, which still carries every accuracy label
   and citation. The omission is in the view.
-- **Two XCUITests are red, and both are pre-existing.** Was three until 2026-08-21, when
-  `testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow` started passing. Re-verified 2026-08-20 in a clean
+- **The XCUITests are green.** All 13 pass as of 2026-08-21; the three long-standing red ones
+  are fixed, and what they turned out to be is worth reading before trusting a guarded tap. Re-verified 2026-08-20 in a clean
   worktree at `65f9465`, which is the only reason they can be called pre-existing rather than
   assumed to be:
-  - `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` and
-    `testQuestListAndSettingsAreReachable` both fail at the *existence* check in `openSettings` —
-    "Profile did not offer a way into the app preferences" — before the scroll-into-reach loop.
-    **Three suspected causes were tested on 2026-08-21 and all three ruled out:**
-    - *Not* a mistimed tap. `openSettings` now carries the same wait-then-one-retry `resetAppData`
-      has — which this note previously called "the obvious next move" — and it changed nothing.
-    - *Not* the accessibility label. `ExplorerCardView` labels the control with
-      `UIStrings.settingsTitle`, which is `"Settings"` in EN, and the app runs in EN under test.
-    - *Not* XCUITest tapping the centre of a padded control. A coordinate tap at the button's own
-      centre was tried and reverted; it changed nothing either.
-    So the Profile **tab genuinely does not switch** under a synthesized tap, and the next place to
-    look is the floating bar's gesture handling rather than the test.
-    **`resetAppData` hides the same failure**: it `guard`s on the Settings button and returns
-    silently when it is absent, so every test calling it is quietly not resetting anything. Worth
-    fixing whether or not the tab bar is.
+  - **They were fixed on 2026-08-21, and the cause was none of the things this note spent weeks
+    guessing at.** The dump that solved it printed what was actually on screen at the assertion:
+    `"Language"`, `"Delete all local data"`, a `"Back"` button, and `"Settings"` present only as a
+    **static text**. The app was still *on the Settings screen*.
+    `resetAppData` deletes local data and then taps `app.buttons["Quests"]` to get back — but
+    Settings is pushed **over** the tab bar, so that tap hit a bar behind it and did nothing. Every
+    later tap in the test landed behind the same screen, and `openSettings` then looked for a
+    *button* called "Settings" on the Settings screen, where it is the title. It leaves by the Back
+    button now.
+    Three earlier theories were tested and are all wrong, which is worth keeping so nobody re-tries
+    them: it is not a mistimed tap (the one-retry changed nothing), not the accessibility label
+    (`ExplorerCardView` uses `UIStrings.settingsTitle` = `"Settings"` in EN), and not XCUITest
+    centre-tapping a padded control (a coordinate tap changed nothing). `KultaraTabBar` is a real
+    `Button` with a `contentShape` and a minimum tap target, and it works — it was simply not on
+    top.
+    **The lesson worth carrying: a guarded tap (`if x.waitForExistence { x.tap() }`) hides a
+    navigation failure completely.** Both defects found here — this one and the stale
+    `"Skip for now"` label — were invisible for exactly that reason. When a test asserts on
+    something missing, print what *is* there before theorising.
   - `testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow` fails at
     `DiscoveryFlowUITests.swift:227` — "A map marker did not open the story flow".
   - `SideQuestFlowUITests.testReopeningACompletedSidequestReplaysWithoutAwardingAgain` is **flaky,
