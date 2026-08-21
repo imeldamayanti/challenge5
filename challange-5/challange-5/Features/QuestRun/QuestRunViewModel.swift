@@ -239,10 +239,13 @@ final class QuestRunViewModel {
         switch stage {
         case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
              .approachTransition, .storyReveal, .placeNotice, .checkpointDetail, .taskDetail,
-             .questExplanation, .stampAward, .transition, .atCheckpoint:
+             .questExplanation, .stampAward, .transition, .atCheckpoint,
+             // `.finished` now opens straight on `WriteJournalScreen` — Hisplora, with its own
+             // heading and its own back control — rather than on the museum-styled
+             // `RunSummaryView` this used to hide for. Reproducing the museum bar's flash over it
+             // is the exact defect this rule exists to prevent everywhere else.
+             .finished:
             true
-        case .finished:
-            false
         }
     }
 
@@ -933,6 +936,33 @@ final class QuestRunViewModel {
         guard let run, let checkpoint else { return nil }
         return run.result(forCheckpointID: checkpoint.id)?
             .taskResults.first { $0.taskID == task.id }
+    }
+
+    // MARK: Journal entry — the Summary screen's closing reflection
+
+    /// Writes the walk's closing journal entry: `saveTask`'s pattern, but for the free-text
+    /// reflection and (up to) two keepsake photographs a finished walk still lets the walker add.
+    /// The photographs reach disk here and nowhere else, for the `NFR-REL-05` reason `saveTask`
+    /// writes a task's photograph here rather than in the view. Returns the updated Run so the
+    /// caller can move on to it; `nil` means the write failed and `message` explains why.
+    @discardableResult
+    func saveJournalEntry(text: String, placePhoto: UIImage?, selfiePhoto: UIImage?) -> Run? {
+        guard let run else { return nil }
+        do {
+            let placePath = try placePhoto.flatMap { try photoStore?.save($0, recordID: UUID()) }
+            let selfiePath = try selfiePhoto.flatMap { try photoStore?.save($0, recordID: UUID()) }
+            let updated = try engine.saveJournalEntry(
+                runID: run.id, text: text,
+                placePhotoRelativePath: placePath, selfiePhotoRelativePath: selfiePath)
+            self.run = updated
+            return updated
+        } catch let error as RunEngineError {
+            message = describe(error)
+            return nil
+        } catch {
+            message = String(describing: error)
+            return nil
+        }
     }
 
     // MARK: Abandoning — FR-RUN-04

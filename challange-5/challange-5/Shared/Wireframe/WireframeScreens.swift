@@ -77,22 +77,11 @@ struct AuthWireframeView: View {
 }
 
 // MARK: - Journal branch
-
-/// Completion screen → Create Journal → Save Journal → Trip Summary.
-struct CreateJournalWireframeView: View {
-    let language: ContentLanguage
-
-    var body: some View {
-        WireframeScreen(WireframeCatalog.createJournal, language: language) {
-            NavigationLink {
-                TripSummaryWireframeView(language: language)
-            } label: {
-                Text(WireframeCatalog.tripSummary.title.value(for: language))
-            }
-            .buttonStyle(.seal)
-        }
-    }
-}
+//
+// `CreateJournalWireframeView` is **gone**, deleted with its catalogue entry in the commit that
+// shipped `WriteJournalScreen` and `JourneySavedScreen` (`Features/RunSummary/`,
+// `WireframeCatalog`'s own rule at the top of this file). What replaced it reads a Run's own saved
+// entry back rather than drawing empty boxes for one.
 
 /// Trip Summary, and the share question that follows it.
 struct TripSummaryWireframeView: View {

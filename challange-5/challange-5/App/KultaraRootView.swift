@@ -431,6 +431,24 @@ struct KultaraRootView: View {
             questID: questID, existingRun: draft, discardingExistingDraft: false)
     }
 
+    /// "See Journey Recap" (`JourneySavedScreen`) opens the walk's real Trip Summary — the Journal
+    /// letter this Run already has a shelf entry for, built the same way `SealedLettersViewModel`
+    /// builds every other one rather than by a second, parallel path.
+    ///
+    /// Reuses `SealedLettersViewModel`'s own builder instead of duplicating it: stamp tiering
+    /// (`StampArtworkResolver`) counts finished walks *per place*, which is a fact about every Run,
+    /// not just this one, so a hand-rolled `SealedLetterPresentation` here could tier a stamp
+    /// differently from the one the shelf itself would show for the same walk.
+    private func openRecap(for run: Run) {
+        runDestination = nil
+        let letters = SealedLettersViewModel(
+            store: environment.runStore, repository: environment.repository, language: language)
+        guard let letter = letters.letters.first(where: { $0.id == run.id }) else { return }
+        journalLetterSection = .summary
+        journalLetter = letter
+        tab = Tab.journal.rawValue
+    }
+
     private func runScreen(_ destination: RunDestination) -> some View {
         ScreenHost(navigationBarWhileLoading: destination.opensOnStoryFlow ? .hidden : .automatic) {
             let existing = destination.existingRunID
@@ -449,7 +467,9 @@ struct KultaraRootView: View {
                 // not a fourth aggregate the eraser would have to learn about.
                 photoStore: environment.photoStore)
         } content: { model in
-            KultaraThemeProvider { QuestRunView(model: model) }
+            KultaraThemeProvider {
+                QuestRunView(model: model, onOpenRecap: openRecap)
+            }
                 .onDisappear {
                     journalRevision += 1
                     // `system-design.md` §6.2 — a completed quest deregisters its start region;

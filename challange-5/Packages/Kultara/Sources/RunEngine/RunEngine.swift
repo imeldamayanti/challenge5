@@ -266,6 +266,29 @@ public struct RunEngine {
         return run
     }
 
+    /// The walker's closing reflection, written from the Summary screen rather than during the
+    /// walk. Allowed on a completed Run for the same reason `recordTaskResult` is
+    /// (`FR-TASK-07`'s argument, `openRunOrThrow`) — the walk finishes on arrival at the last
+    /// checkpoint, while the walker is still standing there with this still unwritten. Saving again
+    /// replaces the entry rather than appending: there is one journal entry per walk.
+    @discardableResult
+    public func saveJournalEntry(
+        runID: UUID,
+        text: String,
+        placePhotoRelativePath: String? = nil,
+        selfiePhotoRelativePath: String? = nil
+    ) throws -> Run {
+        var run = try openRunOrThrow(runID)
+        run.journalEntry = JournalEntry(
+            text: text,
+            placePhotoRelativePath: placePhotoRelativePath,
+            selfiePhotoRelativePath: selfiePhotoRelativePath,
+            savedAt: now())
+        run.updatedAt = now()
+        try store.save(run)
+        return run
+    }
+
     // MARK: - Ending
 
     /// `FR-RUN-04` / `FR-RUN-06`. The summary survives either way — an abandoned walk keeps every

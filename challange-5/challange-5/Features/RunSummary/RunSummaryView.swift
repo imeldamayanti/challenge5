@@ -2,14 +2,30 @@ import ContentKit
 import DesignSystem
 import RunEngine
 import SwiftUI
+import UIKit
 import UIStringsKit
 
 struct RunSummaryView: View {
     @Environment(\.kultaraPalette) private var palette
     private let model: RunSummaryViewModel
+    /// Writes the walk's closing journal entry (`WriteJournalScreen`) and hands back the updated
+    /// Run, or `nil` on failure. Owned by `QuestRunViewModel`, which alone holds the `RunEngine`
+    /// and the `PhotoStore` a save needs — this view stays as free of both as `RunSummaryViewModel`
+    /// already is.
+    private let onSaveJournal: (String, UIImage?, UIImage?) -> Run?
+    /// Opens the walk's real Trip Summary (`Letters.TripSummaryScreen`) from `JourneySavedScreen`'s
+    /// "See Journey Recap" — a root-level concern (switching to the Journal tab), so it is handed
+    /// down as a closure rather than this screen reaching for app state it should not know about.
+    private let onOpenRecap: (Run) -> Void
 
-    init(model: RunSummaryViewModel) {
+    init(
+        model: RunSummaryViewModel,
+        onSaveJournal: @escaping (String, UIImage?, UIImage?) -> Run?,
+        onOpenRecap: @escaping (Run) -> Void
+    ) {
         self.model = model
+        self.onSaveJournal = onSaveJournal
+        self.onOpenRecap = onOpenRecap
     }
 
     private var language: ContentLanguage { model.language }
@@ -103,19 +119,21 @@ struct RunSummaryView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// What the flow chart draws after this screen: the journal question, and — through it — the
-    /// trip summary, the share card and the recommendation. All four are wireframes; this section
-    /// is the way into them, and it says which side of the line it is on.
+    /// What the flow chart draws after this screen: write a journal entry, then — through it — the
+    /// trip summary, the share card and the recommendation. The journal is real now
+    /// (`WriteJournalScreen` → `JourneySavedScreen` → the walk's own Trip Summary); the share card
+    /// and the recommendation stay wireframes, reached the same way they always were.
     private var nextInFlowSection: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            KultaraSectionHeading(WireframeCatalog.stamp.value(for: language))
             NavigationLink {
-                CreateJournalWireframeView(language: language)
+                WriteJournalScreen(
+                    language: language, onSave: onSaveJournal, onOpenRecap: onOpenRecap)
             } label: {
-                Text(WireframeCatalog.createJournal.title.value(for: language))
+                Text(UIStrings.string(.writeJournalTitle, language))
             }
             .buttonStyle(.ruled)
 
+            KultaraSectionHeading(WireframeCatalog.stamp.value(for: language))
             NavigationLink {
                 TripSummaryWireframeView(language: language)
             } label: {

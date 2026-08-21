@@ -7,6 +7,7 @@
 import Foundation
 import Testing
 @testable import challange_5
+import UIKit
 import UIStringsKit
 @testable import ContentKit
 @testable import RunEngine
@@ -58,7 +59,8 @@ struct QuestRunTests {
     private func harness(
         authorization: LocationAuthorizationSnapshot = .whenInUse,
         safetyAcked: Bool = true,
-        overrideDelay: Duration = .milliseconds(20)
+        overrideDelay: Duration = .milliseconds(20),
+        photoStore: (any PhotoStore)? = nil
     ) throws -> Harness {
         let repository = try BundledContentRepository()
         let quest = try #require(try repository.quests().first)
@@ -74,7 +76,8 @@ struct QuestRunTests {
             locationProvider: provider,
             questID: quest.id,
             language: .id,
-            manualOverrideDelay: overrideDelay))
+            manualOverrideDelay: overrideDelay,
+            photoStore: photoStore))
         return Harness(model: model, provider: provider, store: store, quest: quest)
     }
 
@@ -485,6 +488,35 @@ struct QuestRunTests {
         let summary = RunSummaryViewModel(run: try #require(harness.model.run))
         #expect(summary.stops.first?.writtenAnswers.first?.text
                 == "Pintunya lebih tua dari yang saya kira.")
+    }
+
+    /// Replaces the `createJournal` wireframe: the walk's closing journal entry, written from the
+    /// Summary screen once the walk has already reached `.finished`.
+    @Test func savingAJournalEntryReachesTheSummary() throws {
+        let photoStore = InMemoryPhotoStore()
+        let harness = try harness(photoStore: photoStore)
+        openArrival(harness)
+        for checkpoint in harness.quest.orderedCheckpoints {
+            harness.provider.emit(offsetMetres: 2, accuracy: 6)
+            #expect(walkTheStoryStages(harness),
+                    "Failed to arrive at checkpoint \(checkpoint.orderIndex)")
+        }
+        #expect(harness.model.isCompleted)
+
+        let place = UIImage()
+        let selfie = UIImage()
+        let updated = try #require(harness.model.saveJournalEntry(
+            text: "Hari yang luar biasa.", placePhoto: place, selfiePhoto: selfie))
+
+        let entry = try #require(updated.journalEntry)
+        #expect(entry.text == "Hari yang luar biasa.")
+        #expect(entry.placePhotoRelativePath != nil)
+        #expect(entry.selfiePhotoRelativePath != nil)
+        #expect(photoStore.savedCount == 2)
+        // Persisted, not just held in memory — the same store `RunSummaryViewModel` and the
+        // Journal shelf both read from.
+        let stored = try #require(try harness.store.run(id: updated.id))
+        #expect(stored.journalEntry?.text == "Hari yang luar biasa.")
     }
 
     @Test func endingAWalkKeepsWhatWasAlreadyWalked() throws {

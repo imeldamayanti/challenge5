@@ -151,6 +151,51 @@ struct RunEngineTests {
         #expect(run.state == .completed)
     }
 
+    // MARK: - Journal entry
+
+    @Test func savingAJournalEntryReachesACompletedRun() throws {
+        // Same argument as the closing reflection: the walk is already complete by the time the
+        // walker writes it, because arrival at the last checkpoint completed the walk.
+        let (engine, _) = engine()
+        var run = try started(engine)
+        run = try engine.advanceToNextCheckpoint(runID: run.id)
+        run = try engine.recordArrival(
+            runID: run.id, checkpointID: "cp1", method: .gps, accuracyM: 8)
+        run = try engine.advanceToNextCheckpoint(runID: run.id)
+        run = try engine.recordArrival(
+            runID: run.id, checkpointID: "cp2", method: .gps, accuracyM: 8)
+        #expect(run.state == .completed)
+
+        run = try engine.saveJournalEntry(
+            runID: run.id, text: "Hari yang luar biasa.",
+            placePhotoRelativePath: "sidequest-photos/place.jpg",
+            selfiePhotoRelativePath: "sidequest-photos/selfie.jpg")
+
+        let entry = try #require(run.journalEntry)
+        #expect(entry.text == "Hari yang luar biasa.")
+        #expect(entry.placePhotoRelativePath == "sidequest-photos/place.jpg")
+        #expect(entry.selfiePhotoRelativePath == "sidequest-photos/selfie.jpg")
+    }
+
+    @Test func savingAJournalEntryAgainReplacesRatherThanStacking() throws {
+        let (engine, _) = engine()
+        var run = try started(engine)
+        run = try engine.saveJournalEntry(runID: run.id, text: "Draf pertama.")
+        run = try engine.saveJournalEntry(runID: run.id, text: "Draf kedua.")
+
+        #expect(run.journalEntry?.text == "Draf kedua.")
+    }
+
+    @Test func savingAJournalEntryOnAnAbandonedRunIsRefused() throws {
+        let (engine, _) = engine()
+        let run = try started(engine)
+        _ = try engine.abandon(runID: run.id, reason: .userChoice)
+
+        #expect(throws: RunEngineError.runNotActive(.abandoned)) {
+            try engine.saveJournalEntry(runID: run.id, text: "Terlambat.")
+        }
+    }
+
     // MARK: - AD-2, FR-TASK-01/02
 
     @Test func skippingATaskChangesNoStateAndNoAward() throws {
