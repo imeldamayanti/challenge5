@@ -20,6 +20,12 @@ build/
 **/.swiftpm/
 Package.resolved
 **/Package.resolved
+# ...except the app project's, which is the only place a THIRD-PARTY version is pinned.
+# `supabase-swift` arrived on 2026-08-21 (`c2` phase 1's transport decision) and brought six
+# transitive packages with it. An untracked resolve file means every machine and every CI run is
+# free to resolve a different graph — which is a supply-chain hole rather than a convenience, and
+# the reason the exception is this narrow: the local package has no third-party dependency to pin.
+!challange-5/challange-5.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
 
 # Local editor / project metadata
 .remember/

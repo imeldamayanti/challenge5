@@ -41,14 +41,41 @@ the session together with the login screen in phase 6 and there is nothing to me
 
 ### Decide the transport, and write it down here
 
-- [ ] `supabase-swift` or plain `URLSession`. Record the decision and the reason in
-      this file, under a `## Decision` heading, before writing the second file of
-      code.
-      *`supabase-swift`: token refresh, resumable storage upload and PostgREST
-      building for free; the first third-party dependency in a codebase that has
-      zero, plus its transitive tree.*
-      *`URLSession`: zero dependencies, ~8 calls total in all of C2; token refresh and
-      multipart are yours to get wrong.*
+- [x] **Decided 2026-08-21 by the owner: `supabase-swift`.** Wired ahead of the rest of
+      this phase, so the decision is in the repo rather than in a note.
+      `01-architecture.md` §5 carries the reasoning and the four wiring decisions;
+      the short version is below.
+
+## Decision — the SDK
+
+`supabase-swift` **2.55.1**, pinned `upToNextMinor`, linked to the **app target only**.
+It buys token refresh, storage upload and PostgREST building — the three things C2
+would otherwise write by hand and get wrong.
+
+- **Four products, not the umbrella**: `Auth`, `PostgREST`, `Storage`, `Functions`.
+  **`Realtime` is deliberately not linked** — it holds a WebSocket open, which is a
+  battery cost on a walking app for a feature C2 does not have, and a client keeping a
+  socket up is one step from behaving like the reachability check `AD-3` bans. The
+  umbrella would pull it in along with CryptoSwift and swift-secp256k1.
+- **Six transitive packages** arrive with it: swift-crypto, swift-asn1,
+  swift-http-types, swift-concurrency-extras, swift-clocks, xctest-dynamic-overlay.
+  That is the price, stated rather than absorbed.
+- **`Package.resolved` is now tracked** (a narrow `.gitignore` negation). Untracked, a
+  third-party graph resolves differently on every machine and in CI.
+- **The package targets stay clean.** `ContentKit`, `RunEngine` and `DesignSystem` gain
+  nothing; `ImportBoundaryTests` and the two-second macOS `swift test` are unaffected.
+
+### Where credentials live, now that there are two kinds
+
+- **App**: project URL and the **publishable** key, in `challange-5/Config/Backend.xcconfig`,
+  written into the bundle as `Backend.plist` by a build phase and read by
+  `BackendConfiguration`. Public by design; RLS is what protects the data.
+- **Operator**: `.env.local` at the repository root — gitignored, and already the home
+  `.gitignore` names for exactly this. `.env.example` is the checked-in template, and
+  `supabase/scripts/publish-suppressions.sh` reads it without ever echoing the key.
+  **Not a plist, and not in the app**: the service-role key bypasses RLS entirely, and
+  `docs/backend-supabase.md` §8 puts it in two places only — an Edge Function's
+  environment and CI secrets.
 
 ### The service
 

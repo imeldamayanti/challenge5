@@ -20,6 +20,10 @@
 		A0C0C0C0000000000000C013 /* UIStringsKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00F /* UIStringsKit */; };
 		A0C0C0C0000000000000C0D2 /* GovernanceKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C0D1 /* GovernanceKit */; };
 		A0C0C0C0000000000000C0D4 /* TelemetryKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C0D3 /* TelemetryKit */; };
+		A0E0E0E00000000000000E006 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = A0E0E0E00000000000000E002 /* Auth */; };
+		A0E0E0E00000000000000E007 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = A0E0E0E00000000000000E003 /* PostgREST */; };
+		A0E0E0E00000000000000E008 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = A0E0E0E00000000000000E004 /* Storage */; };
+		A0E0E0E00000000000000E009 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = A0E0E0E00000000000000E005 /* Functions */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -106,6 +110,10 @@
 				A0A0A0A0000000000000A008 /* RunEngine in Frameworks */,
 				A0A0A0A0000000000000A0D2 /* GovernanceKit in Frameworks */,
 				A0A0A0A0000000000000A0D4 /* TelemetryKit in Frameworks */,
+				A0E0E0E00000000000000E006 /* Auth in Frameworks */,
+				A0E0E0E00000000000000E007 /* PostgREST in Frameworks */,
+				A0E0E0E00000000000000E008 /* Storage in Frameworks */,
+				A0E0E0E00000000000000E009 /* Functions in Frameworks */,
 				A0A0A0A0000000000000A009 /* DesignSystem in Frameworks */,
 				A0A0A0A0000000000000A00C /* UIStringsKit in Frameworks */,
 				A0A0A0A0000000000000A005 /* ContentKit in Frameworks */,
@@ -217,6 +225,10 @@
 				A0A0A0A0000000000000A003 /* ContentKit */,
 				A0A0A0A0000000000000A0D1 /* GovernanceKit */,
 				A0A0A0A0000000000000A0D3 /* TelemetryKit */,
+				A0E0E0E00000000000000E002 /* Auth */,
+				A0E0E0E00000000000000E003 /* PostgREST */,
+				A0E0E0E00000000000000E004 /* Storage */,
+				A0E0E0E00000000000000E005 /* Functions */,
 			);
 			productName = "challange-5";
 			productReference = A031C9D2302A038800764D07 /* challange-5.app */;
@@ -311,6 +323,7 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				A0A0A0A0000000000000A001 /* XCLocalSwiftPackageReference "Packages/Kultara" */,
+				A0E0E0E0000000000000E001 /* XCRemoteSwiftPackageReference "supabase-swift" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = A031C9D3302A038800764D07 /* Products */;
@@ -816,6 +829,17 @@
 		};
 /* End XCLocalSwiftPackageReference section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		A0E0E0E0000000000000E001 /* XCRemoteSwiftPackageReference "supabase-swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/supabase/supabase-swift.git";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 2.55.1;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
 		A0A0A0A0000000000000A003 /* ContentKit */ = {
 			isa = XCSwiftPackageProductDependency;
@@ -864,6 +888,26 @@
 		A0C0C0C0000000000000C0D3 /* TelemetryKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = TelemetryKit;
+		};
+		A0E0E0E00000000000000E002 /* Auth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A0E0E0E0000000000000E001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Auth;
+		};
+		A0E0E0E00000000000000E003 /* PostgREST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A0E0E0E0000000000000E001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = PostgREST;
+		};
+		A0E0E0E00000000000000E004 /* Storage */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A0E0E0E0000000000000E001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Storage;
+		};
+		A0E0E0E00000000000000E005 /* Functions */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = A0E0E0E0000000000000E001 /* XCRemoteSwiftPackageReference "supabase-swift" */;
+			productName = Functions;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
