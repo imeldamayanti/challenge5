@@ -26,7 +26,7 @@ unit test with a stubbed transport". If it has not run against
 | # | Phase | Depends on | Size | Status | Started | Completed |
 |---|---|---|---|---|---|---|
 | 0 | [Governance & Telemetry](phases/phase-0-governance-telemetry.md) | — | 1–2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
-| 1 | [Anonymous Session](phases/phase-1-anonymous-session.md) | — | 1 d | `NOT STARTED` | — | — |
+| 1 | [Anonymous Session](phases/phase-1-anonymous-session.md) | — | 1 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 2 | [Sync Identity](phases/phase-2-sync-identity.md) | — | ½ d | `NOT STARTED` | — | — |
 | 3 | [Push Sync](phases/phase-3-push-sync.md) | 1, 2 | 2 d | `NOT STARTED` | — | — |
 | 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `NOT STARTED` | — | — |

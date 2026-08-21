@@ -58,6 +58,7 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
     private let proximityMonitor: (any ProximityMonitoring)?
     private let photoStore: (any PhotoStore)?
     private let telemetry: AppTelemetry?
+    private let session: (any SupabaseSessionProviding)?
     private let preferences: any AppPreferencesStore
 
     init(
@@ -66,6 +67,7 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
         proximityMonitor: (any ProximityMonitoring)? = nil,
         photoStore: (any PhotoStore)? = nil,
         telemetry: AppTelemetry? = nil,
+        session: (any SupabaseSessionProviding)? = nil,
         preferences: any AppPreferencesStore
     ) {
         self.store = store
@@ -73,6 +75,7 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
         self.proximityMonitor = proximityMonitor
         self.photoStore = photoStore
         self.telemetry = telemetry
+        self.session = session
         self.preferences = preferences
     }
 
@@ -87,6 +90,17 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
         // the per-walk pseudonymous keys beside them. Neither identifies anybody, and both are
         // still local data somebody asked to be rid of.
         let deletedTelemetryEvents = telemetry?.eraseQueue() ?? 0
+        // `c2` phase 1. The stored session is a bearer credential for this walker's own history;
+        // leaving it behind would mean the next launch silently resumes as the same `auth.users`
+        // row somebody just asked to be disconnected from. Detached because erasure is synchronous
+        // and must not start waiting on the Keychain — and because nothing here can fail in a way
+        // the summary should report.
+        if let session {
+            Task { await session.signOut() }
+        }
+        // `preferences.removeAll()` takes `deviceID` with it, so the next launch is a new install
+        // as far as `schema.md` §C.2 is concerned. Deliberate: a walker who erases should not stay
+        // the same device to the server.
         preferences.removeAll()
         return ErasureSummary(
             deletedRuns: deletedRuns,

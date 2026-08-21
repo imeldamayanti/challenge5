@@ -116,10 +116,17 @@ struct KultaraRootView: View {
         // `AD-5` — one attempt on launch and one on every foreground, and neither blocks a draw.
         // The document the app already holds was read from disk at construction, so this updates an
         // answer rather than producing one (`FR-ERR-09`).
-        .task { await refreshGovernance() }
+        .task {
+            // `c2` phase 1. Fire-and-forget on purpose: `prepare()` returns before the network is
+            // touched, so the session arrives when it arrives and the quest list never waits for
+            // it. A walker who is offline forever simply never has one.
+            (environment.session as? SupabaseSession)?.prepare()
+            await refreshGovernance()
+        }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .active:
+                (environment.session as? SupabaseSession)?.prepare()
                 Task { await refreshGovernance() }
                 // Opportunistic, never on a timer and never on a transition somebody is waiting
                 // for (`NFR-BAT-04`'s reputation, if not its letter).
@@ -558,6 +565,7 @@ struct KultaraRootView: View {
                 proximityMonitor: environment.proximityMonitor,
                 photoStore: environment.photoStore,
                 telemetry: environment.telemetry,
+                session: environment.session,
                 preferences: environment.preferences),
             storage: environment.storage,
             proximityMonitor: environment.proximityMonitor)

@@ -79,6 +79,31 @@ struct BackendConfiguration: Sendable, Equatable {
         baseURL.appending(path: "functions/v1/ingest")
     }
 
+    /// GoTrue's base (`c2` phase 1). The session lives behind this and nothing else in the app
+    /// speaks to it.
+    var authURL: URL {
+        baseURL.appending(path: "auth/v1")
+    }
+
+    /// PostgREST's base (`c2` phase 3). `config.toml` exposes `app` and nothing else — a hosted
+    /// project defaults to `public, graphql_public`, which is why that setting is a security
+    /// control rather than a preference.
+    var restURL: URL {
+        baseURL.appending(path: "rest/v1")
+    }
+
+    /// Storage's base (`c2` phase 4). `trip-photos` is private; every object under it is reached
+    /// with the user's own token and a `{user_id}/…` prefix the policy checks.
+    var storageURL: URL {
+        baseURL.appending(path: "storage/v1")
+    }
+
+    /// One Edge Function by name. `ingestURL` predates this and stays as its own property because
+    /// phase 0 shipped with it.
+    func functionURL(_ name: String) -> URL {
+        baseURL.appending(path: "functions/v1/\(name)")
+    }
+
     private static func values(in bundle: Bundle) -> [String: Any]? {
         guard let url = bundle.url(forResource: resourceName, withExtension: "plist"),
               let data = try? Data(contentsOf: url),

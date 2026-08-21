@@ -32,6 +32,9 @@ struct KultaraEnvironment {
     /// Anonymous telemetry (`c2` phase 0). One instance, not a factory: the queue is the app's, not
     /// a screen's, and two of them would race for the same file.
     let telemetry: AppTelemetry
+    /// The anonymous Supabase session (`c2` phase 1). Nothing on screen reads it — it exists so
+    /// that phases 3, 4 and 7 have a `user_id` to write under and a token to write with.
+    let session: any SupabaseSessionProviding
 
     init(
         repository: any ContentRepository,
@@ -45,7 +48,8 @@ struct KultaraEnvironment {
         makeLocationProvider: (@MainActor () -> any LocationProviding)? = nil,
         backend: BackendConfiguration? = BackendConfiguration(),
         governance: GovernanceGate? = nil,
-        telemetry: AppTelemetry? = nil
+        telemetry: AppTelemetry? = nil,
+        session: (any SupabaseSessionProviding)? = nil
     ) {
         self.repository = repository
         self.preferences = preferences
@@ -65,6 +69,11 @@ struct KultaraEnvironment {
         // nothing, and the app behaves exactly as it does today (`AD-3`).
         self.governance = governance ?? GovernanceGate(configuration: backend)
         self.telemetry = telemetry ?? AppTelemetry(configuration: backend)
+        // The unconfigured double rather than a `SupabaseSession` holding a nil client: the two
+        // behave identically, and this way a test that forgets to pass one cannot accidentally
+        // reach the network.
+        self.session = session ?? (backend.map { SupabaseSession(configuration: $0) }
+            ?? UnconfiguredSupabaseSession())
     }
 
     var runEngine: RunEngine {
