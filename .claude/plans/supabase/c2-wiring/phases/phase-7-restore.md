@@ -69,22 +69,29 @@ out of C2. If this phase ever grows a merge, that decision comes back with `revi
 
 ### Photographs
 
-- [~] Restore the rows with the walk; download the bytes lazily. — SKIPPED, and this is
-      the phase's one real gap. A restored `TaskResult` comes back with
-      `photoRelativePath` **nil**, so a restored walk has its written answers and its
-      stamps but not its photographs. The rows are on the server (phase 4) and nothing
-      reads them back yet.
-      Deliberately not bodged: a lazy download needs a local cache keyed by
-      `app.photos.id`, a place for a half-downloaded file, and a `PhotoStore` that can be
-      told about a file it did not write. That is a day's work with its own failure modes,
-      and it is **not** what makes the reinstall promise true — the walks, the answers and
-      the stamps are. Written down here as the next thing rather than half-built.
-- [~] Thumbnail first — same gap as above.
+- [x] Restore the rows with the walk; fetch the bytes afterwards. **Done**, and it needed
+      no cache: `photo_id` *is* the `TaskResult`'s id (phase 4), and `PhotoStore` derives a
+      photograph's path from exactly that — so a restored record can **name** its
+      photograph before the file exists, and the download simply fills it in.
+      `RestoredPhotoDownloader` runs after the walks are saved and is unawaited, and skips
+      anything already on disk so a second restore fetches nothing.
+      `PhotoStore` gained `place(_:recordID:)` — separate from `save`, which downscales and
+      re-encodes: right for a photograph off a camera, wrong for one that has already been
+      through that once.
+      Observed on prod: a fresh install downloaded the photograph to
+      `Documents/sidequest-photos/<photo id>.jpg`, the exact path the restored record
+      names.
+- [~] Thumbnail first. — SKIPPED, deliberately: **the full derivative is what is
+      downloaded.** The thumbnail exists so a grid can lay out before downloading, and
+      nothing in this app lays out that way yet — writing a 400 px file where a screen
+      expects the photograph would be a silent quality loss. `RestoredPhotoDownloader`
+      names the place thumbnail-first belongs when a grid exists.
 - [x] A missing photograph draws what a missing photograph already draws.
       `PhotoStore.image(atRelativePath:)` returns `nil` and every screen already handles
       that (`FR-SET-02`); a restored walk with no local file takes exactly the same path,
       which is why the gap above is survivable rather than broken.
-- [~] Downloading is not a walk-blocking operation — nothing downloads yet.
+- [x] Downloading is not a walk-blocking operation. It runs once, after a restore, off
+      the path that produces a screen.
 
 ### What restore does not bring back
 
@@ -134,6 +141,19 @@ out of C2. If this phase ever grows a merge, that decision comes back with `revi
 - [x] `noModuleChecksReachability` green.
 - [x] `challange-5Tests` 245 → 252, green; package suite unchanged at four pre-existing
       failures.
+
+## The photograph gap, closed
+
+It was written up here as the phase's one real gap and left for later. "Later" was not
+good enough, and it turned out to need neither a cache nor half-downloaded-file handling:
+`photo_id` is already the `TaskResult`'s own id, so the record can name its photograph
+before the bytes exist, and every screen already draws a named-but-missing photograph the
+way it draws one deleted in Settings. The download is a fill-in rather than a state
+machine.
+
+Verified on prod by seeding one row and one object for the app's own anonymous user, then
+reinstalling: the file landed at `Documents/sidequest-photos/<photo id>.jpg`, exactly the
+path the restored record names. Row and object deleted afterwards.
 
 ## Two things the device showed that no test would have
 
