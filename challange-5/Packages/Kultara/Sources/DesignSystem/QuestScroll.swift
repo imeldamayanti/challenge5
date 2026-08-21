@@ -67,40 +67,118 @@ public enum HisploraScrollArt {
 /// When the art is missing the drawing still draws, on a plain cream panel. A missing decoration
 /// must not take the thing it decorates with it, which is the rule `HisploraParchmentSheet` and
 /// `RunRouteMapView` already follow.
-public struct HisploraMapScroll<Content: View>: View {
+///
+/// **It can open.** `openFraction` runs 0 (the two rods stood together, no paper between them) to 1
+/// (`1:4467` as drawn), and everything between is the same object part-unrolled. It defaults to 1,
+/// so a caller that never asks for the animation gets exactly the picture it got before — and at 1
+/// the drawing is the untouched asset, not a re-composition of it, because three slices butted
+/// together can show a hairline seam that a single image cannot.
+///
+/// **`Animatable`, and it has to be.** `openFraction` is read inside the body to build the slices,
+/// so without this the whole subtree would be swapped at the end of the animation instead of the
+/// widths being interpolated — the scroll would sit shut for the duration and then appear open. The
+/// conformance is what makes SwiftUI re-evaluate the body at each step of the caller's animation.
+public struct HisploraMapScroll<Content: View>: View, Animatable {
     @Environment(\.hisploraPalette) private var palette
 
+    private var openFraction: CGFloat
     private let content: Content
 
-    public init(@ViewBuilder content: () -> Content) {
+    public init(openFraction: CGFloat = 1, @ViewBuilder content: () -> Content) {
+        self.openFraction = openFraction
         self.content = content()
     }
 
-    public var body: some View {
-        scroll
-            .aspectRatio(HisploraScrollArt.mapScroll.aspectRatio, contentMode: .fit)
-            .overlay {
-                GeometryReader { proxy in
-                    content
-                        .frame(width: proxy.size.width * HisploraMapScrollMetrics.interiorWidth,
-                               height: proxy.size.height * HisploraMapScrollMetrics.interiorHeight)
-                        .position(
-                            x: proxy.size.width * HisploraMapScrollMetrics.interiorCentreX,
-                            y: proxy.size.height * HisploraMapScrollMetrics.interiorCentreY)
-                }
-            }
+    /// `nonisolated` because the animation machinery reads and writes this off the main actor while
+    /// the view type itself is main-actor isolated. It touches one `CGFloat` and nothing else, so
+    /// there is no state to race over.
+    public nonisolated var animatableData: CGFloat {
+        get { openFraction }
+        set { openFraction = newValue }
     }
 
-    @ViewBuilder private var scroll: some View {
+    /// Interpolation overshoots on a spring, and a scroll wider than its own picture tears. The
+    /// clamp is here rather than in the initialiser because `animatableData` writes past it.
+    private var open: CGFloat { min(1, max(0, openFraction)) }
+
+    public var body: some View {
+        GeometryReader { proxy in
+            ZStack {
+                scroll(in: proxy.size)
+                interior(in: proxy.size)
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+        }
+        .aspectRatio(HisploraScrollArt.mapScroll.aspectRatio, contentMode: .fit)
+    }
+
+    /// The drawing in the paper field, revealed by the opening rather than squashed with it.
+    ///
+    /// The paper itself is stretched — it is a texture, and a texture that grows reads as paper
+    /// coming off a rod. A map is not: a map squeezed to a tenth of its width and let go reads as a
+    /// rendering fault. So the drawing is laid at its final size and *masked* to whatever the scroll
+    /// has opened, which is what unrolling a real one shows.
+    private func interior(in size: CGSize) -> some View {
+        content
+            .frame(width: size.width * HisploraMapScrollMetrics.interiorWidth,
+                   height: size.height * HisploraMapScrollMetrics.interiorHeight)
+            .position(x: size.width * HisploraMapScrollMetrics.interiorCentreX,
+                      y: size.height * HisploraMapScrollMetrics.interiorCentreY)
+            .mask(alignment: .center) {
+                Rectangle()
+                    .frame(width: size.width * HisploraMapScrollMetrics.paperWidth * open)
+            }
+            // A sliver of map inside a nearly shut scroll is a smudge, not a reveal.
+            .opacity(HisploraMapScrollMetrics.interiorOpacity(atOpenFraction: open))
+    }
+
+    @ViewBuilder private func scroll(in size: CGSize) -> some View {
         if let image = HisploraScrollArt.mapScroll.image {
-            image
-                .resizable()
-                .accessibilityHidden(true)
+            if open >= 1 {
+                image
+                    .resizable()
+                    .accessibilityHidden(true)
+            } else {
+                unrolling(image, in: size)
+            }
         } else {
             RoundedRectangle(cornerRadius: KultaraMetrics.sm)
                 .fill(palette.paperCream.color)
                 .accessibilityHidden(true)
         }
+    }
+
+    /// The scroll part-open: both rods at the size they are drawn, the paper between them narrowed
+    /// to what has come off them.
+    ///
+    /// The rods are *sliced* out of the asset rather than scaled with it — a rod that thins as the
+    /// scroll opens is the one thing that would give the trick away, and it is what a plain
+    /// horizontal squash of the whole picture does.
+    private func unrolling(_ image: Image, in size: CGSize) -> some View {
+        let left = size.width * HisploraMapScrollMetrics.leftRodWidth
+        let right = size.width * HisploraMapScrollMetrics.rightRodWidth
+        let paper = size.width * HisploraMapScrollMetrics.paperWidth
+        return HStack(spacing: 0) {
+            slice(image, in: size, from: 0, width: left)
+            slice(image, in: size, from: left, width: paper)
+                // Layout stays `paper` wide and the drawing shrinks inside it, so the band's centre
+                // never moves: the rods travel out from the middle, exactly as the reference does.
+                .scaleEffect(x: open, anchor: .center)
+                .frame(width: paper * open)
+            slice(image, in: size, from: left + paper, width: right)
+        }
+        .frame(width: size.width, height: size.height)
+        .accessibilityHidden(true)
+    }
+
+    /// One vertical band of the asset, drawn at the size the whole asset would be drawn at.
+    private func slice(_ image: Image, in size: CGSize, from x: CGFloat, width: CGFloat) -> some View {
+        image
+            .resizable()
+            .frame(width: size.width, height: size.height)
+            .offset(x: -x)
+            .frame(width: width, height: size.height, alignment: .leading)
+            .clipped()
     }
 }
 
@@ -123,6 +201,39 @@ public enum HisploraMapScrollMetrics {
     /// The screen lays its content out in the frame's 362-point column, so reaching the scroll's
     /// full width means escaping that column by this much plus the column's own 20-point margin.
     public static let screenBleed: CGFloat = 19
+
+    /// Where the two rods end, measured off `map-scroll.png`'s own alpha rather than read off the
+    /// frame: a column-by-column scan of the 350 x 326 file puts the left rod at x 0…44 and the
+    /// right at 304…350 — the columns whose vertical coverage is the rod's full 260-odd pixels
+    /// before the paper's bow starts eating into it. The two differ by two pixels because the
+    /// picture is a photograph of an object, not a symmetrical drawing.
+    ///
+    /// These are what the unrolling slices on, so they are fractions: the asset is drawn at whatever
+    /// width the screen gives it and a rod measured in points would be the wrong rod on any other
+    /// device.
+    public static let leftRodWidth: CGFloat = 44.0 / 350.0
+    public static let rightRodWidth: CGFloat = 46.0 / 350.0
+    /// What is left between the rods, and therefore the only part the opening stretches.
+    public static let paperWidth: CGFloat = 1 - leftRodWidth - rightRodWidth
+
+    /// How wide the scroll stands with no paper off the rods at all — the closed state, both rods
+    /// touching.
+    public static let closedWidth: CGFloat = leftRodWidth + rightRodWidth
+
+    /// How long the scroll takes to open. The reference render runs a shade over four seconds; this
+    /// is the same movement at a pace that does not hold up a walker standing at a gate.
+    public static let openDuration: Double = 1.8
+
+    /// How visible the drawing is at a given point in the opening. It holds back until the scroll is
+    /// a third open and is fully there well before the rods stop, so the map arrives *during* the
+    /// movement rather than being switched on at the end of it.
+    public static func interiorOpacity(atOpenFraction fraction: CGFloat) -> Double {
+        let start: CGFloat = 0.35
+        let end: CGFloat = 0.75
+        guard fraction > start else { return 0 }
+        guard fraction < end else { return 1 }
+        return Double((fraction - start) / (end - start))
+    }
 }
 
 /// One image shipped with the design system, loaded once from the package bundle.

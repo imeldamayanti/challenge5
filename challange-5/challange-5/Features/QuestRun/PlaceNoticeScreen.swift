@@ -76,6 +76,10 @@ struct PlaceNoticeScreen: View {
     /// the "Before you explore" heading and every rule's label all start and end at the same edges.
     private static let margin: CGFloat = 20
     private static let plaqueInset: CGFloat = 22
+
+    /// Where the plate's head lobe tips, measured off the exported artwork rather than taken from
+    /// the `293:1630` node's own 94 — that PNG carries transparent margin above the drawing.
+    private static let plateTopInset: CGFloat = 46
     private static let plaqueColumn: CGFloat = 44
     private static let descriptionIndent: CGFloat = 24
     private static let descriptionTrail: CGFloat = 7
@@ -96,8 +100,16 @@ struct PlaceNoticeScreen: View {
     var body: some View {
         HisploraStage(ground: \.brownStone) {
             ZStack(alignment: .top) {
-                ScrollView {
+                GeometryReader { geometry in
+                    let width = geometry.size.width - Self.plaqueInset * 2
+                    // The plate is drawn at its own size and only gives way on a screen too short
+                    // to hold it. The acknowledge pill is not subtracted: `293:1613` runs the sheet
+                    // on behind the button, and reserving that strip would shrink the card on
+                    // every phone to protect a case none of them are.
+                    let room = geometry.size.height - Self.plateTopInset
+                    let height = min(HisploraPlaqueMetrics.panelHeight(forWidth: width), room)
                     plaque
+                        .frame(width: width, height: height)
                         .opacity(plateIsSet ? 1 : 0)
                         .offset(y: plateIsSet ? 0 : 14)
                         .animation(
@@ -109,10 +121,9 @@ struct PlaceNoticeScreen: View {
                         // the artwork. On a screen whose status bar has already taken 59 that is this
                         // much. Getting it wrong puts cream under the back arrow, where a cream arrow
                         // disappears.
-                        .padding(.top, 46)
-                        .padding(.bottom, KultaraMetrics.lg)
+                        .padding(.top, Self.plateTopInset)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                 }
-                .scrollBounceBehavior(.basedOnSize)
                 .safeAreaInset(edge: .bottom) { acknowledgeButton }
                 backBar
             }
@@ -145,11 +156,19 @@ struct PlaceNoticeScreen: View {
     /// top edge and a row inside the panel cannot.
     private var plaque: some View {
         HisploraPlaquePanel(interiorTop: Self.plaqueInteriorTop) {
-            printedMatter
-                .padding(.horizontal, Self.plaqueColumn)
-                // The plate runs on well past its last line; it does not end on it. 710 − 630, in
-                // the frame's terms: its last bullet to the foot of its sheet.
-                .padding(.bottom, 80)
+            // The plate is a fixed object now, so the prose is what gives when there is more of it
+            // than the sheet holds — a longer `loreStandalone`, or an accessibility text size. The
+            // scroll lives *inside* the panel rather than under it: a card that changes height with
+            // its contents is not the frame's card.
+            ScrollView {
+                printedMatter
+                    .padding(.horizontal, Self.plaqueColumn)
+                    // The plate runs on well past its last line; it does not end on it. 710 − 630,
+                    // in the frame's terms: its last bullet to the foot of its sheet.
+                    .padding(.bottom, 80)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .scrollIndicators(.hidden)
         }
         .overlay(alignment: .top) {
             HisploraFramedImage(url: portraitURL, label: placeName)
