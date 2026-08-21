@@ -393,16 +393,17 @@ Still unguarded:
     navigation failure completely.** Both defects found here — this one and the stale
     `"Skip for now"` label — were invisible for exactly that reason. When a test asserts on
     something missing, print what *is* there before theorising.
-  - **`testTheWholeFlowSurvivesTheLargestDynamicTypeSize` is still red, and now for a real
-    reason.** With the Settings-on-top bug cleared it gets further and then **the app stops
-    responding**: XCUITest retries the Profile tap three times over sixty seconds, never sees the
-    app go idle, and it is terminated — "application com.umar.hisplora is not running", with **no
-    crash report**, which is the signature of a hang rather than a crash. So this is a genuine
-    unresponsiveness at the largest accessibility content size, which is exactly what the test
-    exists to catch, and it was masked for weeks by the navigation defect in front of it.
-    Diagnosing it means profiling the app at `UICTContentSizeCategoryAccessibilityXXXL` — a layout
-    pass that does not settle is the obvious suspect, and `KultaraTabBar` uses `minHeight` rather
-    than a fixed height precisely because labels grow past 64 points there. **Not yet investigated.**
+  - **`testTheWholeFlowSurvivesTheLargestDynamicTypeSize` is still red, and it is an XCUITest
+    problem rather than an app one.** With the Settings-on-top bug cleared it gets further and then
+    XCUITest retries the Profile tap three times over sixty seconds, never sees the app go idle,
+    and it is terminated — "application is not running" with **no crash report**.
+    **Driving the same path by hand at `AccessibilityXXXL` does not reproduce it**: the app
+    launches, onboarding and Home render, the Profile tab switches, and the process sits at 0% CPU.
+    So the app is not hanging; XCUITest's *wait-for-idle* never settles, which points at a
+    ever-running animation somewhere in the hierarchy — the Journal's idle envelope turn is the
+    obvious candidate, since `HisploraEnvelopeFlip`'s idle cycle is explicitly designed to have
+    nowhere to arrive, and `HisploraPulsingMapMarker` breathes on a loop as well. **The hypothesis
+    is untested.** Whoever picks it up: quiescence, not performance, is the thing to look at.
   - `testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow` fails at
     `DiscoveryFlowUITests.swift:227` — "A map marker did not open the story flow".
   - `SideQuestFlowUITests.testReopeningACompletedSidequestReplaysWithoutAwardingAgain` is **flaky,

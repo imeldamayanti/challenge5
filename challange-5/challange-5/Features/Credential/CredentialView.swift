@@ -25,6 +25,23 @@ struct CredentialView: View {
     @Environment(\.kultaraPalette) private var palette
 
     var body: some View {
+        // **A `ScrollView`, because at `AccessibilityXXXL` this screen does not fit.** Seen on
+        // iPhone 17: the body paragraph truncated mid-word ("…walks can be f…"), which on a screen
+        // whose entire job is to say *nothing here is required* is the one sentence that must not
+        // be cut. The stack keeps its `Spacer`s via `minHeight` so the layout is unchanged at every
+        // size that does fit (`NFR-A11Y-06`).
+        ScrollView {
+            content
+                .frame(minHeight: minimumHeight)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .kultaraGround()
+    }
+
+    /// Read once per layout rather than per subview.
+    @State private var minimumHeight: CGFloat = 0
+
+    private var content: some View {
         VStack(spacing: 24) {
             Spacer()
 
@@ -69,8 +86,11 @@ struct CredentialView: View {
                 .foregroundStyle(palette.inkMuted.color)
                 .padding(.bottom, 24)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .kultaraGround()
+        .frame(maxWidth: .infinity)
+        .background(
+            GeometryReader { proxy in
+                Color.clear.onAppear { minimumHeight = proxy.size.height }
+            })
     }
 
     /// Held across the two halves of Apple's callback. `@State` rather than a field on a view model
