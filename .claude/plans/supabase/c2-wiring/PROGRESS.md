@@ -29,7 +29,7 @@ unit test with a stubbed transport". If it has not run against
 | 1 | [Anonymous Session](phases/phase-1-anonymous-session.md) | — | 1 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 2 | [Sync Identity](phases/phase-2-sync-identity.md) | — | none | `COMPLETE` — collapsed, no code | 2026-08-21 | 2026-08-21 |
 | 3 | [Push Sync](phases/phase-3-push-sync.md) | 1, 2 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
-| 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `NOT STARTED` | — | — |
+| 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `NOT STARTED` | — | — |
 | 7 | [Restore](phases/phase-7-restore.md) | 1, 3, 4, 6 | 1½ d | `NOT STARTED` | — | — |
 | 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `BLOCKED` · post-MVP | — | — |

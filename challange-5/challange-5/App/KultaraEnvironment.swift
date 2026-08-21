@@ -72,7 +72,8 @@ struct KultaraEnvironment {
             runStore: runStore,
             preferences: preferences,
             alertStore: FileProximityAlertStore())
-        self.photoStore = photoStore ?? FilePhotoStore()
+        let resolvedPhotoStore = photoStore ?? FilePhotoStore()
+        self.photoStore = resolvedPhotoStore
         self.makeLocationProvider = makeLocationProvider ?? Self.defaultLocationProvider
         // Both are optional at runtime: with no backend configured they are constructed, do
         // nothing, and the app behaves exactly as it does today (`AD-3`).
@@ -100,6 +101,17 @@ struct KultaraEnvironment {
             session: resolvedSession,
             configuration: backend,
             state: resolvedSyncState,
+            photoUploader: backend.map { _ in
+                // `c2` phase 4. Reading a photograph is `@MainActor`, so it arrives through a
+                // closure rather than as a store the uploader would have to hop to. **Only quest
+                // photographs can reach here**: the uploader is handed a `Run`, so a sidequest's
+                // photograph is not something it can see (`FR-SIDE-13`).
+                PhotoUploader(
+                    loadImage: { [resolvedPhotoStore] path in
+                        resolvedPhotoStore.image(atRelativePath: path)
+                    },
+                    session: resolvedSession)
+            },
             deviceID: { [identity = DeviceIdentity()] in identity.current }))
     }
 
