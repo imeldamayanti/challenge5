@@ -44,6 +44,13 @@ protocol ProximityMonitoring: AnyObject {
     func enable()
     /// `FR-PROX-13` — deregisters every region immediately.
     func disable()
+    /// The kill-switch's sets (`AD-5`, `FR-SIDE-14`). Set by whoever owns the fetch —
+    /// `GovernanceGate`, through the root view — and read by `refreshRegions()`. A property rather
+    /// than a parameter because a region survives the screen that registered it: the monitor has to
+    /// know the current answer at any moment it recomputes, including one nothing on screen asked
+    /// for.
+    var suppressedSideQuestIDs: Set<String> { get set }
+    var suppressedPlaceIDs: Set<String> { get set }
     /// Recomputed on launch, on toggle, on completion, and after a suppression update
     /// (`system-design.md` §6.2). Safe to call repeatedly: it always clears every monitored region
     /// first, so re-registering the same set costs a little battery and drops nothing.
@@ -88,6 +95,10 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
 
     private(set) var notificationsAuthorized = false
     var onSideQuestNearby: ((String) -> Void)?
+    /// Empty until the kill-switch document has been read, which is the safe direction: an empty
+    /// set monitors everything the content ships, exactly as this did before `c2` phase 0.
+    var suppressedSideQuestIDs: Set<String> = []
+    var suppressedPlaceIDs: Set<String> = []
 
     init(
         repository: any ContentRepository,
@@ -143,7 +154,8 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         guard isEnabled, authorization == .always else { return }
 
         let candidates = (try? sideQuestEngine.monitoringCandidates(
-            suppressingSideQuestIDs: [], suppressingPlaceIDs: [])) ?? []
+            suppressingSideQuestIDs: suppressedSideQuestIDs,
+            suppressingPlaceIDs: suppressedPlaceIDs)) ?? []
         let coordinate = manager.location.map {
             Coordinate(lat: $0.coordinate.latitude, lon: $0.coordinate.longitude)
         }

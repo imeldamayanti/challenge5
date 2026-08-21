@@ -12,10 +12,14 @@
 		A0A0A0A0000000000000A008 /* RunEngine in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A006 /* RunEngine */; };
 		A0A0A0A0000000000000A009 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A007 /* DesignSystem */; };
 		A0A0A0A0000000000000A00C /* UIStringsKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A00B /* UIStringsKit */; };
+		A0A0A0A0000000000000A0D2 /* GovernanceKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A0D1 /* GovernanceKit */; };
+		A0A0A0A0000000000000A0D4 /* TelemetryKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0A0A0A0000000000000A0D3 /* TelemetryKit */; };
 		A0C0C0C0000000000000C010 /* ContentKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00C /* ContentKit */; };
 		A0C0C0C0000000000000C011 /* RunEngine in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00D /* RunEngine */; };
 		A0C0C0C0000000000000C012 /* DesignSystem in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00E /* DesignSystem */; };
 		A0C0C0C0000000000000C013 /* UIStringsKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C00F /* UIStringsKit */; };
+		A0C0C0C0000000000000C0D2 /* GovernanceKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C0D1 /* GovernanceKit */; };
+		A0C0C0C0000000000000C0D4 /* TelemetryKit in Frameworks */ = {isa = PBXBuildFile; productRef = A0C0C0C0000000000000C0D3 /* TelemetryKit */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -61,6 +65,7 @@
 		A031C9D2302A038800764D07 /* challange-5.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "challange-5.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0B0B0B0000000000000B002 /* challange-5UITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "challange-5UITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		A0C0C0C0000000000000C002 /* challange-5Tests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "challange-5Tests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		A0D0D0D0000000000000D001 /* Backend.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Backend.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -99,6 +104,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				A0A0A0A0000000000000A008 /* RunEngine in Frameworks */,
+				A0A0A0A0000000000000A0D2 /* GovernanceKit in Frameworks */,
+				A0A0A0A0000000000000A0D4 /* TelemetryKit in Frameworks */,
 				A0A0A0A0000000000000A009 /* DesignSystem in Frameworks */,
 				A0A0A0A0000000000000A00C /* UIStringsKit in Frameworks */,
 				A0A0A0A0000000000000A005 /* ContentKit in Frameworks */,
@@ -120,6 +127,8 @@
 				A0C0C0C0000000000000C011 /* RunEngine in Frameworks */,
 				A0C0C0C0000000000000C012 /* DesignSystem in Frameworks */,
 				A0C0C0C0000000000000C013 /* UIStringsKit in Frameworks */,
+				A0C0C0C0000000000000C0D2 /* GovernanceKit in Frameworks */,
+				A0C0C0C0000000000000C0D4 /* TelemetryKit in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +142,7 @@
 				A0C0C0C0000000000000C003 /* challange-5Tests */,
 				A0B0B0B0000000000000B003 /* challange-5UITests */,
 				2C5DCE05303467B1006C196B /* hisplora Watch App */,
+				A0D0D0D0000000000000D002 /* Config */,
 				A031C9D3302A038800764D07 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -146,6 +156,14 @@
 				2C5DCE04303467B1006C196B /* hisplora Watch App.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		A0D0D0D0000000000000D002 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A0D0D0D0000000000000D001 /* Backend.xcconfig */,
+			);
+			path = Config;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -180,6 +198,7 @@
 				A031C9CE302A038800764D07 /* Sources */,
 				A031C9CF302A038800764D07 /* Frameworks */,
 				A031C9D0302A038800764D07 /* Resources */,
+				A0D0D0D0000000000000D004 /* Write Backend.plist */,
 				2C5DCE12303467B2006C196B /* Embed Watch Content */,
 			);
 			buildRules = (
@@ -196,6 +215,8 @@
 				A0A0A0A0000000000000A007 /* DesignSystem */,
 				A0A0A0A0000000000000A00B /* UIStringsKit */,
 				A0A0A0A0000000000000A003 /* ContentKit */,
+				A0A0A0A0000000000000A0D1 /* GovernanceKit */,
+				A0A0A0A0000000000000A0D3 /* TelemetryKit */,
 			);
 			productName = "challange-5";
 			productReference = A031C9D2302A038800764D07 /* challange-5.app */;
@@ -246,6 +267,8 @@
 				A0C0C0C0000000000000C00D /* RunEngine */,
 				A0C0C0C0000000000000C00E /* DesignSystem */,
 				A0C0C0C0000000000000C00F /* UIStringsKit */,
+				A0C0C0C0000000000000C0D1 /* GovernanceKit */,
+				A0C0C0C0000000000000C0D3 /* TelemetryKit */,
 			);
 			productName = "challange-5Tests";
 			productReference = A0C0C0C0000000000000C002 /* challange-5Tests.xctest */;
@@ -332,6 +355,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A0D0D0D0000000000000D004 /* Write Backend.plist */ = {
+			isa = PBXShellScriptBuildPhase;
+			alwaysOutOfDate = 1;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Config/Backend.xcconfig",
+			);
+			name = "Write Backend.plist";
+			outputPaths = (
+				"$(BUILT_PRODUCTS_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Backend.plist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ -z \"${KULTARA_BACKEND_URL}\" ]; then echo \"warning: KULTARA_BACKEND_URL is unset — the app will run with no backend, which is a supported state but probably not the intended one\"; fi\nplist=\"${BUILT_PRODUCTS_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}/Backend.plist\"\nmkdir -p \"$(dirname \"${plist}\")\"\n/usr/libexec/PlistBuddy -c \"Clear dict\" \"${plist}\" >/dev/null\n/usr/libexec/PlistBuddy -c \"Add :KultaraBackendURL string ${KULTARA_BACKEND_URL}\" \"${plist}\" >/dev/null\n/usr/libexec/PlistBuddy -c \"Add :KultaraBackendPublishableKey string ${KULTARA_BACKEND_PUBLISHABLE_KEY}\" \"${plist}\" >/dev/null\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		2C5DCE00303467B1006C196B /* Sources */ = {
@@ -572,6 +615,7 @@
 		};
 		A031C9DE302A038900764D07 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A0D0D0D0000000000000D001 /* Backend.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -608,6 +652,7 @@
 		};
 		A031C9DF302A038900764D07 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = A0D0D0D0000000000000D001 /* Backend.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -788,6 +833,14 @@
 			isa = XCSwiftPackageProductDependency;
 			productName = UIStringsKit;
 		};
+		A0A0A0A0000000000000A0D1 /* GovernanceKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GovernanceKit;
+		};
+		A0A0A0A0000000000000A0D3 /* TelemetryKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TelemetryKit;
+		};
 		A0C0C0C0000000000000C00C /* ContentKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = ContentKit;
@@ -803,6 +856,14 @@
 		A0C0C0C0000000000000C00F /* UIStringsKit */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = UIStringsKit;
+		};
+		A0C0C0C0000000000000C0D1 /* GovernanceKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = GovernanceKit;
+		};
+		A0C0C0C0000000000000C0D3 /* TelemetryKit */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = TelemetryKit;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -21,6 +21,8 @@ final class NearbySideQuestListViewModel {
     private let repository: any ContentRepository
     private let engine: SideQuestEngine
     private let language: ContentLanguage
+    private let suppressedSideQuestIDs: Set<String>
+    private let suppressedPlaceIDs: Set<String>
 
     private(set) var rows: [NearbySideQuestRow] = []
 
@@ -28,11 +30,15 @@ final class NearbySideQuestListViewModel {
         repository: any ContentRepository,
         engine: SideQuestEngine,
         language: ContentLanguage,
+        suppressedSideQuestIDs: Set<String> = [],
+        suppressedPlaceIDs: Set<String> = [],
         lastKnownCoordinate: Coordinate? = nil
     ) {
         self.repository = repository
         self.engine = engine
         self.language = language
+        self.suppressedSideQuestIDs = suppressedSideQuestIDs
+        self.suppressedPlaceIDs = suppressedPlaceIDs
         reload(lastKnownCoordinate: lastKnownCoordinate)
     }
 
@@ -43,11 +49,12 @@ final class NearbySideQuestListViewModel {
             .map(\.sideQuestID) ?? []
         let completedIDs = Set(completed)
 
-        // Suppression sets are empty here rather than fetched: whoever owns the kill-switch owns
-        // the fetch, and there is no reachability check anywhere in this codebase (`AD-3`,
-        // `FR-SIDE-14`, `FR-SIDE-15`).
+        // The sets are passed in rather than fetched: whoever owns the kill-switch owns the
+        // fetch, and there is no reachability check anywhere in this codebase (`AD-3`,
+        // `FR-SIDE-14`, `FR-SIDE-15`). `GovernanceGate` is what supplies them (`c2` phase 0).
         let sideQuests = (try? repository.sideQuests(
-            suppressingSideQuestIDs: [], suppressingPlaceIDs: [])) ?? []
+            suppressingSideQuestIDs: suppressedSideQuestIDs,
+            suppressingPlaceIDs: suppressedPlaceIDs)) ?? []
 
         rows = sideQuests.compactMap { sideQuest -> NearbySideQuestRow? in
             guard let place = (try? repository.place(id: sideQuest.placeId)) ?? nil else {

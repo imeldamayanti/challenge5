@@ -26,6 +26,12 @@ struct KultaraEnvironment {
     /// own callbacks, and two screens sharing one provider would have the second silently steal the
     /// first's fixes.
     let makeLocationProvider: @MainActor () -> any LocationProviding
+    /// The kill-switch (`AD-5`, `c2` phase 0). Available synchronously from disk at construction;
+    /// the refresh that updates it is the caller's, and nothing on screen waits for it.
+    let governance: GovernanceGate
+    /// Anonymous telemetry (`c2` phase 0). One instance, not a factory: the queue is the app's, not
+    /// a screen's, and two of them would race for the same file.
+    let telemetry: AppTelemetry
 
     init(
         repository: any ContentRepository,
@@ -36,7 +42,10 @@ struct KultaraEnvironment {
         storage: any StorageUsageReporting = ContainerStorageReporter(),
         proximityMonitor: (any ProximityMonitoring)? = nil,
         photoStore: (any PhotoStore)? = nil,
-        makeLocationProvider: (@MainActor () -> any LocationProviding)? = nil
+        makeLocationProvider: (@MainActor () -> any LocationProviding)? = nil,
+        backend: BackendConfiguration? = BackendConfiguration(),
+        governance: GovernanceGate? = nil,
+        telemetry: AppTelemetry? = nil
     ) {
         self.repository = repository
         self.preferences = preferences
@@ -52,6 +61,10 @@ struct KultaraEnvironment {
             alertStore: FileProximityAlertStore())
         self.photoStore = photoStore ?? FilePhotoStore()
         self.makeLocationProvider = makeLocationProvider ?? Self.defaultLocationProvider
+        // Both are optional at runtime: with no backend configured they are constructed, do
+        // nothing, and the app behaves exactly as it does today (`AD-3`).
+        self.governance = governance ?? GovernanceGate(configuration: backend)
+        self.telemetry = telemetry ?? AppTelemetry(configuration: backend)
     }
 
     var runEngine: RunEngine {

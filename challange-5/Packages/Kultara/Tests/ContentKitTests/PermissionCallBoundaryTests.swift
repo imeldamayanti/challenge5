@@ -205,11 +205,17 @@ struct PermissionCallBoundaryTests {
 
     // MARK: Scanner
 
-    static func occurrences(of needles: [String], under root: URL) throws -> [String] {
+    /// `onlyFileNamed` narrows a scan to one file in a directory that holds many. It exists for
+    /// `TelemetryPayloadBoundaryTests`, whose ban applies to the telemetry payload path rather than
+    /// to the whole of `Services/`.
+    static func occurrences(
+        of needles: [String], under root: URL, onlyFileNamed name: String? = nil
+    ) throws -> [String] {
         guard let walker = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else {
             return ["No sources found under \(root.path)"]
         }
-        let files = walker.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        var files = walker.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }
+        if let name { files = files.filter { $0.lastPathComponent == name } }
         // The same property one level down: a scan pointed at a directory that no longer exists
         // must fail, not pass.
         #expect(!files.isEmpty, "No Swift files under \(root.path) — the scan would pass vacuously.")

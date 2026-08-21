@@ -45,6 +45,11 @@ final class PreferencesOnlyDataEraser: LocalDataEraser {
 /// The photo store is a fourth: deleting a sidequest record alone leaves its image file on disk,
 /// which passes every database test and fails `FR-SET-02` — the exact mistake `s4` §7 warns about
 /// (`NFR-PRIV-01`).
+///
+/// The telemetry queue is a fifth (`c2` phase 0). It holds no identifier and no coordinate by
+/// construction — that is what `ops.events` having no user column means on this side of the wire —
+/// but unsent rows are still local data, and leaving them would make the summary's count of deleted
+/// events a number that is true only because nothing counted.
 @MainActor
 final class RunAndPreferencesDataEraser: LocalDataEraser {
 
@@ -52,6 +57,7 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
     private let sideQuestStore: (any SideQuestStore)?
     private let proximityMonitor: (any ProximityMonitoring)?
     private let photoStore: (any PhotoStore)?
+    private let telemetry: AppTelemetry?
     private let preferences: any AppPreferencesStore
 
     init(
@@ -59,12 +65,14 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
         sideQuestStore: (any SideQuestStore)? = nil,
         proximityMonitor: (any ProximityMonitoring)? = nil,
         photoStore: (any PhotoStore)? = nil,
+        telemetry: AppTelemetry? = nil,
         preferences: any AppPreferencesStore
     ) {
         self.store = store
         self.sideQuestStore = sideQuestStore
         self.proximityMonitor = proximityMonitor
         self.photoStore = photoStore
+        self.telemetry = telemetry
         self.preferences = preferences
     }
 
@@ -75,13 +83,17 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
         let deletedSideQuests = try sideQuestStore?.deleteAll() ?? 0
         let deletedProximityAlerts = try proximityMonitor?.deleteAllAlerts() ?? 0
         let deletedPhotos = try photoStore?.deleteAll() ?? 0
+        // A fifth aggregate as of `c2` phase 0: rows queued for the anonymous ingest endpoint, and
+        // the per-walk pseudonymous keys beside them. Neither identifies anybody, and both are
+        // still local data somebody asked to be rid of.
+        let deletedTelemetryEvents = telemetry?.eraseQueue() ?? 0
         preferences.removeAll()
         return ErasureSummary(
             deletedRuns: deletedRuns,
             deletedSideQuests: deletedSideQuests,
             deletedProximityAlerts: deletedProximityAlerts,
             deletedPhotos: deletedPhotos,
-            deletedTelemetryEvents: 0,
+            deletedTelemetryEvents: deletedTelemetryEvents,
             clearedPreferences: true)
     }
 }

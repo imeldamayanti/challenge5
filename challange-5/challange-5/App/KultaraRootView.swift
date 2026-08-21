@@ -8,6 +8,8 @@ struct KultaraRootView: View {
 
     private let environment: KultaraEnvironment
 
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var language: ContentLanguage
     @State private var showsOnboarding: Bool
     /// The two entry screens the app-flow chart opens with, neither of which is built. Held in
@@ -111,6 +113,71 @@ struct KultaraRootView: View {
                 browser
             }
         }
+        // `AD-5` — one attempt on launch and one on every foreground, and neither blocks a draw.
+        // The document the app already holds was read from disk at construction, so this updates an
+        // answer rather than producing one (`FR-ERR-09`).
+        .task { await refreshGovernance() }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                Task { await refreshGovernance() }
+                // Opportunistic, never on a timer and never on a transition somebody is waiting
+                // for (`NFR-BAT-04`'s reputation, if not its letter).
+                environment.telemetry.flush()
+            case .background:
+                environment.telemetry.flush()
+            default:
+                break
+            }
+        }
+    }
+
+    /// One kill-switch refresh, and everything that has to follow it.
+    ///
+    /// Nothing here can fail in a way the walker sees: a refresh that does not land keeps the last
+    /// good document, and every step below then re-applies what was already applied.
+    private func refreshGovernance() async {
+        await environment.governance.refresh()
+        // Regions outlive the screen that registered them, so the monitor is told directly rather
+        // than being handed a set at a call site (`FR-SIDE-14`).
+        environment.proximityMonitor.suppressedSideQuestIDs =
+            environment.governance.suppressedSideQuestIDs
+        environment.proximityMonitor.suppressedPlaceIDs =
+            environment.governance.suppressedPlaceIDs
+        environment.proximityMonitor.refreshRegions()
+        abandonSuppressedRuns()
+    }
+
+    /// A walk whose ground has been withdrawn under it ends as `placeSuppressed` rather than
+    /// carrying on to a checkpoint that must not be visited (`AD-5`).
+    ///
+    /// **Active walks only.** A finished walk renders from snapshots taken at completion — its lore,
+    /// place names and citations were copied into the Run — and suppression must never reach into a
+    /// summary of something that already happened.
+    private func abandonSuppressedRuns() {
+        guard let runs = try? environment.runStore.runs() else { return }
+        let engine = environment.runEngine
+        for run in runs where run.state == .active {
+            guard let quest = (try? environment.repository.quest(id: run.questID)) ?? nil else {
+                continue
+            }
+            guard environment.governance.suppresses(
+                questID: run.questID, placeIDs: quest.checkpoints.map(\.placeId))
+            else { continue }
+            guard (try? engine.abandon(runID: run.id, reason: .placeSuppressed)) != nil else {
+                continue
+            }
+            environment.telemetry.questAbandoned(
+                questID: run.questID,
+                lastOrderIndex: run.orderedCheckpointResults.last?.orderIndex ?? -1,
+                reason: AbandonReason.placeSuppressed.rawValue,
+                runID: run.id)
+            // The screen showing that walk has to go with it. Leaving it up would be a run screen
+            // driving a Run the store now calls abandoned.
+            if runDestination?.existingRunID == run.id { runDestination = nil }
+            if profileRunDestination?.existingRunID == run.id { profileRunDestination = nil }
+            journalRevision += 1
+        }
     }
 
     private var browser: some View {
@@ -201,8 +268,19 @@ struct KultaraRootView: View {
             QuestListView(
                 // Rebuilt when the language changes: every string in the list is resolved at
                 // construction, so the identity of the view model *is* the language.
-                model: QuestListViewModel(repository: environment.repository, language: language),
-                mapModel: RegionMapViewModel(repository: environment.repository, language: language),
+                // `AD-5` — the kill-switch's whole point is that a withdrawn place stops being
+                // offered. The sets are read here, in the body, so a document that arrives on a
+                // foreground rebuilds both surfaces without anything polling for it.
+                model: QuestListViewModel(
+                    repository: environment.repository,
+                    language: language,
+                    suppressedQuestIDs: environment.governance.suppressedQuestIDs,
+                    suppressedPlaceIDs: environment.governance.suppressedPlaceIDs),
+                mapModel: RegionMapViewModel(
+                    repository: environment.repository,
+                    language: language,
+                    suppressedQuestIDs: environment.governance.suppressedQuestIDs,
+                    suppressedPlaceIDs: environment.governance.suppressedPlaceIDs),
                 surface: $questSurface,
                 journal: journal,
                 // `FR-SIDE-07` — a way into a sidequest that does not wait for a notification.
@@ -223,7 +301,11 @@ struct KultaraRootView: View {
         return NearbySideQuestListViewModel(
             repository: environment.repository,
             engine: environment.sideQuestEngine,
-            language: language).rows
+            language: language,
+            // `FR-SIDE-14` — a withdrawn sidequest, or one standing at a withdrawn place,
+            // disappears from every surface.
+            suppressedSideQuestIDs: environment.governance.suppressedSideQuestIDs,
+            suppressedPlaceIDs: environment.governance.suppressedPlaceIDs).rows
     }
 
     private func sideQuestFlow(_ sideQuestID: String) -> some View {
@@ -447,7 +529,8 @@ struct KultaraRootView: View {
                 // `1:4827`'s photograph. The same store the sidequest photo challenge writes to and
                 // the same one "delete all local data" empties (`FR-SET-02`), so a quest photo is
                 // not a fourth aggregate the eraser would have to learn about.
-                photoStore: environment.photoStore)
+                photoStore: environment.photoStore,
+                telemetry: environment.telemetry)
         } content: { model in
             KultaraThemeProvider { QuestRunView(model: model) }
                 .onDisappear {
@@ -474,6 +557,7 @@ struct KultaraRootView: View {
                 sideQuestStore: environment.sideQuestStore,
                 proximityMonitor: environment.proximityMonitor,
                 photoStore: environment.photoStore,
+                telemetry: environment.telemetry,
                 preferences: environment.preferences),
             storage: environment.storage,
             proximityMonitor: environment.proximityMonitor)

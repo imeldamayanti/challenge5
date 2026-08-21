@@ -212,6 +212,8 @@ struct StubStorageReporter: StorageUsageReporting {
 /// permission would be the exact thing `PermissionCallBoundaryTests` bans.
 @MainActor
 final class StubProximityMonitor: ProximityMonitoring {
+    var suppressedSideQuestIDs: Set<String> = []
+    var suppressedPlaceIDs: Set<String> = []
     var isEnabled = false
     var authorization: LocationAuthorizationSnapshot = .notRequested
     var notificationsAuthorized = false
