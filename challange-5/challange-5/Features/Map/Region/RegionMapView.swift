@@ -1,10 +1,14 @@
 import ContentKit
 import DesignSystem
+import RunEngine
 import SwiftUI
 import UIStringsKit
 
 struct RegionMapView: View {
     @Environment(\.kultaraPalette) private var palette
+    /// Pixels to the point, so the pyramid is asked for the level that matches what the device
+    /// will actually paint rather than the level that matches the point count.
+    @Environment(\.displayScale) private var displayScale
 
     private let model: RegionMapViewModel
     private let onSelect: (String) -> Void
@@ -66,10 +70,7 @@ struct RegionMapView: View {
             let offset = clampedPan(in: proxy.size, content: size, scale: scale)
 
             ZStack(alignment: .topLeading) {
-                mapImage(size: size)
-                    .frame(width: size.width, height: size.height)
-                    .scaleEffect(scale)
-                    .offset(offset)
+                mapSurface(size: size, viewport: proxy.size, scale: scale, offset: offset)
                     .frame(width: proxy.size.width, height: proxy.size.height)
 
                 // Markers are drawn in screen space, not in map space: inside the `scaleEffect`
@@ -273,6 +274,99 @@ struct RegionMapView: View {
                 zoom = 2.5
             }
         }
+    }
+
+    /// The artwork, drawn where the pan and the zoom put it.
+    ///
+    /// **The tiled branch is not an optimisation, it is the fix.** The old drawing was one
+    /// `Image` framed at the resting size and then `scaleEffect`-ed: SwiftUI rasterises the image
+    /// once at that frame — 402 points, about 1200 pixels on this screen — and magnifies the
+    /// *layer*, so a reader pinching to 6× is stretching a 1200-pixel bitmap to 7200 and most of
+    /// the 1469-pixel source is never consulted. That is the break-up this replaces. A `Canvas`
+    /// re-renders on every frame at the size actually on screen, and the pyramid hands it a level
+    /// whose pixels match, so zooming reads *into* the drawing rather than across a fixed raster.
+    ///
+    /// Falls back to the single image when content ships no pyramid — same picture, same
+    /// behaviour as before, including the `scaleEffect` and its ceiling.
+    @ViewBuilder private func mapSurface(
+        size: CGSize, viewport: CGSize, scale: CGFloat, offset: CGSize
+    ) -> some View {
+        if let tiles = model.tiles {
+            Canvas(opaque: false) { context, _ in
+                draw(tiles, in: &context,
+                     artwork: artworkRect(size: size, viewport: viewport, scale: scale, offset: offset),
+                     viewport: viewport)
+            }
+            .frame(width: viewport.width, height: viewport.height)
+            .accessibilityHidden(true)
+        } else {
+            mapImage(size: size)
+                .frame(width: size.width, height: size.height)
+                .scaleEffect(scale)
+                .offset(offset)
+        }
+    }
+
+    /// Where the artwork lands in the viewport, in the viewport's own coordinates.
+    ///
+    /// This is the same centre-scale-then-offset `position(of:)` puts the markers through, written
+    /// out once instead of relying on `scaleEffect` and `offset` to perform it. The two must agree
+    /// exactly or every marker drifts off the place it marks.
+    private func artworkRect(
+        size: CGSize, viewport: CGSize, scale: CGFloat, offset: CGSize
+    ) -> CGRect {
+        let drawn = CGSize(width: size.width * scale, height: size.height * scale)
+        return CGRect(
+            x: (viewport.width - drawn.width) / 2 + offset.width,
+            y: (viewport.height - drawn.height) / 2 + offset.height,
+            width: drawn.width,
+            height: drawn.height)
+    }
+
+    /// Paints the tiles that fall inside the viewport, at the level sized for what is on screen.
+    private func draw(
+        _ tiles: RasterTileImageStore,
+        in context: inout GraphicsContext,
+        artwork: CGRect,
+        viewport: CGSize
+    ) {
+        guard artwork.width > 0, artwork.height > 0 else { return }
+
+        let visible = CGRect(origin: .zero, size: viewport).intersection(artwork)
+        guard !visible.isNull, !visible.isEmpty else { return }
+
+        let zoom = tiles.zoom(forDrawnWidth: artwork.width, displayScale: displayScale)
+        let region = RasterTilePyramid.NormalizedRect(
+            minX: Double((visible.minX - artwork.minX) / artwork.width),
+            minY: Double((visible.minY - artwork.minY) / artwork.height),
+            maxX: Double((visible.maxX - artwork.minX) / artwork.width),
+            maxY: Double((visible.maxY - artwork.minY) / artwork.height))
+
+        for tile in tiles.pyramid.tiles(covering: region, atZoom: zoom) {
+            guard let image = tiles.image(for: tile) else { continue }
+            // `.high` on the `Image`, because a `GraphicsContext` has no interpolation setting of
+            // its own. It matters between levels: the chosen level is at least as many pixels as
+            // the rectangle, so every tile is being *down*-sampled, and the default quality prints
+            // the chart's ink lines as stipple.
+            context.draw(
+                Image(uiImage: image).interpolation(.high),
+                in: snapped(tile.rect(in: artwork), to: displayScale))
+        }
+    }
+
+    /// Tile edges pulled onto the device's pixel grid.
+    ///
+    /// Two neighbours share an edge as an exact `Double`, but drawn at a fractional pixel each is
+    /// antialiased against nothing and the seam prints as a bright hairline across the map. Both
+    /// tiles round that shared edge the same way, so rounding closes the seam rather than trading
+    /// it for an overlap.
+    private func snapped(_ rect: CGRect, to displayScale: CGFloat) -> CGRect {
+        let s = max(displayScale, 1)
+        let minX = (rect.minX * s).rounded() / s
+        let minY = (rect.minY * s).rounded() / s
+        let maxX = (rect.maxX * s).rounded() / s
+        let maxY = (rect.maxY * s).rounded() / s
+        return CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
     }
 
     @ViewBuilder private func mapImage(size: CGSize) -> some View {

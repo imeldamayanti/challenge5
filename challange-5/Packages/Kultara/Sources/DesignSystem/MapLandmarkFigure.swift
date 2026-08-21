@@ -164,7 +164,9 @@ public struct MapLandmarkFigure: View {
 /// it is the colour the drawing's own sea fades to at its edge, used to letterbox the artwork when
 /// the reader pinches out far enough to see the whole island. Behind an image, not behind text.
 public enum RegionMapArtwork {
-    /// Sampled from `Content/assets/maps/bali-illustrated.png` at its four corners, which agree to
-    /// within two levels: #879598–#8F9F9E.
-    public static let seaEdge = SRGBColor(hex: "#8B9999")
+    /// Sampled from `Content/assets/maps/bali-illustrated.png` at its four corners and averaged:
+    /// #99CCD9, #9ACED9, #A5D5DE, #A3D3DE. Re-sampled when the chart was replaced — the previous
+    /// artwork's sea was a grey-green #8B9999 and letterboxing this one with it printed a band of
+    /// the old map's colour beside the new one.
+    public static let seaEdge = SRGBColor(hex: "#9FD0DC")
 }

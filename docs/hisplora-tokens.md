@@ -1299,6 +1299,154 @@ surfaces, and two controls that look alike would say they do the same thing. Onl
 carries something to resume; a finished walk's record is its letter and its badge, and a row that
 looks tappable and is not is worse than a row that does not.
 
+## The region chart was replaced, and what that re-measured (2026-08-21)
+
+`maps/bali-illustrated.png` is a new drawing: **1536 × 1024**, `aspectRatio` **1.5**, a watercolour
+chart of Bali with Nusa Penida and Lembongan and nothing beyond. It replaces `275:2309`'s
+1469 × 1071 sepia island at 1.3716, and `contentBundleVersion` goes to **2026.09.11**.
+
+**Nothing measured off the old drawing survives a new one.** Everything below moved together, and
+the order matters: the geometry first, then the points, then the pixels.
+
+### The fit
+
+The land was separated from the sea by `G − B > 20` — this palette's sea sits at about −15 and its
+land at +50 to +80, so the split is unambiguous — and the mask then eroded three pixels to drop the
+offshore rocks, which a foam-inclusive mask bridges to the mainland and which would otherwise have
+set the west extremity 28 pixels too far out.
+
+| the drawing | is bound to | because |
+|---|---|---|
+| x 56 — west extremity | 114.4327°E | Bali's westernmost point, Prapat Agung |
+| x 1499 — east extremity | 115.7133°E | Bali's easternmost cape |
+| y 58 — north extremity | −8.0611 | the north coast at its highest |
+| y 760 — the Bukit isthmus | −8.7750 | the narrowest land bridge, found as the row with the least land between x 700 and 1100 |
+
+**1126.82 px per degree of longitude, 983.33 per degree of latitude.**
+
+### Why latitude is anchored on the isthmus and not on the Bukit's tip
+
+The obvious fourth anchor is the drawn south extremity against Bali's southernmost latitude. It is
+wrong, and visibly so. This drawing runs the Bukit peninsula about **twice** its true length — it is
+the silhouette's most recognisable feature and the artist gave it room — so binding its tip
+stretches the whole latitude scale. Built and rendered before it was caught: the five Denpasar
+places landed *on* the isthmus and the six Kuta ones landed *on the Bukit*, every one of them a
+place a walker would recognise as wrong.
+
+Anchored on the neck instead, the strip the shipped quests occupy lands where it belongs and the
+exaggeration is left where the artist put it: Bali's real southern tip falls at **y ≈ 833** on a
+drawing that runs to y 940.
+
+The check that settled it was not arithmetic. Every projected point was drawn onto the artwork and
+looked at: the Kuta cluster sits on the coastal strip *north* of the neck, the Denpasar cluster
+inland and north-east of it, both on land, in the right relation to each other and to the coast.
+
+### The distortion reversed
+
+| | old chart | this chart |
+|---|---|---|
+| px/°lon | 960 | 1126.82 |
+| px/°lat | 1206 | 983.33 |
+| lat ÷ lon | 1.256 | **0.873** |
+| drawn, placed for correct geography | 1.25× wider than its own proportions | 1.15× taller |
+
+Less distortion than before, and in the other direction. The residual error is the Bukit's length,
+absorbed at the south edge where no quest goes.
+
+### Coverage is tighter
+
+The old chart ran to Java's tip and Lombok. This one stops just past Bali's east cape, so
+`theFittedImageCoversTheIsland` asserts 115.72 rather than 115.75. Widening it back would be
+asserting coverage the artwork does not have.
+
+### The sea token moved
+
+`RegionMapArtwork.seaEdge` is **#9FD0DC**, the mean of the four corners (#99CCD9, #9ACED9, #A5D5DE,
+#A3D3DE). The old value was #8B9999, a grey-green; letterboxing this chart with it printed a band of
+the previous map's sea beside the new one. Still deliberately not a palette token — nothing is
+measured against it.
+
+### The pyramid
+
+`remacri-4x` at scale 4 gives 6144 × 4096; **513 WebP tiles, levels 0–5, 9.7 MB.** Larger than the
+previous chart's 6.2 MB because this drawing is textured where the sepia one had flat washes.
+6144 and 4096 are exact multiples of 256, so this pyramid has no padded edge tiles at all — the
+overhang rule is still guarded, on a ragged synthetic pyramid, because the tidy case is the one that
+stops being true the moment the artwork is re-cut.
+
+### Verified against the live basemap
+
+The only real test of a georeference is the ground underneath it. On iPhone 17 Pro / iOS 26.5, at
+one camera, the wand swaps the chart for MapKit: the coastlines line up and the marker sits on
+Denpasar — `docs/screenshots/m15-map-new-chart.png`.
+
+### Still open
+
+The chart is bright watercolour on cyan. The Hisplora direction is aged brown and cream paper, and
+the Journal and the story flow are built on it. This map now reads as a different app's map next to
+those screens. That is a visual-direction decision with an owner, not a bug, and it is recorded here
+rather than quietly absorbed.
+
+## The region chart's resolution, and the upscale that raised it (2026-08-21)
+
+`275:2309`'s island is a 1469 × 1071 drawing shown on surfaces that magnify it. That is the whole
+of why it looked broken up, and the arithmetic is worth writing down because it is the thing a
+tiling scheme cannot argue with.
+
+The chart spans 1.5302° of longitude — 168.4 km at this latitude — across 1469 pixels, so it holds
+**8.72 px/km**. An iPhone 17 screen is 1206 pixels across. The drawing is therefore 1:1 only when
+the viewport is **138 km wide**, which is very nearly the whole island; the discovery map's opening
+camera shows about 22 km, so it was being magnified **6.3×** before anything was drawn.
+
+| viewport | source width needed for 1:1 |
+|---|---|
+| 138 km | 1,469 px — the authored drawing |
+| 60 km | 3,385 px |
+| 30 km | 6,770 px |
+| 20 km | 10,155 px |
+| 5 km | 40,618 px |
+
+Street zoom is unreachable and always was. What ships instead is a **4× super-resolution pass**:
+5876 × 4284, 34.9 px/km, 1:1 at a 34.5 km viewport, so the opening camera magnifies 1.6× rather
+than 6.3×.
+
+**A pure scale is the reason this was the option taken.** Every `mapPoint` was authored by eye
+against this coastline and the 960/1206 px-per-degree rates were measured off this drawing; a
+*redrawn* or regenerated chart invalidates all of it and is a content job with an owner. Scaling
+the same picture moves nothing on the paper, so `manifest.regionMap.asset`, `aspectRatio 1.3716`,
+`IllustratedMapGeoreference` and all eleven authored points are untouched.
+
+### The model, and why not the sharper ones
+
+Upscayl 2.15.0's `upscayl-bin`, four models compared on the same 360 × 270 crop of the south coast
+before choosing:
+
+| model | verdict |
+|---|---|
+| `remacri-4x` | **shipped.** Reconstructs the ink lines, keeps the wash colour and the paper grain, adds no pattern that was not there |
+| `high-fidelity-4x` | crisper lines, but hallucinates a heavy canvas weave across the sea |
+| `ultrasharp-4x` | sharpest lines, over-contrasts the land, and lays a regular grid weave over the water |
+| `digital-art-4x` | cleanest of all — and flattens the sea to plain colour and removes the paper grain, which is the texture the whole direction is built on |
+
+Lanczos was the control and only blurs; it reconstructs nothing.
+
+The 45 MB upscaled master is **not** committed. It is regenerable from the authored PNG, and the
+exact command is in the header of `scripts/build-map-tiles.sh` — the same treatment
+`docs/design-sources/stamps/` gets, and for the same reason.
+
+### The tiles are WebP, and that is a 37 MB decision
+
+543 tiles: **43 MB as PNG, 6.2 MB as WebP at quality 90.** A q90 tile was compared against its PNG
+at 1:1 before the switch rather than assumed equivalent — on this artwork they are
+indistinguishable. Below about quality 85 the ink lines start ringing against the paper, which on a
+drawing made almost entirely of ink lines is the one artefact that would show. ImageIO has decoded
+WebP since iOS 14 and the deployment target is 18.0, so nothing extra is needed to read them;
+`tiles.json` states `tileFormat` so no Swift hardcodes the extension.
+
+**34.5 km is a ceiling, not infinity.** A reader who pinches to street level still gets smooth
+blur. Going further means a genuinely higher-resolution drawing, or handing the ground over to the
+live basemap past the chart's own resolution — neither is built.
+
 ## Seen rendering
 
 **`452:3132`, `447:1880` and `452:3028` were verified on iPhone 17 / iOS 26.5 on 2026-08-17**,

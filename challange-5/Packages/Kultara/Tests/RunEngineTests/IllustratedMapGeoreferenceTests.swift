@@ -3,15 +3,15 @@ import Testing
 @testable import RunEngine
 
 /// The five Places `badung-empat-wajah` walks, as they are authored today: the real coordinate and
-/// the `mapPoint` that was eyeballed onto `275:2309`'s chart. These are the anchors the discovery
+/// the `mapPoint` that was eyeballed onto the shipped chart. These are the anchors the discovery
 /// map fits its overlay from, so this suite is what stands between an author nudging a pin and the
 /// illustration silently sliding off Bali.
 private let badungAnchors: [IllustratedMapGeoreference.Anchor] = [
-    .init(point: MapPoint(x: 0.6419, y: 0.7021), coordinate: Coordinate(lat: -8.6595, lon: 115.2077)),
-    .init(point: MapPoint(x: 0.6425, y: 0.6993), coordinate: Coordinate(lat: -8.6570, lon: 115.2085)),
-    .init(point: MapPoint(x: 0.6444, y: 0.6960), coordinate: Coordinate(lat: -8.6540, lon: 115.2115)),
-    .init(point: MapPoint(x: 0.6474, y: 0.6954), coordinate: Coordinate(lat: -8.6535, lon: 115.2160)),
-    .init(point: MapPoint(x: 0.6481, y: 0.6982), coordinate: Coordinate(lat: -8.6560, lon: 115.2172)),
+    .init(point: MapPoint(x: 0.6050, y: 0.6313), coordinate: Coordinate(lat: -8.6595, lon: 115.2077)),
+    .init(point: MapPoint(x: 0.6056, y: 0.6289), coordinate: Coordinate(lat: -8.6570, lon: 115.2085)),
+    .init(point: MapPoint(x: 0.6078, y: 0.6260), coordinate: Coordinate(lat: -8.6540, lon: 115.2115)),
+    .init(point: MapPoint(x: 0.6111, y: 0.6255), coordinate: Coordinate(lat: -8.6535, lon: 115.2160)),
+    .init(point: MapPoint(x: 0.6120, y: 0.6279), coordinate: Coordinate(lat: -8.6560, lon: 115.2172)),
 ]
 
 @Suite struct IllustratedMapGeoreferenceTests {
@@ -34,32 +34,39 @@ private let badungAnchors: [IllustratedMapGeoreference.Anchor] = [
         let georeference = try! #require(
             IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors))
 
-        // `HisploraBaliGeoData.baliBounds` — the island, outlying islands included.
+        // Bali proper plus Nusa Penida. **Not** as far as Lombok: the chart is framed on Bali and
+        // its east edge sits a little past Tanjung Bungsil (115.7133), where the older drawing ran
+        // on to Lombok's coast. Widening this back would be asserting coverage the artwork does not
+        // have.
         #expect(georeference.northWest.lon < 114.40)
-        #expect(georeference.southEast.lon > 115.75)
+        #expect(georeference.southEast.lon > 115.72)
         #expect(georeference.northWest.lat > -8.05)
         #expect(georeference.southEast.lat < -8.90)
     }
 
-    /// 1469 ÷ 960 and 1071 ÷ 1206. The spans are what the overlay's rectangle is built from, so
-    /// they are pinned rather than left to arithmetic nobody re-checks.
+    /// 1536 ÷ 1126.82 and 1024 ÷ 983.33. The spans are what the overlay's rectangle is built from,
+    /// so they are pinned rather than left to arithmetic nobody re-checks.
     @Test func theSpansComeFromTheMeasuredRates() {
         let georeference = try! #require(
             IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors))
 
-        #expect(abs(georeference.lonSpanDegrees - 1.53021) < 0.0001)
-        #expect(abs(georeference.latSpanDegrees - 0.88806) < 0.0001)
+        #expect(abs(georeference.lonSpanDegrees - 1.36311) < 0.0001)
+        #expect(abs(georeference.latSpanDegrees - 1.04136) < 0.0001)
     }
 
-    /// The drawing is stretched vertically against true scale, and this is the number that says by
-    /// how much. Placed so geography is right, the picture is drawn about 1.25× wider than its own
+    /// The drawing is compressed vertically against true scale, and this is the number that says by
+    /// how much. Placed so geography is right, the picture is drawn about 1.15× taller than its own
     /// proportions — the deviation `docs/hisplora-tokens.md` records, asserted rather than trusted.
+    ///
+    /// It reversed when the chart was replaced. The older drawing ran 1.256 the other way, and the
+    /// note that used to sit here said the art was squashed; this one is close enough to true scale
+    /// that the remaining error is the Bukit's exaggerated length, absorbed at the south edge.
     @Test func theArtIsStretchedAboutOneAndAQuarterAgainstTrueScale() {
         let georeference = try! #require(
             IllustratedMapGeoreference.fittedToBaliIllustration(anchors: badungAnchors))
 
         let stretch = georeference.pixelsPerDegreeLat / georeference.pixelsPerDegreeLon
-        #expect(abs(stretch - 1.25625) < 0.0001)
+        #expect(abs(stretch - 0.87266) < 0.0001)
     }
 
     @Test func aPointAndACoordinateRoundTrip() {
@@ -89,7 +96,7 @@ private let badungAnchors: [IllustratedMapGeoreference.Anchor] = [
     /// `IllustratedMapGeoreference` started fitting the overlay's place in the world from authored
     /// points, and the fix for them was arithmetic. The fix for *the next one* is this.
     ///
-    /// The tolerance is 1.5 km, which is about 13 pixels of longitude on a 1469-pixel drawing. A
+    /// The tolerance is 1.5 km, which is about 15 pixels of longitude on a 1536-pixel drawing. A
     /// point is still authored, not derived — a pin may be nudged off the exact projection to clear
     /// a label or a coastline, and that headroom is what the tolerance is for. What it will not
     /// tolerate is a point that was never placed against this artwork at all: the five were out by
@@ -123,8 +130,8 @@ private let badungAnchors: [IllustratedMapGeoreference.Anchor] = [
 
     @Test func aDegenerateImageYieldsNoGeoreference() {
         #expect(IllustratedMapGeoreference.fitted(
-            imageWidthPx: 0, imageHeightPx: 1071,
-            pixelsPerDegreeLon: 960, pixelsPerDegreeLat: 1206,
+            imageWidthPx: 0, imageHeightPx: 1024,
+            pixelsPerDegreeLon: 1126.82, pixelsPerDegreeLat: 983.33,
             anchors: badungAnchors) == nil)
     }
 }

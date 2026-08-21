@@ -1,0 +1,8 @@
+{
+  "tileSize": 256,
+  "tileFormat": "webp",
+  "sourceWidthPx": 6144,
+  "sourceHeightPx": 4096,
+  "minZoom": 0,
+  "maxZoom": 5
+}

@@ -60,6 +60,7 @@ struct QuestMapScreen: View {
             pins: model.pins,
             georeference: model.georeference,
             illustration: illustration,
+            tiles: model.tiles,
             showsIllustration: map.showsIllustrationOverlay,
             showsUserLocation: map.showsUserLocation,
             palette: palette,

@@ -67,8 +67,17 @@ struct BundledContentRepositoryTests {
         // `2026.09.8` re-authored the five `mapPoint`s that were never placed against `275:2309` at
         // all — leftovers from the portrait drawing, 34 to 40 km out, invisible for as long as no
         // quest reached those Places. `IllustratedMapGeoreferenceTests` now guards the whole set.
+        // `2026.09.9` added the region map's `gdal2tiles` pyramid — no change to the drawing, but
+        // `manifest.regionMap` gained a `tiles` directory and the bundle gained 44 tiles.
+        // `2026.09.10` rebuilt that pyramid from a 4× super-resolution pass over the same drawing
+        // (543 WebP tiles, six levels, 5 MB), which is more pixels rather than a different picture:
+        // `regionMap.asset`, `aspectRatio` and every `mapPoint` are untouched, because a pure scale
+        // cannot move anything on the paper.
+        // `2026.09.11` replaced the drawing itself — a new 1536 × 1024 chart of Bali and Nusa
+        // Penida — so `aspectRatio` went 1.3716 → 1.5, every `mapPoint` was re-authored against the
+        // new coastline, and `IllustratedMapGeoreference`'s two rates were re-measured off it.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.8")
+        #expect(try repository.contentBundleVersion() == "2026.09.11")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)
@@ -243,6 +252,57 @@ struct BundledContentRepositoryTests {
         let repository = try repository()
         let regionMap = try #require(try repository.manifest().regionMap)
         #expect(try repository.assetURL(regionMap.asset) != nil)
+
+        // The pyramid ships too, and every tile it claims is on disk. A half-written pyramid is
+        // the one failure mode that would not show up as a crash or a missing file at launch — the
+        // map would simply draw holes where a level ran out, at whichever zoom the reader happened
+        // to reach. `scripts/build-map-tiles.sh` writes the whole thing or nothing; this is what
+        // notices when a partial one is committed.
+        let tilesPath = try #require(regionMap.tiles)
+        let root = try #require(try repository.assetURL(tilesPath))
+        let manifest = try #require(
+            try? Data(contentsOf: root.appendingPathComponent("tiles.json")))
+        let pyramid = try JSONDecoder().decode(RasterTilePyramidManifest.self, from: manifest)
+
+        #expect(pyramid.tileSize == 256)
+        #expect(pyramid.maxZoom > pyramid.minZoom)
+
+        // The drawing the pyramid was built from must still be the drawing the manifest declares,
+        // to the pixel and up to a whole-number scale. A pyramid cut from a *different* picture
+        // would draw a coastline every authored `mapPoint` was placed against by eye, and nothing
+        // else in the suite would notice.
+        #expect(pyramid.sourceWidthPx % 1536 == 0)
+        #expect(pyramid.sourceHeightPx % 1024 == 0)
+        #expect(pyramid.sourceWidthPx / 1536 == pyramid.sourceHeightPx / 1024)
+
+        for z in pyramid.minZoom...pyramid.maxZoom {
+            let scale = pow(2.0, Double(z - pyramid.maxZoom))
+            let columns = Int(ceil(Double(pyramid.sourceWidthPx) * scale / 256))
+            let rows = Int(ceil(Double(pyramid.sourceHeightPx) * scale / 256))
+            for x in 0..<max(columns, 1) {
+                for y in 0..<max(rows, 1) {
+                    let tile = "\(tilesPath)/\(z)/\(x)/\(y).\(pyramid.tileFormat)"
+                    #expect(try repository.assetURL(tile) != nil, "missing tile \(tile)")
+                }
+            }
+        }
+    }
+
+    /// A local mirror of `RunEngine.RasterTilePyramid`'s manifest shape. `ContentKitTests` must not
+    /// import `RunEngine` — `ContentKit` is the bottom of the stack and a test that reached upward
+    /// would make the layering unenforceable — and what is being checked here is the *file*, not
+    /// the type that reads it.
+    private struct RasterTilePyramidManifest: Decodable {
+        let tileSize: Int
+        let tileFormat: String
+        let sourceWidthPx: Int
+        let sourceHeightPx: Int
+        let minZoom: Int
+        let maxZoom: Int
+    }
+
+    @Test func theRegionMapPinsAreInsideTheDrawing() throws {
+        let repository = try repository()
 
         for quest in try repository.quests() {
             for checkpoint in quest.orderedCheckpoints {

@@ -21,12 +21,20 @@ import UIKit
 /// decided at init, so there is nothing for the annotation to make unsafe.
 nonisolated final class IllustratedMapOverlay: NSObject, MKOverlay {
 
-    let image: UIImage
+    /// The whole chart as one bitmap. Nil when a pyramid shipped: the renderer draws tiles then,
+    /// and six megabytes of resident bitmap that nothing paints is not a fallback.
+    let image: UIImage?
+    /// The same drawing as a `gdal2tiles` pyramid, when content ships one. The renderer prefers it
+    /// — at street zoom the whole-image draw was stretching a 1469-pixel picture across a rectangle
+    /// hundreds of times its width, and a level of the pyramid at least stops that being the *only*
+    /// thing available.
+    let tiles: RasterTileImageStore?
     let boundingMapRect: MKMapRect
     let coordinate: CLLocationCoordinate2D
 
-    init(image: UIImage, georeference: IllustratedMapGeoreference) {
+    init(image: UIImage?, tiles: RasterTileImageStore?, georeference: IllustratedMapGeoreference) {
         self.image = image
+        self.tiles = tiles
 
         let northWest = MKMapPoint(CLLocationCoordinate2D(
             latitude: georeference.northWest.lat, longitude: georeference.northWest.lon))
@@ -62,22 +70,74 @@ nonisolated final class IllustratedMapOverlayRenderer: MKOverlayRenderer {
     }
 
     override func draw(_ mapRect: MKMapRect, zoomScale: MKZoomScale, in context: CGContext) {
-        guard alpha > 0.01,
-              let overlay = overlay as? IllustratedMapOverlay,
-              let cgImage = overlay.image.cgImage
-        else { return }
+        guard alpha > 0.01, let overlay = overlay as? IllustratedMapOverlay else { return }
 
         let target = rect(for: overlay.boundingMapRect)
+        guard target.width > 0, target.height > 0 else { return }
 
         context.saveGState()
-        context.translateBy(x: 0, y: target.maxY)
-        context.scaleBy(x: 1, y: -1)
-        context.translateBy(x: 0, y: -target.minY)
         context.setAlpha(alpha)
         // The chart's edge is paper, not a hard crop, so interpolation matters at the seams and at
         // the deep zoom levels a walker in Denpasar will actually use.
         context.interpolationQuality = .high
-        context.draw(cgImage, in: target)
+
+        if let tiles = overlay.tiles {
+            drawTiles(tiles, into: target, clippedTo: mapRect, in: context)
+        } else if let cgImage = overlay.image?.cgImage {
+            draw(cgImage, in: target, on: context)
+        }
         context.restoreGState()
+    }
+
+    /// Draws one image the right way up.
+    ///
+    /// MapKit hands the renderer a context whose y axis runs the opposite way from the image's, so
+    /// without this the island is upside down. The flip is a reflection about the rectangle's own
+    /// centre, which leaves the rectangle where it is and turns only what is printed inside it —
+    /// which is what lets every rectangle in this file be computed in the image's own top-left-down
+    /// space and then drawn without further correction. It is Core Graphics rather than
+    /// `UIImage.draw(in:)` because this runs off the main thread.
+    private func draw(_ image: CGImage, in rect: CGRect, on context: CGContext) {
+        context.saveGState()
+        context.translateBy(x: 0, y: rect.maxY)
+        context.scaleBy(x: 1, y: -1)
+        context.translateBy(x: 0, y: -rect.minY)
+        context.draw(image, in: rect)
+        context.restoreGState()
+    }
+
+    /// Draws only the pyramid tiles that meet `mapRect`, at the level whose pixels match what this
+    /// pass is about to fill.
+    ///
+    /// MapKit calls `draw` once per tile of *its* grid, so without the clip every pass would paint
+    /// the whole island and throw away all but a 256-point square of it. The level is picked from
+    /// the drawn width rather than from `zoomScale` directly, because `zoomScale` is points per map
+    /// point and says nothing about how many pixels of artwork are being asked for.
+    private func drawTiles(
+        _ tiles: RasterTileImageStore,
+        into target: CGRect,
+        clippedTo mapRect: MKMapRect,
+        in context: CGContext
+    ) {
+        let visible = rect(for: mapRect).intersection(target)
+        guard !visible.isNull, !visible.isEmpty else { return }
+
+        let zoom = tiles.pyramid.zoom(forDrawnWidthPx: Double(target.width))
+        let region = RasterTilePyramid.NormalizedRect(
+            minX: Double((visible.minX - target.minX) / target.width),
+            minY: Double((visible.minY - target.minY) / target.height),
+            maxX: Double((visible.maxX - target.minX) / target.width),
+            maxY: Double((visible.maxY - target.minY) / target.height))
+
+        // Half a device pixel of overlap. There is no pixel grid to round to here — the context is
+        // MapKit's and its scale changes with the zoom — so neighbours are grown into each other
+        // rather than snapped together. Without it the seams print as hairlines of basemap showing
+        // through the chart.
+        let bleed = 0.5 / max(contentScaleFactor, 1)
+
+        for tile in tiles.pyramid.tiles(covering: region, atZoom: zoom) {
+            guard let image = tiles.image(for: tile)?.cgImage else { continue }
+            draw(image, in: tile.rect(in: target).insetBy(dx: -bleed, dy: -bleed), on: context)
+        }
     }
 }
