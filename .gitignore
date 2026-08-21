@@ -41,6 +41,11 @@ Package.resolved
 .branches
 .temp
 
+# Apple Sign in with Apple private key (.p8) and anything else operator-only that is not an
+# .env file. Never committed, never uploaded anywhere. The service-role key's neighbour: two
+# places only — this machine, and Supabase's own secrets store via `supabase secrets set`.
+/secrets/
+
 # dotenvx
 .env.keys
 .env.local
