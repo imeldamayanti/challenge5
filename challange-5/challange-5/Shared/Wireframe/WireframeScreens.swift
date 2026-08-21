@@ -47,35 +47,6 @@ struct SplashWireframeView: View {
     }
 }
 
-/// Login, with Register one push away. `onSkip` is the honest control here: there is no account
-/// backend, so every button on this screen does the same thing, and only one of them says so.
-struct AuthWireframeView: View {
-    let language: ContentLanguage
-    let onSkip: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            WireframeScreen(WireframeCatalog.login, language: language) {
-                VStack(spacing: KultaraMetrics.md) {
-                    NavigationLink {
-                        WireframeScreen(WireframeCatalog.register, language: language) {
-                            Button(WireframeCatalog.skipAction.value(for: language)) { onSkip() }
-                                .buttonStyle(.seal)
-                        }
-                    } label: {
-                        Text(WireframeCatalog.register.title.value(for: language))
-                    }
-                    .buttonStyle(.ruled)
-
-                    Button(WireframeCatalog.skipAction.value(for: language)) { onSkip() }
-                        .buttonStyle(.seal)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-}
-
 // MARK: - Journal branch
 
 /// Completion screen → Create Journal → Save Journal → Trip Summary.

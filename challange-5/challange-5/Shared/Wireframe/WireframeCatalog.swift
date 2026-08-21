@@ -50,21 +50,6 @@ enum WireframeCatalog {
             id: "Splash → Onboarding → Login/Register → Home. Nama aplikasi belum diputuskan, jadi wordmark-nya masih kosong.",
             en: "Splash → Onboarding → Login/Register → Home. The app has no name yet, so the wordmark is deliberately empty."))
 
-    static let login = WireframeSpec(
-        title: LocalizedText(id: "Login", en: "Login"),
-        purpose: LocalizedText(
-            id: "Masuk ke akun sebelum masuk Home.",
-            en: "Sign in to an account before reaching Home."),
-        blocks: [
-            LocalizedText(id: "Kolom email", en: "Email field"),
-            LocalizedText(id: "Kolom kata sandi", en: "Password field"),
-            LocalizedText(id: "Tombol masuk", en: "Sign-in button"),
-            LocalizedText(id: "Tautan ke Register", en: "Link to Register"),
-        ],
-        flowNote: LocalizedText(
-            id: "Belum ada backend akun, dan seluruh alur inti dirancang jalan tanpa jaringan (AD-3). Layar ini butuh keputusan produk dulu: data apa yang disimpan di server, dan apa yang tetap bisa dipakai offline.",
-            en: "There is no account backend, and every core flow is designed to work with no network (AD-3). This screen needs a product decision first: what is stored on a server, and what still has to work offline."))
-
     static let register = WireframeSpec(
         title: LocalizedText(id: "Register", en: "Register"),
         purpose: LocalizedText(

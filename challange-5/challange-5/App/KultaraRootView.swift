@@ -112,7 +112,21 @@ struct KultaraRootView: View {
                     language: language,
                     onFinish: { showsOnboarding = false })
             } else if showsAuth {
-                AuthWireframeView(language: language, onSkip: { showsAuth = false })
+                // `c2` phase 6. The flow chart's login node, built rather than drawn — but **not
+                // a gate**: every flow works without it, and "Not now" is the same size as the
+                // button beside it. `AuthWireframeView` is gone; nothing else referenced it.
+                CredentialView(
+                    language: language,
+                    onSkip: { showsAuth = false },
+                    onSignIn: { idToken, nonce, name in
+                        let outcome = await environment.credentials.signInWithApple(
+                            idToken: idToken, nonce: nonce, fullName: name)
+                        // A merge moves the rows on the server; this device's copy is unchanged,
+                        // so nothing needs re-reading. A restore on the *next* launch is what
+                        // brings them to another phone (`c2` phase 7).
+                        if outcome != .failed { journalRevision += 1 }
+                        return outcome
+                    })
             } else {
                 browser
             }

@@ -354,6 +354,17 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// `c2` phase 7. Shown when a restore was attempted and the read did not land — the second
     /// place `01-architecture.md` R4's silence is wrong, after a failed account deletion. A walker
     /// looking at an empty Journal cannot tell "you had nothing" from "we could not fetch it".
+    /// `c2` phase 6 — the credential screen. Not "log in": nothing is gated behind it, and a
+    /// walker who never signs in loses nothing except the ability to find their walks again on a
+    /// different phone. The copy has to say that rather than imply an account is required.
+    case credentialTitle
+    case credentialBody
+    case credentialSkipAction
+    case credentialSignOutAction
+    case credentialFailedMessage
+    case credentialMergedMessage
+    case credentialNotMergedMessage
+
     case restoreFailedTitle
     case restoreFailedBody
     case restoreRetryAction

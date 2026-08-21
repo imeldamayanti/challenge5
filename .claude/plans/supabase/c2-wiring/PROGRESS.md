@@ -30,7 +30,7 @@ unit test with a stubbed transport". If it has not run against
 | 2 | [Sync Identity](phases/phase-2-sync-identity.md) | — | none | `COMPLETE` — collapsed, no code | 2026-08-21 | 2026-08-21 |
 | 3 | [Push Sync](phases/phase-3-push-sync.md) | 1, 2 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
-| 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `NOT STARTED` | — | — |
+| 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `IN PROGRESS` — client done, provider setup is the owner's | 2026-08-21 | — |
 | 7 | [Restore](phases/phase-7-restore.md) | 1, 3, 4 | 1½ d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `BLOCKED` · post-MVP | — | — |
 
@@ -92,6 +92,8 @@ Verified 2026-08-20 against the running project, not read from a document.
 | B4 | `FR-MAP-01`'s discovery-basemap amendment is drafted and unsigned; `FR-CP-05`'s Story Reveal exception is undocumented in the PRD | release, not wiring | unassigned |
 | B5 | Apple Developer "Sign in with Apple" key and a Google OAuth client do not exist; `config.toml` has no Google stanza at all | phase 6 | unassigned |
 | B6 | `xcode-select` points at CommandLineTools — every build and test command needs a `DEVELOPER_DIR` prefix. The permanent fix needs the user's password | all phases | af |
+| B8 | **Sign in with Apple is not enabled.** `[auth.external.apple]` is `enabled = false` with an empty `client_id`, so the credential screen's button cannot work. Needs an Apple Developer team, a Sign in with Apple key, a `config push` and the Xcode capability — none of which a session can do or should fake. Blocks phase 6, and with it the two exit criteria phases 3 and 7 both deferred | phase 6, and closing phase 3's and 7's deferred criteria | af |
+| B9 | **A restored walk has no photographs.** Phase 4 puts them on the server and phase 7 does not read the bytes back, so a reinstall returns walks, answers and stamps but not pictures. Needs a local cache keyed by `app.photos.id` and a `PhotoStore` that can be told about a file it did not write | completeness of the reinstall promise | af |
 | ~~B7~~ | **Closed 2026-08-21.** The prod drill ran: suppress, publish, quest gone on device, release, quest back, prod left clean. The deployed function accepts the real production service role — the half the local stack could not prove. Two prod-only findings are in phase 0: a published document takes **60–90 s** to reach readers, and the MCP being read-only again means data writes go through `supabase db query --linked` | — | done |
 
 ## Session log
@@ -112,6 +114,16 @@ Append one line per working session. Newest last.
   Kill-switch round trip then run in full on the local stack at the owner's instruction:
   suppress → quest gone; backend stopped → still gone; release → back
   (`docs/screenshots/c2p0-killswitch-*.png`). Phase 0 `COMPLETE`.
+- **2026-08-21, evening** — phases 1, 2, 3, 4 and 7 landed and are `COMPLETE`; phase 6's
+  client is built and its provider setup is blocked on the owner. The app now signs in
+  anonymously, pushes a walk to `app.*`, uploads a photograph's two derivatives, and
+  brings a walker's walks back onto a device that has none. Phase 2 collapsed to nothing —
+  the client already satisfied the schema — and phase 7 was built **before** phase 6 so it
+  could be tested at all. Four things the deployed project or the device disagreed with
+  the plan about are written into the phase files: no `lore_dwell_ms` column, 75.0 m is
+  `gt75`, `app.photos` has no delete policy, and a restored walk was showing its quest id
+  as a title. One real gap left: a restored walk has no photographs — the rows are on the
+  server and nothing reads the bytes back.
 - **2026-08-21, later** — owner supplied the service-role key and **B7 closed on prod**.
   Suppressed `badung-museum-bali`, published, the quest and its sidequest left the app on a
   foreground, released it, both came back, prod left with zero rows and an empty document.

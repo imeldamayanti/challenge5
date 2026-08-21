@@ -134,6 +134,13 @@ final class AppTelemetry {
         }
     }
 
+    /// Whether anything is still queued. `c2` phase 6 reads it: `merge-anonymous` refuses to move
+    /// rows while the anonymous account may still receive writes, and claiming an empty queue that
+    /// is not empty would move rows out from under one that is about to add more.
+    var queueIsEmpty: Bool {
+        queueStore.load().events.isEmpty
+    }
+
     /// `FR-SET-02` — the queue is local data like any other, and "delete all local data" that left
     /// unsent rows standing would be a lie by the width of whatever had not flushed.
     @discardableResult

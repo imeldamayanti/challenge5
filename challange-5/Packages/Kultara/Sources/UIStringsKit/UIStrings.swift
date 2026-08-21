@@ -526,6 +526,22 @@ public enum UIStrings {
 
         // MARK: Journal — Sealed Letters
         .journalSealedHeading: LocalizedText(id: "Surat Tersegel", en: "Sealed Letters"),
+        .credentialTitle: LocalizedText(
+            id: "Simpan perjalananmu", en: "Keep your walks"),
+        .credentialBody: LocalizedText(
+            id: "Tanpa masuk pun semua tetap berjalan. Masuk hanya berarti perjalananmu bisa ditemukan lagi kalau kamu ganti ponsel.",
+            en: "Everything works without signing in. Signing in only means your walks can be found again if you change phones."),
+        .credentialSkipAction: LocalizedText(id: "Nanti saja", en: "Not now"),
+        .credentialSignOutAction: LocalizedText(id: "Keluar", en: "Sign out"),
+        .credentialFailedMessage: LocalizedText(
+            id: "Belum berhasil masuk. Perjalananmu di ponsel ini tidak berubah.",
+            en: "That did not sign you in. Nothing on this phone has changed."),
+        .credentialMergedMessage: LocalizedText(
+            id: "Sudah masuk. Perjalanan yang kamu buat sebelumnya ikut terbawa.",
+            en: "Signed in. The walks you made before came with you."),
+        .credentialNotMergedMessage: LocalizedText(
+            id: "Sudah masuk, tapi perjalanan lamamu belum ikut terbawa. Perjalanan itu tidak hilang.",
+            en: "Signed in, but your earlier walks did not come across. They are not lost."),
         .restoreFailedTitle: LocalizedText(
             id: "Belum bisa mengambil perjalananmu",
             en: "Could not fetch your walks"),

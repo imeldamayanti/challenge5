@@ -45,6 +45,9 @@ struct KultaraEnvironment {
     let syncState: any SyncStateStore
     /// Brings walks back onto a device that has none (`c2` phase 7). Runs only into an empty store.
     let restore: any RunRestoring
+    /// Attaches an identity to the anonymous session (`c2` phase 6), so a reinstall on another
+    /// phone can find the walks phase 3 pushed. Nothing in the app is gated on it.
+    let credentials: any CredentialLinking
 
     init(
         repository: any ContentRepository,
@@ -131,6 +134,17 @@ struct KultaraEnvironment {
                     title: quest.title.value(for: resolvedLanguage),
                     checkpointCount: quest.checkpoints.count)
             })
+        let resolvedTelemetry = self.telemetry
+        self.credentials = backend.flatMap { configuration -> (any CredentialLinking)? in
+            guard let authClient = (resolvedSession as? SupabaseSession)?.authClient else { return nil }
+            return SupabaseCredentialLinking(
+                configuration: configuration,
+                session: resolvedSession,
+                client: authClient,
+                // `merge-anonymous` refuses to move rows while the anonymous account may still
+                // receive writes. Flushing first and then reporting honestly is the contract.
+                telemetryQueueIsEmpty: { MainActor.assumeIsolated { resolvedTelemetry.queueIsEmpty } })
+        } ?? NoCredentialLinking()
     }
 
     var runEngine: RunEngine {

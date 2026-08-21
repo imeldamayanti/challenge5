@@ -82,6 +82,11 @@ actor SupabaseSession: SupabaseSessionProviding {
     ///
     /// Called from the root view's launch task beside the governance refresh, and for the same
     /// reason: the app draws whatever it has, and this arrives when it arrives.
+    /// Handed to `SupabaseCredentialLinking` so the credential flow signs into **this** session
+    /// rather than a second client with its own storage — two clients would mean two stored
+    /// sessions and a walker signed in on one of them.
+    nonisolated var authClient: AuthClient? { client }
+
     nonisolated func prepare() {
         Task { await ensureSession() }
     }
