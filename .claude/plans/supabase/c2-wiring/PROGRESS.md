@@ -32,9 +32,12 @@ unit test with a stubbed transport". If it has not run against
 | 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `IN PROGRESS` — client done, provider setup is the owner's | 2026-08-21 | — |
 | 7 | [Restore](phases/phase-7-restore.md) | 1, 3, 4 | 1½ d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
-| 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `BLOCKED` · post-MVP | — | — |
+| 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `BUILT, SWITCHED OFF` — publishing still blocked on consent | 2026-08-21 | — |
 
-**The MVP is 1 → 2 → 3 → 4 → 6 → 7, in that order, and phase 5 is not in it.** Set by
+**The MVP is 1 → 2 → 3 → 4 → 6 → 7, in that order, and phase 5 is not in it.** Phase 5
+was nevertheless **built and switched off** on 2026-08-21 — the block on it was always
+publishing rather than engineering, and leaving the engineering undone would have meant
+the consent answer, whenever it comes, arriving to a codebase that then needs three days. Set by
 the owner on 2026-08-21: the goal for user data is *"your walks survive a reinstall"*,
 which needs a credential to survive one and a read to come back. So phase 6 is no
 longer "last, and optional forever" — it is load-bearing, and phase 7 exists because
@@ -131,3 +134,9 @@ Append one line per working session. Newest last.
   Supabase MCP is read-only again so data writes go through `supabase db query --linked`.
   Transport decision also landed: **`supabase-swift` 2.55.1**, app target only, four products
   without `Realtime`, `Package.resolved` now tracked.
+- **2026-08-21, last** — B9 closed (a restored walk downloads its photographs) and **phase 5
+  built and switched off**: the serve function is written and undeployed, its `config.toml`
+  entry unpushed, and `ShareCardMinting.isAvailable` is `false` with a test asserting it.
+  Everything in `c2-wiring` that can be implemented is implemented. What is left needs a
+  credential (**B8**, Sign in with Apple), a physical phone (phase 4's camera path), or an
+  answer to the consent question (phase 5's publishing) — none of which is code.
