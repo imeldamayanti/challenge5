@@ -1447,6 +1447,96 @@ WebP since iOS 14 and the deployment target is 18.0, so nothing extra is needed 
 blur. Going further means a genuinely higher-resolution drawing, or handing the ground over to the
 live basemap past the chart's own resolution — neither is built.
 
+## The entry screens (`791:5145`, `791:5109`, `822:2235`, 2026-08-21)
+
+Sign Up, Sign In and Guest — the three frames between onboarding and Home, which stood as
+wireframes (`WireframeCatalog.login`/`register`) until now. They are one page drawn three times: the
+same cream ground, the same 314-point controls inside a 44-point page margin, the same capsule
+fields at 17 × 11 padding, the same fully rounded pill. `AuthCredentialScreen` is Sign Up and Sign
+In in two configurations for that reason; `GuestNameScreen` is separate because it is left-aligned
+and carries a back control.
+
+### Two new tokens
+
+| Token | Value | Where it came from | Measured |
+|---|---|---|---|
+| `brownSeal` | `#6E2D26` | `791:5149`, `791:5152`, `822:2248` — the masthead, the primary pill, the closing line's link | 9.16:1 on `paperSheet`, 10.16:1 under `inkOnButton` |
+| `fieldRing` | `#8F8B88` | `791:5155`'s outline, moved from the drawn `#918D8A` | 3.05:1 on `paperSheet` |
+
+**`brownSeal` is not `brownDeep` rounded to.** `#6E2717` is a *ground* — the deepest earth the
+story reveal is printed on — and this is ink and fill on cream. They are one step apart, exactly the
+distance `brownBand` keeps from `brownMid`, and they never appear on the same screen. Collapsing
+them would put a ground token on a control.
+
+**`fieldRing` is a deviation, and a three-hundredths one.** The frames draw `#918D8A`, which
+measures **2.97:1** on `paperSheet` — under the 3:1 WCAG 1.4.11 asks of a control's visual boundary,
+and this hairline is the only thing that says where a field is. The theme yields to the threshold
+rather than the other way round (`NFR-A11Y-03`), the same move `inkDusty` and `inkFragments` made.
+
+**The placeholders are not set in it either.** The frames set them in the same `#918D8A`, which as
+*text* is nowhere near the 4.5:1 body needs. They are `inkMuted` — already measured on this ground —
+rather than the ring token being asked to do a job it fails.
+
+### One new type role
+
+| Role | Face | Style | Drawn at |
+|---|---|---|---|
+| `authDisplay` | New York Extra Large **Bold** | `.largeTitle` | 34, tracking 0.4 |
+
+The one place in the table the display serif is set bold. Its own role rather than
+`onboardingDisplay` grown or `storyDisplay` shrunk: those are regular cuts at 30 and 38, and these
+frames set a heavier, smaller title because it stands alone on a cream page with no illustration
+over it.
+
+### One new packaged picture, and it is a blocker
+
+`google-mark.png` (87 × 88, drawn at 21.57 × 22) — `791:5174`, exported at 4× rather than drawn.
+Never hand-authored: it is a trademark with a published geometry, and an approximation is worse than
+none. PNG rather than SVG for the reason `Package.swift` forces — `Resources/Images` is copied
+wholesale and everything in it is read through `UIImage(data:)`.
+
+**Whether it ships is a decision with an owner, and it is not taken.** Google's brand terms allow
+the "G" on a real Google Sign-In control and nowhere else, and this build has no identity provider
+behind the button. This sits beside the `docs/consent-log.md` blockers and the History page's
+citations, not instead of them.
+
+### The two provider rows are drawn and disabled
+
+`791:5170` and `791:5173` are on screen exactly as the frames draw them, and neither can be used. A
+control labelled "Continue with Apple" that does not call `AuthenticationServices` is a false claim,
+and a false Sign in with Apple is one App Review declines besides. `791:5180` ("Continue as a
+guest") is the one row here that does what it says.
+
+Two consequences worth writing down:
+
+- **They are not faded.** `HisploraProviderButtonStyle` takes `dimsWhenDisabled:` and both provider
+  rows pass `false`, which is the opposite of what a style usually wants. Fading composites the fill
+  into the cream — near-black turns to mud and the white row all but disappears — so the screen
+  would be drawing two colours nobody sampled and the measured pairs would stop describing what is
+  on it. `.disabled` still stops the tap and still makes VoiceOver announce them as dimmed.
+- **A line under them says why**, which the frames do not draw. A disabled control with no stated
+  reason is the accessibility failure disabling it was meant to avoid.
+
+### What is behind these screens
+
+A **local profile**, and nothing else. No credential is stored, transmitted or checked: the email
+and the password are validated for *shape* and discarded. What survives is the display name
+`822:2249` promises will appear on the Explorer's Card and in the journal, kept in
+`AppPreferencesStore.explorerDisplayName` and read by `ExplorerCardViewModel` — which headed the
+card by role until this field existed, and still does for a reader who signed in rather than naming
+themselves. `AD-3` is intact: nothing here touches the network, and the entry screens work in
+airplane mode like everything else.
+
+**The password length floor is not applied on sign-in**, deliberately. It is a rule about *choosing*
+a password, and applying it on the way back in is how a form locks out an account made under a
+different rule.
+
+### One string is identical in both languages, on purpose
+
+`authEmailPlaceholder` is "Email" in both columns. The formal Indonesian coinage "surel" exists and
+is not what anyone types their address into, so it is exempted by name in both copies of the
+half-translation guard — `UIStringsTests` and the app target's `LocalizationTests`.
+
 ## Seen rendering
 
 **`452:3132`, `447:1880` and `452:3028` were verified on iPhone 17 / iOS 26.5 on 2026-08-17**,
@@ -1474,6 +1564,13 @@ screenshots are what show it against the frame.
 
 A resumed walk lands on `.atCheckpoint` and skips all three, so reaching them from a desk means a
 fresh install (`xcrun simctl uninstall com.umar.hisplora`) rather than relaunching.
+
+**`791:5145`, `791:5109` and `822:2235` were verified on iPhone 17 Pro / iOS 26.5 on 2026-08-21**,
+from a fresh install: onboarding (Skip) → Sign Up → the closing line to Sign In and back → an empty
+submission printing "Enter a name first." under the name field → "Continue as a guest" → the guest
+screen → a name typed and "Start Exploring" → Home → Profile, where the Explorer's Card is headed
+with that name instead of "Explorer". Screenshots are in `docs/screenshots/m16-auth-*.png`. The
+disabled rows' fade was found on that pass and nowhere else — no test could have seen it.
 
 `81:588`, `98:1588` and `187:866` were verified on iPhone 17 / iOS 26.5 on 2026-08-14 — the first
 time the cutscene screens had been seen at all. **`293:1613` was verified the same way on 2026-08-17**,

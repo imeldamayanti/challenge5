@@ -114,6 +114,15 @@ public enum KultaraTypography {
         /// title in a two-column grid; setting it in `body` would drop the face the frames name
         /// things in. One role, one decision, as the rest of this table works.
         case editorialLabel
+        /// The masthead on the three entry screens — "Get Started" (`791:5149`), "Welcome Back"
+        /// (`791:5113`) and "What should we call you?" (`822:2248`).
+        ///
+        /// New York Extra Large **Bold** at 34, which is iOS's own Large Title size and the one
+        /// place in this table the display serif is set bold. Its own role rather than
+        /// `onboardingDisplay` grown or `storyDisplay` shrunk: those two are regular cuts at 30 and
+        /// 38, and the entry frames set a heavier, smaller title because it stands alone on a cream
+        /// page with no illustration over it.
+        case authDisplay
         /// The place's name franked across the foot of a stamp (`705:2776`, `705:2783`) — "BADUNG
         /// MARKET", "MAOSPAHIT". New York Bold, set in caps as the frames frank it.
         ///
@@ -152,6 +161,7 @@ public enum KultaraTypography {
             // the thing being named.
             case .journalShelfHeading: .title2
             case .journalLetterTitle: .largeTitle
+            case .authDisplay: .largeTitle
             case .journalTapHint: .body
             case .onboardingDisplay: .title
             case .storyPlaceMark, .storyBarTitle: .title3
@@ -187,7 +197,7 @@ public enum KultaraTypography {
             // real cuts rather than a synthesised smear.
             case .storySection: .medium
             case .storyTaskTitle: .semibold
-            case .storyPlaceMark, .stampFranking: .bold
+            case .storyPlaceMark, .stampFranking, .authDisplay: .bold
             case .stampFrankingDetail: .regular
             }
         }
@@ -204,7 +214,7 @@ public enum KultaraTypography {
             case .questTitleLarge, .questTitle, .sectionHeading: .serif
             case .storyDisplay, .storySection, .storyTaskTitle, .storyPlaceMark,
                  .storyBarTitle, .onboardingDisplay, .journalPaperTitle,
-                 .journalLetterTitle, .stampFranking: .displaySerif
+                 .journalLetterTitle, .stampFranking, .authDisplay: .displaySerif
             case .typedSheet, .typedFigure: .typewriter
             default: .sans
             }
@@ -231,6 +241,7 @@ public enum KultaraTypography {
             case .storyDisplay: 38
             case .journalLetterTitle: 35
             case .onboardingDisplay: 30
+            case .authDisplay: 34
             case .storySection, .storyTaskTitle: 25
             case .journalPaperTitle: 26
             case .journalBandHeading: 25
@@ -265,6 +276,8 @@ public enum KultaraTypography {
             case .storyDisplay: -0.76
             // The onboarding frames set the 30-point title untracked, unlike the 38-point display.
             case .onboardingDisplay: 0
+            // 0.4 as the frames set Large Title.
+            case .authDisplay: 0.4
             case .storySection, .storyTaskTitle: -0.5
             // -0.7875 as drawn, at 26.25. Kept as the frame's own ratio rather than rounded to the
             // neighbouring roles' -0.5.
@@ -308,7 +321,7 @@ public enum KultaraTypography {
             // under WCAG's 24 pt, so claiming the allowance here would quietly lower the bar the
             // palette is measured against. It is inkDark on paper anyway, at 13.64:1.
             case .questTitleLarge, .questTitle, .storyDisplay, .onboardingDisplay,
-                 .journalLetterTitle: true
+                 .journalLetterTitle, .authDisplay: true
             default: false
             }
         }
@@ -330,6 +343,8 @@ public enum KultaraTypography {
             // `leading-none` at 35: the frame stacks the two lines of a long title solid.
             case .journalLetterTitle: -4
             case .onboardingDisplay: -2
+            // 41 over 34 on the frame, a shade under SwiftUI's own line box at this size.
+            case .authDisplay: -2
             case .storySection, .storyTaskTitle, .storyPlaceMark, .storyBarTitle,
                  .journalBandHeading: -1
             // The frames set this one solid — `leading-none`, a line box the height of the type.

@@ -40,7 +40,11 @@ struct UIStringsTests {
         // exists to catch — and it is exempted by that PROPERTY rather than by name, so the guard
         // does not get shorter every time another one is added. Anything containing a letter must
         // still differ.
-        let identicalByDesign: Set<UIStringKey> = [.appName, .unitMetres, .unitKilometres]
+        // And a fourth: a loanword that *is* the Indonesian word. "Email" is what an Indonesian
+        // form is labelled with; "surel" is the formal coinage and nobody types their address into
+        // it. Exempted by name, because unlike the specifiers there is no property to test for.
+        let identicalByDesign: Set<UIStringKey> = [
+            .appName, .unitMetres, .unitKilometres, .authEmailPlaceholder]
         for key in UIStringKey.allCases where !identicalByDesign.contains(key) {
             guard let text = UIStrings.table[key] else { continue }
             // The specifiers themselves carry letters (`%1$d`), so they come out before the

@@ -30,11 +30,10 @@ enum WireframeCatalog {
 
     static let continueAction = LocalizedText(id: "Lanjut", en: "Continue")
     static let backAction = LocalizedText(id: "Kembali", en: "Back")
-    static let skipAction = LocalizedText(id: "Lewati dulu", en: "Skip for now")
     static let yesAction = LocalizedText(id: "Ya", en: "Yes")
     static let noAction = LocalizedText(id: "Tidak", en: "No")
 
-    // MARK: Entry — splash, login, register
+    // MARK: Entry — splash
 
     static let splash = WireframeSpec(
         title: LocalizedText(id: "Splash screen", en: "Splash screen"),
@@ -50,35 +49,12 @@ enum WireframeCatalog {
             id: "Splash → Onboarding → Login/Register → Home. Nama aplikasi belum diputuskan, jadi wordmark-nya masih kosong.",
             en: "Splash → Onboarding → Login/Register → Home. The app has no name yet, so the wordmark is deliberately empty."))
 
-    static let login = WireframeSpec(
-        title: LocalizedText(id: "Login", en: "Login"),
-        purpose: LocalizedText(
-            id: "Masuk ke akun sebelum masuk Home.",
-            en: "Sign in to an account before reaching Home."),
-        blocks: [
-            LocalizedText(id: "Kolom email", en: "Email field"),
-            LocalizedText(id: "Kolom kata sandi", en: "Password field"),
-            LocalizedText(id: "Tombol masuk", en: "Sign-in button"),
-            LocalizedText(id: "Tautan ke Register", en: "Link to Register"),
-        ],
-        flowNote: LocalizedText(
-            id: "Belum ada backend akun, dan seluruh alur inti dirancang jalan tanpa jaringan (AD-3). Layar ini butuh keputusan produk dulu: data apa yang disimpan di server, dan apa yang tetap bisa dipakai offline.",
-            en: "There is no account backend, and every core flow is designed to work with no network (AD-3). This screen needs a product decision first: what is stored on a server, and what still has to work offline."))
-
-    static let register = WireframeSpec(
-        title: LocalizedText(id: "Register", en: "Register"),
-        purpose: LocalizedText(
-            id: "Membuat akun baru.",
-            en: "Create a new account."),
-        blocks: [
-            LocalizedText(id: "Nama tampilan", en: "Display name"),
-            LocalizedText(id: "Email", en: "Email"),
-            LocalizedText(id: "Kata sandi dan konfirmasi", en: "Password and confirmation"),
-            LocalizedText(id: "Persetujuan syarat dan privasi", en: "Terms and privacy consent"),
-        ],
-        flowNote: LocalizedText(
-            id: "Sama seperti Login: butuh backend, dan butuh keputusan soal data pribadi sebelum dibangun.",
-            en: "Same as Login: needs a backend, and needs a personal-data decision before it is built."))
+    // `login` and `register` were drawings of "sign in, then reach Home". This file's own rule:
+    // when a screen is built for real, its wireframe entry is deleted with it. `Features/Auth/` is
+    // those screens now (Figma `791:5145`, `791:5109`, `822:2235`) — and the product decision the
+    // notes here asked for was taken rather than dodged: nothing is stored on a server, the
+    // credentials are validated for shape and discarded, and what survives is a local display name.
+    // `AuthViewModel` carries the whole account of it.
 
     // MARK: Journal branch
     //

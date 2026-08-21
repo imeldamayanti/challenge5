@@ -47,6 +47,7 @@ The repo root and the Xcode project directory share a name, which is confusing:
     │   ├── App/                      6   shell, composition root, routing
     │   ├── Features/
     │   │   ├── Onboarding/           3
+    │   │   ├── Auth/                  4   sign up, sign in, guest
     │   │   ├── QuestList/            9
     │   │   ├── QuestPreview/         5
     │   │   ├── QuestRun/            18   largest feature
@@ -96,8 +97,8 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 589 tests / 74 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
-| `xcodebuild test -only-testing:challange-5Tests` | 203 tests / 20 suites — view models, presentation, UI strings, host linkage | Yes |
+| `swift test` (from `Packages/Kultara`) | 592 tests / 74 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `xcodebuild test -only-testing:challange-5Tests` | 238 tests / 23 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
 **Four `swift test` failures are pre-existing on this branch and are not yours.** None is in a
@@ -399,7 +400,7 @@ Still unguarded:
 
 ## Two visual directions, split at a screen boundary
 
-The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task sheet → task list → site plan** → transition — and, since 2026-08-18, **onboarding**, which is now the first Hisplora surface the app shows and is reached before the museum theme is ever seen. Onboarding is the one Hisplora screen that is *not* brown: since 2026-08-20 it stands on the cream `paperSheet`, which is a re-paint of the same direction and not a third one.
+The museum-catalogue theme (`KultaraPalette`, light/dark) carries the quest list, region map, preview, checkpoint, summary and settings. The Hisplora direction (`HisploraPalette`, a fixed brown/cream editorial pairing that does **not** flip with the system appearance) carries the run's story flow: story preview → location states → cutscene → story reveal → place notice → **task sheet → task list → site plan** → transition — and, since 2026-08-18, **onboarding** — plus, since 2026-08-21, the three **entry screens** (sign up, sign in, guest) that follow it. Those four are the first Hisplora surfaces the app shows, and all of them are reached before the museum theme is ever seen. Onboarding is the one Hisplora screen that is *not* brown: since 2026-08-20 it stands on the cream `paperSheet`, which is a re-paint of the same direction and not a third one.
 
 The last three landed 2026-08-17 from Figma `452:3132` ("Quest 1/3"), `447:1880` ("Quest_Filled") and `452:3028` ("Site Map"): `CheckpointDetailScreen` (restyled from the earlier `51:201`), the new `TaskDetailScreen`, and the new `PlaceSiteMapScreen`. `452:3028` is the **one story-flow screen on paper rather than brown** — `mapGround`, its own token — because a plan is a document. Five new palette tokens, four new New York type roles, and four recorded deviations came with them; `docs/hisplora-tokens.md` has all of it.
 
@@ -503,10 +504,14 @@ nothing in them is persisted. Deleting one means deleting its `WireframeCatalog`
 Wireframe copy is deliberately kept out of `UIStrings` so the real string table never carries
 strings for screens that do not exist.
 
+**The login/register pair is no longer among them.** `AuthWireframeView` and its two catalogue
+entries were deleted on 2026-08-21 when `Features/Auth/` shipped the real screens — this file's own
+rule, the same way `createJournal` and `NearbyNoticeWireframeView` went.
+
 Two structural consequences: the tab bar is Quests / Journal / Profile (settings is no longer a
 tab — the chart reaches it as Profile → App preferences, and `DiscoveryFlowUITests.openSettings`
-follows that path), and launch goes splash → onboarding → login before Home, with the splash
-auto-advancing and the login carrying a "Skip for now".
+follows that path), and launch goes splash → onboarding → sign up / sign in / guest before Home,
+with the splash still auto-advancing and still a drawing.
 
 ## Known state
 
@@ -1023,6 +1028,34 @@ auto-advancing and the login carrying a "Skip for now".
   (`HisploraEnvelopeSequence.animation(of:)`) instead of one 900 ms ease for all four, and the page
   fades in over 200 ms rather than cross-fading across its whole travel, so it reads as coming out
   of the pocket rather than appearing in front of the envelope.
+- **The three entry screens ship, and there is still no account behind them.** `791:5145`
+  (Sign Up), `791:5109` (Sign In) and `822:2235` (Guest) landed 2026-08-21 as `Features/Auth/`,
+  replacing `AuthWireframeView`. Six things about them:
+  - **What a walker types builds a local profile and nothing else.** No credential is stored,
+    transmitted or checked — the email and password are validated for *shape* and discarded. What
+    survives is `AppPreferencesStore.explorerDisplayName`, which is the promise `822:2249` makes
+    ("This name will appear on your Explorer's Card and journal") kept locally.
+    `ExplorerCardViewModel` reads it and falls back to naming the reader by role, which is what the
+    card did before the field existed. `AD-3` is intact: nothing here touches the network.
+  - **Apple and Google are drawn and disabled**, and a line under them says so. A control labelled
+    "Continue with Apple" that does not call `AuthenticationServices` is a false claim, and a false
+    Sign in with Apple is one App Review declines besides. They are deliberately *not* faded —
+    `HisploraProviderButtonStyle` takes `dimsWhenDisabled:` and both pass `false`, because fading
+    composites near-black into cream and the measured pairs stop describing what is on screen.
+  - **`google-mark.png` is a pre-public blocker, not a settled asset.** Google's brand terms allow
+    the "G" on a real Google Sign-In control and nowhere else. It sits beside the
+    `docs/consent-log.md` blockers, and `docs/hisplora-tokens.md` has it written down.
+  - **Two new tokens, one of them a deviation.** `brownSeal` `#6E2D26` (the masthead, the primary
+    pill, the closing line's link) and `fieldRing` `#8F8B88` — **moved** from the drawn `#918D8A`,
+    which measures 2.97:1 on `paperSheet` against the 3:1 a control's boundary wants. Placeholders
+    are `inkMuted` rather than the ring, which as text would be 2.97:1 as well. One new type role,
+    `authDisplay` — New York **Bold** at 34, the one bold display role in the table.
+  - **Sign Up and Sign In are one screen in two configurations.** The frames are one page drawn
+    twice; two views would be two places to fix the next layout change in.
+  - **The entry is persisted where the wireframe was not.** `accountEntryCompletedAt` is a stored
+    date read by `AccountEntryGate`, so a walker is asked once; `removeAll` clears it with the name
+    (`FR-SET-02`), which is the only way back to these screens short of a reinstall. The **splash
+    is still a wireframe** and still `@State`, for the reason it always was.
 - **Consent for those five places is a self-grant, not a grant.** D1-b: every `consent/badung-*.json`
   names the project team as `grantingBody`, scoped to inclusion and naming, for a non-public academic
   prototype. None of the five sites has been approached. The signatory fields are still literal

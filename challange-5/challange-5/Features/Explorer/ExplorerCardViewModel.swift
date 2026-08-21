@@ -28,16 +28,19 @@ final class ExplorerCardViewModel {
     private let runStore: any RunStore
     private let sideQuestStore: any SideQuestStore
     private let repository: any ContentRepository
+    private let preferences: any AppPreferencesStore
 
     init(
         runStore: any RunStore,
         sideQuestStore: any SideQuestStore,
         repository: any ContentRepository,
+        preferences: any AppPreferencesStore,
         language: ContentLanguage
     ) {
         self.runStore = runStore
         self.sideQuestStore = sideQuestStore
         self.repository = repository
+        self.preferences = preferences
         self.language = language
         reload()
     }
@@ -107,7 +110,12 @@ final class ExplorerCardViewModel {
             }
 
         presentation = ExplorerCardPresentation(
-            name: UIStrings.string(.profileExplorerName, language),
+            // What the walker asked to be called on `822:2235`, if they were ever asked. Falling
+            // back to the role rather than to a placeholder name is the same decision this card
+            // made when there was no field at all: the app does not invent one.
+            name: preferences.explorerDisplayName
+                ?? UIStrings.string(.profileExplorerName, language),
+            isNamed: preferences.explorerDisplayName != nil,
             questCount: runs.filter { $0.state == .completed }.count,
             stampCount: stamps.count,
             badgeCount: badges.count,

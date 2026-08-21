@@ -38,6 +38,22 @@ enum LanguageResolver {
 protocol AppPreferencesStore: AnyObject {
     var preferredLanguage: ContentLanguage? { get set }
     var onboardingCompletedAt: Date? { get set }
+    /// When the entry screens were last passed — sign up, sign in, or the guest name (Figma
+    /// `791:5145`, `791:5109`, `822:2235`).
+    ///
+    /// Persisted, where the wireframes these replaced were held in `@State` on purpose: a drawing
+    /// is something the team wants to see again on every launch, and a form that asks a walker for
+    /// their name every time they open the app is a defect. Cleared by `removeAll`, so
+    /// Settings → erase local data puts them back (`FR-SET-02`).
+    var accountEntryCompletedAt: Date? { get set }
+    /// What the walker asked to be called, from the guest screen's one field or the sign-up form's
+    /// name.
+    ///
+    /// **A local profile, not an account.** Nothing is sent anywhere and nothing authenticates
+    /// it — `822:2249` promises this name appears on the Explorer's Card and in the journal, and
+    /// that promise is kept locally. Empty is `nil` rather than `""`, so the Explorer's Card falls
+    /// back to naming the reader by their role the way it did before there was a field at all.
+    var explorerDisplayName: String? { get set }
     /// `FR-START-04` — the safety notice is acknowledged once per quest, before its first Run.
     /// Per quest rather than once globally: the notice names that route's traffic, pavements and
     /// terrain, so a blanket acknowledgement would be an acknowledgement of nothing.
@@ -53,6 +69,8 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
 
     static let preferredLanguageKey = "kultara.preferredLanguage"
     static let onboardingCompletedAtKey = "kultara.onboardingCompletedAt"
+    static let accountEntryCompletedAtKey = "kultara.accountEntryCompletedAt"
+    static let explorerDisplayNameKey = "kultara.explorerDisplayName"
     static let safetyNoticeAckedQuestIDsKey = "kultara.safetyNoticeAckedQuestIDs"
     static let nearbyAlertsEnabledKey = "kultara.nearbyAlertsEnabled"
 
@@ -89,6 +107,35 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
         }
     }
 
+    var accountEntryCompletedAt: Date? {
+        get { defaults.object(forKey: Self.accountEntryCompletedAtKey) as? Date }
+        set {
+            if let newValue {
+                defaults.set(newValue, forKey: Self.accountEntryCompletedAtKey)
+            } else {
+                defaults.removeObject(forKey: Self.accountEntryCompletedAtKey)
+            }
+        }
+    }
+
+    var explorerDisplayName: String? {
+        get {
+            // A stored empty string is the same as no name; normalising on read means a build that
+            // once wrote one cannot leave the card headed with nothing.
+            let stored = defaults.string(forKey: Self.explorerDisplayNameKey)?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return (stored?.isEmpty ?? true) ? nil : stored
+        }
+        set {
+            let trimmed = newValue?.trimmingCharacters(in: .whitespacesAndNewlines)
+            if let trimmed, !trimmed.isEmpty {
+                defaults.set(trimmed, forKey: Self.explorerDisplayNameKey)
+            } else {
+                defaults.removeObject(forKey: Self.explorerDisplayNameKey)
+            }
+        }
+    }
+
     var safetyNoticeAckedQuestIDs: Set<String> {
         get { Set(defaults.stringArray(forKey: Self.safetyNoticeAckedQuestIDsKey) ?? []) }
         set { defaults.set(Array(newValue).sorted(), forKey: Self.safetyNoticeAckedQuestIDsKey) }
@@ -102,6 +149,8 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
     func removeAll() {
         defaults.removeObject(forKey: Self.preferredLanguageKey)
         defaults.removeObject(forKey: Self.onboardingCompletedAtKey)
+        defaults.removeObject(forKey: Self.accountEntryCompletedAtKey)
+        defaults.removeObject(forKey: Self.explorerDisplayNameKey)
         defaults.removeObject(forKey: Self.safetyNoticeAckedQuestIDsKey)
         defaults.removeObject(forKey: Self.nearbyAlertsEnabledKey)
     }
@@ -111,24 +160,43 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
 final class InMemoryAppPreferencesStore: AppPreferencesStore {
     var preferredLanguage: ContentLanguage?
     var onboardingCompletedAt: Date?
+    var accountEntryCompletedAt: Date?
     var safetyNoticeAckedQuestIDs: Set<String>
     var nearbyAlertsEnabled: Bool
+
+    /// Normalised on write, the way the `UserDefaults` store normalises on read: a double that
+    /// accepts `"  "` where the real one does not is a double that hides a bug.
+    var explorerDisplayName: String? {
+        get { storedExplorerDisplayName }
+        set {
+            let trimmed = newValue?.trimmingCharacters(in: .whitespacesAndNewlines)
+            storedExplorerDisplayName = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        }
+    }
+
+    private var storedExplorerDisplayName: String?
 
     init(
         preferredLanguage: ContentLanguage? = nil,
         onboardingCompletedAt: Date? = nil,
+        accountEntryCompletedAt: Date? = nil,
+        explorerDisplayName: String? = nil,
         safetyNoticeAckedQuestIDs: Set<String> = [],
         nearbyAlertsEnabled: Bool = false
     ) {
         self.preferredLanguage = preferredLanguage
         self.onboardingCompletedAt = onboardingCompletedAt
+        self.accountEntryCompletedAt = accountEntryCompletedAt
         self.safetyNoticeAckedQuestIDs = safetyNoticeAckedQuestIDs
         self.nearbyAlertsEnabled = nearbyAlertsEnabled
+        self.explorerDisplayName = explorerDisplayName
     }
 
     func removeAll() {
         preferredLanguage = nil
         onboardingCompletedAt = nil
+        accountEntryCompletedAt = nil
+        explorerDisplayName = nil
         safetyNoticeAckedQuestIDs = []
         nearbyAlertsEnabled = false
     }

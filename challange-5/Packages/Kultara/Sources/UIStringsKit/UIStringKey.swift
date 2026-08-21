@@ -34,6 +34,50 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case onboardingCollectionTitle
     case onboardingCollectionBody
 
+    // MARK: Entry — sign up, sign in, guest
+    //
+    // Figma `791:5145`, `791:5109` and `822:2235`. The screens the app-flow chart drew between
+    // onboarding and Home, which stood as wireframes until they were built.
+    //
+    // **There is no account backend behind any of this.** The credential screens keep a local
+    // profile and nothing else, and the two identity providers are drawn and disabled — see
+    // `AuthViewModel` for the whole account of what is and is not connected.
+    case authSignUpTitle
+    case authSignInTitle
+    case authGuestTitle
+    /// The line under the guest title, which is the one place the app says where a name is used.
+    case authGuestBody
+    case authNamePlaceholder
+    case authGuestNamePlaceholder
+    case authEmailPlaceholder
+    case authPasswordPlaceholder
+    case authSignUpAction
+    case authSignInAction
+    case authGuestAction
+    /// The ruled divider's own word (`791:5166`), and separately what it is announced as — "OR"
+    /// alone tells a reader who cannot see the two rules nothing about what it divides.
+    case authOr
+    case authOrSpoken
+    case authContinueWithApple
+    case authContinueWithGoogle
+    case authContinueAsGuest
+    case authHaveAccount
+    case authSignInLink
+    case authNoAccount
+    case authSignUpLink
+    case authBack
+    /// Why the two provider rows are drawn but cannot be used. Not in the frames: a disabled
+    /// control with no stated reason is the accessibility failure disabling it was meant to avoid.
+    case authProvidersUnavailable
+    /// The three things a form can be wrong about, shown under the field they belong to rather
+    /// than as an alert.
+    case authInvalidEmail
+    case authShortPassword
+    /// An empty password box, which is a different mistake from a short one — telling a walker
+    /// their blank field is under eight characters is technically true and useless.
+    case authMissingPassword
+    case authMissingName
+
     // Discovery — FR-DISC-02/05
     case questListTitle
     /// The Home masthead (`28:172`). Separate from `questListTitle`, which names the *tab* and the

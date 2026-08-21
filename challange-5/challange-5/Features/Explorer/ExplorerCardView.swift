@@ -9,10 +9,12 @@ import UIStringsKit
 /// One screen with three surfaces, not three screens: the frames differ only in what sits under
 /// the strip, and the header, the roundel and the counts are the same object in all three.
 ///
-/// **What is not on it.** The frame prints a name — "Umar" — under a portrait. There are no
-/// accounts in this build and nothing has ever asked the reader who they are (`FR-ONB-01`), so the
-/// card names the reader by what they are and the roundel is empty. Inventing a name, or filling
-/// the frame with a stock face, would be the screen claiming something the app does not know.
+/// **The name is the reader's own, when there is one.** The frame prints "Umar" under a portrait.
+/// There are still no accounts in this build, but the entry screens do ask — `822:2235` promises
+/// the display name typed there "will appear on your Explorer's Card and journal", and this is
+/// where that promise is kept. A reader who signed in rather than naming themselves, or who has
+/// erased their local data, is named by their role instead: the app does not invent one, and the
+/// roundel stays empty for the same reason a stock face would be a claim it cannot make.
 struct ExplorerCardView: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -93,7 +95,7 @@ struct ExplorerCardView: View {
     private var identity: some View {
         HStack(spacing: KultaraMetrics.xl) {
             HisploraExplorerRoundel(
-                accessibilityLabel: UIStrings.string(.profileExplorerName, language)
+                accessibilityLabel: model.presentation.name
             ) {
                 // Deliberately empty — see the note at the head of this file.
                 Rectangle().fill(palette.paperWarm.color)
@@ -104,7 +106,10 @@ struct ExplorerCardView: View {
                 Text(model.presentation.name)
                     .kultaraFont(.questTitle)
                     .foregroundStyle(palette.inkDark.color)
-                    .accessibilityHint(UIStrings.string(.profileExplorerNameNote, language))
+                    // The note only belongs on the fallback. Once the card carries a name the
+                    // reader typed, explaining why it does not have one is a hint about nothing.
+                    .accessibilityHint(model.presentation.isNamed
+                        ? "" : UIStrings.string(.profileExplorerNameNote, language))
                 // A flow rather than an `HStack`: at an accessibility size three labels do not fit
                 // across 192 points, and the frame's row becomes a column instead of three
                 // truncations (`NFR-A11Y-01`).
