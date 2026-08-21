@@ -39,7 +39,10 @@ struct TaskDetailTests {
         provider.emit(offsetMetres: 5, accuracy: 10)
 
         // Bounded rather than `while`: a stage that returns itself should fail the suite, not hang it.
-        for _ in 0..<11 where model.stage != .checkpointDetail {
+        for _ in 0..<12 where model.stage != .checkpointDetail {
+            // `921:3851` — the quest-availability sheet sits between the first explanation and the
+            // sealed scroll but is not a `Stage`, so it is checked ahead of the switch below.
+            if model.isPresentingQuestAvailability { model.advanceFromQuestAvailability(); continue }
             switch model.stage {
             case .locationVerified: model.advanceFromLocationVerified()
             case .cutsceneIntro: model.advanceFromCutsceneIntro()
@@ -94,16 +97,21 @@ struct TaskDetailTests {
         return Harness(model: model, provider: provider, quest: quest)
     }
 
-    // MARK: - `1:4592` → `1:4586` → `1:4711` → `1:4904`
+    // MARK: - `1:4592` → `921:3851` → `1:4586` → `1:4711` → `1:4904`
 
-    /// The reordered flow: the place notice hands over to the sealed-scroll transition, and the
-    /// transition is what opens the checkpoint's **first** task — not the task menu. The menu is
-    /// what the walker reaches after resolving it.
+    /// The reordered flow: the place notice hands over to the quest-availability sheet, which hands
+    /// over to the sealed-scroll transition, and the transition is what opens the checkpoint's
+    /// **first** task — not the task menu. The menu is what the walker reaches after resolving it.
     @Test func thePlaceNoticeHandsToTheTransitionWhichOpensTheFirstTask() throws {
         let harness = try atPlaceNotice()
         let first = try #require(harness.model.checkpoint?.tasks.first)
 
         harness.model.advanceFromPlaceNotice()
+        #expect(harness.model.isPresentingQuestAvailability)
+        #expect(harness.model.stage == .placeNotice, "the sheet sits over the notice, not a new stage")
+
+        harness.model.advanceFromQuestAvailability()
+        #expect(!harness.model.isPresentingQuestAvailability)
         #expect(harness.model.stage == .transition)
 
         harness.model.advanceFromTransition()
@@ -117,6 +125,7 @@ struct TaskDetailTests {
     @Test func backingOutOfTheFirstTaskReturnsToTheTransitionItCameFrom() throws {
         let harness = try atPlaceNotice()
         harness.model.advanceFromPlaceNotice()
+        harness.model.advanceFromQuestAvailability()
         harness.model.advanceFromTransition()
 
         harness.model.retreatFromStoryStage()
@@ -284,7 +293,11 @@ struct TaskDetailTests {
         harness.model.advanceFromCheckpointDetail()
         harness.model.advance()
         harness.provider.emit(offsetMetres: 5, accuracy: 10)
-        for _ in 0..<11 where harness.model.stage != .checkpointDetail {
+        for _ in 0..<12 where harness.model.stage != .checkpointDetail {
+            if harness.model.isPresentingQuestAvailability {
+                harness.model.advanceFromQuestAvailability()
+                continue
+            }
             switch harness.model.stage {
             case .locationVerified: harness.model.advanceFromLocationVerified()
             case .storyReveal: harness.model.advanceFromStoryReveal()
@@ -409,12 +422,18 @@ struct TaskDetailTests {
     }
 
     /// The menu's own action still leaves the checkpoint for the walk to the next place.
-    @Test func theMenuContinuesIntoTheCheckpointScreen() throws {
+    /// The menu's own action still leaves the checkpoint for the walk to the next place — but,
+    /// since `197:148` replaced `452:3194`'s single button, it does so directly (`advance()`)
+    /// rather than by way of `.atCheckpoint`'s own advance button. `AD-2`: nothing here gates
+    /// progression, so this is not a shorter path through a requirement, only through a screen.
+    @Test func theMenuContinuesIntoTheWalkToTheNextPlace() throws {
         let harness = try atTaskList()
+        let startIndex = harness.model.currentIndex
 
         harness.model.advanceFromCheckpointDetail()
 
-        #expect(harness.model.stage == .atCheckpoint)
+        #expect(harness.model.stage == .awaitingArrival)
+        #expect(harness.model.currentIndex == startIndex + 1)
     }
 
     /// `1:4647`'s window. The drawing is picked from the walker's *finished* walks, and on a first

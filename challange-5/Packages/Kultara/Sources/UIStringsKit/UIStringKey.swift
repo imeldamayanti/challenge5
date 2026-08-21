@@ -164,12 +164,25 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     // The place notice — `50:137` ("Quest") — and the checkpoint's task menu — `452:3132`
     // ("Quest 1/3"), which replaced the earlier `51:201` ("Detail Quest") treatment.
     case placeNoticeBeforeExplore
+    /// `921:3851` ("Quest - Card") — the sheet between a checkpoint's first explanation (the place
+    /// notice at a sacred Place, the story reveal everywhere else) and the sealed-scroll transition.
+    /// `%d` is the checkpoint's own task count and `%@` is the place name.
+    case questAvailabilityTitle
+    case questAvailabilitySubtitle
+    case questAvailabilityContinue
     case checkpointDetailContinue
     /// `452:3174` — the heading over the task list.
     case checkpointDetailAllTasks
-    /// `452:3194` — the one action at the foot of the task list. It leaves this checkpoint's list
-    /// for the walk to the next place; it does not skip anything (`AD-2`).
-    case checkpointDetailContinueToNext
+    /// `197:148`'s footer caption over the exit pill — replaces `452:3194`'s single "Continue to
+    /// Next Location" button. Read before `checkpointDetailNextPlace` when there is a next place to
+    /// name, or before `checkpointDetailFinishAction` at the final checkpoint.
+    case checkpointDetailOrGoTo
+    /// `197:148` — `%@` is the next checkpoint's place name. The frame's own copy ("Next Place:
+    /// Pura Pemecutan") names a place absent from the content tree (`AD-4`), so this reads the next
+    /// checkpoint's real name instead. Unused at the final checkpoint, which reuses
+    /// `runCompletedHeading`/`summaryOpenAction` instead — there is no next place to name, and the
+    /// walk is already `.completed` by the time this screen can show (`FR-DONE-01`).
+    case checkpointDetailNextPlace
     /// `452:3142` — what the stamp over the progress bar is.
     case checkpointDetailStampLabel
     /// `452:3138` — the segmented bar, read out. `%1$d` resolved of `%2$d`.

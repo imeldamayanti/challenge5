@@ -15,7 +15,9 @@ struct QuestRunView: View {
     @Environment(\.kultaraPalette) private var palette
     /// `223:2004` draws a back arrow and a "Back to Homepage" text button. Both pop this screen;
     /// they do not abandon the walk — the draft Run stays on disk and the quest list resumes it.
-    /// Abandoning is a separate, confirmed control (`FR-RUN-04`).
+    /// `FR-RUN-04`'s confirmed abandon is a separate model-level action
+    /// (`QuestRunViewModel.requestAbandon`/`confirmAbandon`) with no UI control on this screen any
+    /// more — the museum checkpoint screen it lived on is gone by request.
     @Environment(\.dismiss) private var dismiss
     /// `FR-MAP-04`'s handoff. `openURL` rather than `MKMapItem`, because `import MapKit` is banned
     /// in this target (`FR-MAP-01`, `PermissionCallBoundaryTests`).
@@ -93,6 +95,15 @@ struct QuestRunView: View {
                 KultaraThemeProvider { manualOverrideSheet }
                     .kultaraManualOverrideSheetPresentation()
             }
+            // `921:3851` — a sheet over whichever explanation (place notice or story reveal) it was
+            // reached from, dismissal treated the same as Continue (`AD-2`: nothing here gates
+            // progression, so there is no dead end to guard against).
+            .sheet(isPresented: Binding(get: { model.isPresentingQuestAvailability },
+                                        set: { if !$0 { model.advanceFromQuestAvailability() } })) {
+                questAvailability
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
+            }
             .task(id: model.stage) {
                 switch model.stage {
                 case .locationVerified:
@@ -137,7 +148,11 @@ struct QuestRunView: View {
         case .questExplanation: questExplanation
         case .stampAward: stampAward
         case .transition: transition
-        case .atCheckpoint: checkpointScreen
+        // `.atCheckpoint` renders the same "All Quest" screen `.checkpointDetail` does — the
+        // dark museum screen it used to render (lore, tasks, clue, an advance button and "End
+        // this walk") is gone by request, in favour of showing this one screen everywhere a
+        // checkpoint's task menu is reached, resumed walk included.
+        case .atCheckpoint: checkpointDetail
         case .finished: finishedScreen
         }
     }
@@ -266,6 +281,13 @@ struct QuestRunView: View {
         }
     }
 
+    private var questAvailability: some View {
+        QuestAvailabilityScreen(
+            language: language,
+            title: model.questAvailabilityTitle,
+            onContinue: { model.advanceFromQuestAvailability() })
+    }
+
     @ViewBuilder private var checkpointDetail: some View {
         if let checkpoint = model.checkpoint {
             CheckpointDetailScreen(
@@ -278,6 +300,8 @@ struct QuestRunView: View {
                 // image goes in instead — content with provenance, rather than a picture introduced
                 // here (`FR-CP-05`), the same substitution `PlaceNoticeScreen` makes.
                 stampImageURL: model.cutsceneImageURL,
+                isFinal: checkpoint.isFinal,
+                nextPlaceName: model.nextPlaceName,
                 onSelectTask: { model.openTaskDetail(taskID: $0.id) },
                 onContinue: { model.advanceFromCheckpointDetail() },
                 onBack: { model.retreatFromStoryStage() })
@@ -633,8 +657,10 @@ struct QuestRunView: View {
     }
 
     /// The frame's quieter second action. It leaves the *screen*, not the walk: the draft Run is
-    /// already on disk and the quest list resumes it. `FR-RUN-04`'s abandon is the control below,
-    /// and it is confirmed — this one is not, because nothing is lost.
+    /// already on disk and the quest list resumes it — this is not confirmed, because nothing is
+    /// lost. `FR-RUN-04`'s confirmed abandon used to sit further into the walk (the museum
+    /// checkpoint screen's own control); that screen is gone by request, and nothing replaces it,
+    /// so `QuestRunViewModel.requestAbandon`/`confirmAbandon` are reachable from tests only now.
     private var backToHomeButton: some View {
         Button(UIStrings.string(.locationNotThereBack, language)) { dismiss() }
             .buttonStyle(.hisploraPlain(ink: \.inkOnButton))
@@ -721,133 +747,6 @@ struct QuestRunView: View {
         .background(palette.paperRaised.color)
     }
 
-    // MARK: Checkpoint
-
-    @ViewBuilder private var checkpointScreen: some View {
-        if let checkpoint = model.checkpoint {
-            ScrollView {
-                VStack(alignment: .leading, spacing: KultaraMetrics.xl) {
-                    checkpointHeading(checkpoint)
-                    // `FR-CP-02` — lore, then tasks, then the clue. The order is the requirement.
-                    loreSection(checkpoint)
-                    tasksSection(checkpoint)
-                    clueSection(checkpoint)
-                    advanceSection
-                    abandonButton
-                }
-                .padding(KultaraMetrics.lg)
-                .kultaraFloatingTabBarClearance()
-            }
-        } else {
-            EmptyView()
-        }
-    }
-
-    private func checkpointHeading(_ checkpoint: CheckpointPresentation) -> some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-            KultaraEyebrow(UIStrings.string(.checkpointArrivedHeading, language),
-                           index: checkpoint.orderIndex + 1)
-            Text(checkpoint.placeName)
-                .kultaraFont(.questTitleLarge)
-                .foregroundStyle(palette.ink.color)
-                .fixedSize(horizontal: false, vertical: true)
-                .accessibilityAddTraits(.isHeader)
-            Text(model.progressText)
-                .kultaraFont(.metadata)
-                .foregroundStyle(palette.inkMuted.color)
-            // `FR-CP-07` — the stamp is a fact of arrival, stated before any task is offered.
-            Text(UIStrings.string(.checkpointStampAwarded, language))
-                .kultaraFont(.metadata)
-                .foregroundStyle(palette.seal.color)
-            KultaraRule()
-        }
-    }
-
-    private func loreSection(_ checkpoint: CheckpointPresentation) -> some View {
-        VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            KultaraSectionHeading(UIStrings.string(.checkpointLoreHeading, language))
-            LoreClaimList(claims: checkpoint.claims, language: language)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-
-    @ViewBuilder private func tasksSection(_ checkpoint: CheckpointPresentation) -> some View {
-        if !checkpoint.tasks.isEmpty {
-            VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-                KultaraSectionHeading(UIStrings.string(.checkpointTasksHeading, language))
-                // `FR-TASK-05` — at a sacred Place the dress code and photo policy come before any
-                // task is offered, not in a panel further down.
-                if checkpoint.isSacred {
-                    KultaraCard {
-                        VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-                            Text(UIStrings.string(.previewSacredNotice, language))
-                                .kultaraFont(.metadata)
-                                .foregroundStyle(palette.seal.color)
-                            LabelledValue(
-                                label: UIStrings.string(.previewDressCode, language),
-                                value: checkpoint.dressCodeText)
-                            LabelledValue(
-                                label: UIStrings.string(.previewPhotoPolicy, language),
-                                value: checkpoint.photoPolicyText)
-                        }
-                    }
-                }
-                Text(UIStrings.string(.taskOptionalNote, language))
-                    .kultaraFont(.metadata)
-                    .foregroundStyle(palette.inkMuted.color)
-                    .fixedSize(horizontal: false, vertical: true)
-                ForEach(checkpoint.tasks) { task in
-                    TaskCard(
-                        task: task,
-                        prompt: checkpoint.taskPrompts[task.id] ?? "",
-                        language: language,
-                        resolution: model.resolution(for: task),
-                        draft: Binding(
-                            get: { model.taskDrafts[task.id] ?? "" },
-                            set: { model.taskDrafts[task.id] = $0 }),
-                        onSave: { model.saveTask(task) },
-                        onSkip: { model.skipTask(task) })
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    @ViewBuilder private func clueSection(_ checkpoint: CheckpointPresentation) -> some View {
-        if let clue = checkpoint.clueToNext {
-            VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-                KultaraSectionHeading(UIStrings.string(.checkpointClueHeading, language))
-                KultaraCard {
-                    Text(clue)
-                        .kultaraFont(.body)
-                        .foregroundStyle(palette.ink.color)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-        }
-    }
-
-    @ViewBuilder private var advanceSection: some View {
-        if model.canAdvance {
-            Button(UIStrings.string(.checkpointAdvanceAction, language)) { model.advance() }
-                .buttonStyle(.seal)
-        } else if model.isCompleted {
-            VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-                Text(UIStrings.string(.runCompletedHeading, language))
-                    .kultaraFont(.sectionHeading)
-                    .foregroundStyle(palette.seal.color)
-                Text(UIStrings.string(.runCompletedBody, language))
-                    .kultaraFont(.body)
-                    .foregroundStyle(palette.ink.color)
-                    .fixedSize(horizontal: false, vertical: true)
-                Button(UIStrings.string(.summaryOpenAction, language)) { model.openSummary() }
-                    .buttonStyle(.seal)
-            }
-        }
-    }
-
     // MARK: Finished
 
     @ViewBuilder private var finishedScreen: some View {
@@ -855,22 +754,6 @@ struct QuestRunView: View {
             RunSummaryView(model: RunSummaryViewModel(run: run))
         } else {
             EmptyView()
-        }
-    }
-
-    // MARK: Shared
-
-    /// Drawn in whichever direction the screen around it is on: the arrival screen is on the story
-    /// flow's palette, the checkpoint screen is still on the museum theme.
-    @ViewBuilder private var abandonButton: some View {
-        if model.run?.state == .active {
-            if model.stage == .awaitingArrival {
-                Button(UIStrings.string(.runAbandonAction, language)) { model.requestAbandon() }
-                    .buttonStyle(.hisploraPlain)
-            } else {
-                Button(UIStrings.string(.runAbandonAction, language)) { model.requestAbandon() }
-                    .buttonStyle(.ruled)
-            }
         }
     }
 }

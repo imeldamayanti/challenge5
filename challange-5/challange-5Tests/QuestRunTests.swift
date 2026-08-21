@@ -96,15 +96,29 @@ struct QuestRunTests {
     /// Arrival no longer lands on the checkpoint screen directly. M8's story flow puts the Hisplora
     /// stages between them — cutscene intro and portrait on the first arrival, then the paged story
     /// reveal, the transition, a place notice at a sacred Place (`FR-TASK-05`), and the checkpoint
-    /// detail. Walking them is what a walker does, and asserting the walk *terminates* at
-    /// `.atCheckpoint` is a stronger guard than asserting arrival lands there: it also catches a
-    /// story stage that loops or never hands over.
+    /// detail. Walking them is what a walker does, and asserting the walk *terminates* somewhere
+    /// real is a stronger guard than asserting arrival lands there: it also catches a story stage
+    /// that loops or never hands over.
+    ///
+    /// **The menu's own exit no longer stops at `.atCheckpoint`.** Since `197:148` replaced
+    /// `452:3194`'s single button, `advanceFromCheckpointDetail` leaves straight for the next place
+    /// or the summary (see its own doc comment), so the walk this helper simulates now runs one hop
+    /// further than it used to — to `.awaitingArrival` (there is a next checkpoint to walk to) or
+    /// `.finished` (there is not). `.atCheckpoint` is still accepted: `stampAwardNextLocation`
+    /// still reaches it from the stamp screen, on the path this helper's `.taskDetail` case does not
+    /// take (it simulates leaving the sheet unresolved, not resolving it).
     @discardableResult
     private func walkTheStoryStages(_ harness: Harness) -> Bool {
         // Bounded rather than `while`: a stage that returns itself would otherwise hang the suite
         // instead of failing it. Nine stages is the longest legal path — `1:4458`'s arrival
-        // confirmation added one and `187:1103`'s map added another — and twelve gives it room.
-        for _ in 0..<12 {
+        // confirmation added one, `187:1103`'s map added another, and `921:3851`'s
+        // quest-availability sheet a third — thirteen gives it room.
+        for _ in 0..<13 {
+            // `921:3851` is a sheet, not a `Stage`, so it is checked ahead of the switch below.
+            if harness.model.isPresentingQuestAvailability {
+                harness.model.advanceFromQuestAvailability()
+                continue
+            }
             switch harness.model.stage {
             case .locationVerified: harness.model.advanceFromLocationVerified()
             case .cutsceneIntro: harness.model.advanceFromCutsceneIntro()
@@ -113,11 +127,14 @@ struct QuestRunTests {
             case .storyReveal: harness.model.advanceFromStoryReveal()
             case .placeNotice: harness.model.advanceFromPlaceNotice()
             // The checkpoint's first task now sits between the notice and the menu (`1:4592` →
-            // `1:4711` → `1:4904`), so the walk passes through it on the way to `.atCheckpoint`.
+            // `1:4711` → `1:4904`), so the walk passes through it on the way to the menu.
             case .taskDetail: harness.model.advanceFromTaskDetail()
             case .checkpointDetail: harness.model.advanceFromCheckpointDetail()
             case .transition: harness.model.advanceFromTransition()
-            default: return harness.model.stage == .atCheckpoint
+            default:
+                return harness.model.stage == .atCheckpoint
+                    || harness.model.stage == .awaitingArrival
+                    || harness.model.stage == .finished
             }
         }
         return false
@@ -214,7 +231,7 @@ struct QuestRunTests {
 
     // MARK: - FR-START-01, FR-ARR-01/02
 
-    @Test func aGoodFixAtTheGateStartsTheWalkAndStopsSampling() throws {
+    @Test func aGoodFixAtTheGateStartsTheWalkAndHandsOverToTheNextLeg() throws {
         let harness = try harness()
         openArrival(harness)
         harness.provider.emit(offsetMetres: 5, accuracy: 8)
@@ -223,10 +240,13 @@ struct QuestRunTests {
         #expect(run.state == .active)
         #expect(run.reachedCount == 1)
         // The Run exists the instant the gate opens; the story stages that follow are presentation,
-        // and they must hand over to the checkpoint screen rather than dead-end.
-        #expect(walkTheStoryStages(harness), "Story stages did not terminate at .atCheckpoint")
-        // NFR-BAT-04 — nothing keeps sampling once there is nothing to detect.
-        #expect(!harness.provider.isSampling)
+        // and they must hand over to the walk's next leg rather than dead-end.
+        #expect(walkTheStoryStages(harness), "Story stages did not hand over cleanly")
+        // `197:148`'s own exit leaves the checkpoint straight for the next place, which begins
+        // sampling again at once (`beginSampling` inside `advance()`) — there is no longer an idle
+        // rest at `.atCheckpoint` on this path for `NFR-BAT-04` to hold still against.
+        #expect(harness.model.stage == .awaitingArrival)
+        #expect(harness.provider.isSampling)
         #expect(try harness.store.activeRun(questID: harness.quest.id)?.id == run.id)
     }
 
@@ -334,9 +354,12 @@ struct QuestRunTests {
         let harness = try harness()
         openArrival(harness)
         harness.provider.emit(offsetMetres: 5, accuracy: 8)
-        #expect(walkTheStoryStages(harness), "Story stages did not terminate at .atCheckpoint")
+        // The menu's own exit already leaves for the next place (`advanceFromCheckpointDetail`),
+        // so `walkTheStoryStages` lands on `.awaitingArrival` with sampling already aimed at the
+        // second checkpoint — no separate `advance()` call is needed here any more.
+        #expect(walkTheStoryStages(harness), "Story stages did not hand over cleanly")
+        #expect(harness.model.stage == .awaitingArrival)
 
-        harness.model.advance()
         harness.provider.emit(offsetMetres: 5, accuracy: 8)
 
         #expect(harness.model.stage == .locationVerified)
@@ -426,10 +449,10 @@ struct QuestRunTests {
         let harness = try harness()
         openArrival(harness)
 
+        // No separate `advance()` between checkpoints any more: the menu's own exit
+        // (`advanceFromCheckpointDetail`) already leaves for the next place — or, at the last
+        // checkpoint, for the summary — as part of `walkTheStoryStages` itself.
         for checkpoint in harness.quest.orderedCheckpoints {
-            if checkpoint.orderIndex > 0 {
-                harness.model.advance()
-            }
             harness.provider.emit(offsetMetres: 2, accuracy: 6)
             #expect(walkTheStoryStages(harness),
                     "Failed to arrive at checkpoint \(checkpoint.orderIndex)")

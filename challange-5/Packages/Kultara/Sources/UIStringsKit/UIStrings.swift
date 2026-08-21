@@ -250,10 +250,17 @@ public enum UIStrings {
         .transitionTapToReveal: LocalizedText(id: "Ketuk untuk membuka", en: "Tap to reveal"),
         .placeNoticeBeforeExplore: LocalizedText(
             id: "Sebelum menjelajah:", en: "Before you explore:"),
+        .questAvailabilityTitle: LocalizedText(
+            id: "%d Kegiatan untuk Dijelajahi di %@", en: "%d Quest to Explore in %@"),
+        .questAvailabilitySubtitle: LocalizedText(
+            id: "Selesaikan kegiatan utama, lalu jelajahi lebih lanjut dengan santai.",
+            en: "Complete the main quest, then explore more at your own pace."),
+        .questAvailabilityContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
         .checkpointDetailContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),
         .checkpointDetailAllTasks: LocalizedText(id: "Semua Kegiatan", en: "All Quest"),
-        .checkpointDetailContinueToNext: LocalizedText(
-            id: "Lanjut ke titik berikutnya", en: "Continue to Next Location"),
+        .checkpointDetailOrGoTo: LocalizedText(id: "Atau lanjut ke", en: "Or go to"),
+        .checkpointDetailNextPlace: LocalizedText(
+            id: "Tempat berikutnya: %@", en: "Next Place: %@"),
         .checkpointDetailStampLabel: LocalizedText(
             id: "Stempel titik ini", en: "This checkpoint's stamp"),
         .checkpointDetailProgressLabel: LocalizedText(

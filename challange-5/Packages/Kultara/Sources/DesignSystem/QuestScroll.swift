@@ -33,6 +33,13 @@ public enum HisploraScrollArt {
     /// asset is one file and the geometry is the caller's.
     public static let rolledScroll = PackagedImage(name: "quest-scroll", aspectRatio: 511.0 / 488.0)
 
+    /// The ribboned scroll `921:3851` ("Quest - Card") draws on the quest-availability sheet — a
+    /// tied roll rather than `rolledScroll`'s plain one, at its own aspect ratio. The width/height
+    /// here is provisional pending the real export; `HisploraAvailabilityGlyph` sizes it by
+    /// `.scaledToFit()` regardless, so a corrected ratio is a one-line fix once the file lands.
+    public static let availabilityScroll = PackagedImage(
+        name: "quest-availability-scroll", aspectRatio: 474.0 / 274.0)
+
     /// The tilt `447:1909` gives the scroll above the map hint.
     public static let mapHintTiltDegrees: Double = 41.6
 
@@ -387,6 +394,32 @@ public struct HisploraScrollGlyph: View {
         }
         .frame(width: size, height: size)
         .rotationEffect(.degrees(tiltDegrees))
+        .accessibilityHidden(true)
+    }
+}
+
+/// The ribboned scroll `921:3851` draws — decoration for the quest-availability sheet, sized by
+/// width with the height following its own ratio rather than a caller-supplied square.
+public struct HisploraAvailabilityGlyph: View {
+    @Environment(\.hisploraPalette) private var palette
+
+    private let width: CGFloat
+
+    public init(width: CGFloat) {
+        self.width = width
+    }
+
+    public var body: some View {
+        Group {
+            if let image = HisploraScrollArt.availabilityScroll.image {
+                image.resizable().scaledToFit()
+            } else {
+                Image(systemName: "scroll")
+                    .font(.system(size: width * 0.5))
+                    .foregroundStyle(palette.brownMid.color)
+            }
+        }
+        .frame(width: width, height: width / HisploraScrollArt.availabilityScroll.aspectRatio)
         .accessibilityHidden(true)
     }
 }
