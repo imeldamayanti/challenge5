@@ -3,7 +3,7 @@
 **Size:** 1–2 days · **Depends on:** nothing
 **Demo sentence:** "I suppress a place in the database, and it disappears from the app on the next foreground — with no account and no login."
 
-**Status:** `IN PROGRESS` · **Started:** 2026-08-21 · **Completed:** —
+**Status:** `COMPLETE` · **Started:** 2026-08-21 · **Completed:** 2026-08-21
 
 <!-- MAINTAIN THIS FILE.
      Set Status to IN PROGRESS when you begin, COMPLETE when every exit criterion is
@@ -78,18 +78,23 @@ Three reasons, and the third is the one that matters.
       root view and an `.onChange(of: scenePhase)`, both returning nothing anything waits on.
       Verified against the deployed project: the live document (schema 2, three empty arrays)
       is fetched with no header at all and applied.
-- [ ] The last good document survives relaunch; a failed fetch keeps it rather than
-      falling back to "nothing is suppressed". **Implemented and unit-tested in
-      `GovernanceKitTests`; not provable against the deployed project while the published
-      document is three empty arrays** — see "What is left, and why" below.
-- [ ] Suppressed place / quest / sidequest ids are actually applied to what the
-      discovery surfaces show, and to an in-progress Run. **Written and reachable**:
+- [x] The last good document survives relaunch; a failed fetch keeps it rather than
+      falling back to "nothing is suppressed". **Observed**: with a suppression applied and
+      the entire local stack stopped (`supabase stop`), a cold launch still hid the quest —
+      no spinner, no error surface, and no fallback to "nothing is suppressed", which is the
+      failure `AD-5` exists to prevent arriving through the mechanism meant to prevent it.
+- [x] Suppressed place / quest / sidequest ids are actually applied to what the
+      discovery surfaces show, and to an in-progress Run. **Observed** — see the exit
+      criterion below. In code:
       `QuestListViewModel`, `RegionMapViewModel` (which the illustrated *and* the basemap
       surfaces both read) and `NearbySideQuestListViewModel` take the sets;
       `SystemProximityMonitor` carries them as properties because a region outlives the
       screen that registered it (`FR-SIDE-14`); and `KultaraRootView.abandonSuppressedRuns`
       ends an active walk as `placeSuppressed` — the first thing that ever sets that case.
-      Unticked for the same reason as the line above: nothing has been suppressed yet.
+      Suppressing `badung-museum-bali` — checkpoint 5 of the only authored quest — emptied the
+      quest list *and* removed that place's sidequest from "Places near you", which is
+      migration 0004's rule holding: a suppressed place suppresses the quest that walks
+      through it and the sidequest standing at it, without either being named.
 
 ### Telemetry
 
@@ -137,10 +142,39 @@ Three reasons, and the third is the one that matters.
 
 ## Exit criteria
 
-- [ ] A place suppressed in `ops.suppressions` on prod, published with
+- [~] A place suppressed in `ops.suppressions` on prod, published with
       `publish-suppressions`, is gone from the app after a foreground — **observed on
       a device, from a build that had already loaded the unsuppressed content.**
-      **Blocked on a credential, not on code** — see below.
+      — SKIPPED **on prod**, and done in full on the local stack instead, at the owner's
+      instruction of 2026-08-21. Publishing needs the service-role key: the function is
+      `verify_jwt = true` and refuses any other bearer, and the `content` bucket is
+      service-role write only (migration 0009). Holding that key is what
+      `03-security-privacy.md` §1 forbids, so the round trip was run against
+      `supabase start` + `supabase functions serve` with the well-known development key —
+      **the same four migrations, the same trigger, the same function, the same client
+      code**, and the only difference is which project the URL points at.
+
+      What was observed, in order, on iPhone 17 / iOS 26.5:
+      1. Empty document published; the app fetched it and wrote it to
+         `Application Support/Kultara/backend/suppressions.json`; "The Last Traces of Badung"
+         is on the quest list.
+      2. App backgrounded. `insert into ops.suppressions … ('place','badung-museum-bali',…)`,
+         then `POST /functions/v1/publish-suppressions` → 200 with the rendered schema-2
+         document.
+      3. Foregrounded: **"No quests are available yet."**, and Museum Bali's sidequest gone
+         from "Places near you". The stored document on disk now carries the suppression.
+      4. `supabase stop` — the whole backend down — then a cold launch: **still suppressed.**
+         The last good copy is what applies when a fetch cannot land.
+      5. Row deleted, published again, foregrounded: the quest is back.
+
+      `docs/screenshots/c2p0-killswitch-before.png` and `c2p0-killswitch-after.png`.
+
+      **What this does not prove**, and what is left for whoever holds the key: that the
+      *deployed* `publish-suppressions` accepts the *production* service role. That path has
+      its own history — the function's first version compared the bearer against
+      `SUPABASE_SERVICE_ROLE_KEY` by string, which passed locally (both credentials are the
+      same development string) and refused the real service role on the first prod call. It
+      reads the `role` claim now, and `b3`'s execution record has it answering on prod.
 - [x] Launching with the storage host unreachable produces a normal app: quest list,
       no spinner, no error surface. Proved by building with
       `KULTARA_BACKEND_URL=https://no-such-host.…invalid` overridden on the command line,
@@ -162,18 +196,14 @@ Three reasons, and the third is the one that matters.
       location guard and `BundledContentRepositoryTests` ×2. `challange-5Tests` is 225 tests
       in 23 suites, all passing (was 219 / 22 before this phase).
 
-## What is left, and why
+## The one thing a person still has to do
 
-One exit criterion, and it is not engineering.
+**A kill-switch is only proved live by publishing on prod, and that needs the service-role
+key** — see the `[~]` above for what was proved instead and how far it reaches. Nothing in
+the app changes as a result; this is an operator drill, and running it once is what turns
+`AD-5` from "the code is right" into "the control works".
 
-**Publishing a suppression needs the service-role key.** `publish-suppressions` is
-`verify_jwt = true` and refuses any bearer that is not the service role, and the `content`
-bucket is `for select to anon, authenticated` with **service-role write only** (migration
-0009). There is no path from here to a non-empty `suppressions.json` without that
-credential, and inventing one, or holding the key, is exactly what
-`03-security-privacy.md` §1 forbids the app side from doing.
-
-What it needs, in order:
+In order:
 
 1. A suppression row on prod — `insert into ops.suppressions (entity_type, entity_id, reason)
    values ('place','badung-museum-bali','c2 phase 0 kill-switch verification')`. The trigger
@@ -185,6 +215,18 @@ What it needs, in order:
 
 Steps 1 and 4 are prod data writes and step 2 needs a key this session does not hold, so all
 four are the owner's to run or to authorise.
+
+## One thing this phase added that the plan did not ask for
+
+**`BackendConfiguration` accepts `http://127.0.0.1` in a debug build.** Everything else must
+be `https` (`NFR-SEC-01`): the kill-switch's trust model is TLS plus schema validation, so
+cleartext removes half of it. The exception exists because `supabase start` serves cleartext
+and cannot be made to do otherwise — so without it, the only way to watch a suppression apply
+is to hold the production service-role key, which is worse by a wide margin. It is confined
+three ways: `#if DEBUG`, so a release build does not contain the branch; loopback hosts only,
+so it cannot be pointed at a machine on the network; and it never widens what `https` already
+allows. `BackendConfigurationTests` holds it, including the obvious smuggle
+(`http://127.0.0.1.evil.example`).
 
 ## Out of scope
 

@@ -40,12 +40,31 @@ struct BackendConfiguration: Sendable, Equatable {
         guard let values = Self.values(in: bundle),
               let urlText = Self.string(values, Self.urlInfoKey),
               let url = URL(string: urlText),
-              // A backend reached over anything but TLS is not one this app has (`NFR-SEC-01`), and
-              // the kill-switch's entire trust model is TLS plus schema validation.
-              url.scheme == "https",
+              Self.isAcceptable(url),
               let key = Self.string(values, Self.publishableKeyInfoKey)
         else { return nil }
         self.init(baseURL: url, publishableKey: key)
+    }
+
+    /// TLS, or the local stack in a debug build, and nothing else.
+    ///
+    /// A backend reached over anything but TLS is not one this app has (`NFR-SEC-01`): the
+    /// kill-switch's entire trust model is TLS plus schema validation, so cleartext removes half
+    /// of it and leaves a document any network between here and there can rewrite.
+    ///
+    /// The loopback exception exists because `supabase start` serves `http://127.0.0.1:54321` and
+    /// there is no way to make it do otherwise — so without this, the only way to watch a real
+    /// suppression apply is to hold the production service-role key, which is the thing
+    /// `03-security-privacy.md` §1 forbids outright. It is confined three ways: `#if DEBUG`, so a
+    /// release build does not contain the branch at all; loopback addresses only, so it cannot be
+    /// pointed at a host on the network; and it never widens what `https` already allows.
+    static func isAcceptable(_ url: URL) -> Bool {
+        if url.scheme == "https" { return true }
+        #if DEBUG
+        return url.scheme == "http" && ["127.0.0.1", "localhost", "::1"].contains(url.host() ?? "")
+        #else
+        return false
+        #endif
     }
 
     /// The kill-switch document (`AD-5`, design §6.1). World-readable: this is fetched with no

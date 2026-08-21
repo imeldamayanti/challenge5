@@ -25,7 +25,7 @@ unit test with a stubbed transport". If it has not run against
 
 | # | Phase | Depends on | Size | Status | Started | Completed |
 |---|---|---|---|---|---|---|
-| 0 | [Governance & Telemetry](phases/phase-0-governance-telemetry.md) | — | 1–2 d | `IN PROGRESS` | 2026-08-21 | — |
+| 0 | [Governance & Telemetry](phases/phase-0-governance-telemetry.md) | — | 1–2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 1 | [Anonymous Session](phases/phase-1-anonymous-session.md) | — | 1 d | `NOT STARTED` | — | — |
 | 2 | [Sync Identity](phases/phase-2-sync-identity.md) | — | 2 d | `NOT STARTED` | — | — |
 | 3 | [Push Sync](phases/phase-3-push-sync.md) | 1, 2 | 3 d | `NOT STARTED` | — | — |
@@ -53,8 +53,9 @@ Verified 2026-08-20 against the running project, not read from a document.
       arrival on iPhone 17 / iOS 26.5 are in `ops.events` on the deployed project, read back
       2026-08-21 00:42 UTC, and the kill-switch document is fetched on launch and on every
       foreground.
-- [ ] A **non-empty** kill-switch document observed applying. Blocked on the service-role
-      key — see B7.
+- [x] A **non-empty** kill-switch document observed applying, and still applying with the
+      backend stopped. Run end to end against the **local** stack, because publishing needs
+      the service-role key — see B7 and phase 0's `[~]` for exactly how far that reaches.
 
 ## Blockers
 
@@ -66,7 +67,7 @@ Verified 2026-08-20 against the running project, not read from a document.
 | B4 | `FR-MAP-01`'s discovery-basemap amendment is drafted and unsigned; `FR-CP-05`'s Story Reveal exception is undocumented in the PRD | release, not wiring | unassigned |
 | B5 | Apple Developer "Sign in with Apple" key and a Google OAuth client do not exist; `config.toml` has no Google stanza at all | phase 6 | unassigned |
 | B6 | `xcode-select` points at CommandLineTools — every build and test command needs a `DEVELOPER_DIR` prefix. The permanent fix needs the user's password | all phases | af |
-| B7 | Publishing a suppression needs the **service-role key**: `publish-suppressions` is `verify_jwt = true` and refuses any other bearer, and the `content` bucket is service-role write only (migration 0009). Phase 0's last exit criterion cannot be met without it, and holding that key is what `03-security-privacy.md` §1 forbids | phase 0's exit, `AD-5` being provably live | af |
+| B7 | Publishing a suppression needs the **service-role key**: `publish-suppressions` is `verify_jwt = true` and refuses any other bearer, and the `content` bucket is service-role write only (migration 0009). The round trip is proved on the local stack; running it once on prod is what turns `AD-5` from "the code is right" into "the control works". An operator drill, not engineering | `AD-5` being provably live on prod | af |
 
 ## Session log
 
@@ -83,4 +84,7 @@ Append one line per working session. Newest last.
   `ops.events` on `ppwcxmvetmmwliusliac`. Two guards added —
   `TelemetryPayloadBoundaryTests` (proved to fire) and `AppTelemetryTests` (6 tests).
   Package suite unchanged at four pre-existing failures; `challange-5Tests` 219 → 225, green.
-  Left open: the suppression round trip, blocked on B7.
+  Kill-switch round trip then run in full on the local stack at the owner's instruction:
+  suppress → quest gone; backend stopped → still gone; release → back
+  (`docs/screenshots/c2p0-killswitch-*.png`). Phase 0 `COMPLETE`; the prod publish stays as
+  B7, an operator drill.
