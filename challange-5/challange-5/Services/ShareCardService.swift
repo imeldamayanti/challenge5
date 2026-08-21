@@ -89,11 +89,23 @@ nonisolated struct SupabaseShareCardMinting: ShareCardMinting {
                 "Authorization": "Bearer \(token)",
             ],
             encoder: SyncWireFormat.encoder, decoder: SyncWireFormat.decoder)
+
+        // **The revision bump is what makes this work at all.** Without it
+        // `resolve_sync_conflict` reads the update as an idempotent retry and returns null — the
+        // row is untouched, PostgREST answers 200, and the walker is told the link is off while it
+        // keeps serving. See `SyncConflictTrigger`; a local test found this.
+        guard let revision = await SyncConflictTrigger.nextRevision(
+            table: "share_cards", idColumn: "run_id", id: runID, client: database)
+        else { return false }
+
         // `revoked_at` rather than a delete: the serve function checks it per request, so the link
-        // stops on the next fetch. Deleting the row would work too and would lose the record that
-        // a card was ever shared, which is the thing a walker might want to see.
+        // stops on the next fetch, and the record that a card was ever shared survives — which is
+        // the thing a walker might want to see.
         return (try? await database.from("share_cards")
-            .update(["revoked_at": SyncWireFormat.formatter.string(from: Date())])
+            .update([
+                "revoked_at": SyncWireFormat.formatter.string(from: Date()),
+                "revision": "\(revision)",
+            ])
             .eq("run_id", value: runID.uuidString)
             .execute()) != nil
     }

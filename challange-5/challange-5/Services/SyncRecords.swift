@@ -1,5 +1,6 @@
 import ContentKit
 import Foundation
+import PostgREST
 import RunEngine
 import TelemetryKit
 
@@ -74,6 +75,44 @@ nonisolated enum SyncWireFormat {
         formatter.formatOptions = [.withInternetDateTime]
         return formatter
     }()
+}
+
+/// An update that does **not** bump `revision` is silently discarded.
+///
+/// `app.runs`, `app.photos`, `app.checkpoint_results`, `app.task_results`, `app.awards` and
+/// `app.share_cards` all carry `resolve_sync_conflict` as a `before update` trigger, and its second
+/// branch reads:
+///
+///     if new.revision = old.revision and new.device_id = old.device_id then
+///       return null;                            -- an idempotent retry, not a conflict
+///
+/// Which is right for what it was written for — a device re-pushing an unchanged row — and wrong
+/// for a **partial** update from the same device. PostgREST leaves untouched columns alone, so
+/// `revision` and `device_id` both match and the write is dropped. No error, no affected-rows
+/// count anybody checks, nothing in the response to notice.
+///
+/// This bit twice, both times invisibly: `uploaded_at` never got stamped on a photograph, which
+/// made every restored walk skip its pictures; and `revoked_at` never landed on a share card, which
+/// is a link a walker believes is off and is not. **Any partial update to an `app.*` row goes
+/// through `revisionBump`.**
+///
+/// It is also the one place `revision` earns its keep, after `c2` phase 2 cut it everywhere else —
+/// worth remembering before deciding the column is dead weight.
+nonisolated enum SyncConflictTrigger {
+    /// Reads a row's current `revision` and answers the value an update must carry.
+    static func nextRevision(
+        table: String, idColumn: String, id: UUID, client: PostgrestClient
+    ) async -> Int? {
+        struct RevisionOnly: Decodable { let revision: Int }
+        let rows: [RevisionOnly]? = try? await client.from(table)
+            .select("revision")
+            .eq(idColumn, value: id.uuidString)
+            .limit(1)
+            .execute()
+            .value
+        guard let current = rows?.first?.revision else { return nil }
+        return current + 1
+    }
 }
 
 // MARK: - runs

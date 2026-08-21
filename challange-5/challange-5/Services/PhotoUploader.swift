@@ -89,11 +89,20 @@ nonisolated struct PhotoUploader: PhotoUploading {
             try await bucket.upload(fullPath, data: derivatives.full, options: options)
             try await bucket.upload(thumbPath, data: derivatives.thumbnail, options: options)
 
-            // Stamped only once both objects are actually there.
-            try await database.from("photos")
-                .update(["uploaded_at": SyncWireFormat.formatter.string(from: Date())])
-                .eq("id", value: photoID.uuidString)
-                .execute()
+            // Stamped only once both objects are actually there — **with a revision bump**, or
+            // `resolve_sync_conflict` reads it as an idempotent retry and drops it silently. See
+            // `SyncConflictTrigger`; without this every photograph stays `uploaded_at` null and
+            // every restored walk skips its pictures.
+            if let revision = await SyncConflictTrigger.nextRevision(
+                table: "photos", idColumn: "id", id: photoID, client: database) {
+                try await database.from("photos")
+                    .update([
+                        "uploaded_at": SyncWireFormat.formatter.string(from: Date()),
+                        "revision": "\(revision)",
+                    ])
+                    .eq("id", value: photoID.uuidString)
+                    .execute()
+            }
         }
         return identifiers
     }

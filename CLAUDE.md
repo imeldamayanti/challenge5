@@ -386,13 +386,12 @@ Still unguarded:
   - `SideQuestFlowUITests.testReopeningACompletedSidequestReplaysWithoutAwardingAgain` is **flaky,
     not red**: it failed once on "The delete confirmation dialog did not appear" and passed on a
     re-run of the same build. Do not treat a single failure of it as a regression without a re-run.
-- **`JournalPapersTests.openingWhileTurnedReturnsTheCardToItsFrontFirst` is flaky.** Not a UI test —
-  it is in `challange-5Tests`. Observed failing three times across 2026-08-21 on
-  `Expectation failed: (finished → nil) != nil`, and passing on every re-run of the same build,
-  including twice in a row immediately after a failure. It is a timing assertion over
-  `HisploraEnvelopeFlip`'s beats. **Re-run before treating a single failure as a regression**, and
-  if it is going to be fixed, the fix is to make the assertion wait on the sequence rather than on
-  a clock.
+- **`JournalPapersTests.openingWhileTurnedReturnsTheCardToItsFrontFirst` was flaky and is fixed.**
+  It failed five times on 2026-08-21 and passed on every re-run, because it slept a fixed 400 ms
+  and then asserted a callback had fired — the turn is wall-clock work, and under a parallel suite
+  on a busy machine it overruns. It polls to a five-second deadline now. **The general lesson,
+  since this codebase has several animation-adjacent tests: a test that asserts "eventually" should
+  wait for the thing, not for the clock.**
 
 ## Two visual directions, split at a screen boundary
 
