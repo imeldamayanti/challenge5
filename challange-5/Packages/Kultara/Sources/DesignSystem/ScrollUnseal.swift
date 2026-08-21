@@ -70,11 +70,31 @@ public struct HisploraScrollUnsealSequence: Sendable, Equatable {
         guard !rendersImmediately else { return .zero }
         switch stage {
         case .sealed: return .zero
-        case .widening: return .milliseconds(550)
-        case .unbinding: return .milliseconds(320)
-        case .unrolling: return .milliseconds(900)
+        case .widening: return .milliseconds(520)
+        case .unbinding: return .milliseconds(300)
+        case .unrolling: return .milliseconds(950)
         // Long enough to read as the sheet settling, short enough that nobody waits on it.
-        case .open: return .milliseconds(260)
+        case .open: return .milliseconds(240)
+        }
+    }
+
+    /// How long the runner waits before starting the *next* beat — shorter than the beat itself, so
+    /// the following one begins while this one is still easing out.
+    ///
+    /// **This is the fix for an opening that read as four separate movements.** Sleeping for exactly
+    /// `duration(of:)` meant every beat ran to a full stop before the next one started, so the roll
+    /// grew, stopped, faded, stopped, unrolled, stopped. Overlapping the tails hands the motion from
+    /// one beat to the next without the object ever coming to rest mid-sequence. The overlap is
+    /// small on purpose: the two beats that *change identity* (`unbinding`'s cross-fade) must still
+    /// land on a silhouette that has finished growing, so `widening` keeps most of its tail.
+    public func hold(of stage: HisploraScrollUnsealStage) -> Duration {
+        guard !rendersImmediately else { return .zero }
+        switch stage {
+        case .sealed: return .zero
+        case .widening: return .milliseconds(430)
+        case .unbinding: return .milliseconds(215)
+        case .unrolling: return .milliseconds(780)
+        case .open: return duration(of: .open)
         }
     }
 
@@ -86,13 +106,17 @@ public struct HisploraScrollUnsealSequence: Sendable, Equatable {
         let seconds = duration(of: stage).seconds
         switch stage {
         case .sealed, .open: return nil
-        // A tied roll growing under the reader's thumb carries its weight into the stop.
-        case .widening: return .smooth(duration: seconds)
+        // A tied roll growing under the reader's thumb carries its weight into the stop — quick off
+        // the mark, long tail. `.smooth(duration:)` was a spring, and a spring does not finish at
+        // its `duration`: the next beat started on values still in motion and the two animations
+        // fought, which is most of what read as a stutter here. A timing curve ends when it says it
+        // does, which is what makes `hold(of:)`'s overlap a chosen overlap rather than an accident.
+        case .widening: return .timingCurve(0.22, 0.68, 0.24, 1, duration: seconds)
         // The swap between the two pictures is a fade and nothing else; a curve on it would read as
         // the object changing size at the moment it changes identity.
         case .unbinding: return .easeInOut(duration: seconds)
         // Paper coming off a rod does not accelerate. It starts, it runs, it eases into rest.
-        case .unrolling: return .easeInOut(duration: seconds)
+        case .unrolling: return .timingCurve(0.32, 0, 0.12, 1, duration: seconds)
         }
     }
 
@@ -217,4 +241,109 @@ public enum HisploraParchmentUnrollMetrics {
     /// How tall the sheet stands with no paper off the rolls at all — the two rolls, head against
     /// foot, which is the shape the tied roll becomes.
     public static let closedHeight: CGFloat = topRollHeight + bottomRollHeight
+}
+
+/// How the tied roll moves while nobody has touched it yet — the idle beat before `sealed` becomes
+/// `widening`.
+///
+/// **A screen whose only control is a picture has to say that it is one.** `293:1595` draws the
+/// scroll at rest and prints "Tap to reveal" under it, and on device the picture read as decoration:
+/// the words were doing all the work, and a reader who did not look at the foot of the screen had
+/// nothing telling them the object was live. A slow drift makes the roll the thing that invites the
+/// tap, which is what the frame's composition assumes.
+///
+/// It is deliberately below the threshold where it reads as an animation playing — one breath every
+/// three and a half seconds, seven points of travel, under two degrees of sway. Anything larger
+/// competes with the opening the tap starts.
+///
+/// **Reduce Motion stops it entirely rather than shrinking it.** There is nowhere for an idle loop
+/// to arrive, so a collapsed version of it is a still picture — which is what a reader who asked for
+/// less movement should get (`NFR-A11Y-05`).
+public enum HisploraScrollIdleMotion {
+    /// How far the roll rises off its resting line at the top of the breath, in points.
+    public static let floatOffset: CGFloat = 7
+    /// The sway, in degrees, applied *around* the roll's own drawn tilt rather than replacing it.
+    public static let tiltDegrees: Double = 1.6
+    /// How much the roll grows at the top of the breath, as a fraction of its own size.
+    public static let scaleRange: CGFloat = 0.014
+    /// One half-breath. The loop autoreverses, so a full rise-and-fall is twice this.
+    public static let period: Double = 3.4
+    /// How long the drift takes to come to rest once the roll has been tapped. Short, so it is out
+    /// of the way before `widening` is doing anything the eye can follow.
+    public static let settle: Double = 0.18
+    /// How faint the caption goes at the bottom of its own breath. It shares the roll's clock so the
+    /// two read as one object breathing, not as two things animating near each other.
+    public static let captionFloor: Double = 0.62
+}
+
+/// Applies `HisploraScrollIdleMotion` to whatever it wraps for as long as `isActive`.
+///
+/// The repeating animation is attached to the phase value rather than to the view, so switching
+/// `isActive` off swaps the repeat for a single short easing back to rest instead of leaving a
+/// forever-animation running underneath the sequence that follows it.
+private struct HisploraIdleDrift: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let isActive: Bool
+    let sways: Bool
+    @State private var lifted = false
+
+    private var running: Bool { isActive && !reduceMotion }
+    private var phase: CGFloat { (running && lifted) ? 1 : 0 }
+
+    func body(content: Content) -> some View {
+        content
+            .scaleEffect(1 + HisploraScrollIdleMotion.scaleRange * phase)
+            .rotationEffect(
+                .degrees(sways ? HisploraScrollIdleMotion.tiltDegrees * Double(phase) : 0))
+            .offset(y: -HisploraScrollIdleMotion.floatOffset * phase)
+            .animation(
+                running
+                    ? .easeInOut(duration: HisploraScrollIdleMotion.period)
+                        .repeatForever(autoreverses: true)
+                    : .easeOut(duration: HisploraScrollIdleMotion.settle),
+                value: phase)
+            // Started here rather than at `init`, so the first breath begins on the frame the screen
+            // actually appears on instead of part-way through.
+            .onAppear { lifted = true }
+    }
+}
+
+/// The caption's half of the same breath — opacity only, since the words sit at a measured distance
+/// from the home indicator and must not move off it.
+private struct HisploraIdlePulse: ViewModifier {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    let isActive: Bool
+    @State private var lifted = false
+
+    private var running: Bool { isActive && !reduceMotion }
+
+    func body(content: Content) -> some View {
+        let dim = (running && lifted) ? HisploraScrollIdleMotion.captionFloor : 1
+        content
+            .opacity(dim)
+            .animation(
+                running
+                    ? .easeInOut(duration: HisploraScrollIdleMotion.period)
+                        .repeatForever(autoreverses: true)
+                    : .easeOut(duration: HisploraScrollIdleMotion.settle),
+                value: dim)
+            .onAppear { lifted = true }
+    }
+}
+
+public extension View {
+    /// The sealed scroll's idle breath — see `HisploraScrollIdleMotion`.
+    ///
+    /// - Parameter sways: whether the drift adds its own rotation. False for anything already drawn
+    ///   at a fixed angle it must not be nudged off.
+    func hisploraIdleDrift(isActive: Bool, sways: Bool = true) -> some View {
+        modifier(HisploraIdleDrift(isActive: isActive, sways: sways))
+    }
+
+    /// The caption's opacity half of the same breath.
+    func hisploraIdlePulse(isActive: Bool) -> some View {
+        modifier(HisploraIdlePulse(isActive: isActive))
+    }
 }
