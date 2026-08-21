@@ -239,9 +239,9 @@ final class QuestRunViewModel {
         switch stage {
         case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
              .approachTransition, .storyReveal, .placeNotice, .checkpointDetail, .taskDetail,
-             .questExplanation, .stampAward, .transition:
+             .questExplanation, .stampAward, .transition, .atCheckpoint:
             true
-        case .atCheckpoint, .finished:
+        case .finished:
             false
         }
     }
@@ -522,16 +522,46 @@ final class QuestRunViewModel {
     }
 
     /// A sacred Place explains itself before any task is offered (`FR-TASK-05`), straight off the
-    /// story reveal; every other checkpoint goes straight to the sealed-scroll transition.
+    /// story reveal; every other checkpoint goes to the quest-availability sheet directly.
     /// Reordered ahead of `transition` at request — the New Hisplora board drew `1:4592` after
     /// `1:4586`.
     func advanceFromStoryReveal() {
-        stage = (checkpoint?.isSacred ?? false) ? .placeNotice : .transition
+        if checkpoint?.isSacred ?? false {
+            stage = .placeNotice
+        } else {
+            isPresentingQuestAvailability = true
+        }
     }
 
-    /// `1:4592` → `1:4586`. The notice hands over to the sealed scroll, not to the first task
-    /// directly — the scroll is what closes the story and opens the walk.
-    func advanceFromPlaceNotice() { stage = .transition }
+    /// `1:4592` → `921:3851`. The notice hands over to the quest-availability sheet, not to the
+    /// sealed scroll directly — every checkpoint's first explanation (this one at a sacred Place,
+    /// the story reveal everywhere else) is followed by the same sheet before the scroll closes the
+    /// story and opens the walk.
+    func advanceFromPlaceNotice() { isPresentingQuestAvailability = true }
+
+    /// `921:3851` — the sheet naming how many quests this checkpoint holds, reached once per
+    /// checkpoint straight off its first explanation. Not a `Stage` case: `stage` never changes while
+    /// it is up, so the screen behind it is whichever explanation the walker just read, dimmed by the
+    /// sheet presentation itself, and nothing about back-navigation or `isStoryFlow` has to know it
+    /// exists (`isPresentingSiteMap` is the same argument for the same reason).
+    ///
+    /// Nothing here gates progression (`AD-2`) — this is information, not a decision — so a swipe
+    /// dismissal is wired to the same effect as tapping Continue rather than fought with
+    /// `.interactiveDismissDisabled()`. That also rules out the one dead end a forced, un-dismissable
+    /// sheet could create if a future OS-level dismissal path ever bypassed the flag.
+    private(set) var isPresentingQuestAvailability = false
+
+    func advanceFromQuestAvailability() {
+        isPresentingQuestAvailability = false
+        stage = .transition
+    }
+
+    /// `921:3851`'s headline — the checkpoint's own task count, never the Figma frame's invented
+    /// sample number, so it stays true as content grows (`AD-4`).
+    var questAvailabilityTitle: String {
+        String(format: UIStrings.string(.questAvailabilityTitle, language),
+               taskCount, currentPlaceName)
+    }
 
     /// The sealed scroll closes the story and opens the walk — `1:4856` → `1:4586` → `1:4711` on
     /// the New Hisplora board (place notice, when the Place is sacred, has already been shown).
@@ -552,7 +582,20 @@ final class QuestRunViewModel {
         return .taskDetail(taskID: first.id)
     }
 
-    func advanceFromCheckpointDetail() { stage = .atCheckpoint }
+    /// `197:148`'s footer — leaves the task menu straight for the next place, or the summary at the
+    /// final checkpoint, rather than by way of `.atCheckpoint`. Before the relinked frame this
+    /// landed on `.atCheckpoint` and left the museum screen's own advance button to do the rest;
+    /// that hop is gone because it added nothing `advance()`/`openSummary()` do not already do
+    /// directly, and it was also where the dark screen's "End this walk" sat, out of place at the
+    /// end of a Hisplora screen. `.atCheckpoint` itself is unaffected — a resumed walk still opens
+    /// there directly, and `stampAwardNextLocation` still reaches it from the stamp screen.
+    func advanceFromCheckpointDetail() {
+        if checkpoint?.isFinal == true {
+            openSummary()
+        } else {
+            advance()
+        }
+    }
 
     /// Where `taskDetail` was entered from — `transition` for the checkpoint's first task,
     /// `checkpointDetail` for every task opened from the menu. Stored rather than derived:
@@ -572,8 +615,8 @@ final class QuestRunViewModel {
     }
 
     /// Leaving the sheet forwards without resolving anything — an already-answered task being
-    /// re-read. It lands on the menu, which is the checkpoint's hub:
-    /// `checkpointDetailContinueToNext` is the one way out of it.
+    /// re-read. It lands on the menu, which is the checkpoint's hub: `advanceFromCheckpointDetail`
+    /// is the one way out of it.
     func advanceFromTaskDetail() { stage = .checkpointDetail }
 
     /// Saving an answer from the sheet, then into the story behind it.
@@ -604,8 +647,10 @@ final class QuestRunViewModel {
     /// `1:4654` — back to this checkpoint's task menu.
     func stampAwardMoreQuests() { stage = .checkpointDetail }
 
-    /// `15:2798` — on towards the next place. The same exit `checkpointDetailContinueToNext` takes,
-    /// so there is one way off a checkpoint and two controls that reach it.
+    /// `15:2798` — on towards the next place, by way of `.atCheckpoint`'s own advance button. A
+    /// walker reaching this from the checkpoint's *first* task has not seen the task menu at all,
+    /// so unlike `advanceFromCheckpointDetail` this has no menu to skip past — `.atCheckpoint` is
+    /// still where its lore, remaining tasks and clue live for that walker.
     func stampAwardNextLocation() { stage = .atCheckpoint }
 
     /// The claims `1:4609` prints — the Place's own `loreStandalone`, with the accuracy label and the
@@ -800,6 +845,14 @@ final class QuestRunViewModel {
         guard let run, run.state == .active else { return false }
         return run.hasArrivedAtCurrentCheckpoint
             && currentIndex + 1 < totalCheckpoints
+    }
+
+    /// The next checkpoint's place name — `CheckpointDetailScreen`'s "Next Place" exit (`197:148`).
+    /// Nil at the final checkpoint, where there is no next place to name.
+    var nextPlaceName: String? {
+        guard currentIndex + 1 < totalCheckpoints else { return nil }
+        let next = orderedCheckpoints.first { $0.orderIndex == currentIndex + 1 }
+        return placeName(for: next)
     }
 
     func advance() {

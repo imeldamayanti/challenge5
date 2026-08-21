@@ -5,19 +5,20 @@ import SwiftUI
 import UIStringsKit
 
 /// The checkpoint's task list — `452:3132` ("Quest 1/3"), which replaces the earlier `51:201`
-/// ("Detail Quest") treatment this screen shipped with.
+/// ("Detail Quest") treatment this screen shipped with, and `197:148`, the same frame relinked in
+/// Ngalcer with a redrawn footer (see `footer` below).
 ///
 /// A list, not the tasks themselves: every row opens `TaskDetailScreen`, and the answer field, the
 /// save and the skip stay where they already are on the checkpoint screen (`TaskCard`, `FR-TASK-02`).
 /// This screen's job is narrower — name what is waiting, in the order it is waiting in, and say which
 /// of it is done.
 ///
-/// **The frame's three tasks do not exist.** `452:3149`, `452:3159` and `452:3169` name "The Iron
-/// Statue", "The Ancient Script" and "The Whip Bearer"; nothing in the content tree carries any of
-/// them, and the shipped checkpoints carry exactly one task each. So the rows are whatever `tasks`
-/// the run actually has, titled by `TaskType` — and the progress bar draws one segment where the
-/// frame draws three, because the bar is the run's state and not the mock-up's (`AD-4`,
-/// `FR-RUN-06`).
+/// **The frame's three tasks do not exist.** `452:3149`, `452:3159` and `452:3169` (`197:161`,
+/// `197:171`, `197:181` in the relinked frame) name "The Iron Statue", "The Ancient Script" and "The
+/// Whip Bearer"; nothing in the content tree carries any of them, and the shipped checkpoints carry
+/// exactly one task each. So the rows are whatever `tasks` the run actually has, titled by
+/// `TaskType` — and the progress bar draws one segment where the frame draws three, because the bar
+/// is the run's state and not the mock-up's (`AD-4`, `FR-RUN-06`).
 ///
 /// **The stamp's picture is the quest's own hero image.** `452:3142` fills it with a generated sketch
 /// of a temple gate; a picture presented as a particular place is a claim `FR-CP-05` wants a source
@@ -35,6 +36,12 @@ struct CheckpointDetailScreen: View {
     /// The quest's hero image, for the stamp. Nil ships a plain cream stamp rather than an empty
     /// perforated hole.
     let stampImageURL: URL?
+    /// Whether this is the walk's last checkpoint — `197:148`'s footer reads differently there,
+    /// since there is no next place to leave for.
+    let isFinal: Bool
+    /// The next checkpoint's place name, for the footer's "Next Place" pill. Nil at the final
+    /// checkpoint, where `isFinal` decides the footer instead.
+    let nextPlaceName: String?
     let onSelectTask: (ContentTask) -> Void
     let onContinue: () -> Void
     let onBack: () -> Void
@@ -74,17 +81,53 @@ struct CheckpointDetailScreen: View {
                 .scrollBounceBehavior(.basedOnSize)
             }
             .padding(.horizontal, Self.margin)
-            // Pinned rather than stacked after the frame's 224-point gap: `452:3194` sits at a fixed
+            // Pinned rather than stacked after the frame's 224-point gap: `197:148` sits at a fixed
             // distance from the home indicator, so anchoring it there keeps it where it is drawn no
             // matter how many rows the list has or how far the words wrap.
-            .safeAreaInset(edge: .bottom) {
-                Button(UIStrings.string(.checkpointDetailContinueToNext, language),
-                       action: onContinue)
-                    .buttonStyle(.hisploraPlain(ink: \.inkOnButton))
-                    .padding(.horizontal, Self.margin)
-                    .padding(.bottom, 30)
+            .safeAreaInset(edge: .bottom) { footer }
+        }
+    }
+
+    /// `197:148`'s own exit — a caption over a full-width white pill — replaces `452:3194`'s single
+    /// "Continue to Next Location" button.
+    ///
+    /// **It leaves directly, not by way of `.atCheckpoint`.** The frame draws one control, named for
+    /// where it goes ("Next Place: …"), not a second stop at the dark museum screen this checkpoint
+    /// used to hand over to first — which is also where "End this walk" lived. Nothing here was ever
+    /// gating progression (`AD-2`), so a walker who has already resolved this checkpoint's tasks
+    /// loses no requirement by leaving in one tap instead of two.
+    @ViewBuilder private var footer: some View {
+        VStack(spacing: 12) {
+            // `197:148` sets the caption `#AEAEB2` over `#58453E` — none of the palette's own
+            // "quiet" inks are measured against `brownStone`, so this follows `StampAwardScreen`'s
+            // own precedent for muted text on the same ground: `inkOnButton` scaled down instead.
+            Text(UIStrings.string(isFinal ? .runCompletedHeading : .checkpointDetailOrGoTo,
+                                   language))
+                .kultaraFont(.metadata)
+                .foregroundStyle(palette.inkOnButton.color.opacity(0.7))
+                .multilineTextAlignment(.center)
+            if isFinal {
+                Button(UIStrings.string(.summaryOpenAction, language), action: onContinue)
+                    .buttonStyle(.hisploraLightPill)
+            } else {
+                // `197:148`'s own mock names "Pura Pemecutan" — a place absent from the content
+                // tree (`AD-4`) — so this reads the next checkpoint's real, resolved name instead.
+                Button {
+                    onContinue()
+                } label: {
+                    HStack(spacing: 8) {
+                        Text(String(format: UIStrings.string(.checkpointDetailNextPlace, language),
+                                    nextPlaceName ?? ""))
+                            .lineLimit(1)
+                        Image(systemName: "chevron.forward")
+                    }
+                }
+                .buttonStyle(.hisploraLightPill)
             }
         }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, Self.margin)
+        .padding(.bottom, 30)
     }
 
     /// The back arrow with the place name centred over it, as every story frame draws it. The glyph

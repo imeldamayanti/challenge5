@@ -21,8 +21,9 @@ import UIStringsKit
 /// **Two actions, and one of them disappears.** `1:4650` draws "Next Location" beside "More Quests
 /// (2)". The count is this checkpoint's *unresolved* tasks, from the Run's own results — and when it
 /// reaches zero the second pill goes, because a control offering nothing is worse than one control.
-/// Neither gates anything: "Next Location" is the same exit `checkpointDetailContinueToNext` is, and
-/// the walk has never been blocked on a task (`AD-2`).
+/// Neither gates anything: "Next Location" reaches `.atCheckpoint`, where every task at this
+/// checkpoint (not only the ones still open) is still reachable, and the walk has never been
+/// blocked on a task (`AD-2`).
 struct StampAwardScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
