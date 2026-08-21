@@ -25,10 +25,13 @@ enum TaskSheetLayout {
 
     /// The determinate bar the frame draws 4 points tall, in a row padded 20 above and below.
     static let progressBarHeight: CGFloat = 4
-    static let progressBarPadding: CGFloat = 20
+    static let progressBarPadding: CGFloat = 14
 
-    /// The sheet is drawn at y = 190, 62 under the bar's box.
-    static let sheetTop: CGFloat = 62
+    /// The sheet is drawn at y = 190, 62 under the bar's box. Held at 44 rather than the frame's 62:
+    /// the frame draws a photo task, whose sheet is one pill deep, and a written task's field, save
+    /// and skip need those points back or the sheet runs past the foot of the screen with the map
+    /// hint printed across its lower roll.
+    static let sheetTop: CGFloat = 44
 
     /// How far the sheet's head roll stands below the top of the safe area — the number the
     /// transition screen has to land its unrolled parchment on.

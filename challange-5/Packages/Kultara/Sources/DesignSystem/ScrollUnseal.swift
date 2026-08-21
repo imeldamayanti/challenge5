@@ -130,7 +130,7 @@ public struct HisploraParchmentUnroll: View, Animatable {
 
     /// **It fills the frame it is given rather than keeping the art's aspect**, which is what
     /// `HisploraParchmentSheet` does with the same picture as a background. The caller is unrolling
-    /// *into* a sheet whose height is its own words', so a picture that insisted on 368 × 478 would
+    /// *into* a sheet whose height is its own words', so a picture that insisted on 368 × 482 would
     /// land at the wrong height however carefully the caller placed it.
     public var body: some View {
         GeometryReader { proxy in
@@ -143,7 +143,12 @@ public struct HisploraParchmentUnroll: View, Animatable {
         if let image = HisploraScrollArt.sheet.image {
             if open >= 1 {
                 image
-                    .resizable()
+                    // The same nine-slice `HisploraParchmentSheet` settles into, and it has to be:
+                    // this unrolls into a box the height of the task's own words, which is well past
+                    // the art's 482, so a plain stretch here would hand over to a screen whose rolls
+                    // are a third the size and the page would visibly snap at the seam.
+                    .resizable(capInsets: HisploraParchmentMetrics.rollCaps,
+                               resizingMode: .stretch)
                     .accessibilityHidden(true)
             } else {
                 unrolling(image, in: size)
@@ -155,10 +160,16 @@ public struct HisploraParchmentUnroll: View, Animatable {
         }
     }
 
+    /// **The rolls are absolute, not fractions of the box.** They were fractions while the sheet was
+    /// a plain stretch and both ends grew together; now that the settled sheet pins them
+    /// (`HisploraParchmentMetrics.rollCaps`), a roll that is a fraction of a 700-point box opens at
+    /// nearly a hundred points and hands over to one drawn at sixty-four.
+    /// `HisploraParchmentUnrollMetrics` still records where they sit in the *file*, which is what the
+    /// guard scans; this is where they sit on the *screen*.
     private func unrolling(_ image: Image, in size: CGSize) -> some View {
-        let top = size.height * HisploraParchmentUnrollMetrics.topRollHeight
-        let bottom = size.height * HisploraParchmentUnrollMetrics.bottomRollHeight
-        let paper = size.height * HisploraParchmentUnrollMetrics.sheetHeight
+        let top = HisploraParchmentMetrics.rollHeadHeight
+        let bottom = HisploraParchmentMetrics.rollFootHeight
+        let paper = max(0, size.height - top - bottom)
         return VStack(spacing: 0) {
             slice(image, in: size, from: 0, height: top)
             slice(image, in: size, from: top, height: paper)
@@ -173,10 +184,11 @@ public struct HisploraParchmentUnroll: View, Animatable {
         .accessibilityHidden(true)
     }
 
-    /// One horizontal band of the asset, drawn at the size the whole asset would be drawn at.
+    /// One horizontal band of the asset, drawn at the size the whole asset would be drawn at — and
+    /// nine-sliced there, so the band a roll is cut from is the roll at the height it settles to.
     private func slice(_ image: Image, in size: CGSize, from y: CGFloat, height: CGFloat) -> some View {
         image
-            .resizable()
+            .resizable(capInsets: HisploraParchmentMetrics.rollCaps, resizingMode: .stretch)
             .frame(width: size.width, height: size.height)
             .offset(y: -y)
             .frame(width: size.width, height: height, alignment: .top)
@@ -186,14 +198,19 @@ public struct HisploraParchmentUnroll: View, Animatable {
 
 /// Where the two rolls end in `quest-parchment.png`, in fractions of its own height.
 ///
-/// Measured off the file's alpha rather than read off the frame: a row-by-row scan of the 438 × 570
-/// export puts the head roll at y 0…79 and the foot roll at 494…570 — the rows that run the picture's
+/// Measured off the file's alpha rather than read off the frame: a row-by-row scan of the 368 × 482
+/// file puts the head roll at y 0…63 and the foot roll at 418…482 — the rows that run the picture's
 /// full width, before the sheet's bowed sides start narrowing it. `HisploraParchmentMetrics`'s own
-/// numbers are *print* margins in the drawn 368 × 478 space and are a different measurement of a
+/// numbers are *print* margins in the same 368 × 482 space and are a different measurement of a
 /// different thing; they are not interchangeable with these.
+///
+/// **These describe the file, not the screen.** The drawing takes its roll heights from
+/// `HisploraParchmentMetrics.rollHeadHeight`/`rollFootHeight` — the same points the nine-slice pins
+/// them to — and these fractions are what the guard scans the shipped bytes against, so a re-export
+/// cropped differently fails there rather than cutting a roll in half on device.
 public enum HisploraParchmentUnrollMetrics {
-    public static let topRollHeight: CGFloat = 79.0 / 570.0
-    public static let bottomRollHeight: CGFloat = 76.0 / 570.0
+    public static let topRollHeight: CGFloat = 64.0 / 482.0
+    public static let bottomRollHeight: CGFloat = 64.0 / 482.0
     /// What is left between the rolls, and therefore the only part the opening stretches.
     public static let sheetHeight: CGFloat = 1 - topRollHeight - bottomRollHeight
 

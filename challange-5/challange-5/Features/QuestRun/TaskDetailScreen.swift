@@ -216,8 +216,12 @@ struct TaskDetailScreen: View {
                     .foregroundStyle(palette.inkBody.color)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                // 521 − 449: the action sits 72 under the instruction.
-                Spacer(minLength: 72)
+                // 521 − 449: the action sits 72 under the instruction. That is the gap the frame
+                // draws under a *photo* task, whose whole foot is one pill — a written task puts a
+                // three-line field, a save and a skip below this point, and keeping 72 there grew
+                // the sheet past the viewport and printed the skip across the foot roll. The written
+                // case takes half.
+                Spacer(minLength: task.type == .photo || resolution != nil ? 72 : 20)
                 answerSection
             }
             .frame(maxWidth: .infinity)

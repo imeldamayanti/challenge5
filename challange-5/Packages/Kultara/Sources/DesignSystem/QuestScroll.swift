@@ -12,9 +12,9 @@ import SwiftUI
 /// real place with real distances, so it is content with a citation (`PlaceSiteMap`), not chrome.
 public enum HisploraScrollArt {
 
-    /// The parchment sheet, `447:1886` — 368 × 478 as drawn, with a rolled bar top and bottom and a
-    /// smooth cream field between them.
-    public static let sheet = PackagedImage(name: "quest-parchment", aspectRatio: 368.0 / 478.0)
+    /// The parchment sheet, `447:1886` — 368 × 482, with a rolled bar top and bottom and a plain
+    /// tan field between them.
+    public static let sheet = PackagedImage(name: "quest-parchment", aspectRatio: 368.0 / 482.0)
 
     /// The flourish `447:1887` rules under the place name — 263 × 9.08, drawn at 4× so it stays crisp
     /// on a 3× screen.
@@ -274,7 +274,7 @@ public struct PackagedImage: Sendable {
 /// The sheet is the *background* of the printed matter rather than a fixed-size image with content
 /// laid over it, which is the same decision `PhotoQuestCard` records: a background cannot make its
 /// parent smaller, so at the largest accessibility sizes the sheet grows to fit the words instead of
-/// the words spilling off the paper (`NFR-A11Y-01`). Reproduced the other way round — a 368 × 478
+/// the words spilling off the paper (`NFR-A11Y-01`). Reproduced the other way round — a 368 × 482
 /// image with an overlay — the instruction runs off the lower roll at the second size above default.
 ///
 /// When the packaged art is missing the sheet falls back to a plain cream panel. A missing decoration
@@ -293,7 +293,7 @@ public struct HisploraParchmentSheet<Content: View>: View {
         content
             .frame(maxWidth: .infinity)
             // The rolled bars at the head and foot are art, not margin: printing into them puts the
-            // first line across a curl. 78 and 74 of the drawn 478, plus the sheet's own 44-point
+            // first line across a curl. 64 and 64 of the drawn 482, plus the sheet's own clear
             // interior margin.
             .padding(.top, HisploraParchmentMetrics.interiorTop)
             .padding(.bottom, HisploraParchmentMetrics.interiorBottom)
@@ -304,9 +304,14 @@ public struct HisploraParchmentSheet<Content: View>: View {
     @ViewBuilder private var sheet: some View {
         if let image = HisploraScrollArt.sheet.image {
             image
-                .resizable()
-                // The rolls have to stay the shape they are drawn; the field between them is a flat
-                // gradient and stretching it is invisible.
+                // **Nine-slice, not a plain stretch, and this was a visible bug.** A plain
+                // `.resizable()` scales the whole picture to the content's height — so a task with a
+                // text field, which is a good deal taller than the art's own 482, drew the head roll
+                // at two and a half times the size it is painted and pushed the foot roll off the
+                // screen with the skip printed across it. The caps hold both rolls at the height they
+                // are drawn whatever the sheet grows to; the field between them is a flat grain and
+                // stretching *that* is invisible.
+                .resizable(capInsets: HisploraParchmentMetrics.rollCaps, resizingMode: .stretch)
                 .accessibilityHidden(true)
         } else {
             RoundedRectangle(cornerRadius: KultaraMetrics.sm)
@@ -316,15 +321,44 @@ public struct HisploraParchmentSheet<Content: View>: View {
     }
 }
 
-/// `447:1886`'s own proportions, in its own 368 × 478 terms.
+/// `447:1886`'s own proportions, in its own 368 × 482 terms.
+///
+/// **These are measured off `quest-parchment.png`'s own alpha, not read off the frame**, the same way
+/// `HisploraMapScrollMetrics` measures the map scroll's rods. A row-by-row scan of the 368 × 482 file
+/// puts the head roll at y 0…63 and the foot roll at 418…482 — the rows whose coverage is the rolls'
+/// full width before the paper's narrower field starts — and the field between them narrows to
+/// x 39…329 at its waist, because the rolls are painted wider than the sheet they hold and the
+/// sheet's sides bow inward.
+///
+/// Replacing the art means re-running that scan. The rolls are held at these heights by
+/// `rollCaps` regardless of how tall the sheet grows, so a cap that does not match the picture cuts
+/// a roll in half rather than merely mis-margining the text.
 public enum HisploraParchmentMetrics {
-    /// The sheet's head roll runs to y ≈ 78 of 478, and `447:1906` prints the place name at 107 —
-    /// which on a sheet starting at 190 is 29 points of clear paper under the roll.
-    public static let interiorTop: CGFloat = 107
-    /// The foot roll starts at y ≈ 404 of 478, and the drawn content ends well above it.
-    public static let interiorBottom: CGFloat = 96
-    /// `447:1895` runs x = 65…336 on a sheet spanning 17…385, so 48 in on each side.
-    public static let interiorSide: CGFloat = 48
+    /// The two rolls, at the height they are painted. Leading and trailing are zero: the sheet is
+    /// drawn within a few points of the art's own 368 wide, so the horizontal stretch is invisible,
+    /// and a horizontal cap would pin the rolls' rounded ends against a field that no longer met
+    /// them.
+    public static let rollCaps = EdgeInsets(top: rollHeadHeight,
+                                            leading: 0,
+                                            bottom: rollFootHeight,
+                                            trailing: 0)
+
+    /// The head roll runs y 0…63 of the art's own 482.
+    public static let rollHeadHeight: CGFloat = 64
+    /// The foot roll starts at y 418, so it is the same 64 deep.
+    public static let rollFootHeight: CGFloat = 64
+
+    /// Clear paper under the head roll before the place name starts — `447:1906`'s 29, rounded to
+    /// the 30 the new art's softer roll edge wants.
+    public static let interiorTop: CGFloat = rollHeadHeight + 24
+    /// The same, above the foot roll. Slightly tighter than the head because the foot carries a
+    /// control rather than a masthead.
+    public static let interiorBottom: CGFloat = rollFootHeight + 20
+    /// The paper narrows to x 39…329 of 368 at its waist, so the ink has to clear 39 before it
+    /// clears anything else — measured at the *narrowest* row rather than at the rolls, or a line
+    /// set against the sheet's widest point runs off its bowed side halfway down. 56 leaves 17
+    /// points of paper inside each edge there.
+    public static let interiorSide: CGFloat = 56
 }
 
 /// The flourish under the place name (`447:1887`), or nothing when the art is missing.

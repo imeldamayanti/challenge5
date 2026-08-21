@@ -148,11 +148,27 @@ struct QuestScrollArtTests {
     /// The parchment's interior margins have to leave the rolled bars alone: printing into them puts
     /// the first line across a curl.
     @Test func theSheetsInteriorClearsBothRolls() {
-        // The head roll runs to y ≈ 78 of the drawn 478 and the foot roll starts at y ≈ 404.
-        #expect(HisploraParchmentMetrics.interiorTop > 78)
-        #expect(HisploraParchmentMetrics.interiorBottom > 478 - 404)
-        // And the side margins are inside the sheet's own 368 width.
+        // The head roll runs to y = 63 of the drawn 482 and the foot roll starts at y = 418, and the
+        // nine-slice holds both at exactly that height however tall the sheet grows — so clearing
+        // them is a fixed inset now rather than one that has to survive a stretch.
+        #expect(HisploraParchmentMetrics.interiorTop > HisploraParchmentMetrics.rollHeadHeight)
+        #expect(HisploraParchmentMetrics.interiorBottom > HisploraParchmentMetrics.rollFootHeight)
+        // The paper narrows to x 39…329 of the art's 368 at its waist, so the ink has to clear 39
+        // a side — the narrowest row, not the widest.
+        #expect(HisploraParchmentMetrics.interiorSide > 39)
         #expect(HisploraParchmentMetrics.interiorSide * 2 < 368)
+    }
+
+    /// The caps are the rolls, and nothing horizontal — a leading or trailing cap would pin the
+    /// rolls' rounded ends against a field that no longer met them.
+    @Test func theCapsPinTheRollsAndOnlyTheRolls() {
+        #expect(HisploraParchmentMetrics.rollCaps.top == HisploraParchmentMetrics.rollHeadHeight)
+        #expect(HisploraParchmentMetrics.rollCaps.bottom == HisploraParchmentMetrics.rollFootHeight)
+        #expect(HisploraParchmentMetrics.rollCaps.leading == 0)
+        #expect(HisploraParchmentMetrics.rollCaps.trailing == 0)
+        // Both rolls together are a fraction of the art, or a short task has no paper between them.
+        #expect(HisploraParchmentMetrics.rollHeadHeight
+            + HisploraParchmentMetrics.rollFootHeight < 482 / 2)
     }
 
     @Test func theMapHintKeepsTheFramesTilt() {
