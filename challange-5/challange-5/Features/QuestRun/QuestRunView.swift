@@ -23,6 +23,11 @@ struct QuestRunView: View {
     /// in this target (`FR-MAP-01`, `PermissionCallBoundaryTests`).
     @Environment(\.openURL) private var openURL
     @Bindable private var model: QuestRunViewModel
+    /// Opens the finished walk's real Trip Summary from the journal-saved confirmation
+    /// (`JourneySavedScreen`). A root-level concern — switching to the Journal tab and opening the
+    /// journal-letter overlay — so `KultaraRootView` supplies it rather than this screen reaching
+    /// for app state several layers above it.
+    private let onOpenRecap: (Run) -> Void
     /// `1:4458` — the confirmed-arrival screen holds for a minimum 3 s once reached, so a walk that
     /// arrives the instant sampling starts does not flash past "Location Verified" before the
     /// walker can read it. This only gates what `content` draws; `model.stage` still flips the
@@ -33,8 +38,9 @@ struct QuestRunView: View {
     /// but the sampler is still genuinely checking.
     @State private var isLocationVerifiedRevealed = false
 
-    init(model: QuestRunViewModel) {
+    init(model: QuestRunViewModel, onOpenRecap: @escaping (Run) -> Void) {
         self.model = model
+        self.onOpenRecap = onOpenRecap
     }
 
     private var language: ContentLanguage { model.language }
@@ -749,9 +755,18 @@ struct QuestRunView: View {
 
     // MARK: Finished
 
+    /// The walk's own end: straight onto the journal-writing screen rather than a summary the
+    /// walker has to scroll past to find it. `WriteJournalScreen` → `JourneySavedScreen` → "See
+    /// Journey Recap" is now where the fuller summary (the walk's real Trip Summary) lives.
     @ViewBuilder private var finishedScreen: some View {
-        if let run = model.run {
-            RunSummaryView(model: RunSummaryViewModel(run: run))
+        if model.run != nil {
+            WriteJournalScreen(
+                language: language,
+                onSave: { text, placePhoto, selfiePhoto in
+                    model.saveJournalEntry(
+                        text: text, placePhoto: placePhoto, selfiePhoto: selfiePhoto)
+                },
+                onOpenRecap: onOpenRecap)
         } else {
             EmptyView()
         }

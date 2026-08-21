@@ -200,6 +200,35 @@ public struct Award: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
+// MARK: - JournalEntry
+
+/// The walker's own closing reflection on a finished walk — free text plus up to two keepsake
+/// photographs, written from the Summary screen rather than during the walk.
+///
+/// A single optional field on `Run` rather than a list: unlike a `TaskResult`, this is not tied to
+/// a checkpoint, and there is exactly one journal entry per walk. Saving again replaces it rather
+/// than appending, the same choice `recordTaskResult` makes for a re-answered task.
+public struct JournalEntry: Codable, Sendable, Equatable {
+    public var text: String
+    /// Relative to the app container, never absolute (`NFR-REL-05`), the same rule every other
+    /// photo path in this store follows.
+    public var placePhotoRelativePath: String?
+    public var selfiePhotoRelativePath: String?
+    public var savedAt: Date
+
+    public init(
+        text: String,
+        placePhotoRelativePath: String? = nil,
+        selfiePhotoRelativePath: String? = nil,
+        savedAt: Date
+    ) {
+        self.text = text
+        self.placePhotoRelativePath = placePhotoRelativePath
+        self.selfiePhotoRelativePath = selfiePhotoRelativePath
+        self.savedAt = savedAt
+    }
+}
+
 // MARK: - Run
 
 public struct Run: Codable, Sendable, Equatable, Identifiable {
@@ -226,6 +255,9 @@ public struct Run: Codable, Sendable, Equatable, Identifiable {
 
     public var checkpointResults: [CheckpointResult]
     public var awards: [Award]
+    /// `nil` until the walker writes one from the Summary screen. Optional so every `Run` already
+    /// on disk before this field existed decodes unchanged rather than needing a migration.
+    public var journalEntry: JournalEntry?
 
     public init(
         id: UUID = UUID(),
@@ -242,7 +274,8 @@ public struct Run: Codable, Sendable, Equatable, Identifiable {
         abandonedAt: Date? = nil,
         abandonReason: AbandonReason? = nil,
         checkpointResults: [CheckpointResult] = [],
-        awards: [Award] = []
+        awards: [Award] = [],
+        journalEntry: JournalEntry? = nil
     ) {
         self.id = id
         self.questID = questID
@@ -259,6 +292,7 @@ public struct Run: Codable, Sendable, Equatable, Identifiable {
         self.abandonReason = abandonReason
         self.checkpointResults = checkpointResults
         self.awards = awards
+        self.journalEntry = journalEntry
     }
 
     public var orderedCheckpointResults: [CheckpointResult] {

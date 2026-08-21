@@ -429,6 +429,19 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// `791:6593` — the last line of the History page, under which the walk's own seal is stamped.
     case tripHistoryClosing
 
+    // Journal — writing one, from the Summary screen (Figma `921-2256`, `921-2932`). Replaces the
+    // `createJournal` wireframe entry, which is deleted with these keys added.
+    case writeJournalTitle
+    case writeJournalHeading
+    case writeJournalExperienceLabel
+    case writeJournalExperiencePlaceholder
+    case writeJournalMemoriesLabel
+    case writeJournalAddPlacePhoto
+    case writeJournalAddSelfie
+    case writeJournalSaveAction
+    case journeySavedTitle
+    case journeySavedRecapAction
+
     // Profile — the Explorer's Card (Figma `547:2724`)
     case profileHeading
     /// What the card is headed with. There is no account in this build and no name to print, so

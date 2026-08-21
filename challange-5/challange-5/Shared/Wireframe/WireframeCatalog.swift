@@ -81,21 +81,12 @@ enum WireframeCatalog {
             en: "Same as Login: needs a backend, and needs a personal-data decision before it is built."))
 
     // MARK: Journal branch
-
-    static let createJournal = WireframeSpec(
-        title: LocalizedText(id: "Create Journal", en: "Create Journal"),
-        purpose: LocalizedText(
-            id: "Menulis catatan perjalanan sesudah quest selesai, lalu menyimpannya.",
-            en: "Write a journal entry after a quest is finished, then save it."),
-        blocks: [
-            LocalizedText(id: "Judul catatan", en: "Entry title"),
-            LocalizedText(id: "Isi catatan bebas", en: "Free-text body"),
-            LocalizedText(id: "Lampiran foto perjalanan", en: "Attached trip photos"),
-            LocalizedText(id: "Tombol Save Journal", en: "Save Journal button"),
-        ],
-        flowNote: LocalizedText(
-            id: "Completion screen → mau bikin journal? → Create Journal → Save Journal → Trip Summary. Kegiatan foto sendiri belum dirilis, jadi lampiran foto menunggu itu dulu.",
-            en: "Completion screen → want to create a journal? → Create Journal → Save Journal → Trip Summary. Photo activities have not shipped, so the photo attachment waits on those."))
+    //
+    // `createJournal` was a drawing of "write a note, save it" — this file's own rule: when a
+    // screen is built for real, its wireframe entry is deleted with it. `WriteJournalScreen` and
+    // `JourneySavedScreen` (`Features/RunSummary/`) are that screen now, reached the same way the
+    // flow chart always drew it — from the completion screen — and saving one for real, onto
+    // `Run.journalEntry`, rather than onto nothing.
 
     static let tripSummary = WireframeSpec(
         title: LocalizedText(id: "Trip Summary", en: "Trip Summary"),

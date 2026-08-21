@@ -577,6 +577,26 @@ public enum UIStrings {
             id: "Kamu sudah mengumpulkan serpihan-serpihan itu.",
             en: "You have gathered those fragments."),
 
+        // MARK: Journal — writing one, from the Summary screen (Figma `921-2256`, `921-2932`)
+        .writeJournalTitle: LocalizedText(id: "Tulis Jurnalmu", en: "Write Your Journal"),
+        .writeJournalHeading: LocalizedText(
+            id: "Bagaimana Perjalananmu?", en: "How's Your Journey?"),
+        .writeJournalExperienceLabel: LocalizedText(
+            id: "Ceritakan Pengalamanmu*", en: "Tell us Your Experience*"),
+        .writeJournalExperiencePlaceholder: LocalizedText(
+            id: "Bagaimana pengalamanmu selama perjalanan ini?",
+            en: "How your experience during this trip?"),
+        .writeJournalMemoriesLabel: LocalizedText(
+            id: "Kenangan Aktivitas*", en: "Activities Memories*"),
+        .writeJournalAddPlacePhoto: LocalizedText(
+            id: "Tambah Foto Tempat", en: "Add Place Photo"),
+        .writeJournalAddSelfie: LocalizedText(id: "Tambah Swafotomu", en: "Add Your Selfie"),
+        .writeJournalSaveAction: LocalizedText(id: "Simpan", en: "Save"),
+        .journeySavedTitle: LocalizedText(
+            id: "Perjalananmu Tersimpan!", en: "Your Journey is Saved!"),
+        .journeySavedRecapAction: LocalizedText(
+            id: "Lihat Rekap Perjalanan", en: "See Journey Recap"),
+
         // MARK: Profile — the Explorer's Card
         .profileHeading: LocalizedText(id: "Kartu Penjelajah", en: "Explorer’s Card"),
         .profileExplorerName: LocalizedText(id: "Penjelajah", en: "Explorer"),
