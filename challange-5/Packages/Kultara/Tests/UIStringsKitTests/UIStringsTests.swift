@@ -46,6 +46,10 @@ struct UIStringsTests {
             .unitCheckpointSingular, .unitCheckpointPlural,  // "titik" is both singular and plural
             .collectionProgress,      // "%1$d / %2$d" — digits and a slash
             .collectionBadgeAwarded,  // shares `runBadgeAwarded`'s wording by design
+            // "Email" is the everyday Indonesian word. The formal coinage "surel" exists and is
+            // not what anyone types it into a form as, so a field labelled with it would be a
+            // translation nobody asked for.
+            .authEmailPlaceholder,
         ]
         let identical = UIStringKey.allCases.filter { key in
             guard !deliberatelyIdentical.contains(key), let text = UIStrings.table[key] else {

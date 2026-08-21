@@ -37,9 +37,30 @@ final class SideQuestFlowUITests: XCTestCase {
         if splashContinue.waitForExistence(timeout: 10) { splashContinue.tap() }
         let skip = app.buttons["Skip"]
         if skip.waitForExistence(timeout: 10) { skip.tap() }
-        let skipAuth = app.buttons["Skip for now"]
-        if skipAuth.waitForExistence(timeout: 10) { skipAuth.tap() }
+        passEntryScreens(app)
         return app
+    }
+
+    /// Past the three entry screens (`791:5145`, `791:5109`, `822:2235`), which stand where the
+    /// login wireframe used to.
+    ///
+    /// The guest route rather than the credential form: it is the one path with no password on it,
+    /// and its single field is what the screen insists on before it lets go (`AuthViewModel`).
+    /// Every check is conditional, because a run that has already passed these screens does not see
+    /// them again — the entry is persisted, unlike the wireframe it replaced.
+    private func passEntryScreens(_ app: XCUIApplication) {
+        let guest = app.buttons["Continue as a guest"]
+        guard guest.waitForExistence(timeout: 10) else { return }
+        guest.tap()
+
+        let name = app.textFields["Display name"]
+        if name.waitForExistence(timeout: 10) {
+            name.tap()
+            name.typeText("Tester")
+        }
+
+        let start = app.buttons["Start Exploring"]
+        if start.waitForExistence(timeout: 5) { start.tap() }
     }
 
     private func attach(_ app: XCUIApplication, named name: String) {

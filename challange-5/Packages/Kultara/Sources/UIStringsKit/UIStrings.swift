@@ -48,6 +48,52 @@ public enum UIStrings {
             id: "Kumpulkan prangko dari setiap situs yang kamu datangi, raih lencana bersegel untuk kuis yang tuntas, dan bangun jurnal pribadi berisi temuanmu.",
             en: "Collect stamps from every site you visit, earn sealed badges for completed quests, and build a personal journal of your discoveries."),
 
+        // MARK: Entry — sign up, sign in, guest
+        .authSignUpTitle: LocalizedText(id: "Ayo Mulai", en: "Get Started"),
+        .authSignInTitle: LocalizedText(id: "Selamat Datang Kembali", en: "Welcome Back"),
+        .authGuestTitle: LocalizedText(
+            id: "Kami panggil kamu siapa?",
+            en: "What should we call you?"),
+        .authGuestBody: LocalizedText(
+            id: "Nama ini akan muncul di Kartu Penjelajah dan jurnalmu.",
+            en: "This name will appear on your Explorer's Card and journal."),
+        .authNamePlaceholder: LocalizedText(id: "Nama kamu", en: "Your name"),
+        .authGuestNamePlaceholder: LocalizedText(id: "Nama tampilan", en: "Display name"),
+        .authEmailPlaceholder: LocalizedText(id: "Email", en: "Email"),
+        .authPasswordPlaceholder: LocalizedText(id: "Kata sandi", en: "Password"),
+        .authSignUpAction: LocalizedText(id: "Daftar", en: "Sign Up"),
+        .authSignInAction: LocalizedText(id: "Masuk", en: "Sign in"),
+        .authGuestAction: LocalizedText(id: "Mulai Menjelajah", en: "Start Exploring"),
+        .authOr: LocalizedText(id: "ATAU", en: "OR"),
+        .authOrSpoken: LocalizedText(id: "Atau lanjutkan dengan", en: "Or continue with"),
+        .authContinueWithApple: LocalizedText(
+            id: "Lanjut dengan Apple",
+            en: "Continue with Apple"),
+        .authContinueWithGoogle: LocalizedText(
+            id: "Lanjut dengan Google",
+            en: "Continue with Google"),
+        .authContinueAsGuest: LocalizedText(
+            id: "Lanjut sebagai tamu",
+            en: "Continue as a guest"),
+        .authHaveAccount: LocalizedText(id: "Sudah punya akun?", en: "Already have an account?"),
+        .authSignInLink: LocalizedText(id: "Masuk", en: "Sign in"),
+        .authNoAccount: LocalizedText(id: "Belum punya akun?", en: "Don't have an account?"),
+        .authSignUpLink: LocalizedText(id: "Daftar", en: "Sign up"),
+        .authBack: LocalizedText(id: "Kembali", en: "Back"),
+        .authProvidersUnavailable: LocalizedText(
+            id: "Masuk dengan Apple dan Google belum tersambung di versi ini.",
+            en: "Apple and Google sign-in are not connected in this build."),
+        .authInvalidEmail: LocalizedText(
+            id: "Masukkan alamat email yang benar.",
+            en: "Enter a valid email address."),
+        .authShortPassword: LocalizedText(
+            id: "Kata sandi minimal 8 karakter.",
+            en: "Use a password of at least 8 characters."),
+        .authMissingPassword: LocalizedText(
+            id: "Masukkan kata sandimu.",
+            en: "Enter your password."),
+        .authMissingName: LocalizedText(id: "Isi namamu dulu.", en: "Enter a name first."),
+
         // MARK: Discovery
         .questListTitle: LocalizedText(id: "Kuis", en: "Quests"),
         .homeMasthead: LocalizedText(id: "Telusuri Bali", en: "Uncover Bali"),
@@ -601,8 +647,8 @@ public enum UIStrings {
         .profileHeading: LocalizedText(id: "Kartu Penjelajah", en: "Explorer’s Card"),
         .profileExplorerName: LocalizedText(id: "Penjelajah", en: "Explorer"),
         .profileExplorerNameNote: LocalizedText(
-            id: "Versi ini tidak memakai akun, jadi kartu ini tidak menyimpan nama.",
-            en: "This build has no accounts, so the card holds no name."),
+            id: "Belum ada nama tampilan, jadi kartu ini memakai perannya.",
+            en: "No display name yet, so the card is headed by role."),
         .profileStatQuests: LocalizedText(id: "Perjalanan", en: "Quests"),
         .profileStatStamps: LocalizedText(id: "Stempel", en: "Stamps"),
         .profileStatBadges: LocalizedText(id: "Lencana", en: "Badges"),

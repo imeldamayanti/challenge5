@@ -11,7 +11,7 @@ import UIStringsKit
 ///
 /// When a screen is built for real, its wireframe here is deleted along with its catalogue entry.
 
-// MARK: - Entry: splash, login, register
+// MARK: - Entry: splash
 
 /// Splash. Auto-advances, and is tappable so nobody has to wait for it.
 struct SplashWireframeView: View {
@@ -47,34 +47,10 @@ struct SplashWireframeView: View {
     }
 }
 
-/// Login, with Register one push away. `onSkip` is the honest control here: there is no account
-/// backend, so every button on this screen does the same thing, and only one of them says so.
-struct AuthWireframeView: View {
-    let language: ContentLanguage
-    let onSkip: () -> Void
-
-    var body: some View {
-        NavigationStack {
-            WireframeScreen(WireframeCatalog.login, language: language) {
-                VStack(spacing: KultaraMetrics.md) {
-                    NavigationLink {
-                        WireframeScreen(WireframeCatalog.register, language: language) {
-                            Button(WireframeCatalog.skipAction.value(for: language)) { onSkip() }
-                                .buttonStyle(.seal)
-                        }
-                    } label: {
-                        Text(WireframeCatalog.register.title.value(for: language))
-                    }
-                    .buttonStyle(.ruled)
-
-                    Button(WireframeCatalog.skipAction.value(for: language)) { onSkip() }
-                        .buttonStyle(.seal)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-            }
-        }
-    }
-}
+// `AuthWireframeView` is **gone**, deleted with its `login` and `register` catalogue entries in
+// the commit that shipped the real screens (this file's own rule at the top). What replaced them:
+// `Features/Auth/` — `AuthCredentialScreen` in its two configurations and `GuestNameScreen`, from
+// Figma `791:5145`, `791:5109` and `822:2235`, reached exactly where the drawing was.
 
 // MARK: - Journal branch
 //

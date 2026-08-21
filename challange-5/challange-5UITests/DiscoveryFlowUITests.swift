@@ -49,12 +49,7 @@ final class DiscoveryFlowUITests: XCTestCase {
             skip.tap()
         }
 
-        // The login wireframe stands where the flow chart puts it. There is no account backend, so
-        // its skip is the only control on it that does anything.
-        let skipAuth = app.buttons["Skip for now"]
-        if skipAuth.waitForExistence(timeout: 10) {
-            skipAuth.tap()
-        }
+        passEntryScreens(app)
 
         // `app.launch()` starts a fresh process but not a fresh sandbox: a Run started by an
         // earlier test method in this run is still on disk, and `startOrResumeRun` resumes a draft
@@ -70,9 +65,32 @@ final class DiscoveryFlowUITests: XCTestCase {
         return app
     }
 
+
+    /// Past the three entry screens (`791:5145`, `791:5109`, `822:2235`), which stand where the
+    /// login wireframe used to.
+    ///
+    /// The guest route rather than the credential form: it is the one path with no password on it,
+    /// and its single field is what the screen insists on before it lets go (`AuthViewModel`).
+    /// Every check is conditional, because a run that has already passed these screens does not see
+    /// them again — the entry is persisted, unlike the wireframe it replaced.
+    private func passEntryScreens(_ app: XCUIApplication) {
+        let guest = app.buttons["Continue as a guest"]
+        guard guest.waitForExistence(timeout: 10) else { return }
+        guest.tap()
+
+        let name = app.textFields["Display name"]
+        if name.waitForExistence(timeout: 10) {
+            name.tap()
+            name.typeText("Tester")
+        }
+
+        let start = app.buttons["Start Exploring"]
+        if start.waitForExistence(timeout: 5) { start.tap() }
+    }
+
     private func resetAppData(_ app: XCUIApplication, timeout: TimeInterval = 10) {
         let profile = app.buttons["Profile"].firstMatch
-        // Right after the auth wireframe's own dismissal, the tab bar can still be settling into
+        // Right after the guest screen hands over, the tab bar can still be settling into
         // place — waiting for the button to exist before tapping it (rather than tapping on faith)
         // is what makes this reliable at the largest accessibility size, where the bar's layout
         // pass takes longer.

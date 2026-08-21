@@ -33,9 +33,12 @@ struct ExplorerCardPresentation: Sendable, Equatable {
         }
     }
 
-    /// What the card is headed with. There is no account in this build, so this is a role and not
-    /// a name — see `.profileExplorerName`.
+    /// What the card is headed with: the display name from `822:2235` if the reader gave one, and
+    /// otherwise their role — see `.profileExplorerName`. There is still no account behind either.
     let name: String
+    /// Which of those two it is. The view needs to know: the note explaining why the card has no
+    /// name is a hint about nothing once it has one.
+    let isNamed: Bool
     let questCount: Int
     let stampCount: Int
     let badgeCount: Int
@@ -44,11 +47,12 @@ struct ExplorerCardPresentation: Sendable, Equatable {
     let badges: [BadgePresentation]
 
     static let empty = ExplorerCardPresentation(
-        name: "", questCount: 0, stampCount: 0, badgeCount: 0,
+        name: "", isNamed: false, questCount: 0, stampCount: 0, badgeCount: 0,
         quests: [], stamps: [], badges: [])
 
     init(
         name: String,
+        isNamed: Bool,
         questCount: Int,
         stampCount: Int,
         badgeCount: Int,
@@ -57,6 +61,7 @@ struct ExplorerCardPresentation: Sendable, Equatable {
         badges: [BadgePresentation]
     ) {
         self.name = name
+        self.isNamed = isNamed
         self.questCount = questCount
         self.stampCount = stampCount
         self.badgeCount = badgeCount

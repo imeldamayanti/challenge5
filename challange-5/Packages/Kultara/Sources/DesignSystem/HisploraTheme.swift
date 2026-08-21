@@ -153,6 +153,29 @@ public struct HisploraPalette: Sendable, Equatable {
     /// accessibility label, and each one carries a cream ring so it reads as a placed object.
     public let mapMarker: SRGBColor
 
+    /// The seal red the entry screens set their masthead, their primary pill and their one inline
+    /// link in — `791:5145` ("Get Started"), `791:5109` ("Welcome Back") and `822:2235`
+    /// ("What should we call you?").
+    ///
+    /// **Not `brownDeep` rounded to.** That one is a *ground* — the deepest earth the story reveal
+    /// is printed on — and this is ink and fill on cream. They are a step apart (`#6E2717` against
+    /// `#6E2D26`, the same distance `brownBand` keeps from `brownMid`), they never appear on the
+    /// same screen, and collapsing them would put a ground token on a control. The pair below
+    /// measures it as both: type on `paperSheet`, and a label on the fill.
+    public let brownSeal: SRGBColor
+    /// The outline of a text field on those screens (`791:5155`, `791:5158`, `822:2244`).
+    ///
+    /// **Moved from the drawn `#918D8A`,** which measures 2.97:1 on `paperSheet` — three
+    /// hundredths under the 3:1 WCAG 1.4.11 asks of a control's visual boundary, and this hairline
+    /// is the *only* thing that says where a field is. The theme yields to the threshold rather
+    /// than the other way round (`NFR-A11Y-03`), the same move `inkDusty` and `inkFragments` made.
+    /// Deviation recorded in `docs/hisplora-tokens.md`.
+    ///
+    /// The frames also set the *placeholder* in `#918D8A`, which is 2.97:1 as text and nowhere near
+    /// body. Placeholders are set in `inkMuted` instead — already measured on this ground — rather
+    /// than this token being asked to do a job it fails.
+    public let fieldRing: SRGBColor
+
     // Inks on the paper grounds.
     public let inkDark: SRGBColor
     public let inkBody: SRGBColor
@@ -191,6 +214,8 @@ public struct HisploraPalette: Sendable, Equatable {
         paperStamp: SRGBColor,
         mapGround: SRGBColor,
         mapMarker: SRGBColor,
+        brownSeal: SRGBColor,
+        fieldRing: SRGBColor,
         inkCream: SRGBColor,
         inkDusty: SRGBColor,
         inkGilt: SRGBColor,
@@ -228,6 +253,8 @@ public struct HisploraPalette: Sendable, Equatable {
         self.paperStamp = paperStamp
         self.mapGround = mapGround
         self.mapMarker = mapMarker
+        self.brownSeal = brownSeal
+        self.fieldRing = fieldRing
         self.inkCream = inkCream
         self.inkDusty = inkDusty
         self.inkGilt = inkGilt
@@ -282,6 +309,8 @@ public struct HisploraPalette: Sendable, Equatable {
         paperStamp: SRGBColor(hex: "#FFFFFF"),    // 16.86:1 under inkDark, 6.80:1 under inkMuted
         mapGround: SRGBColor(hex: "#DFCDB5"),     // 11.95:1 under buttonFill
         mapMarker: SRGBColor(hex: "#B44934"),     // 4.31:1 on paperCream, 3.43:1 on mapGround
+        brownSeal: SRGBColor(hex: "#6E2D26"),     // 8.77:1 on paperSheet, 9.73:1 under inkOnButton
+        fieldRing: SRGBColor(hex: "#8F8B88"),     // moved from the drawn #918D8A; 3.05:1 on paperSheet
         inkCream: SRGBColor(hex: "#FDF2DE"),      // 9.63:1 on brownDeep, 8.11:1 on brownStone
         inkDusty: SRGBColor(hex: "#D0B5AE"),      // moved from the drawn #AA9B8E; 4.67:1 on brownStone
         inkGilt: SRGBColor(hex: "#FFDE7C"),       // 7.22:1 on brownMid, 8.46:1 on brownDeep
@@ -310,6 +339,7 @@ public struct HisploraPalette: Sendable, Equatable {
          ("paperSheet", paperSheet), ("paperCard", paperCard),
          ("paperRow", paperRow), ("paperStamp", paperStamp),
          ("mapGround", mapGround), ("mapMarker", mapMarker),
+         ("brownSeal", brownSeal), ("fieldRing", fieldRing),
          ("inkCream", inkCream), ("inkDusty", inkDusty), ("inkGilt", inkGilt),
          ("paperTrip", paperTrip), ("paperTile", paperTile), ("brownBand", brownBand),
          ("paperTan", paperTan), ("inkCard", inkCard), ("inkCreamWhite", inkCreamWhite),
@@ -513,6 +543,20 @@ public struct HisploraPalette: Sendable, Equatable {
                                   requirement: .nonTextEssential))
         pairs.append(ContrastPair(label: "buttonRing on brownStone",
                                   foreground: buttonRing, background: brownStone,
+                                  requirement: .nonTextEssential))
+
+        // The entry screens (`791:5145`, `791:5109`, `822:2235`). The seal red does two jobs on
+        // cream — the masthead and the "Sign in"/"Sign up" link in the closing line — and a third
+        // as the primary pill's fill, so both directions are measured rather than one assumed from
+        // the other. The field hairline is the boundary of a control and is held to 1.4.11.
+        pairs.append(ContrastPair(label: "brownSeal on paperSheet",
+                                  foreground: brownSeal, background: paperSheet,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "inkOnButton on brownSeal",
+                                  foreground: inkOnButton, background: brownSeal,
+                                  requirement: .bodyText))
+        pairs.append(ContrastPair(label: "fieldRing on paperSheet",
+                                  foreground: fieldRing, background: paperSheet,
                                   requirement: .nonTextEssential))
 
         return pairs

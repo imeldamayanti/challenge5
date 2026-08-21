@@ -10,11 +10,18 @@ struct KultaraRootView: View {
 
     @State private var language: ContentLanguage
     @State private var showsOnboarding: Bool
-    /// The two entry screens the app-flow chart opens with, neither of which is built. Held in
-    /// `@State` rather than persisted: they are wireframes, and a persisted flag would mean the
-    /// team has to clear app data to see them again. Both are one tap to get past.
+    /// The splash the app-flow chart opens with, which is still a wireframe. Held in `@State`
+    /// rather than persisted for exactly that reason: it is a drawing, and a persisted flag would
+    /// mean the team has to clear app data to see it again. One tap gets past it.
     @State private var showsSplash = true
-    @State private var showsAuth = true
+    /// Whether the entry screens still have something to ask (Figma `791:5145`, `791:5109`,
+    /// `822:2235`).
+    ///
+    /// **Persisted, unlike the splash above.** These are built screens now, not drawings, and a
+    /// form that asks a walker their name on every launch is a defect rather than a review aid.
+    /// `AccountEntryGate` owns the reading; Settings → erase local data puts them back
+    /// (`FR-SET-02`).
+    @State private var showsAuth: Bool
     @State private var runDestination: RunDestination?
     /// The letter the Journal has opened, drawn full screen over the shelf.
     ///
@@ -92,12 +99,14 @@ struct KultaraRootView: View {
             override: environment.preferences.preferredLanguage))
         _showsOnboarding = State(initialValue: OnboardingGate.shouldPresentOnboarding(
             store: environment.preferences))
+        _showsAuth = State(initialValue: AccountEntryGate.shouldPresentEntry(
+            store: environment.preferences))
     }
 
     var body: some View {
         KultaraThemeProvider {
-            // Splash → Onboarding → Login/Register → Home, as the flow chart opens. The first and
-            // third of those are wireframes; only onboarding is a built screen.
+            // Splash → Onboarding → Sign up / Sign in / Guest → Home, as the flow chart opens.
+            // The splash is still a wireframe; onboarding and the three entry screens are built.
             if showsSplash {
                 SplashWireframeView(language: language, onFinish: { showsSplash = false })
             } else if showsOnboarding {
@@ -106,7 +115,10 @@ struct KultaraRootView: View {
                     language: language,
                     onFinish: { showsOnboarding = false })
             } else if showsAuth {
-                AuthWireframeView(language: language, onSkip: { showsAuth = false })
+                AuthView(
+                    store: environment.preferences,
+                    language: language,
+                    onFinish: { showsAuth = false })
             } else {
                 browser
             }
@@ -385,6 +397,7 @@ struct KultaraRootView: View {
                     runStore: environment.runStore,
                     sideQuestStore: environment.sideQuestStore,
                     repository: environment.repository,
+                    preferences: environment.preferences,
                     language: language)
             } content: { model in
                 ExplorerCardView(
