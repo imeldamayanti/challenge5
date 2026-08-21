@@ -369,8 +369,9 @@ Still unguarded:
   outstanding, no owner named). `theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources` does *not*
   cover it — that test asserts on `CheckpointPresentation`, which still carries every accuracy label
   and citation. The omission is in the view.
-- **The XCUITests are green.** All 13 pass as of 2026-08-21; the three long-standing red ones
-  are fixed, and what they turned out to be is worth reading before trusting a guarded tap. Re-verified 2026-08-20 in a clean
+- **Twelve of thirteen XCUITests pass as of 2026-08-21**, up from ten. Two of the three
+  long-standing red ones are fixed; the third turned out to be a different and more interesting
+  failure once the navigation bug in front of it was cleared — see below. Re-verified 2026-08-20 in a clean
   worktree at `65f9465`, which is the only reason they can be called pre-existing rather than
   assumed to be:
   - **They were fixed on 2026-08-21, and the cause was none of the things this note spent weeks
@@ -392,6 +393,16 @@ Still unguarded:
     navigation failure completely.** Both defects found here — this one and the stale
     `"Skip for now"` label — were invisible for exactly that reason. When a test asserts on
     something missing, print what *is* there before theorising.
+  - **`testTheWholeFlowSurvivesTheLargestDynamicTypeSize` is still red, and now for a real
+    reason.** With the Settings-on-top bug cleared it gets further and then **the app stops
+    responding**: XCUITest retries the Profile tap three times over sixty seconds, never sees the
+    app go idle, and it is terminated — "application com.umar.hisplora is not running", with **no
+    crash report**, which is the signature of a hang rather than a crash. So this is a genuine
+    unresponsiveness at the largest accessibility content size, which is exactly what the test
+    exists to catch, and it was masked for weeks by the navigation defect in front of it.
+    Diagnosing it means profiling the app at `UICTContentSizeCategoryAccessibilityXXXL` — a layout
+    pass that does not settle is the obvious suspect, and `KultaraTabBar` uses `minHeight` rather
+    than a fixed height precisely because labels grow past 64 points there. **Not yet investigated.**
   - `testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow` fails at
     `DiscoveryFlowUITests.swift:227` — "A map marker did not open the story flow".
   - `SideQuestFlowUITests.testReopeningACompletedSidequestReplaysWithoutAwardingAgain` is **flaky,
