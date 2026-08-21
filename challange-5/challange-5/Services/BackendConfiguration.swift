@@ -20,7 +20,7 @@ import Foundation
 /// **The service-role key is not here and may never be**, in any build configuration. It bypasses
 /// RLS entirely; anything needing elevated access belongs in an Edge Function
 /// (`03-security-privacy.md` §1).
-struct BackendConfiguration: Sendable, Equatable {
+nonisolated struct BackendConfiguration: Sendable, Equatable {
 
     /// `https://<ref>.supabase.co`, with no trailing path.
     let baseURL: URL

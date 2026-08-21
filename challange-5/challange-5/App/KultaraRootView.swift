@@ -131,6 +131,10 @@ struct KultaraRootView: View {
                 // Opportunistic, never on a timer and never on a transition somebody is waiting
                 // for (`NFR-BAT-04`'s reputation, if not its letter).
                 environment.telemetry.flush()
+                // `c2` phase 3. Foreground is one of three triggers — the others are completing a
+                // walk and abandoning one, both raised by `QuestRunViewModel`. Never during arrival,
+                // lore or a task: those are the moments a walker is waiting for a screen.
+                Task { await environment.sync.push() }
             case .background:
                 environment.telemetry.flush()
             default:
@@ -537,7 +541,8 @@ struct KultaraRootView: View {
                 // the same one "delete all local data" empties (`FR-SET-02`), so a quest photo is
                 // not a fourth aggregate the eraser would have to learn about.
                 photoStore: environment.photoStore,
-                telemetry: environment.telemetry)
+                telemetry: environment.telemetry,
+                sync: environment.sync)
         } content: { model in
             KultaraThemeProvider { QuestRunView(model: model) }
                 .onDisappear {
@@ -566,6 +571,8 @@ struct KultaraRootView: View {
                 photoStore: environment.photoStore,
                 telemetry: environment.telemetry,
                 session: environment.session,
+                accountDeleter: environment.accountDeleter,
+                syncState: environment.syncState,
                 preferences: environment.preferences),
             storage: environment.storage,
             proximityMonitor: environment.proximityMonitor)

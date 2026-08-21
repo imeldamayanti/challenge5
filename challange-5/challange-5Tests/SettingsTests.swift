@@ -96,7 +96,7 @@ struct SettingsTests {
 
     // MARK: - FR-SET-02, deletion behind a confirmation
 
-    @Test func deletionRequiresAConfirmationFirst() throws {
+    @Test func deletionRequiresAConfirmationFirst() async throws {
         let eraser = SpyLocalDataEraser()
         let model = try model(eraser: eraser)
 
@@ -104,7 +104,7 @@ struct SettingsTests {
         #expect(model.isConfirmingDelete)
         #expect(eraser.callCount == 0, "Nothing may be deleted before the user confirms")
 
-        model.confirmDelete()
+        await model.confirmDelete()
         #expect(eraser.callCount == 1)
         #expect(!model.isConfirmingDelete)
         #expect(model.lastDeletionSummary != nil)
@@ -120,14 +120,14 @@ struct SettingsTests {
         #expect(model.lastDeletionSummary == nil)
     }
 
-    @Test func deletionAlsoClearsPreferences() throws {
+    @Test func deletionAlsoClearsPreferences() async throws {
         let store = InMemoryAppPreferencesStore()
         store.preferredLanguage = .en
         store.onboardingCompletedAt = Date()
         let model = try model(language: .en, store: store, eraser: SpyLocalDataEraser())
 
         model.requestDelete()
-        model.confirmDelete()
+        await model.confirmDelete()
 
         #expect(store.preferredLanguage == nil)
         #expect(store.onboardingCompletedAt == nil)
@@ -140,11 +140,11 @@ struct SettingsTests {
         #expect(!(try model().deleteScopeNote.isEmpty))
     }
 
-    @Test func aFailedDeletionIsReportedRatherThanSilentlySwallowed() throws {
+    @Test func aFailedDeletionIsReportedRatherThanSilentlySwallowed() async throws {
         let eraser = SpyLocalDataEraser(shouldFail: true)
         let model = try model(eraser: eraser)
         model.requestDelete()
-        model.confirmDelete()
+        await model.confirmDelete()
         #expect(model.deletionFailed)
         #expect(model.lastDeletionSummary == nil)
     }
@@ -246,7 +246,7 @@ final class SpyLocalDataEraser: LocalDataEraser {
         self.shouldFail = shouldFail
     }
 
-    func eraseAllLocalData() throws -> ErasureSummary {
+    func eraseAllLocalData() async throws -> ErasureSummary {
         callCount += 1
         if shouldFail { throw Failure() }
         return ErasureSummary(deletedRuns: 0, deletedPhotos: 0, deletedTelemetryEvents: 0, clearedPreferences: true)

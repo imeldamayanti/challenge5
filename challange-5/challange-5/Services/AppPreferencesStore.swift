@@ -45,14 +45,9 @@ protocol AppPreferencesStore: AnyObject {
     /// `FR-PROX-03`, `NFR-PRIV-10` — off by default, and only ever turned on from the Settings row
     /// that explains it. Nothing else in the app reads or writes this.
     var nearbyAlertsEnabled: Bool { get set }
-    /// One UUID per installation, minted on first read and stable until the app is deleted
-    /// (`c2` phase 1, `schema.md` §C.2's `device_id`).
-    ///
-    /// **Not a device identifier.** `identifierForVendor` and its relatives survive a delete and
-    /// are shared across an author's apps, which makes them a way to recognise a person; this is a
-    /// random value that says only "the same install wrote these rows". `FR-SET-02` erasure resets
-    /// it, and that is the point rather than a side effect.
-    var deviceID: UUID { get }
+    /// The per-install id lives on `DeviceIdentity`, not here — see that type for why it has to be
+    /// `Sendable` and this protocol cannot be. `removeAll()` still forgets it, so `FR-SET-02` stays
+    /// one call.
     func removeAll()
 }
 
@@ -63,7 +58,6 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
     static let onboardingCompletedAtKey = "kultara.onboardingCompletedAt"
     static let safetyNoticeAckedQuestIDsKey = "kultara.safetyNoticeAckedQuestIDs"
     static let nearbyAlertsEnabledKey = "kultara.nearbyAlertsEnabled"
-    static let deviceIDKey = "kultara.deviceID"
 
     private let defaults: UserDefaults
 
@@ -108,18 +102,6 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
         set { defaults.set(newValue, forKey: Self.nearbyAlertsEnabledKey) }
     }
 
-    /// Read-only from the outside and minted on first access, so there is exactly one way for this
-    /// value to come into existence. A settable property would let two callers disagree about
-    /// which install this is, which is the same class of mistake as two accuracy enums.
-    var deviceID: UUID {
-        if let raw = defaults.string(forKey: Self.deviceIDKey), let existing = UUID(uuidString: raw) {
-            return existing
-        }
-        let minted = UUID()
-        defaults.set(minted.uuidString, forKey: Self.deviceIDKey)
-        return minted
-    }
-
     func removeAll() {
         defaults.removeObject(forKey: Self.preferredLanguageKey)
         defaults.removeObject(forKey: Self.onboardingCompletedAtKey)
@@ -127,7 +109,7 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
         defaults.removeObject(forKey: Self.nearbyAlertsEnabledKey)
         // `FR-SET-02`. The next read mints a new one, so a user who erases stops being the same
         // install to the server as well as to this device.
-        defaults.removeObject(forKey: Self.deviceIDKey)
+        DeviceIdentity(defaults: defaults).forget()
     }
 }
 
@@ -137,14 +119,6 @@ final class InMemoryAppPreferencesStore: AppPreferencesStore {
     var onboardingCompletedAt: Date?
     var safetyNoticeAckedQuestIDs: Set<String>
     var nearbyAlertsEnabled: Bool
-    private(set) var storedDeviceID: UUID?
-
-    var deviceID: UUID {
-        if let storedDeviceID { return storedDeviceID }
-        let minted = UUID()
-        storedDeviceID = minted
-        return minted
-    }
 
     init(
         preferredLanguage: ContentLanguage? = nil,
@@ -163,6 +137,5 @@ final class InMemoryAppPreferencesStore: AppPreferencesStore {
         onboardingCompletedAt = nil
         safetyNoticeAckedQuestIDs = []
         nearbyAlertsEnabled = false
-        storedDeviceID = nil
     }
 }

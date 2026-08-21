@@ -35,6 +35,14 @@ struct KultaraEnvironment {
     /// The anonymous Supabase session (`c2` phase 1). Nothing on screen reads it — it exists so
     /// that phases 3, 4 and 7 have a `user_id` to write under and a token to write with.
     let session: any SupabaseSessionProviding
+    /// Pushes walks to the server (`c2` phase 3). Nothing reads it and nothing waits on it;
+    /// deleting the type removes syncing and breaks nothing else.
+    let sync: any RunSyncing
+    /// Removes the server copy on `FR-SET-02` erasure. `nil` with no backend, which is the same as
+    /// "there is nothing on a server to remove".
+    let accountDeleter: (any AccountDeleting)?
+    /// What has already been pushed, so erasure can forget it (`c2` phase 3).
+    let syncState: any SyncStateStore
 
     init(
         repository: any ContentRepository,
@@ -49,7 +57,8 @@ struct KultaraEnvironment {
         backend: BackendConfiguration? = BackendConfiguration(),
         governance: GovernanceGate? = nil,
         telemetry: AppTelemetry? = nil,
-        session: (any SupabaseSessionProviding)? = nil
+        session: (any SupabaseSessionProviding)? = nil,
+        sync: (any RunSyncing)? = nil
     ) {
         self.repository = repository
         self.preferences = preferences
@@ -72,8 +81,26 @@ struct KultaraEnvironment {
         // The unconfigured double rather than a `SupabaseSession` holding a nil client: the two
         // behave identically, and this way a test that forgets to pass one cannot accidentally
         // reach the network.
-        self.session = session ?? (backend.map { SupabaseSession(configuration: $0) }
+        let resolvedSession = session ?? (backend.map { SupabaseSession(configuration: $0) }
             ?? UnconfiguredSupabaseSession())
+        self.session = resolvedSession
+        let resolvedSyncState: any SyncStateStore = backend == nil
+            ? InMemorySyncStateStore()
+            : FileSyncStateStore()
+        self.syncState = resolvedSyncState
+        self.accountDeleter = backend.map {
+            EdgeFunctionAccountDeleter(configuration: $0, session: resolvedSession)
+        }
+        // Both closures rather than the objects themselves: `RunStore` and `AppPreferencesStore`
+        // are `@MainActor` and the coordinator is not. Reading `deviceID` through a closure also
+        // means a push after `FR-SET-02` erasure sees the newly minted one rather than the one this
+        // environment was built with.
+        self.sync = sync ?? (backend == nil ? NoRunSyncing() : SyncCoordinator(
+            loadRuns: { [runStore] in try runStore.runs() },
+            session: resolvedSession,
+            configuration: backend,
+            state: resolvedSyncState,
+            deviceID: { [identity = DeviceIdentity()] in identity.current }))
     }
 
     var runEngine: RunEngine {

@@ -50,7 +50,7 @@ struct SupabaseSessionTests {
             store: InMemoryRunStore(),
             session: spy,
             preferences: InMemoryAppPreferencesStore())
-        _ = try eraser.eraseAllLocalData()
+        _ = try await eraser.eraseAllLocalData()
         // Sign-out is detached: erasure is synchronous and must not start waiting on the Keychain.
         for _ in 0..<100 where !spy.didSignOut { await Task.yield() }
         #expect(spy.didSignOut)
@@ -58,33 +58,30 @@ struct SupabaseSessionTests {
 
     /// `schema.md` §C.2. One value per installation — a fresh one per read would make `device_id`
     /// meaningless and would do it silently, since every row would still be accepted.
-    @Test func theDeviceIDIsStableAcrossReads() {
-        let preferences = InMemoryAppPreferencesStore()
-        let first = preferences.deviceID
-        #expect(preferences.deviceID == first)
-        #expect(preferences.deviceID == first)
-    }
-
-    /// And erasure resets it, which is the point rather than a side effect: a walker who erases
-    /// should stop being the same device to the server as well as to this phone.
-    @Test func erasureMintsANewDeviceID() {
-        let preferences = InMemoryAppPreferencesStore()
-        let before = preferences.deviceID
-        preferences.removeAll()
-        #expect(preferences.deviceID != before)
-    }
-
-    /// The same, through `UserDefaults`, because that is the implementation that ships and the
-    /// in-memory double could agree with a rule the real one breaks.
-    @Test func theStoredDeviceIDSurvivesANewStoreOverTheSameDefaults() throws {
+    @Test func theDeviceIDIsStableAcrossReadsAndAcrossInstances() throws {
         let suite = "kultara.tests.\(UUID().uuidString)"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
 
-        let first = UserDefaultsAppPreferencesStore(defaults: defaults).deviceID
-        #expect(UserDefaultsAppPreferencesStore(defaults: defaults).deviceID == first)
+        let identity = DeviceIdentity(defaults: defaults)
+        let first = identity.current
+        #expect(identity.current == first)
+        // A second instance over the same defaults is the same install, which is what makes this a
+        // property of the installation rather than of an object somebody happens to be holding.
+        #expect(DeviceIdentity(defaults: defaults).current == first)
+    }
 
+    /// And erasure resets it, which is the point rather than a side effect: a walker who erases
+    /// should stop being the same device to the server as well as to this phone.
+    @Test func erasureMintsANewDeviceID() throws {
+        let suite = "kultara.tests.\(UUID().uuidString)"
+        let defaults = try #require(UserDefaults(suiteName: suite))
+        defer { defaults.removePersistentDomain(forName: suite) }
+
+        let before = DeviceIdentity(defaults: defaults).current
+        // Through the preference store rather than `DeviceIdentity.forget()` directly, because
+        // `FR-SET-02` is one call and the point is that it reaches this too.
         UserDefaultsAppPreferencesStore(defaults: defaults).removeAll()
-        #expect(UserDefaultsAppPreferencesStore(defaults: defaults).deviceID != first)
+        #expect(DeviceIdentity(defaults: defaults).current != before)
     }
 }

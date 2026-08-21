@@ -55,7 +55,7 @@ struct SettingsView: View {
             actions: [
                 KultaraDialogAction(
                     title: model.deleteConfirmAction,
-                    kind: .destructive) { model.confirmDelete() },
+                    kind: .destructive) { Task { await model.confirmDelete() } },
                 KultaraDialogAction(
                     title: model.deleteCancelAction,
                     kind: .cancel) { model.cancelDelete() },

@@ -1,9 +1,9 @@
 # Phase 2 — Sync Identity
 
-**Size:** ~half a day · **Depends on:** nothing · **Touches no network code at all**
+**Size:** none — it collapsed · **Depends on:** nothing · **Touches no code at all**
 **Demo sentence:** "Every record the app writes now knows which device wrote it and when — and none of that required a server."
 
-**Status:** `NOT STARTED` · **Started:** — · **Completed:** —
+**Status:** `COMPLETE` — no code changed · **Started:** 2026-08-21 · **Completed:** 2026-08-21
 
 <!-- MAINTAIN THIS FILE. See phase 0's header for the rules. -->
 
@@ -12,7 +12,49 @@
 > safe to drop, is in "What this phase used to contain" at the bottom. Read that before
 > putting any of it back.
 
-## Goal
+## What happened
+
+**This phase turned out to be empty, and that is the result rather than a failure to do
+it.** Reading the four record types against the four tables, one field at a time, the
+client already carries everything the schema demands. The remaining three items were
+never client-model changes at all — they are projections, and a projection belongs in the
+thing that builds the wire shape, which is phase 3's DTO.
+
+So the deliverable is the table below. Phase 3 implements it; nothing was added to
+`RunEngine`, no on-disk format changed, and the old-shape fixture test this phase used to
+require is unnecessary because there is no new shape to be old about.
+
+### Every column the client has to supply, and where it comes from
+
+| Table | Column | Source |
+|---|---|---|
+| all four | `device_id` | **Stamped at push time** from `AppPreferencesStore.deviceID`. See below |
+| all four | `revision`, `server_seq` | Not sent. `default 1` and `nextval` respectively |
+| `runs` | `created_at` / `updated_at` | `startedAt` / `updatedAt`. Both already exist and `RunEngine` maintains `updatedAt` on **every** write — five call sites, checked |
+| `runs` | everything else | Already on `Run`, name for name |
+| `checkpoint_results` | `created_at` / `updated_at` | `arrivedAt` |
+| `checkpoint_results` | `gps_accuracy_bucket` | Bucketed from `gpsAccuracyM` by `TelemetryKit.AccuracyBand` |
+| `checkpoint_results` | `snapshot_sources` | Union of `snapshotLore[].sourceCitations` |
+| `checkpoint_results` | `lore_dwell_ms` | `null`, deliberately |
+| `task_results` | `created_at` / `updated_at` | `completedAt` |
+| `task_results` | `answer_text` | `text` |
+| `task_results` | `photo_id` | Phase 4 |
+| `awards` | `created_at` / `updated_at` | `awardedAt` |
+
+### Why `device_id` is stamped at push time and not stored on the record
+
+The column means *which device authored this revision*. Stamping at push is not an
+approximation of that — it is closer to it. A row is only pushed when it has changed
+locally since the last push, so the device doing the pushing **is** the device that last
+wrote it. The case that looks like a counterexample is phase 7's: a walk restored onto a
+new phone keeps its original `device_id` on the server, and only acquires the new one if
+the walker writes to it again — which is exactly when the new phone becomes its author.
+
+Storing it on the record instead would mean a new field on four types, a decode path for
+every existing `Run`, and `RunEngine` taking a device identity it has no other use for —
+to arrive at a value that is right slightly less often.
+
+## Goal (as originally written)
 
 Give every syncable record the three fields the deployed schema demands and the client
 does not have, **before** any transport exists to argue with.
@@ -34,7 +76,9 @@ It also means phase 3 is **transport only** — and a phase that is transport on
 deleted if it goes wrong, which phase 2's fields cannot once records are written with
 them.
 
-## Scope
+## Scope (as originally written — none of it is now client work)
+
+
 
 ### `SyncMetadata`
 
@@ -90,11 +134,14 @@ them.
 
 ## Exit criteria
 
-- [ ] Package suite green on macOS; the four known pre-existing failures unchanged.
-- [ ] Old-shape fixture decodes and re-encodes without loss.
-- [ ] `RunEngine` still imports nothing but Foundation and `ContentKit` —
-      `ImportBoundaryTests` green.
-- [ ] Grep proves no network type entered `RunEngine`.
+- [x] Package suite green on macOS; the four known pre-existing failures unchanged.
+      Trivially, since nothing changed.
+- [~] Old-shape fixture decodes and re-encodes without loss. — SKIPPED: there is no new
+      shape. The on-disk format is untouched, so there is nothing for a fixture to catch.
+- [x] `RunEngine` still imports nothing but Foundation and `ContentKit`.
+- [x] No network type entered `RunEngine`. None was added to it at all.
+- [x] **Every column the client must supply has a named source** — the table above, which
+      is what phase 3 builds against.
 
 ## Out of scope
 

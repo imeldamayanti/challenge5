@@ -100,6 +100,10 @@ final class QuestRunViewModel {
     /// still resolvable by skipping (`AD-2`).
     private let photoStore: (any PhotoStore)?
     private let telemetry: AppTelemetry?
+    /// `c2` phase 3. Two of the three push triggers are here — a walk completing and a walk being
+    /// abandoned — because they are the two moments after which a walk will not change again for a
+    /// while, and both leave the walker standing still rather than waiting for a screen.
+    private let sync: (any RunSyncing)?
     /// Whether this device has a camera at all. Injected rather than read here so the rule is a value
     /// a test can set — the Simulator has none, and a screen that offers a control the hardware
     /// cannot honour is worse on a walk than one that says so.
@@ -182,7 +186,8 @@ final class QuestRunViewModel {
         hasCameraHardware: Bool = AVCaptureDevice.default(for: .video) != nil,
         // `c2` phase 0. Optional, and nil in every test: telemetry is a side channel, and a view
         // model that needed one to be constructed would have made it a dependency of the walk.
-        telemetry: AppTelemetry? = nil
+        telemetry: AppTelemetry? = nil,
+        sync: (any RunSyncing)? = nil
     ) {
         guard let quest = (try? repository.quest(id: questID)) ?? nil else { return nil }
         self.engine = engine
@@ -191,6 +196,7 @@ final class QuestRunViewModel {
         self.photoStore = photoStore
         self.hasCameraHardware = hasCameraHardware
         self.telemetry = telemetry
+        self.sync = sync
         self.sampling = ArrivalSampling(
             locationProvider: locationProvider,
             language: language,
@@ -514,6 +520,14 @@ final class QuestRunViewModel {
         // A finished walk is one of the three moments a flush is allowed (`c2` phase 0): the
         // walker is standing still, reading, and not waiting on a transition.
         telemetry.flush()
+        pushCompletedOrAbandonedWalk()
+    }
+
+    /// `c2` phase 3. Detached and unawaited: a push is never something a screen waits on, and a
+    /// push that does not land leaves the walk dirty for the next foreground (`AD-3`, R4).
+    private func pushCompletedOrAbandonedWalk() {
+        guard let sync else { return }
+        Task { await sync.push() }
     }
 
     private func arriveAtCurrentCheckpoint() {
@@ -947,6 +961,7 @@ final class QuestRunViewModel {
             lastOrderIndex: run.orderedCheckpointResults.last?.orderIndex ?? -1,
             reason: AbandonReason.userChoice.rawValue,
             runID: run.id)
+        pushCompletedOrAbandonedWalk()
         screenDisappeared()
         stage = .finished
     }

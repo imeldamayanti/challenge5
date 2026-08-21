@@ -178,10 +178,10 @@ final class SettingsViewModel {
         isConfirmingDelete = false
     }
 
-    func confirmDelete() {
+    func confirmDelete() async {
         isConfirmingDelete = false
         do {
-            lastDeletionSummary = try eraser.eraseAllLocalData()
+            lastDeletionSummary = try await eraser.eraseAllLocalData()
             // The eraser owns whatever store it was given; preferences are cleared here as well
             // because a language override that survives "delete all local data" is a surprise.
             store.removeAll()
