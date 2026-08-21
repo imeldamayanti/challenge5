@@ -22,6 +22,21 @@ protocol PhotoStore: AnyObject {
     /// crashed or drew a broken-image glyph over that would be worse than one that simply has one
     /// fewer picture on it.
     func image(atRelativePath path: String) -> UIImage?
+    /// Places bytes that came from somewhere else — a restore (`c2` phase 7), not a shutter.
+    ///
+    /// Separate from `save` on purpose: `save` downscales and re-encodes, which is right for a
+    /// photograph straight off the camera and wrong for one that has already been through that
+    /// once. A second pass would lose quality for no reason, and the file on the server is
+    /// already what `save` produced.
+    ///
+    /// The path is derived from `recordID` by exactly the rule `save` uses, so a restored
+    /// photograph lands where the record already says it is.
+    @discardableResult func place(_ data: Data, recordID: UUID) throws -> String
+    /// Whether the file is already there. Restore uses it to skip what it has.
+    func hasImage(forRecordID recordID: UUID) -> Bool
+    /// The path `save` and `place` produce for a record. The one naming rule, in one place, so a
+    /// restored `TaskResult` can name its photograph before the bytes arrive.
+    nonisolated static func relativePath(forRecordID recordID: UUID) -> String
 }
 
 enum PhotoStoreError: Error, CustomStringConvertible {
@@ -53,6 +68,17 @@ final class InMemoryPhotoStore: PhotoStore {
 
     /// Nothing was ever written, so nothing reads back.
     func image(atRelativePath path: String) -> UIImage? { nil }
+
+    @discardableResult func place(_ data: Data, recordID: UUID) throws -> String {
+        savedCount += 1
+        return Self.relativePath(forRecordID: recordID)
+    }
+
+    func hasImage(forRecordID recordID: UUID) -> Bool { false }
+
+    nonisolated static func relativePath(forRecordID recordID: UUID) -> String {
+        "sidequest-photos/\(recordID.uuidString).jpg"
+    }
 }
 
 /// One JPEG per photograph under `Documents/sidequest-photos/`, downscaled before it is written.
@@ -91,14 +117,38 @@ final class FilePhotoStore: PhotoStore {
             .jpegData(compressionQuality: 0.8)
         else { throw PhotoStoreError.encodingFailed }
 
-        let fileName = "\(recordID.uuidString).jpg"
-        let target = directory.appendingPathComponent(fileName)
+        let target = directory.appendingPathComponent("\(recordID.uuidString).jpg")
         do {
             try data.write(to: target, options: .atomic)
         } catch {
             throw PhotoStoreError.unwritable(path: target.path, reason: String(describing: error))
         }
-        return "sidequest-photos/\(fileName)"
+        return Self.relativePath(forRecordID: recordID)
+    }
+
+    @discardableResult func place(_ data: Data, recordID: UUID) throws -> String {
+        do {
+            try FileManager.default.createDirectory(
+                at: directory, withIntermediateDirectories: true)
+        } catch {
+            throw PhotoStoreError.unwritable(path: directory.path, reason: String(describing: error))
+        }
+        let target = directory.appendingPathComponent("\(recordID.uuidString).jpg")
+        do {
+            try data.write(to: target, options: .atomic)
+        } catch {
+            throw PhotoStoreError.unwritable(path: target.path, reason: String(describing: error))
+        }
+        return Self.relativePath(forRecordID: recordID)
+    }
+
+    func hasImage(forRecordID recordID: UUID) -> Bool {
+        FileManager.default.fileExists(
+            atPath: directory.appendingPathComponent("\(recordID.uuidString).jpg").path)
+    }
+
+    nonisolated static func relativePath(forRecordID recordID: UUID) -> String {
+        "sidequest-photos/\(recordID.uuidString).jpg"
     }
 
     @discardableResult func deleteAll() throws -> Int {

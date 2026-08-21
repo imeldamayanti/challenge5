@@ -133,6 +133,19 @@ struct KultaraEnvironment {
                 return QuestFacts(
                     title: quest.title.value(for: resolvedLanguage),
                     checkpointCount: quest.checkpoints.count)
+            },
+            // `c2` B9. A restored walk names its photographs immediately and grows them shortly
+            // after; a walk with a path and no file behind it renders exactly as one whose picture
+            // was deleted in Settings, which is why nothing waits on this.
+            photoDownloader: backend.map { configuration in
+                RestoredPhotoDownloader(
+                    configuration: configuration,
+                    place: { [resolvedPhotoStore] data, id in
+                        try? resolvedPhotoStore.place(data, recordID: id)
+                    },
+                    alreadyHave: { [resolvedPhotoStore] id in
+                        resolvedPhotoStore.hasImage(forRecordID: id)
+                    })
             })
         let resolvedTelemetry = self.telemetry
         self.credentials = backend.flatMap { configuration -> (any CredentialLinking)? in

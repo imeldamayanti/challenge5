@@ -43,6 +43,9 @@ actor RunRestorer: RunRestoring {
     /// A withdrawn quest resolves to nothing, and the walk then shows its id rather than a blank
     /// row. That is the honest fallback: the record is real, only its name is gone.
     private let resolveQuest: @Sendable (String) -> QuestFacts?
+    /// Fetches the bytes for the rows a restore brought back (`c2` B9). Nil with no backend, and
+    /// nil in the tests that only care about reassembly.
+    private let photoDownloader: (any RestoredPhotoDownloading)?
 
     init(
         loadRuns: @escaping @Sendable @MainActor () throws -> [Run],
@@ -50,7 +53,8 @@ actor RunRestorer: RunRestoring {
         session: any SupabaseSessionProviding,
         configuration: BackendConfiguration?,
         state: SyncStateStore,
-        resolveQuest: @escaping @Sendable (String) -> QuestFacts? = { _ in nil }
+        resolveQuest: @escaping @Sendable (String) -> QuestFacts? = { _ in nil },
+        photoDownloader: (any RestoredPhotoDownloading)? = nil
     ) {
         self.loadRuns = loadRuns
         self.saveRun = saveRun
@@ -58,6 +62,7 @@ actor RunRestorer: RunRestoring {
         self.configuration = configuration
         self.state = state
         self.resolveQuest = resolveQuest
+        self.photoDownloader = photoDownloader
     }
 
     func restoreIfLocalStoreIsEmpty() async -> RestoreOutcome? {
@@ -99,6 +104,9 @@ actor RunRestorer: RunRestoring {
                 .select().is("deleted_at", value: nil).execute().value
             let awards: [AwardRow] = try await client.from("awards")
                 .select().is("deleted_at", value: nil).execute().value
+            // Rows only. The bytes are fetched afterwards, off the path that produces a screen.
+            let photos: [PhotoRow] = (try? await client.from("photos")
+                .select().is("deleted_at", value: nil).execute().value) ?? []
 
             let assembled = RunAssembly.runs(
                 from: runs, checkpoints: checkpoints, tasks: tasks, awards: awards,
@@ -112,6 +120,12 @@ actor RunRestorer: RunRestoring {
             // restore does not push every walk straight back at the server.
             for run in assembled {
                 state.markPushed(runID: run.id, updatedAt: run.updatedAt)
+            }
+            // **After the walks are saved, and unawaited.** A walk with no picture yet renders
+            // exactly as a walk whose picture was deleted in Settings does, so nothing waits on
+            // this and nothing is shown while it runs.
+            if let photoDownloader {
+                Task { await photoDownloader.download(photos, token: token) }
             }
             return RestoreOutcome(restoredRuns: assembled.count, succeeded: true)
         } catch {
@@ -131,7 +145,8 @@ nonisolated enum RunAssembly {
         checkpoints: [CheckpointResultRow],
         tasks: [TaskResultRow],
         awards: [AwardRow],
-        quest: (String) -> QuestFacts? = { _ in nil }
+        quest: (String) -> QuestFacts? = { _ in nil },
+        photoPath: (UUID) -> String = FilePhotoStore.relativePath(forRecordID:)
     ) -> [Run] {
         let tasksByCheckpoint = Dictionary(grouping: tasks, by: \.checkpoint_result_id)
         let checkpointsByRun = Dictionary(grouping: checkpoints, by: \.run_id)
@@ -162,7 +177,7 @@ nonisolated enum RunAssembly {
                         snapshotContentVersion: checkpoint.snapshot_content_version,
                         taskResults: (tasksByCheckpoint[checkpoint.id] ?? [])
                             .sorted { $0.completed_at < $1.completed_at }
-                            .map(taskResult))
+                            .map { taskResult($0, photoPath: photoPath) })
                 }
 
             return Run(
@@ -188,7 +203,9 @@ nonisolated enum RunAssembly {
         }
     }
 
-    private static func taskResult(_ row: TaskResultRow) -> TaskResult {
+    private static func taskResult(
+        _ row: TaskResultRow, photoPath: (UUID) -> String
+    ) -> TaskResult {
         TaskResult(
             id: row.id,
             taskID: row.task_id,
@@ -198,9 +215,12 @@ nonisolated enum RunAssembly {
             promptSnapshot: "",
             skipped: row.skipped,
             text: row.answer_text,
-            // Phase 4 uploads the bytes; a restored device downloads them lazily, so the local
-            // path is not known until then.
-            photoRelativePath: nil,
+            // **Named before the bytes arrive.** `photo_id` is the `TaskResult`'s own id (phase 4),
+            // and `PhotoStore` derives its path from exactly that — so the record can say where its
+            // photograph lives while the file is still being fetched. Every screen already handles
+            // a path with no file behind it (`FR-SET-02` deletes leave the same state), which is
+            // what makes the gap between restore and download survivable rather than broken.
+            photoRelativePath: row.photo_id.map(photoPath),
             completedAt: row.completed_at)
     }
 

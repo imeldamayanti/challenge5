@@ -93,7 +93,7 @@ Verified 2026-08-20 against the running project, not read from a document.
 | B5 | Apple Developer "Sign in with Apple" key and a Google OAuth client do not exist; `config.toml` has no Google stanza at all | phase 6 | unassigned |
 | B6 | `xcode-select` points at CommandLineTools — every build and test command needs a `DEVELOPER_DIR` prefix. The permanent fix needs the user's password | all phases | af |
 | B8 | **Sign in with Apple is not enabled.** `[auth.external.apple]` is `enabled = false` with an empty `client_id`, so the credential screen's button cannot work. Needs an Apple Developer team, a Sign in with Apple key, a `config push` and the Xcode capability — none of which a session can do or should fake. Blocks phase 6, and with it the two exit criteria phases 3 and 7 both deferred | phase 6, and closing phase 3's and 7's deferred criteria | af |
-| B9 | **A restored walk has no photographs.** Phase 4 puts them on the server and phase 7 does not read the bytes back, so a reinstall returns walks, answers and stamps but not pictures. Needs a local cache keyed by `app.photos.id` and a `PhotoStore` that can be told about a file it did not write | completeness of the reinstall promise | af |
+| ~~B9~~ | **Closed 2026-08-21.** A restored walk downloads its photographs. It needed no cache: `photo_id` is the `TaskResult`'s own id, so a restored record names its photograph before the bytes exist and the download fills it in. Verified on prod by reinstalling — the file landed at the exact path the record names | — | done |
 | ~~B7~~ | **Closed 2026-08-21.** The prod drill ran: suppress, publish, quest gone on device, release, quest back, prod left clean. The deployed function accepts the real production service role — the half the local stack could not prove. Two prod-only findings are in phase 0: a published document takes **60–90 s** to reach readers, and the MCP being read-only again means data writes go through `supabase db query --linked` | — | done |
 
 ## Session log
@@ -122,8 +122,7 @@ Append one line per working session. Newest last.
   could be tested at all. Four things the deployed project or the device disagreed with
   the plan about are written into the phase files: no `lore_dwell_ms` column, 75.0 m is
   `gt75`, `app.photos` has no delete policy, and a restored walk was showing its quest id
-  as a title. One real gap left: a restored walk has no photographs — the rows are on the
-  server and nothing reads the bytes back.
+  as a title. A restored walk downloads its photographs too (B9, closed the same day).
 - **2026-08-21, later** — owner supplied the service-role key and **B7 closed on prod**.
   Suppressed `badung-museum-bali`, published, the quest and its sidequest left the app on a
   foreground, released it, both came back, prod left with zero rows and an empty document.

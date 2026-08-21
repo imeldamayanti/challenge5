@@ -166,6 +166,66 @@ struct RestoreTests {
         #expect(two.awards.first?.sourceID == "s1")
     }
 
+    // MARK: Photographs (B9)
+
+    /// A restored `TaskResult` **names** its photograph before the bytes exist, because
+    /// `photo_id` is the task's own id and `PhotoStore` derives its path from exactly that. Without
+    /// this the record would have no way to point at the file once it arrived.
+    @Test func aRestoredTaskNamesItsPhotographBeforeTheBytesArrive() throws {
+        let runID = UUID()
+        let checkpointID = UUID()
+        let taskID = UUID()
+        let assembled = try #require(RunAssembly.runs(
+            from: [runRow(id: runID)],
+            checkpoints: [checkpointRow(runID: runID, id: checkpointID)],
+            tasks: [TaskResultRow(
+                TaskResult(
+                    id: taskID, taskID: "t-photo", type: .photo, promptSnapshot: "P",
+                    skipped: false, photoRelativePath: "sidequest-photos/\(taskID.uuidString).jpg",
+                    completedAt: Date(timeIntervalSince1970: 20)),
+                checkpointResultID: checkpointID, runID: runID, userID: UUID(),
+                deviceID: UUID(), photoID: taskID)],
+            awards: []).first)
+
+        let task = try #require(assembled.orderedCheckpointResults.first?.taskResults.first)
+        #expect(task.photoRelativePath == FilePhotoStore.relativePath(forRecordID: taskID))
+    }
+
+    /// And a task that never had one comes back with none, rather than a path to nothing.
+    @Test func aRestoredTaskWithNoPhotographNamesNoFile() throws {
+        let runID = UUID()
+        let checkpointID = UUID()
+        let assembled = try #require(RunAssembly.runs(
+            from: [runRow(id: runID)],
+            checkpoints: [checkpointRow(runID: runID, id: checkpointID)],
+            tasks: [TaskResultRow(
+                TaskResult(
+                    taskID: "t1", type: .reflection, promptSnapshot: "Q",
+                    skipped: false, text: "an answer",
+                    completedAt: Date(timeIntervalSince1970: 20)),
+                checkpointResultID: checkpointID, runID: runID, userID: UUID(),
+                deviceID: UUID(), photoID: nil)],
+            awards: []).first)
+        #expect(assembled.orderedCheckpointResults.first?.taskResults.first?.photoRelativePath == nil)
+    }
+
+    /// `save` and `place` must agree on where a photograph lives, or a restored record points at a
+    /// file the download wrote somewhere else.
+    @Test func placeAndSaveAgreeOnThePath() throws {
+        let directory = URL(fileURLWithPath: NSTemporaryDirectory())
+            .appendingPathComponent("photos-\(UUID().uuidString)", isDirectory: true)
+        defer { try? FileManager.default.removeItem(at: directory) }
+
+        let store = FilePhotoStore(directory: directory)
+        let id = UUID()
+        #expect(!store.hasImage(forRecordID: id))
+
+        let bytes = Data("not really a jpeg".utf8)
+        let placed = try store.place(bytes, recordID: id)
+        #expect(placed == FilePhotoStore.relativePath(forRecordID: id))
+        #expect(store.hasImage(forRecordID: id))
+    }
+
     /// A restore that lands must not make the next foreground push every walk straight back.
     @Test func restoredWalksAreMarkedAsAlreadyLanded() {
         let state = InMemorySyncStateStore()
