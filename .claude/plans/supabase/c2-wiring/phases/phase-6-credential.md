@@ -3,7 +3,7 @@
 **Size:** 2 days · **Depends on:** phase 1
 **Demo sentence:** "I walked three quests without an account. Then I signed in with Apple, and all three were already there."
 
-**Status:** `IN PROGRESS` — client done, **provider setup is the owner's** · **Started:** 2026-08-21 · **Completed:** —
+**Status:** `PROVIDER LIVE, CLIENT UNVERIFIED ON DEVICE` · **Started:** 2026-08-21 · **Completed:** —
 
 <!-- MAINTAIN THIS FILE. See phase 0's header for the rules. -->
 
@@ -32,17 +32,26 @@ orphaned.
 
 ### Provider setup — none of this is Swift
 
-- [~] Apple: enable "Sign in with Apple" on the App ID, create the key, note the
+- [x] Apple: enabled on the App ID, key created (Key ID `S5NSF5CCNH`), Services ID
+      `com.astungkara.hisplora`, Team ID `62ZRZ6VZKC`. Done by the owner in the
       Services ID and Team ID.
-- [~] Google: create an OAuth client. **`config.toml` has no `[auth.external.google]`
+- [ ] Google: create an OAuth client. **`config.toml` has no `[auth.external.google]`
       stanza at all** — it has to be added.
-- [~] `[auth.external.apple]` is **still** `enabled = false` with an empty `client_id`.
-- [~] Secrets via `env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)` and never in the repo — the
-      line is already in `config.toml` and the variable is unset.
+- [x] `[auth.external.apple]` is `enabled = true`, `client_id = "com.astungkara.hisplora"`.
+- [x] Secrets via `env(SUPABASE_AUTH_EXTERNAL_APPLE_SECRET)`, resolved from the local
+      shell at `config push` time — **not** from `supabase secrets set`, which refuses
+      any `SUPABASE_`-prefixed name outright (that command is Edge Function runtime
+      secrets, a different store entirely). The JWT was generated locally (PyJWT,
+      ES256, `kid`/`iss`/`sub` from the four values, 6-month expiry — Apple's cap, and
+      there is no refresh; **regenerate around 2027-02-19**), exported into one shell,
+      pushed, and the plaintext env file was zero-overwritten before deletion. The `.p8`
+      key lives in `/secrets/`, gitignored, `chmod 600`, never committed.
       **This project has already had one production key exposure and rotation.**
-- [~] `site_url = "kultara://auth-callback"` is already set; the URL scheme has to
+- [x] `site_url = "kultara://auth-callback"` is already set; the URL scheme has to
       exist in the app, and it names a working title that may not survive B2.
-- [~] `config push` applies auth settings. It does **not** apply a function's
+- [x] `config push` applies auth settings — confirmed, `auth: updated` in the response,
+      and the diff showed `secret = "hash:…"` rather than plaintext. It does **not**
+      apply a function's
       `verify_jwt` — verify with `supabase functions list`, not by assuming.
 
 ### The screens
@@ -95,28 +104,32 @@ orphaned.
       credentialed user, and the copy must distinguish "sign out" from "delete
       everything".
 
-## What is done, and what is blocked
+## What is done, and what is left
 
-**The client is built and the provider is not.** Everything in Swift is there:
-`SupabaseCredentialLinking`, the nonce, `CredentialView` with Apple's own button, the
-`merge-anonymous` call, and honest copy for all three outcomes. It has been seen on
-iPhone 17 / iOS 26.5 — `docs/screenshots/c2p6-credential-screen.png`.
+**The provider is live and the client is unverified on a device.** Closed 2026-08-21:
+the owner supplied the four Apple Developer values, the `.p8` key was moved into
+`/secrets/` (gitignored) and shredded from `~/Downloads`, the client-secret JWT was
+generated locally, and `config push` applied it — confirmed both by the response
+(`auth: updated`) and by POSTing a garbage `id_token` to `/auth/v1/token` and getting
+`"Unable to detect issuer in ID token for Apple provider"` rather than a
+disabled-provider error. That is GoTrue actually attempting Apple verification, which
+only happens when the provider is on.
 
-**Tapping the button cannot work yet**, and that is not a defect in the code:
-`[auth.external.apple]` is `enabled = false` with an empty `client_id`, so Supabase
-rejects the identity token. Enabling it needs an Apple Developer team, a Sign in with
-Apple key, and a `config push` — none of which this session can do or should fake.
+**The Sign in with Apple capability and entitlements were added in Xcode between
+messages**, along with a bundle-id change from `com.umar.hisplora` to
+`com.astungkara.hisplora` to match the registered Services ID. Every earlier
+`simctl launch` command in this project's history used the old id and needs updating
+for any further Simulator work.
 
-What the owner has to do, in order:
+**What is still not proven**: a real device, tapping the real button, producing a
+real identity token — the Simulator cannot do Sign in with Apple end to end. In one
+pass on a device:
 
-1. Enable **Sign in with Apple** on the App ID for `com.umar.hisplora`, create the key,
-   and note the Services ID, Team ID and Key ID.
-2. Set `[auth.external.apple] enabled = true` and `client_id` in `config.toml`; export
-   `SUPABASE_AUTH_EXTERNAL_APPLE_SECRET`; `supabase config push`.
-3. Add the **Sign in with Apple** capability to the app target in Xcode.
-4. Then, in one pass: sign in on a device, watch `merge-anonymous` move the rows, and
-   close the two exit criteria phases 3 and 7 both deferred — erase-all removing the
-   server copy, and a second credential restoring only its own walks.
+1. Sign in, confirm `auth.users` gains a non-anonymous row for the credential.
+2. Confirm `merge-anonymous` moved the anonymous walks across.
+3. Close the two exit criteria phases 3 and 7 both deferred for lack of a second
+   credential — erase-all removing the server copy, and a second credential
+   restoring only its own walks.
 
 **Three things about the code are worth reading before that pass**, because each is a
 mistake that fails with a message pointing somewhere else:

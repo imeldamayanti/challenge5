@@ -30,7 +30,7 @@ unit test with a stubbed transport". If it has not run against
 | 2 | [Sync Identity](phases/phase-2-sync-identity.md) | — | none | `COMPLETE` — collapsed, no code | 2026-08-21 | 2026-08-21 |
 | 3 | [Push Sync](phases/phase-3-push-sync.md) | 1, 2 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
-| 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `IN PROGRESS` — client done, provider setup is the owner's | 2026-08-21 | — |
+| 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `PROVIDER LIVE, CLIENT UNVERIFIED ON DEVICE` | 2026-08-21 | — |
 | 7 | [Restore](phases/phase-7-restore.md) | 1, 3, 4 | 1½ d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `DEPLOYED` — live on prod at owner's instruction, consent position unchanged | 2026-08-21 | 2026-08-21 |
 
@@ -140,3 +140,16 @@ Append one line per working session. Newest last.
   Everything in `c2-wiring` that can be implemented is implemented. What is left needs a
   credential (**B8**, Sign in with Apple), a physical phone (phase 4's camera path), or an
   answer to the consent question (phase 5's publishing) — none of which is code.
+- **2026-08-21, even later** — the owner made two calls the plan had left to them.
+  **Phase 5 deployed**, knowingly, over the unresolved consent gap: `share` is live on prod
+  (`verify_jwt: false`, smoke-tested), `isAvailable` is `true`. `docs/consent-log.md` is
+  unchanged — this is the owner's product decision, not the question being answered.
+  **B8 closed**: the owner supplied the four Apple Developer values, the `.p8` key was moved
+  into a gitignored `/secrets/`, a client-secret JWT was generated locally and pushed, and
+  `auth.external.apple` is `enabled = true` on prod — confirmed by GoTrue's error message
+  changing from "provider not enabled" to "unable to detect issuer", which only happens
+  when it is actually parsing an Apple token. The Sign in with Apple capability and a
+  bundle-id change (`com.umar.hisplora` → `com.astungkara.hisplora`) were added in Xcode
+  between messages. **Neither is verified end to end on a device yet** — the Simulator
+  cannot produce a real Apple identity token or exercise the published share link's full
+  reader experience, so both close as "live" rather than "proven".
