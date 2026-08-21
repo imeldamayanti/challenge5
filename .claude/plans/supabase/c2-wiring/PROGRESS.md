@@ -32,7 +32,7 @@ unit test with a stubbed transport". If it has not run against
 | 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `IN PROGRESS` — client done, provider setup is the owner's | 2026-08-21 | — |
 | 7 | [Restore](phases/phase-7-restore.md) | 1, 3, 4 | 1½ d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
-| 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `BUILT, SWITCHED OFF` — publishing still blocked on consent | 2026-08-21 | — |
+| 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `DEPLOYED` — live on prod at owner's instruction, consent position unchanged | 2026-08-21 | 2026-08-21 |
 
 **The MVP is 1 → 2 → 3 → 4 → 6 → 7, in that order, and phase 5 is not in it.** Phase 5
 was nevertheless **built and switched off** on 2026-08-21 — the block on it was always

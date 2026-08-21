@@ -37,9 +37,13 @@ nonisolated struct SupabaseShareCardMinting: ShareCardMinting {
     let session: any SupabaseSessionProviding
     let deviceID: @Sendable () -> UUID
 
-    /// **Off.** See the type's note. Flipping this without deploying `supabase/functions/share/`
-    /// mints links that 404, which is a worse failure than the feature being absent.
-    var isAvailable: Bool { false }
+    /// **On, deployed 2026-08-21.** `supabase/functions/share/` is live on prod
+    /// (`ppwcxmvetmmwliusliac`), `verify_jwt = false`, smoke-tested: unknown and malformed slugs
+    /// both 404, non-GET is 405. Flipped at the owner's explicit instruction, over the consent
+    /// caveat this type's doc comment used to lead with — five sites' consent records are still a
+    /// self-grant per `docs/consent-log.md`, and that has not changed. Recorded here rather than
+    /// silently dropped.
+    var isAvailable: Bool { true }
 
     func mint(_ card: ShareCardDraft) async -> URL? {
         guard isAvailable,

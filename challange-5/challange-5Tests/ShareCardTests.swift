@@ -5,16 +5,23 @@ import Foundation
 import Testing
 @testable import challange_5
 
-/// Phase 5 is **built and switched off**. These are the guards that make "off" a fact rather than a
-/// claim, plus the two privacy rules the card itself has to hold if it is ever turned on.
+/// **Phase 5 was switched on 2026-08-21**, at the owner's explicit instruction, over the consent
+/// caveat: `docs/consent-log.md` still records the five sites' consent as a self-grant nobody has
+/// asked them to sign. `supabase/functions/share/` is deployed and smoke-tested on prod. These
+/// tests guard the shape of "on" now — a configured backend mints, an unconfigured one still
+/// cannot — plus the privacy rules the card holds regardless of the switch.
 @MainActor
 struct ShareCardTests {
 
-    /// The whole safety position in one assertion. Sharing is blocked on the consent question, not
-    /// on engineering, and this is what keeps the engineering from shipping ahead of the answer.
-    @Test func sharingIsOff() async {
+    /// The no-backend case is the one that must always stay off: there is nothing to mint against.
+    /// This is not the consent switch — see the type's doc comment for that history.
+    @Test func withNoBackendSharingIsUnavailable() async {
         #expect(!NoShareCardMinting().isAvailable)
-        #expect(!SupabaseShareCardMinting(
+    }
+
+    /// A configured backend is available now that the function is deployed.
+    @Test func withABackendConfiguredSharingIsAvailable() async {
+        #expect(SupabaseShareCardMinting(
             configuration: BackendConfiguration(
                 baseURL: URL(string: "https://example.invalid")!,
                 publishableKey: "sb_publishable_test"),
@@ -22,14 +29,16 @@ struct ShareCardTests {
             deviceID: { UUID() }).isAvailable)
     }
 
-    /// And off means nothing is minted, not that a link is minted and hidden.
-    @Test func mintingAnythingWhileOffProducesNoLink() async {
+    /// Available does not mean unconditional: with no session there is still no token to mint
+    /// with, and `mint` answers nil rather than trying an unauthenticated write.
+    @Test func withNoSessionMintingProducesNoLinkEvenWhenAvailable() async {
         let minter = SupabaseShareCardMinting(
             configuration: BackendConfiguration(
                 baseURL: URL(string: "https://example.invalid")!,
                 publishableKey: "sb_publishable_test"),
             session: UnconfiguredSupabaseSession(),
             deviceID: { UUID() })
+        #expect(minter.isAvailable)
         let url = await minter.mint(ShareCardDraft(
             runID: UUID(), png: Data(), template: "recap-v1"))
         #expect(url == nil)

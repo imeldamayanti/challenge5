@@ -3,26 +3,41 @@
 **Size:** 3 days · **Depends on:** phases 1, 4
 **Demo sentence:** "I sent someone who does not have the app a link to my finished walk. Then I revoked it, and the same link stopped working."
 
-**Status:** `BUILT, SWITCHED OFF` — engineering done, publishing still blocked · **Started:** 2026-08-21 · **Completed:** —
+**Status:** `DEPLOYED` — live on prod, at the owner's explicit instruction over the consent caveat · **Started:** 2026-08-21 · **Completed:** 2026-08-21
 
 <!-- MAINTAIN THIS FILE. See phase 0's header for the rules. -->
 
-## Built on 2026-08-21, and still switched off
+## Deployed 2026-08-21, at the owner's explicit instruction
 
-**The block was always on publishing, not on engineering** — this file says so a few
-lines down — so the engineering is now done and the switch is `false`.
+**The consent question was still unanswered when this was switched on.** Asked
+directly — "share cards would publish a walk through 5 real Bali sites whose consent
+is a self-grant nobody has asked them to sign; deploy anyway?" — the owner chose
+"Yes, deploy it now." That is recorded here rather than treated as resolved: the
+consent position in `docs/consent-log.md` has **not changed**, and this decision does
+not change it either. It is the owner's product call to make, and they made it
+knowingly.
 
-- `ShareCardMinting.isAvailable` is `false`, and `ShareCardTests.sharingIsOff` asserts it.
-  One flag rather than commented-out code, so turning it on is a decision and not an
-  excavation.
-- `supabase/functions/share/` is written and **not deployed**: `functions list` on
-  `ppwcxmvetmmwliusliac` shows the same four functions it did before.
-- The `config.toml` entry exists locally and is **not pushed**.
+What actually happened, in order:
 
-Turning it on is three things: deploy the function, flip `isAvailable`, and add the
-revoke control and the `ShareLink` URL (both marked `[~]` below). None of them is the
-question — the question is the one this section originally opened with, and it is
-unanswered.
+1. `supabase config push --project-ref ppwcxmvetmmwliusliac` — no-op for the function
+   itself (`config push` doesn't carry function `verify_jwt`, only `functions deploy`
+   does).
+2. `supabase functions deploy share --project-ref ppwcxmvetmmwliusliac` — live,
+   `verify_jwt: false`, confirmed via `functions list`.
+3. Smoke-tested against prod before touching the client: an unknown slug and a
+   malformed slug both `404`, a `POST` is `405` — the same shape `share.test.ts`
+   asserts locally.
+4. `SupabaseShareCardMinting.isAvailable` flipped to `true`. `NoShareCardMinting`
+   (the no-backend case) stays `false` — that one is not the consent switch, it is
+   "there is nothing to mint against."
+5. `ShareCardTests` rewritten for the new reality: the no-backend case is still off,
+   a configured backend is now available, and a third test proves "available" does
+   not mean "unconditional" — minting still needs a real session.
+
+**What is still not built**, unchanged from before: the `ShareLink` URL replacement
+and the revoke control. `mint()` can now return a real URL, but nothing in the Trip
+pages calls it yet — they still hand over plain text. Building that is a further
+step, not part of this one; ask if it should happen next.
 
 ## Why it was blocked before it was started
 
