@@ -49,9 +49,16 @@ final class DiscoveryFlowUITests: XCTestCase {
             skip.tap()
         }
 
-        // The login wireframe stands where the flow chart puts it. There is no account backend, so
-        // its skip is the only control on it that does anything.
-        let skipAuth = app.buttons["Skip for now"]
+        // The credential screen stands where the flow chart puts the login node — a real screen
+        // since `c2` phase 6, not the wireframe it replaced. Its "Not now" is what these tests use,
+        // and it is deliberately as easy to press as the Apple button beside it: nothing in the app
+        // is gated on signing in.
+        //
+        // **This label changed when the wireframe went** and the tests were not updated with it, so
+        // every suite that reaches Home stalled ten seconds on a button that no longer existed and
+        // then failed on everything after. Guarded taps hide that kind of break: the tap is
+        // optional, the screen it was meant to dismiss is not.
+        let skipAuth = app.buttons["Not now"]
         if skipAuth.waitForExistence(timeout: 10) {
             skipAuth.tap()
         }
@@ -100,8 +107,24 @@ final class DiscoveryFlowUITests: XCTestCase {
 
     /// Settings is no longer a tab: the flow reaches it as Profile → App preferences.
     private func openSettings(_ app: XCUIApplication, timeout: TimeInterval = 10) {
-        app.buttons["Profile"].firstMatch.tap()
-        let preferences = app.buttons["Settings"].firstMatch
+        // **The same wait-then-retry `resetAppData` already had**, and its absence here is what
+        // made these two tests red for weeks under "Profile did not offer a way into the app
+        // preferences". The tap was on faith: right after the launch flow dismisses, the floating
+        // tab bar can still be settling, so a tap lands short of the bar, nothing happens, and the
+        // Explorer's Card is never on screen for the scroll-into-reach loop below to find. It was
+        // read as a Dynamic Type problem because the larger size makes the layout pass slower and
+        // the race easier to lose.
+        let profile = app.buttons["Profile"].firstMatch
+        _ = profile.waitForExistence(timeout: timeout)
+        profile.tap()
+
+        var preferences = app.buttons["Settings"].firstMatch
+        if !preferences.waitForExistence(timeout: timeout) {
+            // One retry: a mistimed first tap changed nothing, so Profile is still reachable —
+            // cheaper than chasing the exact settle time.
+            profile.tap()
+            preferences = app.buttons["Settings"].firstMatch
+        }
         XCTAssertTrue(preferences.waitForExistence(timeout: timeout),
                       "Profile did not offer a way into the app preferences")
 

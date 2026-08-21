@@ -37,7 +37,7 @@ final class SideQuestFlowUITests: XCTestCase {
         if splashContinue.waitForExistence(timeout: 10) { splashContinue.tap() }
         let skip = app.buttons["Skip"]
         if skip.waitForExistence(timeout: 10) { skip.tap() }
-        let skipAuth = app.buttons["Skip for now"]
+        let skipAuth = app.buttons["Not now"]
         if skipAuth.waitForExistence(timeout: 10) { skipAuth.tap() }
         return app
     }
