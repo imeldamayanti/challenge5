@@ -54,8 +54,8 @@ Verified 2026-08-20 against the running project, not read from a document.
       2026-08-21 00:42 UTC, and the kill-switch document is fetched on launch and on every
       foreground.
 - [x] A **non-empty** kill-switch document observed applying, and still applying with the
-      backend stopped. Run end to end against the **local** stack, because publishing needs
-      the service-role key — see B7 and phase 0's `[~]` for exactly how far that reaches.
+      backend stopped — on the **local** stack, and then in full **on prod** (2026-08-21).
+      `AD-5` is a working control now, not correct code.
 
 ## Blockers
 
@@ -67,7 +67,7 @@ Verified 2026-08-20 against the running project, not read from a document.
 | B4 | `FR-MAP-01`'s discovery-basemap amendment is drafted and unsigned; `FR-CP-05`'s Story Reveal exception is undocumented in the PRD | release, not wiring | unassigned |
 | B5 | Apple Developer "Sign in with Apple" key and a Google OAuth client do not exist; `config.toml` has no Google stanza at all | phase 6 | unassigned |
 | B6 | `xcode-select` points at CommandLineTools — every build and test command needs a `DEVELOPER_DIR` prefix. The permanent fix needs the user's password | all phases | af |
-| B7 | Publishing a suppression needs the **service-role key**: `publish-suppressions` is `verify_jwt = true` and refuses any other bearer, and the `content` bucket is service-role write only (migration 0009). The round trip is proved on the local stack; running it once on prod is what turns `AD-5` from "the code is right" into "the control works". An operator drill, not engineering | `AD-5` being provably live on prod | af |
+| ~~B7~~ | **Closed 2026-08-21.** The prod drill ran: suppress, publish, quest gone on device, release, quest back, prod left clean. The deployed function accepts the real production service role — the half the local stack could not prove. Two prod-only findings are in phase 0: a published document takes **60–90 s** to reach readers, and the MCP being read-only again means data writes go through `supabase db query --linked` | — | done |
 
 ## Session log
 
@@ -86,5 +86,12 @@ Append one line per working session. Newest last.
   Package suite unchanged at four pre-existing failures; `challange-5Tests` 219 → 225, green.
   Kill-switch round trip then run in full on the local stack at the owner's instruction:
   suppress → quest gone; backend stopped → still gone; release → back
-  (`docs/screenshots/c2p0-killswitch-*.png`). Phase 0 `COMPLETE`; the prod publish stays as
-  B7, an operator drill.
+  (`docs/screenshots/c2p0-killswitch-*.png`). Phase 0 `COMPLETE`.
+- **2026-08-21, later** — owner supplied the service-role key and **B7 closed on prod**.
+  Suppressed `badung-museum-bali`, published, the quest and its sidequest left the app on a
+  foreground, released it, both came back, prod left with zero rows and an empty document.
+  The deployed function accepts the real production service role. Two things prod taught
+  that local could not: a published document takes **60–90 s** to reach a reader, and the
+  Supabase MCP is read-only again so data writes go through `supabase db query --linked`.
+  Transport decision also landed: **`supabase-swift` 2.55.1**, app target only, four products
+  without `Realtime`, `Package.resolved` now tracked.

@@ -142,52 +142,45 @@ Three reasons, and the third is the one that matters.
 
 ## Exit criteria
 
-- [~] A place suppressed in `ops.suppressions` on prod, published with
+- [x] A place suppressed in `ops.suppressions` on prod, published with
       `publish-suppressions`, is gone from the app after a foreground — **observed on
       a device, from a build that had already loaded the unsuppressed content.**
-      — SKIPPED **on prod**, and done in full on the local stack instead, at the owner's
-      instruction of 2026-08-21. Publishing needs the service-role key: the function is
-      `verify_jwt = true` and refuses any other bearer, and the `content` bucket is
-      service-role write only (migration 0009). Holding that key is what
-      `03-security-privacy.md` §1 forbids, so the round trip was run against
-      `supabase start` + `supabase functions serve` with the well-known development key —
-      **the same four migrations, the same trigger, the same function, the same client
-      code**, and the only difference is which project the URL points at.
+      Run on the deployed project 2026-08-21 09:24–09:30 WITA, once the owner supplied the
+      service-role key. iPhone 17 / iOS 26.5, the prod-configured build, fresh install:
 
-      What was observed, in order, on iPhone 17 / iOS 26.5:
-      1. Empty document published; the app fetched it and wrote it to
-         `Application Support/Kultara/backend/suppressions.json`; "The Last Traces of Badung"
-         is on the quest list.
-      2. App backgrounded. `insert into ops.suppressions … ('place','badung-museum-bali',…)`,
-         then `POST /functions/v1/publish-suppressions` → 200 with the rendered schema-2
-         document.
+      1. Prod clean — no rows, document three empty arrays at `2026-08-15T13:09:32Z`. The app
+         fetched **that** document and stored it, timestamp matching, so what follows is a
+         change it saw rather than a first read.
+      2. `insert into ops.suppressions … ('place','badung-museum-bali', …)`, then the script.
+         200, and the response carried the rendered document with the place in it.
       3. Foregrounded: **"No quests are available yet."**, and Museum Bali's sidequest gone
-         from "Places near you". The stored document on disk now carries the suppression.
-      4. `supabase stop` — the whole backend down — then a cold launch: **still suppressed.**
-         The last good copy is what applies when a fetch cannot land.
-      5. Row deleted, published again, foregrounded: the quest is back.
+         from "Places near you" — `docs/screenshots/c2p0-killswitch-prod-suppressed.png`.
+      4. Row deleted, published again, foregrounded: the quest is back and prod is clean.
 
-      `docs/screenshots/c2p0-killswitch-before.png` and `c2p0-killswitch-after.png`.
+      **The deployed function accepts the real production service role**, which is the half
+      the local stack could not prove — both credentials are the same development string
+      locally, which is exactly how the first version's string comparison passed every test
+      and then refused the real key. Verified before any data was touched, by publishing the
+      then-empty document: a no-op that answers only the question about the bearer.
 
-      **What this does not prove**, and what is left for whoever holds the key: that the
-      *deployed* `publish-suppressions` accepts the *production* service role. That path has
-      its own history — the function's first version compared the bearer against
-      `SUPABASE_SERVICE_ROLE_KEY` by string, which passed locally (both credentials are the
-      same development string) and refused the real service role on the first prod call. It
-      reads the `role` claim now, and `b3`'s execution record has it answering on prod.
-- [x] Launching with the storage host unreachable produces a normal app: quest list,
-      no spinner, no error surface. Proved by building with
-      `KULTARA_BACKEND_URL=https://no-such-host.…invalid` overridden on the command line,
-      installing that build on iPhone 17 / iOS 26.5 and reaching the quest list. "Previous
-      document still applied" is the half that needs a non-empty document to mean anything.
-- [~] A completed walk produces rows in `ops.events`, read back from the project.
-      — SKIPPED: **half of it is done and the other half is proved by test rather than by
-      walking.** A real arrival on iPhone 17 / iOS 26.5 at Puri Agung Pemecutan produced
-      `quest_started` and `checkpoint_arrived` in `ops.events` on `ppwcxmvetmmwliusliac`,
-      read back at 2026-08-21 00:42 UTC — the app's first network write ever. Walking all
-      five checkpoints to the end by hand is roughly fifty taps through the story stages;
-      `quest_completed` and `quest_abandoned` travel the same enqueue-and-flush path and are
-      asserted payload-for-payload in `AppTelemetryTests`.
+      **Two things prod did that local did not, and both are worth knowing:**
+
+      - **A published document takes about 60–90 seconds to reach a reader.** Measured twice:
+         the function returned the new document at 01:26:57 UTC and the public URL still
+         served the old one until roughly 90 s later; the release took about 60 s. Locally it
+         is instant. `AD-5`'s floor is "applies on next launch" so this is well inside it —
+         but an operator watching the app and not the object will think the kill-switch did
+         nothing, and reach for a second publish. **Poll the public URL, not the clock.**
+         Note the response header reads `cache-control: no-cache` rather than the `300` the
+         function sets, so this is propagation rather than the CDN honouring that value; do
+         not treat the five minutes in the function's comment as the number to wait.
+      - **The Supabase MCP is read-only again**, so the two data writes went through
+         `supabase db query --linked --project-ref …` (the Management API; the CLI is already
+         authenticated on this machine). That is a *data* write and not DDL, so `b0` D9 is
+         untouched — its subject is `apply_migration` and `deploy_edge_function` letting the
+         repo and the project diverge with nothing to detect it. A row inserted and deleted
+         in `ops.suppressions` leaves no schema behind.
+
 - [x] `ops.events` still has no `user_id` column, and no payload contained one. Both read
       back off the deployed project.
 - [x] Release binary contains no service-role key.
@@ -196,12 +189,11 @@ Three reasons, and the third is the one that matters.
       location guard and `BundledContentRepositoryTests` ×2. `challange-5Tests` is 225 tests
       in 23 suites, all passing (was 219 / 22 before this phase).
 
-## The one thing a person still has to do
+## The drill, for the next time
 
-**A kill-switch is only proved live by publishing on prod, and that needs the service-role
-key** — see the `[~]` above for what was proved instead and how far it reaches. Nothing in
-the app changes as a result; this is an operator drill, and running it once is what turns
-`AD-5` from "the code is right" into "the control works".
+**Done once, on prod, 2026-08-21.** `AD-5` is a working control rather than correct code.
+Keep the steps: this is what a real withdrawal looks like, and the next one will be under
+pressure.
 
 In order:
 
@@ -213,8 +205,13 @@ In order:
    list and the map, because a quest is suppressed when any of its checkpoints' places is.
 4. Delete the row, publish again, foreground again, and watch it come back.
 
-Steps 1 and 4 are prod data writes and step 2 needs a key this session does not hold, so all
-four are the owner's to run or to authorise.
+**Steps 1 and 4 are prod data writes** — the owner's to run or to authorise, every time.
+And step 3 is a wait, not a refresh: give the public URL a minute and a half before
+concluding anything.
+
+**Clear `SUPABASE_SERVICE_ROLE_KEY` out of `.env.local` when a drill ends.** The file is
+gitignored, which stops it reaching the repository and nothing else; a key sitting on a
+laptop between drills is a copy that exists for no reason.
 
 ## One thing this phase added that the plan did not ask for
 
