@@ -135,6 +135,8 @@ user a display name.
 - **Anonymous sign-in is rate limited to 30 per hour per IP.** A test rig that
   reinstalls in a loop will hit it and the failure will look like a bug in the client.
 - **A session per install means a reinstall orphans the previous user's data.** That
-  is correct and intended until phase 6 — but it means "I lost my walks when I
-  reinstalled" is a true report with no fix before phase 6, and support-facing copy
-  should not promise otherwise.
+  is correct and intended until phases 6 and 7 — but it means "I lost my walks when I
+  reinstalled" is a true report with no fix before both of them ship, and
+  support-facing copy must not promise otherwise until then. Phase 6 gives the walks
+  somewhere to belong; **phase 7 is what brings them back**, and neither alone is
+  enough.

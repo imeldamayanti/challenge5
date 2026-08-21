@@ -92,13 +92,21 @@ When this has to shrink, cut in this order:
    grid download it. Costs bandwidth, not correctness. `thumb_path` stays null.
 3. **Phase 0's telemetry half.** The kill-switch half is a safety control and stays;
    the events half only informs the team.
-4. **Phase 6.** It is already last, and the app is designed to work without it
-   forever.
+4. ~~**Phase 6.** It is already last, and the app is designed to work without it
+   forever.~~ **No longer true as of 2026-08-21.** The owner's MVP goal for user data
+   is "your walks survive a reinstall", and an anonymous session orphans data on
+   reinstall — so phase 6 is load-bearing and phase 7 reads the rows back. Cutting
+   either leaves phases 3 and 4 pushing a copy no walker can ever see, which is the one
+   shape of sync that costs a user privacy and returns them nothing. **Cut 3, 4, 6 and
+   7 together or not at all.**
 
 **Never cut:** the anonymous session (phase 1 — everything below it stops existing),
-tombstones (phase 2 — without them a delete on one device resurrects on another the
-moment pull sync ships), accuracy bucketing (phase 2 — it is `NFR-PRIV-02`, not a
-format detail), or the sidequest-photo exclusion (phase 4 — `FR-SIDE-13`).
+accuracy bucketing (phase 2 — it is `NFR-PRIV-02`, not a format detail), the
+sidequest-photo exclusion (phase 4 — `FR-SIDE-13`), or phase 7's **empty-store guard**
+(it is the entire reason restore is not the pull sync `00-scope.md` §6 rules out).
+
+~~Tombstones~~ were on this list until 2026-08-21 and are now cut — nothing in the app
+deletes a single walk. They come back the day it does; phase 2's cut list says so.
 
 ## Rules for executing this plan
 

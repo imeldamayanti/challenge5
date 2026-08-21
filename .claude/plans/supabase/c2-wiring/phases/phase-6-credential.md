@@ -7,6 +7,13 @@
 
 <!-- MAINTAIN THIS FILE. See phase 0's header for the rules. -->
 
+> **In the MVP as of 2026-08-21, and no longer optional.** The owner's goal for user
+> data is "your walks survive a reinstall", and an anonymous session orphans data on
+> reinstall — so this phase is what gives a walk somewhere to belong. It still does not
+> bring anything back: that is [phase 7](phase-7-restore.md), which depends on this one.
+> Shipping this without phase 7 leaves a user signed in, looking at an empty Journal,
+> with their walks sitting in a database they cannot reach.
+
 ## Goal
 
 Let a walker claim the account their walks have been filed under since phase 1.

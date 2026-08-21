@@ -1,6 +1,6 @@
 # Phase 3 — Push Sync
 
-**Size:** 3 days · **Depends on:** phases 1, 2
+**Size:** ~2 days · **Depends on:** phases 1, 2
 **Demo sentence:** "I walked the whole quest in airplane mode. Here are its rows in the database, and here is a second user's token getting nothing when it asks for them."
 
 **Status:** `NOT STARTED` · **Started:** — · **Completed:** —
@@ -12,18 +12,25 @@
 A completed — or in-progress — walk reaches `app.runs`, `app.checkpoint_results`,
 `app.task_results` and `app.awards`, and can be read back by nobody but its author.
 
-Push only. Pull is not in C2 (`../00-scope.md` §6).
+Push only. The one read C2 has is phase 7's restore, and it runs **only into an empty
+store** — see below.
 
-## Why push before pull
+## Why push before any kind of read
 
 Pull surfaces conflicts, and a conflict has to be shown to somebody. `app.sync_conflicts`
 and the `<table>_resolve_conflict` triggers exist and are tested; the presentation for
 a conflict does not exist, and a pull that silently picks a winner is worse than no
-pull at all.
+pull at all. That stays out of C2 (`../00-scope.md` §6).
 
 Push-only also means **the device is the only writer**, so the conflict machinery has
 nothing to arbitrate. If a push is rejected as a conflict anyway, that is a broken
 assumption in this plan — log it and stop pushing that row, do not "handle" it.
+
+Phase 7's restore does not change that. It reads once, on a device whose store is
+empty, and refuses to run otherwise — so there is still exactly one writer per row and
+still nothing to arbitrate. **The moment restore is allowed to merge into a non-empty
+store, this paragraph is false and `revision` comes back with it** (phase 2's cut list
+says the same thing from the other side).
 
 ## Scope
 
@@ -59,12 +66,19 @@ assumption in this plan — log it and stop pushing that row, do not "handle" it
 ### Idempotency and retry
 
 - [ ] Upsert on the row's own UUID. Pushing the same walk twice is a no-op, not a
-      duplicate.
-- [ ] A local "pushed at revision N" marker so an unchanged record is not re-sent.
+      duplicate. This is the whole retry story, and it is why the rest of this section
+      is short.
+- [ ] **One boolean per walk, not a revision cursor.** `needsPush` goes true on any
+      local write to that `Run` and false after all of its rows land. That is the entire
+      "don't re-send what has not changed" mechanism.
+- [ ] **Partial failure re-sends the whole walk.** A walk is about a dozen rows —
+      `runs`, five `checkpoint_results`, five `task_results`, a handful of `awards` —
+      and every one of them is an idempotent upsert, so restarting *is* finishing.
+      Resuming mid-sequence would be per-table bookkeeping that buys back a few
+      kilobytes and adds the one kind of state that can be wrong in a way nothing
+      detects.
 - [ ] Backoff on failure. No retry storm on a flaky connection, and no retry loop that
       runs while the app is backgrounded.
-- [ ] Partial success is survivable: `runs` landing and `awards` failing must leave
-      the next attempt able to finish, not restart.
 
 ### Triggers
 
@@ -88,7 +102,8 @@ assumption in this plan — log it and stop pushing that row, do not "handle" it
 - [ ] A second user's token asking for the same ids gets **zero rows**, proved by real
       HTTP, not by `execute_sql`.
 - [ ] Pushing twice produces no duplicates and no errors.
-- [ ] Killing the app mid-push leaves the next launch able to finish the push.
+- [ ] Killing the app mid-push leaves the next launch able to complete the walk's rows
+      — by re-sending all of them, which is the design and not a fallback.
 - [ ] An abandoned walk carries `abandoned_at` and `abandon_reason`, satisfying the
       `runs_abandoned_has_reason` constraint.
 - [ ] A completed walk carries `completed_at`, satisfying `runs_completed_has_timestamp`.
@@ -98,7 +113,7 @@ assumption in this plan — log it and stop pushing that row, do not "handle" it
 
 ## Out of scope
 
-Pull. Conflict UI. `app.journal_entries` — no producer exists (`../00-scope.md` §6).
+Live pull and the conflict UI (restore-into-empty is phase 7 and is not that). `app.journal_entries` — no producer exists (`../00-scope.md` §6).
 Photos — phase 4, and this phase pushes an empty photo step to keep the order intact.
 `app.profiles`.
 

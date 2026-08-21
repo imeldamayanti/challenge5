@@ -52,7 +52,7 @@ offers only that one, stop.
 | `app` | `photos` | 4 | Created before `task_results` in migration 0006 for the FK order |
 | `app` | `share_cards` | 5 | |
 | `app` | `journal_entries` | — | See §6 |
-| `app` | `sync_conflicts` | — | Pull sync only. Out of scope |
+| `app` | `sync_conflicts` | — | Live pull only. Out of scope; phase 7's restore cannot produce one |
 
 ## 5. Storage buckets
 
@@ -66,9 +66,13 @@ offers only that one, stop.
 
 Each of these is a decision, not an oversight.
 
-- **Pull sync and the conflict UI.** `app.sync_conflicts` and the
+- **Live pull sync and the conflict UI.** `app.sync_conflicts` and the
   `<table>_resolve_conflict` triggers exist and are tested. The presentation for a
   conflict does not, and a pull that silently picks a winner is worse than no pull.
+  **Amended 2026-08-21:** the *one-shot restore* in phase 7 is now in scope and is not
+  this. It runs only into an empty local store and refuses otherwise, so there is no
+  second writer and no conflict to show — the same argument phase 3 makes for push.
+  Continuous pull, merging, and anything that compares two versions of a row stay out.
 - **`app.journal_entries`.** It stores a user-authored `body`. The app has no journal
   editor — the Journal renders the Run's own snapshots (`AD-4`, `FR-RUN-06`). There
   is nothing to put in it. Wiring it means inventing a feature to justify a table.

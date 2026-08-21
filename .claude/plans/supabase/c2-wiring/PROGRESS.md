@@ -27,15 +27,40 @@ unit test with a stubbed transport". If it has not run against
 |---|---|---|---|---|---|---|
 | 0 | [Governance & Telemetry](phases/phase-0-governance-telemetry.md) | — | 1–2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 1 | [Anonymous Session](phases/phase-1-anonymous-session.md) | — | 1 d | `NOT STARTED` | — | — |
-| 2 | [Sync Identity](phases/phase-2-sync-identity.md) | — | 2 d | `NOT STARTED` | — | — |
-| 3 | [Push Sync](phases/phase-3-push-sync.md) | 1, 2 | 3 d | `NOT STARTED` | — | — |
+| 2 | [Sync Identity](phases/phase-2-sync-identity.md) | — | ½ d | `NOT STARTED` | — | — |
+| 3 | [Push Sync](phases/phase-3-push-sync.md) | 1, 2 | 2 d | `NOT STARTED` | — | — |
 | 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `NOT STARTED` | — | — |
-| 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `BLOCKED` | — | — |
 | 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `NOT STARTED` | — | — |
+| 7 | [Restore](phases/phase-7-restore.md) | 1, 3, 4, 6 | 1½ d | `NOT STARTED` | — | — |
+| 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `BLOCKED` · post-MVP | — | — |
+
+**The MVP is 1 → 2 → 3 → 4 → 6 → 7, in that order, and phase 5 is not in it.** Set by
+the owner on 2026-08-21: the goal for user data is *"your walks survive a reinstall"*,
+which needs a credential to survive one and a read to come back. So phase 6 is no
+longer "last, and optional forever" — it is load-bearing, and phase 7 exists because
+without it the server holds a copy no walker can ever see.
 
 Phase 5 is `BLOCKED` before it is started, on purpose: the consent position in
 `03-security-privacy.md` §4 has to change before a share card can be shown to anyone
-outside the team. The engineering in it is not blocked; publishing is.
+outside the team. The engineering in it is not blocked; publishing is. It is now also
+explicitly outside the MVP, so that block costs nothing.
+
+### What the 2026-08-21 trim removed
+
+The owner asked for MVP only, no speculative machinery. Cut, each with the reason it
+was safe to cut written into the phase that used to hold it:
+
+| Cut | Was | Safe because |
+|---|---|---|
+| `revision` bumped on every local write | phase 2 | Resolves conflicts; there is one writer and restore only runs into an empty store. Column is `default 1` server-side |
+| Tombstones | phase 2 | Nothing in the app deletes one walk — `RunStore.delete(id:)` has no caller. The only delete is erase-all, which phase 3 pairs with `delete-account` |
+| `GPSAccuracyBucket` in `RunEngine` | phase 2 | `TelemetryKit.AccuracyBand` already is it — same three tokens, shipped, and its rows are on prod |
+| "pushed at revision N" marker, resumable partial pushes | phase 3 | One `needsPush` boolean per walk. A walk is ~12 idempotent upserts, so restarting *is* finishing |
+
+Nothing about **storage volume** was cut, because volume was never the problem: a walk
+is about 4 KB of rows (`snapshot_lore` is ~870 bytes × five checkpoints). A photograph
+is ~500 KB, two derivatives — a hundred times everything else — and the owner chose to
+keep photo upload as planned.
 
 ## What exists today
 
