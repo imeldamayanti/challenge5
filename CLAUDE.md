@@ -6,9 +6,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A native iOS app (SwiftUI, iOS 18.0) for story-led cultural heritage walking quests in Bali. Users walk a fixed-order route of physical checkpoints, unlock narrative lore at each one, and finish with a shareable recap.
 
-Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. The share card, the recall survey and proximity alerts are not built; photo tasks are, as of 2026-08-19. Telemetry and the kill-switch are **half** built: the server side is deployed and the client kits (`TelemetryKit`, `GovernanceKit`) exist and are tested, but nothing in the app calls either — see `.claude/plans/supabase/c1-client-phase0.plan.md` §6. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
+Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. The share card, the recall survey and proximity alerts are not built; photo tasks are, as of 2026-08-19. **The app is wired to the backend as of 2026-08-21** (`.claude/plans/supabase/c2-wiring/`). It signs in anonymously, applies the kill-switch, sends anonymous telemetry, pushes a walk to `app.*`, uploads a photograph's two derivatives, and restores a walker's walks onto a device that has none. The credential screen is built and **Sign in with Apple is not enabled** — blocker B8. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
 
-Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — **is done**: 110 tests in `challange-5Tests`, all passing, plus the two source-scanning guards in the package. `.claude/plans/supabase/b0`–`b3` built and deployed a Supabase backend, and `.claude/plans/supabase/c1-client-phase0.plan.md` added the kill-switch publisher, `GovernanceKit` and `TelemetryKit` — **none of which the app calls yet**, deliberately.
+Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — **is done**: 110 tests in `challange-5Tests`, all passing, plus the two source-scanning guards in the package. `.claude/plans/supabase/b0`–`b3` built and deployed a Supabase backend, `c1-client-phase0.plan.md` added the kill-switch publisher, `GovernanceKit` and `TelemetryKit`, and **`c2-wiring/` connected all of it to the app**. Phases 0–4 and 7 are `COMPLETE`; phase 6 is client-done and blocked on provider setup; phase 5 (share card) is post-MVP and blocked on consent. `c2-wiring/PROGRESS.md` is the file to read first.
 
 ## Directory layout
 
@@ -452,6 +452,43 @@ direction: it is a full-bleed preview under a translucent black bar, which is th
 own language rather than this app's.
 
 `docs/hisplora-tokens.md` records where each token was sampled, every measured ratio, and — importantly — the frames' content that was deliberately **not** built: the AI-generated portrait of a named historical figure (a `FR-CP-05` claim with no source or consent record), the external-maps handoff (`AD-3`), and the map screenshot (`FR-MAP-01`).
+
+## The backend, from the app's side
+
+Nine files under `challange-5/Services/` are the whole of it, and **nothing above them
+knows they exist**. Deleting any one removes a capability and breaks nothing else.
+
+| File | Does |
+|---|---|
+| `BackendConfiguration.swift` | Where the project is. Read from `Backend.plist`, written by a build phase from `Config/Backend.xcconfig` |
+| `GovernanceGate.swift` | The kill-switch (`AD-5`). Last good document from disk at construction, refreshed on launch and every foreground |
+| `AppTelemetry.swift` | Four anonymous events, per-walk random keys, no identifier of any kind |
+| `SupabaseSession.swift` | The anonymous session. Keychain-stored, refreshed inside a 60 s margin |
+| `DeviceIdentity.swift` | One UUID per install. Not a device identifier; erasure resets it |
+| `SyncRecords.swift` | The wire shapes. `nonisolated`, in `Services/`, never in `RunEngine` |
+| `SyncCoordinator.swift` | Pushes a walk. Idempotent upserts, backoff, and `EdgeFunctionAccountDeleter` |
+| `SyncStateStore.swift` | `runID -> the updatedAt that landed`, so an unchanged walk is not re-sent |
+| `PhotoUploader.swift` | Two objects per photograph, and structurally unable to see a sidequest's |
+| `RunRestorer.swift` | Brings walks back, **only into an empty store** |
+| `CredentialLinking.swift` | Sign in with Apple and `merge-anonymous` |
+
+Six rules hold the shape, and each cost something to learn:
+
+- **Nothing waits on the network.** Every call is fire-and-forget except one:
+  `delete-account` during `FR-SET-02` erasure, which is awaited because a walker told
+  their data is gone while it is not cannot act on something only they can decide about.
+- **No reachability check anywhere** (`AD-3`). `noModuleChecksReachability` scans for it.
+- **Two silences are broken deliberately**, and only two: a failed account deletion and a
+  failed restore. Both are shown; everything else is `try?`.
+- **The service-role key never enters the app.** Operator credentials live in `.env.local`
+  (gitignored) and `supabase/scripts/publish-suppressions.sh` reads them.
+- **`revision`, tombstones and conflict resolution were cut**, because there is one writer
+  and restore only ever runs into an empty store. `c2-wiring/phases/phase-2-sync-identity.md`
+  says what brings each back.
+- **The simulator lies twice.** Its unified log renders every message from this process as
+  `<compose failure>` — read `Library/Application Support/supabase-trace.log` instead
+  (debug builds only) — and its **Keychain survives `simctl uninstall`**, so
+  delete-and-relaunch is not a cold install for session purposes.
 
 ## Content
 
