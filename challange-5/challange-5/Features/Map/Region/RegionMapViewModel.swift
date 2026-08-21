@@ -12,6 +12,13 @@ final class RegionMapViewModel {
     let mapImageURL: URL?
     let aspectRatio: Double
 
+    /// The illustration's tile pyramid, when content ships one.
+    ///
+    /// Both map surfaces read it: at rest they draw a level sized for the viewport, and pinching in
+    /// walks *down* the pyramid instead of magnifying a raster that was fixed at the resting size.
+    /// Nil falls back to `mapImageURL`, which is what the screens drew before there was a pyramid.
+    let tiles: RasterTileImageStore?
+
     /// Where the illustration sits on the real world, so a live basemap can be drawn under it.
     ///
     /// Nil when no drawn quest reaches a Place carrying a `mapPoint` — the discovery map then has
@@ -92,6 +99,9 @@ final class RegionMapViewModel {
         self.language = language
         aspectRatio = regionMap.aspectRatio
         mapImageURL = (try? repository.assetURL(regionMap.asset)) ?? nil
+        tiles = regionMap.tiles
+            .flatMap { (try? repository.assetURL($0)) ?? nil }
+            .flatMap(RasterTileImageStore.init(directory:))
 
         let quests = (try? repository.quests(
             suppressingQuestIDs: suppressedQuestIDs,

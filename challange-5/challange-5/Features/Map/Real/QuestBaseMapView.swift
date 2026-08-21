@@ -21,6 +21,10 @@ struct QuestBaseMapView: UIViewRepresentable {
     let pins: [RegionMapPin]
     let georeference: IllustratedMapGeoreference?
     let illustration: UIImage?
+    /// The same drawing as a tile pyramid, when content ships one. Preferred by the renderer: a
+    /// single 1469-pixel image stretched across a street-zoom rectangle is the break-up the
+    /// pyramid exists to remove.
+    let tiles: RasterTileImageStore?
     let showsIllustration: Bool
     let showsUserLocation: Bool
     let palette: KultaraPalette
@@ -190,10 +194,18 @@ struct QuestBaseMapView: UIViewRepresentable {
                 installedQuestIDs = wanted
             }
 
+            // **Still gated on the decoded image, even though the pyramid needs no decode.**
+            // Adding the overlay is also what applies the camera boundary, the zoom range and the
+            // opening correction, and `correct` refuses to run against an un-laid-out map. The
+            // decode is asynchronous, so waiting for it is what puts all three after layout. Gating
+            // on `tiles != nil` instead fires them on the first `updateUIView`, and the map opens on
+            // a camera the correction never got to fix — visibly, as a band of bare basemap under
+            // the chart's south coast.
             if overlay == nil,
                let georeference = view.georeference,
                let illustration = view.illustration {
-                overlay = IllustratedMapOverlay(image: illustration, georeference: georeference)
+                overlay = IllustratedMapOverlay(
+                    image: illustration, tiles: view.tiles, georeference: georeference)
             }
 
             guard let overlay else { return }

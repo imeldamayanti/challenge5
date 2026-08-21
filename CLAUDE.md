@@ -96,7 +96,7 @@ challange_5`.
 
 | Command | Runs | Needs a simulator |
 |---|---|---|
-| `swift test` (from `Packages/Kultara`) | 549 tests / 70 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
+| `swift test` (from `Packages/Kultara`) | 589 tests / 74 suites — `ContentKit`, `RunEngine`, `UIStringsKit`, `DesignSystem`, `GovernanceKit`, `TelemetryKit`, and the two source-scanning guards | **No** — macOS |
 | `xcodebuild test -only-testing:challange-5Tests` | 203 tests / 20 suites — view models, presentation, UI strings, host linkage | Yes |
 | `xcodebuild test -only-testing:challange-5UITests` | 5 XCUITests — the flow, and `AccessibilityXXXL` | Yes |
 
@@ -150,6 +150,16 @@ swift run content-validator Sources/ContentKit/Content
 ```
 
 Exits 0 when rules V1–V18 pass, 1 on any finding, 2 on bad arguments. Point it at an authored content tree (the directory holding `manifest.json`, `places/`, `quests/`, `assets/`, `consent/`).
+
+The region map's tile pyramid — run from the repository root, needs `brew install gdal`:
+
+```bash
+scripts/build-map-tiles.sh
+```
+
+Rewrites `Content/assets/maps/bali-illustrated-tiles/` from the drawing named by
+`manifest.regionMap.asset` (or from a path given as the one argument). Everything it writes is
+generated; bump `contentBundleVersion` afterwards.
 
 Backend — run from the repository root, with Docker running:
 
@@ -584,6 +594,91 @@ auto-advancing and the login carrying a "Skip for now".
     app dies on the way into the map. And the map sets `insetsLayoutMarginsFromSafeArea = false` and
     is positioned with `edgePadding: .zero`, or MapKit fits the region into the *unobscured* area and
     leaves a band of bare basemap the height of the home indicator's inset.
+  - **The chart was replaced at `contentBundleVersion` 2026.09.11, and that re-measured
+    everything.** `maps/bali-illustrated.png` is now a **1536 × 1024** watercolour chart of Bali,
+    Nusa Penida and Lembongan — `aspectRatio` **1.5**, in place of the sepia 1469 × 1071 drawing at
+    1.3716. A new drawing invalidates every number that was read off the old one, and all of them
+    moved together:
+    - **All eleven `mapPoint`s were re-authored**, and `RegionMapArtwork.seaEdge` was re-sampled
+      from the new corners (**#9FD0DC**, where the old sea was a grey-green #8B9999 — letterboxing
+      the new chart with the old token printed a band of the previous map's colour beside it).
+    - **`IllustratedMapGeoreference`'s two rates were re-measured off the new coastline**: **1126.82**
+      px/°lon from the drawn island's west and east extremities (x 56 and 1499) against Bali's real
+      114.4327°E and 115.7133°E, and **983.33** px/°lat from the north coast (y 58, −8.0611) and the
+      Bukit isthmus (y 760, −8.7750).
+    - **Latitude is anchored on the isthmus, not on the Bukit's tip, and that is load-bearing.**
+      This drawing runs the Bukit about twice its true length. Binding the drawn south extremity to
+      Bali's real southernmost latitude stretches the scale and drags every inland point south —
+      built, seen, and reverted: the five Denpasar places landed *on* the isthmus and the six Kuta
+      ones landed on the Bukit. Anchored on the neck instead, the strip the shipped quests occupy
+      lands where it belongs and Bali's real southern tip falls at y≈833 on a drawing that runs to
+      y=940. The exaggeration stays where it was drawn.
+    - **The distortion reversed and shrank.** The old chart was stretched 1.256× vertically against
+      true scale; this one is compressed **0.873×**, so placed for correct geography it is drawn
+      about 1.15× taller than its own proportions rather than 1.25× wider.
+    - **Coverage is tighter.** The old chart ran to Java's tip and Lombok; this one stops just past
+      Bali's east cape. `IllustratedMapGeoreferenceTests.theFittedImageCoversTheIsland` asserts
+      115.72 rather than 115.75 for exactly that reason — widening it back would assert coverage the
+      artwork does not have.
+    - **Verified against the live basemap on device**, which is the only real test of a fit: at the
+      same camera the wand swaps to MapKit and the coastlines line up, with the marker on Denpasar
+      — `docs/screenshots/m15-map-new-chart.png`.
+  - **The chart is a `gdal2tiles` pyramid over a 4× super-resolution pass.**
+    `contentBundleVersion` **2026.09.9** added `assets/maps/bali-illustrated-tiles/`, **2026.09.10**
+    rebuilt it from an upscaled source, and **2026.09.11** rebuilt it again from the new drawing:
+    `--profile=raster --xyz`, 256-pixel **WebP** tiles, levels 0–5, **513 files, 9.7 MB**, declared
+    as `manifest.regionMap.tiles` and described by its own `tiles.json`. 6144 × 4096 is an exact
+    multiple of 256, so this pyramid has no padded edge tiles at all —
+    `RasterTilePyramidTests.edgeTilesOverhang` asserts that *and* keeps the overhang rule guarded on
+    a ragged synthetic pyramid, because the tidy case is the one that stops being true the moment
+    the artwork is re-cut.
+    `scripts/build-map-tiles.sh` is the generator and **nothing under that directory is authored by
+    hand**; re-run it whenever the drawing changes. `RunEngine.RasterTilePyramid` holds the
+    geometry (raster profile puts the source at each level's *top-left*, `--xyz` counts rows down
+    from there, level `maxZoom` is 1:1, edge tiles are padded with transparency rather than
+    cropped), `RasterTileImageStore` decodes and caches, and both surfaces draw through them.
+    Four things worth knowing:
+    - **What this fixes is the *magnification*, not the resolution.** `RegionMapView` framed one
+      `Image` at the resting size and then `scaleEffect`-ed it, so pinching to 6× stretched a
+      ~1200-pixel layer to 7200 and never consulted the 1469-pixel source at all. It draws a
+      `Canvas` now, re-rendered each frame at the size actually on screen. The MapKit overlay's
+      gain is different: it stops compositing the whole 1469 × 1071 drawing into every one of
+      MapKit's tile passes.
+    - **The pixels come from Upscayl, and the upscale changes nothing on the paper.** The authored
+      1536 × 1024 chart is 10.2 px/km, so it is 1:1 only at a **118 km** viewport — the whole island
+      — and the opening camera (~22 km) magnifies it 5.4×. `remacri-4x` at scale 4 gives
+      6144 × 4096, 41 px/km, 1:1 at **29.5 km**, so the opening camera now magnifies 1.3×. A pure
+      scale is the point: `aspectRatio`, the measured px-per-degree rates and every authored
+      `mapPoint` survive it untouched, which is exactly what *replacing the drawing* does not — see
+      the bullet above for what that costs.
+      **`remacri-4x` rather than a sharper model, deliberately.** `ultrasharp-4x` and
+      `high-fidelity-4x` reconstruct crisper ink but hallucinate a regular fabric weave across the
+      sea; `digital-art-4x` is cleanest of all and flattens away the paper grain the Hisplora
+      direction is built on. All four were compared on the same crop before choosing —
+      `docs/hisplora-tokens.md` has the detail. The 45 MB upscaled master is **not** in the
+      repository: it is regenerable, and the command is in the script's header.
+    - **Past `maxZoom` there is still nothing left to descend into.** 29.5 km is the ceiling,
+      not infinity — a reader who pinches to street level gets smooth blur, and no tiling scheme
+      invents pixels. `RasterTilePyramidTests.stopsAtNativeResolution` is where that is written
+      down rather than assumed away. Going further means either a genuinely higher-resolution
+      drawing or handing over to the live basemap past the chart's resolution; neither is built.
+    - **Tiles are WebP at quality 90, and that is a tens-of-megabytes decision.** The 543 tiles of
+      the previous chart were 43 MB as PNG against 6.2 MB as WebP; this drawing's 513 are 9.7 MB,
+      the texture costing what the sepia chart's flat washes did not. A q90 tile was compared against its PNG at 1:1 before the switch, not assumed
+      equivalent. ImageIO has decoded WebP since iOS 14 and the target is 18.0, so
+      `UIImage(contentsOfFile:)` reads them with no extra code; `tiles.json` states `tileFormat`
+      so nothing in Swift hardcodes the extension.
+    - **The overlay is still gated on the decoded whole image, deliberately.** Adding it is also
+      what applies `cameraBoundary`, `cameraZoomRange` and the opening `correct`, and `correct`
+      refuses an un-laid-out map — so the asynchronous decode is what puts all three after layout.
+      Gating on `tiles != nil` instead fires them on the first `updateUIView` and the map opens on a
+      camera the correction never gets to fix, which shows as a band of bare basemap under the south
+      coast. That was built, seen and reverted; the whole-image decode is the price.
+    - **Tile seams are closed differently on each surface.** The `Canvas` snaps shared edges onto
+      the device pixel grid (both neighbours round the same value, so there is no overlap); the
+      MapKit renderer has no fixed pixel grid to snap to and grows neighbours into each other by
+      half a device pixel instead. Seen on iPhone 17 Pro / iOS 26.5 —
+      `docs/screenshots/m14-map-tiled-pyramid.png`.
   - **The map is never unmounted, and there is no reachability check.** A failed tile load only
     forces the chart on — the illustration needs no network, covers the viewport by construction and
     is projected by arithmetic, so `FR-OFF-03` is met by what is drawn rather than by which screen is
@@ -613,9 +708,9 @@ auto-advancing and the login carrying a "Skip for now".
     map its freedom to show Java and Lombok, which is deliberate and a one-line revert: this app is
     a walk around Bali, and the basemap is here to say where in Bali a quest is. Seen on iPhone 17 /
     iOS 26.5 — `docs/screenshots/m13-map-illustrated-over-basemap.png`, `m13-map-real-basemap.png`.
-- **The region map is `275:2309`'s wide fantasy island, and it scrolls both ways.** As of
-  `contentBundleVersion` **2026.09.4** `maps/bali-illustrated.png` is a 1469 × 1071 landscape chart
-  (`aspectRatio` 1.3716) in place of the 853 × 1844 portrait one. `RegionMapView` fills the
+- **The region map is a wide fantasy island, and it scrolls both ways.** As of
+  `contentBundleVersion` **2026.09.11** `maps/bali-illustrated.png` is a 1536 × 1024 landscape chart
+  (`aspectRatio` 1.5); it was `275:2309`'s 1469 × 1071 sepia drawing at 1.3716 from **2026.09.4** in place of the 853 × 1844 portrait one. `RegionMapView` fills the
   viewport, so it is drawn ~1199 points wide on a 402-point screen — the frame's own layout — which
   is where the horizontal pan comes from; vertical pan appears above fill, and **fill is the
   zoom-out limit** — pinching out stops where the drawing still covers the screen, so seeing the

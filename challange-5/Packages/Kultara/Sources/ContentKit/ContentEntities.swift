@@ -44,10 +44,22 @@ public struct RegionMapAsset: Codable, Sendable, Equatable, Hashable {
     public let asset: String
     /// Width ÷ height of the image, so the layout can reserve the right space before decoding it.
     public let aspectRatio: Double
+    /// Directory of a `gdal2tiles --profile=raster --xyz` pyramid built from `asset`, holding a
+    /// `tiles.json` and a `{z}/{x}/{y}.png` tree. Both map surfaces magnify this drawing, and a
+    /// single decoded PNG is rasterised once and then layer-scaled — so what a reader pinching in
+    /// magnifies is the resting-size raster rather than the source. The pyramid lets each surface
+    /// draw the level whose pixels match the pixels it is about to fill.
+    ///
+    /// Optional, and the surfaces fall back to `asset` when it is absent: authored content that
+    /// has not been tiled still draws, at the resolution it always did. Nothing here is a
+    /// *fetch* — a pyramid is shipped in the bundle exactly as the single PNG is, so `AD-3` and
+    /// `FR-OFF-03` are untouched.
+    public let tiles: String?
 
-    public init(asset: String, aspectRatio: Double) {
+    public init(asset: String, aspectRatio: Double, tiles: String? = nil) {
         self.asset = asset
         self.aspectRatio = aspectRatio
+        self.tiles = tiles
     }
 }
 

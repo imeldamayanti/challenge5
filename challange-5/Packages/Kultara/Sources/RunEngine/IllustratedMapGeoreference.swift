@@ -10,18 +10,25 @@ import Foundation
 /// has an opinion about where things are.
 ///
 /// The fit is deliberately **not** a regression over the anchors. The two rates are read off
-/// `docs/hisplora-tokens.md` — 960 px per degree of longitude, 1206 per degree of latitude, measured
-/// from three features on the artwork at known real coordinates — and only the *origin* is solved
-/// here. Every shipped Place but one sits inside Denpasar, so a two-variable fit over that cluster
-/// would be numerically unstable and would move every time an author nudged a pin. Fixed rates plus
-/// a mean offset is stable with a single anchor and stays true to the measurement that was actually
-/// made.
+/// `docs/hisplora-tokens.md` — measured from the artwork's own coastline at known real coordinates
+/// — and only the *origin* is solved here. Every shipped Place but one sits inside Denpasar, so a
+/// two-variable fit over that cluster would be numerically unstable and would move every time an
+/// author nudged a pin. Fixed rates plus a mean offset is stable with a single anchor and stays
+/// true to the measurement that was actually made.
 ///
-/// The consequence, stated plainly: the drawing is stretched about 1.25× vertically against true
+/// **Latitude is anchored on the isthmus, not on the Bukit's tip, and that is the load-bearing
+/// choice.** The drawing runs the Bukit peninsula about twice its true length — it is the
+/// silhouette's most recognisable feature and the artist gave it room — so binding the drawn
+/// south extremity to Bali's real southernmost latitude stretches the scale and drags every
+/// inland point south with it. Bound to the north coast and the Bukit neck instead, the strip the
+/// shipped quests actually occupy lands where it belongs and the exaggeration is left where it was
+/// drawn: Bali's real southern tip falls at y≈833 on a drawing that runs to y=940.
+///
+/// The consequence, stated plainly: the drawing is compressed about 1.15× vertically against true
 /// scale, so a placement that puts drawn features at their real coordinates necessarily draws the
 /// picture at a different aspect ratio than the file's. Geography is correct and the art is
-/// squashed. The alternative — preserving the artwork's proportions — puts the coastline up to
-/// eleven kilometres out at the island's ends, which is the error that shows.
+/// stretched. The alternative — preserving the artwork's proportions — puts the coastline
+/// kilometres out at the island's ends, which is the error that shows.
 public struct IllustratedMapGeoreference: Sendable, Equatable {
 
     /// One authored point and the real place it stands for.
@@ -35,12 +42,17 @@ public struct IllustratedMapGeoreference: Sendable, Equatable {
         }
     }
 
-    /// `275:2309`'s chart, at the pixel size the shipped asset is.
-    public static let baliIllustratedWidthPx: Double = 1469
-    public static let baliIllustratedHeightPx: Double = 1071
+    /// The chart, at the pixel size the shipped asset is.
+    public static let baliIllustratedWidthPx: Double = 1536
+    public static let baliIllustratedHeightPx: Double = 1024
     /// `docs/hisplora-tokens.md` — measured off the artwork, not derived from a projection.
-    public static let baliIllustratedPixelsPerDegreeLon: Double = 960
-    public static let baliIllustratedPixelsPerDegreeLat: Double = 1206
+    ///
+    /// Longitude comes from the drawn island's own west and east extremities (x 56 and 1499) read
+    /// against Bali's real ones, 114.4327°E and 115.7133°E. Latitude comes from the north coast
+    /// (y 58, −8.0611) and the Bukit isthmus (y 760, −8.7750) — see the note above for why the
+    /// south tip is not used.
+    public static let baliIllustratedPixelsPerDegreeLon: Double = 1126.82
+    public static let baliIllustratedPixelsPerDegreeLat: Double = 983.33
 
     public let imageWidthPx: Double
     public let imageHeightPx: Double
