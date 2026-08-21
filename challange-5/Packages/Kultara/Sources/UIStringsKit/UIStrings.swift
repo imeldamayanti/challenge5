@@ -526,6 +526,12 @@ public enum UIStrings {
 
         // MARK: Journal — Sealed Letters
         .journalSealedHeading: LocalizedText(id: "Surat Tersegel", en: "Sealed Letters"),
+        .shareCardEyebrow: LocalizedText(id: "Sebuah perjalanan", en: "A walk taken"),
+        .shareCardStampCount: LocalizedText(id: "{count} cap", en: "{count} stamps"),
+        .shareIncludeAnswersLabel: LocalizedText(
+            id: "Sertakan catatan yang kamu tulis",
+            en: "Include the notes you wrote"),
+        .shareRevokeAction: LocalizedText(id: "Matikan tautannya", en: "Turn the link off"),
         .credentialTitle: LocalizedText(
             id: "Simpan perjalananmu", en: "Keep your walks"),
         .credentialBody: LocalizedText(

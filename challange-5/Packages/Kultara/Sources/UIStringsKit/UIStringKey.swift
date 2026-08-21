@@ -357,6 +357,13 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// `c2` phase 6 — the credential screen. Not "log in": nothing is gated behind it, and a
     /// walker who never signs in loses nothing except the ability to find their walks again on a
     /// different phone. The copy has to say that rather than imply an account is required.
+    /// `c2` phase 5 — the recap card's own words. Short: the card is a picture somebody scrolls
+    /// past, and the quest's title is the thing that has to survive that.
+    case shareCardEyebrow
+    case shareCardStampCount
+    case shareIncludeAnswersLabel
+    case shareRevokeAction
+
     case credentialTitle
     case credentialBody
     case credentialSkipAction
