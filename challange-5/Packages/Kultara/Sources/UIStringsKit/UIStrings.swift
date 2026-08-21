@@ -526,6 +526,14 @@ public enum UIStrings {
 
         // MARK: Journal — Sealed Letters
         .journalSealedHeading: LocalizedText(id: "Surat Tersegel", en: "Sealed Letters"),
+        .restoreFailedTitle: LocalizedText(
+            id: "Belum bisa mengambil perjalananmu",
+            en: "Could not fetch your walks"),
+        .restoreFailedBody: LocalizedText(
+            id: "Perjalanan yang pernah kamu simpan mungkin masih ada. Kami belum berhasil mengambilnya, bukan berarti tidak ada.",
+            en: "Walks you saved before may still be there. We could not fetch them — that is not the same as you having none."),
+        .restoreRetryAction: LocalizedText(id: "Coba lagi", en: "Try again"),
+        .restoreDismissAction: LocalizedText(id: "Nanti saja", en: "Not now"),
         .journalUnsealAction: LocalizedText(id: "Buka Segelnya", en: "Unseal the Journey"),
         .journalSealedEmptyTitle: LocalizedText(
             id: "Belum ada surat", en: "No letters yet"),

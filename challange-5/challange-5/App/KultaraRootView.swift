@@ -38,6 +38,10 @@ struct KultaraRootView: View {
     /// observable — it is a protocol with a file behind it — and a counter is a smaller thing to
     /// own than an observation layer this milestone would use in exactly one place.
     @State private var journalRevision = 0
+    /// `c2` phase 7. True when a restore was attempted and the read did not land. Shown rather than
+    /// swallowed: a walker looking at an empty Journal cannot tell "you had nothing" from "we could
+    /// not fetch it", and only the second is recoverable by trying again.
+    @State private var restoreFailed = false
     /// Which sidequest to present, set by the nearby list, by a notification tap, and by a
     /// foreground region entry (`s3`). Owned by `challange_5App` and handed down, because the
     /// notification delegate and `SystemProximityMonitor.onSideQuestNearby` both have to reach it
@@ -122,6 +126,26 @@ struct KultaraRootView: View {
             // it. A walker who is offline forever simply never has one.
             (environment.session as? SupabaseSession)?.prepare()
             await refreshGovernance()
+            // `c2` phase 7. After the session, because there is nothing to read without one, and
+            // only ever into an empty store — the restorer checks that itself, immediately before
+            // it reads, so a walk started in between is still seen.
+            await restoreWalksIfThisDeviceHasNone()
+        }
+        // `c2` phase 7. The one thing a restore is allowed to put on screen, and only when it
+        // failed: a walker cannot tell an empty Journal that is theirs from one that is a failed
+        // fetch, and only the second is worth trying again. The retry needs no sign-out.
+        .alert(
+            UIStrings.text(.restoreFailedTitle).value(for: language),
+            isPresented: $restoreFailed
+        ) {
+            Button(UIStrings.text(.restoreRetryAction).value(for: language)) {
+                Task { await restoreWalksIfThisDeviceHasNone() }
+            }
+            Button(
+                UIStrings.text(.restoreDismissAction).value(for: language),
+                role: .cancel) {}
+        } message: {
+            Text(UIStrings.text(.restoreFailedBody).value(for: language))
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
@@ -141,6 +165,19 @@ struct KultaraRootView: View {
                 break
             }
         }
+    }
+
+    /// `c2` phase 7. A device with no walks asks whether this walker has any elsewhere.
+    ///
+    /// Nothing waits on this and nothing is shown while it runs. **A failure is not silent
+    /// though** — see `RestoreOutcome.succeeded`: a walker cannot tell "you had nothing" from "we
+    /// could not fetch it", and only the second is worth trying again.
+    private func restoreWalksIfThisDeviceHasNone() async {
+        guard let outcome = await environment.restore.restoreIfLocalStoreIsEmpty() else { return }
+        if outcome.restoredRuns > 0 {
+            journalRevision += 1
+        }
+        restoreFailed = !outcome.succeeded
     }
 
     /// One kill-switch refresh, and everything that has to follow it.

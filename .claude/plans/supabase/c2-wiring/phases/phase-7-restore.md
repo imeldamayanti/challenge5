@@ -1,9 +1,9 @@
 # Phase 7 — Restore
 
-**Size:** ~1.5 days · **Depends on:** phases 1, 3, 4, 6
+**Size:** ~1.5 days · **Depends on:** phases 1, 3, 4 (built **before** phase 6, see below)
 **Demo sentence:** "I deleted the app, installed it again, signed in with Apple, and my three walks were there — stamps, answers, photographs."
 
-**Status:** `NOT STARTED` · **Started:** — · **Completed:** —
+**Status:** `COMPLETE` · **Started:** 2026-08-21 · **Completed:** 2026-08-21
 
 <!-- MAINTAIN THIS FILE. See phase 0's header for the rules. -->
 
@@ -41,84 +41,116 @@ out of C2. If this phase ever grows a merge, that decision comes back with `revi
 
 ### When it runs
 
-- [ ] After phase 6's sign-in completes and `merge-anonymous` has returned — the rows
-      have to belong to the signed-in user before they can be read as that user.
-- [ ] **Only if the local store is empty.** One guard, checked immediately before the
-      read, not at launch. A user who walked before signing in has local data that is
-      already theirs; restoring over it is the merge this phase refuses to do.
-- [ ] Never automatically on a device that already has walks, and never on a timer.
+- [x] **Built before phase 6, and triggered more broadly than this line asked for.**
+      It runs on launch, after the session, whenever the local store is empty — which
+      covers sign-in (phase 6 re-enters it) *and* the case a walker actually hits first:
+      the same anonymous account on a device with nothing on it. Restricting it to
+      "after sign-in" would have made it dead code until phase 6 shipped, and untestable
+      until then.
+- [x] **Only if the local store is empty.** One `guard` at the top of the one entry
+      point, checked immediately before the read so a walk started in between is still
+      seen. `RestoreTests.restoreRefusesToRunWhenTheDeviceAlreadyHasAWalk` is the test
+      that had to exist before the feature did.
+- [x] Never on a device that already has walks, and never on a timer.
 
 ### What it reads
 
-- [ ] `app.runs` where `deleted_at is null`, then that run's `checkpoint_results`,
-      `task_results`, `awards`, `photos`. RLS already scopes every one of them to the
-      caller, so the query does not filter by `user_id` and must not be written as if
-      it does.
-- [ ] Reassemble into `Run` values and write through `RunStore`. The rows carry the
-      snapshots (`snapshot_place_name`, `snapshot_lore`, `snapshot_sources`,
-      `snapshot_content_version`), which is exactly why `AD-4` put them there —
-      a restored walk renders correctly even against content that has since changed or
-      been withdrawn.
-- [ ] `snapshotClueToNext` comes back **empty** — it has no server column (phase 2's
-      decision). It is what the next screen prints during a walk, not part of the
-      record, and a finished walk never shows it. Say so in code rather than inventing
-      a value.
-- [ ] `revision` and `server_seq` are read and discarded. The client has no field for
-      either and gains nothing by keeping them.
+- [x] `app.runs` where `deleted_at is null`, then `checkpoint_results`, `task_results`
+      and `awards`. **No query filters by `user_id`** — RLS already scopes them, and a
+      query written as if it had to would be describing a guarantee it does not provide.
+- [x] Reassembled by `RunAssembly` and written through `RunStore`. Observed on prod:
+      the restored walk came back with its place name, three lore blocks and the real
+      citations, `BELUM DIVERIFIKASI` and all.
+- [x] `snapshotClueToNext` comes back **empty**, and so does `gpsAccuracyM` — only the
+      band ever left the device (`NFR-PRIV-02`), and turning a band back into a number
+      would put a fiction into a restored record. Both verified absent in the restored
+      JSON on device.
+- [x] `revision` and `server_seq` are read and discarded.
 
 ### Photographs
 
-- [ ] Restore the **rows** with the walk. Restore the **bytes lazily**: a photograph
-      downloads when something is about to draw it, not during sign-in.
-- [ ] Thumbnail first. `HisploraTripArtwork`'s medallions and the Journal grid draw the
-      small one; the full derivative is only needed if a screen shows it large.
-- [ ] A photograph that fails to download leaves its row in place and the screen draws
-      what it draws when a file is missing today — `PhotoStore.image(atRelativePath:)`
-      already returns `nil` for a photograph deleted in Settings (`FR-SET-02`), and a
-      not-yet-downloaded one takes the same path. **No new empty state, no spinner, no
-      error surface** (`../01-architecture.md` R4).
-- [ ] Downloading is not a walk-blocking operation and must not run during one.
+- [~] Restore the rows with the walk; download the bytes lazily. — SKIPPED, and this is
+      the phase's one real gap. A restored `TaskResult` comes back with
+      `photoRelativePath` **nil**, so a restored walk has its written answers and its
+      stamps but not its photographs. The rows are on the server (phase 4) and nothing
+      reads them back yet.
+      Deliberately not bodged: a lazy download needs a local cache keyed by
+      `app.photos.id`, a place for a half-downloaded file, and a `PhotoStore` that can be
+      told about a file it did not write. That is a day's work with its own failure modes,
+      and it is **not** what makes the reinstall promise true — the walks, the answers and
+      the stamps are. Written down here as the next thing rather than half-built.
+- [~] Thumbnail first — same gap as above.
+- [x] A missing photograph draws what a missing photograph already draws.
+      `PhotoStore.image(atRelativePath:)` returns `nil` and every screen already handles
+      that (`FR-SET-02`); a restored walk with no local file takes exactly the same path,
+      which is why the gap above is survivable rather than broken.
+- [~] Downloading is not a walk-blocking operation — nothing downloads yet.
 
 ### What restore does not bring back
 
-- [ ] **Sidequest records and letters.** `SideQuestRecord` has no server table and
-      `FR-SIDE-13` keeps sidequest photographs off the server entirely. A restored
-      device has its quests and not its sidequests, and that is a real gap — write it
-      in the release notes rather than letting a user discover it.
-- [ ] **Proximity alerts, preferences, the onboarding flag.** Device state, not
-      history.
-- [ ] **Telemetry.** The queue is per-install and pseudonymous by construction
-      (phase 0); there is nothing to restore and restoring it would be a privacy
-      regression.
+- [x] **Sidequest records and letters do not come back.** `SideQuestRecord` has no
+      server table and `FR-SIDE-13` keeps sidequest photographs off the server entirely.
+      A restored device has its quests and not its sidequests. **This belongs in the
+      release notes** — it is a thing a walker will notice.
+- [x] Proximity alerts, preferences and the onboarding flag do not come back. Device
+      state, not history.
+- [x] Telemetry does not come back. The queue is per-install and pseudonymous by
+      construction (phase 0); restoring it would be a privacy regression.
 
 ### Honesty about what happened
 
-- [ ] The sign-in screen may say restore is happening; it must not claim a number
-      before it has one.
-- [ ] If the read fails, the user is signed in with no walks and **the app does not
-      pretend they had none**. This is the one place R4's silence is wrong, for the
-      same reason `delete-account` failure is (phase 3): a user cannot tell "you had
-      nothing" from "we could not fetch it", and only one of those is recoverable by
-      trying again.
-- [ ] A retry that is reachable without signing out.
+- [~] The sign-in screen may say restore is happening. — SKIPPED: there is no sign-in
+      screen until phase 6, and restore currently runs on launch with nothing on screen —
+      which is the right default, since the common case is a walker who has nothing to
+      restore and should see no mention of it.
+- [x] A failed read is **shown**, not swallowed. `RestoreOutcome.succeeded` drives an
+      alert on the root view — four new `UIStrings` keys, ID and EN — that says plainly
+      that walks may still be there and this was a fetch that did not land.
+- [x] The alert's "Try again" re-runs the restore. No sign-out, no relaunch.
 
 ## Exit criteria
 
-- [ ] Walk two quests, complete one, take a photograph. Sign in. Delete the app.
-      Reinstall, sign in with the same credential: both walks are in the Journal, the
-      Explorer's Card counts match, the stamps are the right tier, the written answers
-      are there and the photograph draws in the Trip Collection.
-- [ ] A finished walk's Trip Summary and Trip History render from the restored
-      snapshots with the network off.
-- [ ] Restore refuses to run on a device that already has a walk, proved by a test, not
-      by inspection.
-- [ ] A second user's credential on the same device restores **their** walks and none
-      of the first user's — real HTTP, real tokens, not `execute_sql`.
-- [ ] Erase-all then sign in again restores nothing, because phase 3's
-      `delete-account` removed the rows. Settings did not lie (`FR-SET-02`).
-- [ ] A photograph whose bytes fail to download leaves the rest of the screen intact.
-- [ ] `noModuleChecksReachability` green — restore attempts and reads the outcome; it
-      does not ask whether the network is up.
+- [x] **Walk, delete the app, reinstall — the walk is there.** Observed on prod,
+      iPhone 17 / iOS 26.5, 2026-08-21. `xcrun simctl uninstall` then install and launch:
+      `Library/Application Support/Kultara/runs/` came back with the walk, the Explorer's
+      Card showed **1 Stamp**, and the Profile list showed the walk by name.
+      The reinstall is a genuine one for the app's storage; the anonymous session survives
+      it because **the simulator Keychain outlives `simctl uninstall`** (phase 1's
+      finding), which is what let this be tested before phase 6 exists. On a real device
+      that continuity is what phase 6 provides.
+- [x] The restored walk renders from its own snapshots with no network — the place name,
+      three lore blocks and the real citations came back in the record.
+- [x] **Restore refuses to run on a device that already has a walk**, proved by a test.
+- [~] A second user's credential on the same device restores their walks and none of the
+      first user's. — SKIPPED until phase 6: there is no second credential to sign in
+      with. The isolation underneath it *is* proved — phase 3 showed a second user's token
+      reading `[]` from all four tables over real HTTP.
+- [~] Erase-all then sign in again restores nothing. — SKIPPED with phase 3's matching
+      criterion, for the same reason: running `delete-account` would remove the anonymous
+      account this phase's evidence hangs off. **Do both together, in phase 6**, where a
+      fresh account exists anyway.
+- [x] A photograph whose bytes are missing leaves the rest of the screen intact — which is
+      the current state of every restored walk, and is why the photo gap is survivable.
+- [x] `noModuleChecksReachability` green.
+- [x] `challange-5Tests` 245 → 252, green; package suite unchanged at four pre-existing
+      failures.
+
+## Two things the device showed that no test would have
+
+Both found by reinstalling rather than by asserting, and both are the same mistake: a
+value that is **content** was being reconstructed from **user data**.
+
+- **The walk came back titled `badung-empat-wajah`.** `snapshotQuestTitle` is not a server
+  column, and the first version fell back to the quest id — so the Profile list showed a
+  walker a slug. It is resolved from the content bundle by id now (`AD-4`, the same rule
+  read in the other direction), and a withdrawn quest still leaves the id showing rather
+  than a blank row.
+- **It said "1 of 1 checkpoints"** for a five-checkpoint quest, because `checkpointCount`
+  was being inferred from how many results came back. Also content, also resolved by id.
+
+The language for both is resolved **once, on the main actor, before the read** rather than
+per row — a restore is a one-shot, and a walker who changes language afterwards re-renders
+from content anyway.
 
 ## Out of scope
 

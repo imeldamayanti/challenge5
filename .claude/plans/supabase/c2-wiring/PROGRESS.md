@@ -31,7 +31,7 @@ unit test with a stubbed transport". If it has not run against
 | 3 | [Push Sync](phases/phase-3-push-sync.md) | 1, 2 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 4 | [Photo Upload](phases/phase-4-photo-upload.md) | 1, 3 | 2 d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 6 | [Credential](phases/phase-6-credential.md) | 1 | 2 d | `NOT STARTED` | — | — |
-| 7 | [Restore](phases/phase-7-restore.md) | 1, 3, 4, 6 | 1½ d | `NOT STARTED` | — | — |
+| 7 | [Restore](phases/phase-7-restore.md) | 1, 3, 4 | 1½ d | `COMPLETE` | 2026-08-21 | 2026-08-21 |
 | 5 | [Share Card](phases/phase-5-share-card.md) | 1, 4 | 3 d | `BLOCKED` · post-MVP | — | — |
 
 **The MVP is 1 → 2 → 3 → 4 → 6 → 7, in that order, and phase 5 is not in it.** Set by

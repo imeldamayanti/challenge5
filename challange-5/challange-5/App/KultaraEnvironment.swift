@@ -43,6 +43,8 @@ struct KultaraEnvironment {
     let accountDeleter: (any AccountDeleting)?
     /// What has already been pushed, so erasure can forget it (`c2` phase 3).
     let syncState: any SyncStateStore
+    /// Brings walks back onto a device that has none (`c2` phase 7). Runs only into an empty store.
+    let restore: any RunRestoring
 
     init(
         repository: any ContentRepository,
@@ -113,6 +115,22 @@ struct KultaraEnvironment {
                     session: resolvedSession)
             },
             deviceID: { [identity = DeviceIdentity()] in identity.current }))
+        self.restore = backend == nil ? NoRunRestoring() : RunRestorer(
+            loadRuns: { [runStore] in try runStore.runs() },
+            saveRun: { [runStore] run in try runStore.save(run) },
+            session: resolvedSession,
+            configuration: backend,
+            state: resolvedSyncState,
+            // The language is resolved **once, here on the main actor**, and captured. A restore
+            // is a one-shot read; a walker who changes language afterwards re-renders from content
+            // anyway, and hopping back to the main actor per row to ask again would buy nothing.
+            resolveQuest: { [repository, resolvedLanguage = LanguageResolver.resolve(
+                override: preferences.preferredLanguage)] questID in
+                guard let quest = (try? repository.quest(id: questID)) ?? nil else { return nil }
+                return QuestFacts(
+                    title: quest.title.value(for: resolvedLanguage),
+                    checkpointCount: quest.checkpoints.count)
+            })
     }
 
     var runEngine: RunEngine {

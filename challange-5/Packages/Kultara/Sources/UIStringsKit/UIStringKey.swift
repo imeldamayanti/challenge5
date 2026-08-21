@@ -351,6 +351,14 @@ public enum UIStringKey: String, Sendable, CaseIterable {
 
     // Journal — the Sealed Letters screen (Figma `332:1607`)
     case journalSealedHeading
+    /// `c2` phase 7. Shown when a restore was attempted and the read did not land — the second
+    /// place `01-architecture.md` R4's silence is wrong, after a failed account deletion. A walker
+    /// looking at an empty Journal cannot tell "you had nothing" from "we could not fetch it".
+    case restoreFailedTitle
+    case restoreFailedBody
+    case restoreRetryAction
+    case restoreDismissAction
+
     case journalUnsealAction
     case journalSealedEmptyTitle
     case journalSealedEmptyBody
