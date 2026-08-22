@@ -688,6 +688,37 @@ public enum UIStrings {
         .journeySavedRecapAction: LocalizedText(
             id: "Lihat Rekap Perjalanan", en: "See Journey Recap"),
 
+        // The trip-completion carousel (`205:121`, `205:151`, `205:205`)
+        .tripRecapHeadlineTitle: LocalizedText(
+            id: "Kamu Menghidupkan Kembali Sejarah!", en: "You Made History Come Alive!"),
+        .tripRecapHeadlineBody: LocalizedText(
+            id: "Kamu telah menyelesaikan kisah ini dan menyusuri setiap tempatnya, "
+                + "menyingkap masa lalu, dan merasakan warisan hidup Bali.",
+            en: "You’ve completed this story and walked through the places, uncovered the past, "
+                + "and experienced a piece of Bali’s living heritage."),
+        .tripRecapGlanceTitle: LocalizedText(
+            id: "Perjalananmu Sekilas", en: "Your Journey at a Glance"),
+        .tripRecapStatExploredPlaces: LocalizedText(id: "Tempat Dijelajahi", en: "Explored Places"),
+        .tripRecapStatTripDuration: LocalizedText(id: "Durasi Perjalanan", en: "Trip Duration"),
+        .tripRecapStatCompletedQuests: LocalizedText(id: "Quest Selesai", en: "Completed Quests"),
+        .tripRecapStatMemories: LocalizedText(id: "Kenangan", en: "Memories"),
+        .tripRecapDurationUnit: LocalizedText(id: "mnt", en: "m"),
+        .tripRecapExploredTitle: LocalizedText(
+            id: "Kamu menjelajahi %d tempat bersejarah di %@.",
+            en: "You explored %d historic places in %@."),
+        .tripRecapExploredTitleNoRegion: LocalizedText(
+            id: "Kamu menjelajahi %d tempat bersejarah.",
+            en: "You explored %d historic places."),
+        .tripRecapMemoriesTitle: LocalizedText(
+            id: "Kenangan dari Perjalananmu", en: "Memories From Your Journey"),
+        .tripRecapMemoLabel: LocalizedText(id: "Catatan", en: "Memo"),
+        .tripRecapPlacesUnit: LocalizedText(id: "%d Tempat", en: "%d Places"),
+        .tripRecapMinutesUnit: LocalizedText(id: "%d Menit", en: "%d Minutes"),
+        .tripRecapPostcardTitle: LocalizedText(id: "POSTCARD", en: "POSTCARD"),
+        .tripRecapPostcardFrom: LocalizedText(id: "dari %@", en: "from %@"),
+        .tripRecapShareAction: LocalizedText(id: "Bagikan", en: "Share"),
+        .tripRecapCloseAction: LocalizedText(id: "Tutup Ringkasan", en: "Close Summary"),
+
         // MARK: Profile — the Explorer's Card
         .profileHeading: LocalizedText(id: "Kartu Penjelajah", en: "Explorer’s Card"),
         .profileExplorerName: LocalizedText(id: "Penjelajah", en: "Explorer"),

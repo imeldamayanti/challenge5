@@ -41,6 +41,11 @@ struct KultaraRootView: View {
     @State private var journalPapers: SealedLetterPresentation?
     /// And a third, for the Profile tab's Quests list. Same argument as the one above it.
     @State private var profileRunDestination: RunDestination?
+    /// The walk "See Journey Recap" is showing the Strava-style completion carousel for, before
+    /// `openRecap` hands it on to the real Trip Summary. A `fullScreenCover`, same shape as
+    /// `sideQuestCover` below — this flow arrives from outside the navigation stack the run screen
+    /// was just popped off of.
+    @State private var completionRecapRun: Run?
     /// Bumped whenever a walk changes, so the home screen's journal is rebuilt. The store is not
     /// observable — it is a protocol with a file behind it — and a counter is a smaller thing to
     /// own than an observation layer this milestone would use in exactly one place.
@@ -289,6 +294,9 @@ struct KultaraRootView: View {
         .fullScreenCover(item: sideQuestCover) { destination in
             sideQuestFlow(destination.id)
         }
+        .fullScreenCover(item: $completionRecapRun) { run in
+            completionRecapScreen(for: run)
+        }
     }
 
     /// `nil` while a walk is in progress, which suppresses both entry paths at once — the nearby
@@ -296,7 +304,8 @@ struct KultaraRootView: View {
     private var sideQuestCover: Binding<SideQuestDestination?> {
         Binding(
             get: {
-                guard runDestination == nil, journalLetter == nil, journalPapers == nil
+                guard runDestination == nil, journalLetter == nil, journalPapers == nil,
+                      completionRecapRun == nil
                 else { return nil }
                 return router.pendingSideQuestID.map(SideQuestDestination.init)
             },
@@ -590,22 +599,58 @@ struct KultaraRootView: View {
             questID: questID, existingRun: draft, discardingExistingDraft: false)
     }
 
-    /// "See Journey Recap" (`JourneySavedScreen`) opens the walk's real Trip Summary — the Journal
-    /// letter this Run already has a shelf entry for, built the same way `SealedLettersViewModel`
-    /// builds every other one rather than by a second, parallel path.
+    /// "See Journey Recap" (`JourneySavedScreen`) no longer jumps straight to the Journal — it opens
+    /// the Strava-style completion carousel first (`TripRecapCarouselScreen`), whose own finish is
+    /// what now does the jump `openRecap` used to do directly.
+    private func openRecap(for run: Run) {
+        runDestination = nil
+        completionRecapRun = run
+    }
+
+    /// The carousel's own "Skip"/"Close Summary" (`921:2867`): the papers picker — "Modal Cerita"
+    /// (`921:2346`), this app's own `JournalPapersModal` — over the Journal letter this Run already
+    /// has a shelf entry for, built the same way `SealedLettersViewModel` builds every other one
+    /// rather than by a second, parallel path.
     ///
     /// Reuses `SealedLettersViewModel`'s own builder instead of duplicating it: stamp tiering
     /// (`StampArtworkResolver`) counts finished walks *per place*, which is a fact about every Run,
     /// not just this one, so a hand-rolled `SealedLetterPresentation` here could tier a stamp
     /// differently from the one the shelf itself would show for the same walk.
-    private func openRecap(for run: Run) {
-        runDestination = nil
+    private func finishCompletionRecap(for run: Run) {
+        completionRecapRun = nil
         let letters = SealedLettersViewModel(
             store: environment.runStore, repository: environment.repository, language: language)
         guard let letter = letters.letters.first(where: { $0.id == run.id }) else { return }
-        journalLetterSection = .summary
-        journalLetter = letter
+        journalPapers = letter
         tab = Tab.journal.rawValue
+    }
+
+    /// The carousel's own data, assembled here rather than inside the screen: `RunSummaryViewModel`
+    /// deliberately holds no `ContentRepository`, and the stamp collage needs one to resolve a
+    /// region and a place's tiered artwork (`StampArtworkResolver`) — the same reason
+    /// `ExplorerCardViewModel` builds its stamps where a repository is already in scope.
+    private func completionRecapScreen(for run: Run) -> some View {
+        let runs = (try? environment.runStore.runs()) ?? []
+        let region = (try? environment.repository.quest(id: run.questID))??.region ?? ""
+        let resolver = StampArtworkResolver(runs: runs, repository: environment.repository)
+        let stamps = run.awards
+            .filter { $0.type == .stamp }
+            .map { award in
+                TripRecapStampPresentation(
+                    id: "\(run.id)-\(award.sourceID)",
+                    placeName: award.snapshotName,
+                    region: region,
+                    artworkName: resolver.artworkName(
+                        questID: run.questID, stampSourceID: award.sourceID))
+            }
+        return TripRecapCarouselScreen(
+            language: language,
+            summary: RunSummaryViewModel(run: run),
+            completedQuestsCount: runs.filter { $0.state == .completed }.count,
+            region: region,
+            stamps: stamps,
+            photoStore: environment.photoStore,
+            onFinish: { finishCompletionRecap(for: run) })
     }
 
     private func runScreen(_ destination: RunDestination) -> some View {
