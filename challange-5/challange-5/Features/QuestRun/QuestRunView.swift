@@ -60,9 +60,21 @@ struct QuestRunView: View {
             //
             // Each stage still runs its own entrance — the typewriter, the scroll, the reveal's own
             // fade — on top of this.
-            .transition(.opacity)
-            .animation(.easeInOut(duration: 0.35), value: model.stage)
-            .kultaraSpeckledGround(palette.paper)
+            // Asymmetric rather than a plain cross-fade, and the asymmetry is the whole point: with
+            // both halves fading over the same window the compositor shows a quarter of the ground
+            // through the middle of the change, so two screens that draw the *same* parchment still
+            // flashed darker at the seam. Holding the outgoing screen at full opacity for the first
+            // 0.24 s keeps the stack opaque the whole way across, and the incoming one arrives on
+            // top of a page that never dimmed.
+            .transition(.asymmetric(
+                insertion: .opacity.animation(.easeOut(duration: 0.32)),
+                removal: .opacity.animation(.easeIn(duration: 0.26).delay(0.24))))
+            .animation(.easeInOut(duration: 0.5), value: model.stage)
+            // **The ground under the cross-fade has to be the ground of the screens crossing it.**
+            // `palette.paper` is the museum's cream, and on the story flow — brown on both sides of
+            // every stage change — it printed a bright flash for as long as the fade lasted. That
+            // was the single most visible fault in the hand-over out of the transition screen.
+            .kultaraSpeckledGround(isOnStoryFlow ? hisplora.brownStone : palette.paper)
             .navigationTitle(isOnStoryFlow ? "" : model.quest.title.value(for: language))
             .kultaraInlineNavigationTitle()
             .toolbar(isOnStoryFlow ? .hidden : .visible, for: .navigationBar)

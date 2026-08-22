@@ -83,6 +83,50 @@ import Testing
         #expect(sequence.animation(of: .unrolling) != nil)
     }
 
+    /// Every moving beat hands over before it has finished, which is what keeps the opening one
+    /// movement instead of four. A `hold` equal to its `duration` is the stutter this replaced.
+    @Test func everyMovingBeatHandsOverBeforeItSettles() {
+        let sequence = HisploraScrollUnsealSequence(rendersImmediately: false)
+        for beat in [HisploraScrollUnsealStage.widening, .unbinding, .unrolling] {
+            #expect(sequence.hold(of: beat) < sequence.duration(of: beat))
+            #expect(sequence.hold(of: beat) > .zero)
+        }
+    }
+
+    /// The overlap is a tail, not a chord. A beat that gives away more than a third of itself starts
+    /// the next one while this one is still visibly travelling, and the two read as a collision.
+    @Test func theOverlapIsATailRatherThanAChord() {
+        let sequence = HisploraScrollUnsealSequence(rendersImmediately: false)
+        for beat in [HisploraScrollUnsealStage.widening, .unbinding, .unrolling] {
+            let overlap = sequence.duration(of: beat) - sequence.hold(of: beat)
+            #expect(overlap.seconds < sequence.duration(of: beat).seconds / 3)
+        }
+    }
+
+    /// A skipped opening waits for nothing, the same way it animates nothing.
+    @Test func reducedMotionHoldsOnNoBeatAtAll() {
+        let sequence = HisploraScrollUnsealSequence(rendersImmediately: true)
+        for beat in HisploraScrollUnsealStage.allCases {
+            #expect(sequence.hold(of: beat) == .zero)
+        }
+    }
+
+    /// The idle breath is below the threshold where it reads as an animation playing — it is there
+    /// to say the picture is a control, not to be watched. Numbers rather than a screenshot, because
+    /// this is exactly the kind of value that gets nudged up until it competes with the opening.
+    @Test func theIdleBreathStaysUnderTheThresholdOfAnAnimation() {
+        #expect(HisploraScrollIdleMotion.floatOffset <= 10)
+        #expect(HisploraScrollIdleMotion.tiltDegrees <= 2.5)
+        #expect(HisploraScrollIdleMotion.scaleRange <= 0.03)
+        #expect(HisploraScrollIdleMotion.period >= 2.5)
+        // It must be off the roll well before `widening` is doing anything the eye can follow.
+        #expect(HisploraScrollIdleMotion.settle
+            < HisploraScrollUnsealSequence(rendersImmediately: false)
+                .duration(of: .widening).seconds)
+        #expect(HisploraScrollIdleMotion.captionFloor > 0.5,
+                "a caption that fades further than this reads as broken, not as breathing")
+    }
+
     /// The tilt is the frame's, not a second copy of it that can drift. It is also constant — see
     /// `sealedTiltDegrees`.
     @Test func theRestingTiltIsTheFramesOwn() {

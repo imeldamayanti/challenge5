@@ -26,6 +26,26 @@ public enum TransitionScrollMetrics {
     /// `293:1599`'s `rotate-[41.6deg]`.
     public static let rotationDegrees: Double = 41.6
 
+    /// How wide the *drawn* roll is against the frame reserved for it, once the turn is applied.
+    ///
+    /// **The picture is not its own silhouette.** The asset is drawn on a diagonal and
+    /// `rotationDegrees` stands it level; `rotationEffect` does not resize what it turns, so the
+    /// level roll ends up wider than the box it was laid out in. Measured on device at the resting
+    /// size: a 264.247-point frame draws a roll about 294 points across.
+    ///
+    /// It matters at exactly one moment. The opening grows the roll until it is the same silhouette
+    /// as the shut parchment and then cross-fades the two, so the *drawn* roll — not its frame — is
+    /// what has to reach the sheet's width. Growing the frame to the sheet's 362 instead grew the
+    /// roll to about 403, off both edges of a 402-point screen, and the cross-fade landed on a
+    /// picture visibly larger than the one it became. Seen on iPhone 17 Pro / iOS 26.5 before this
+    /// was divided back out.
+    public static let drawnWidthFactor: CGFloat = 294.0 / 264.247
+
+    /// The frame to give the tied roll so that the roll it draws is `sheetWidth` across.
+    public static func frameWidth(drawingRollOfWidth sheetWidth: CGFloat) -> CGFloat {
+        sheetWidth / drawnWidthFactor
+    }
+
     /// The box the turned picture occupies, `364.93 × 363.905` — very nearly square, and held as
     /// the frame's real ratio rather than rounded to 1. `rotationEffect` does not resize the view
     /// it turns, so the layout needs this separately from the picture's own size.
