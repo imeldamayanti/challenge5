@@ -197,7 +197,9 @@ struct QuestListView: View {
                 } else {
                     ForEach(model.visibleRows) { row in
                         Button { onSelect(row.questID) } label: {
-                            QuestCard(row: row, language: language)
+                            QuestCard(
+                                row: row, language: language,
+                                isOngoing: journal.activeQuestIDs.contains(row.questID))
                         }
                         .buttonStyle(.plain)
                     }

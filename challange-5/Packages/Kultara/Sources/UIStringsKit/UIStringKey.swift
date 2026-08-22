@@ -95,6 +95,13 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case questMapShowReal
     case questMapOfflineNotice
     case questMapUserLocation
+    /// `298:988` — the liquid-glass stack button that now stands where the chevron did, and goes
+    /// back to the list surface.
+    case questMapBackToList
+    /// The popover a marker tap opens (`1026:3514`). The rows are one line each, so the count and
+    /// the minutes ride inside their own format strings rather than beside separate unit keys.
+    case questPopoverDurationFormat
+    case questPopoverStopsFormat
     case labelRegion
     case labelDistance
     case labelWalkingTime
@@ -355,6 +362,9 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// `PlaceholderQuestCatalog`.
     case homePlaceholderCardsNotice
     case homePlaceholderCardHint
+    /// The hanging tag on a quest card whose walk is still open (`850:2289`). The words are baked
+    /// into the artwork; this is what VoiceOver reads instead of them.
+    case questCardOngoing
 
     // Sidequests — PRD §5.15 `FR-SIDE-01`…`FR-SIDE-16`. The story flow outside a Run: a notice, an
     // arrival gate, the place's history, one challenge, one letter.

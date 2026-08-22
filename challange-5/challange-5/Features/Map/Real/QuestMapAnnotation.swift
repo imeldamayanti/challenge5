@@ -9,6 +9,10 @@ final class QuestMapAnnotation: NSObject, MKAnnotation {
     let questID: String
     let questTitle: String
     let spokenLabel: String
+    /// What `1026:3514`'s card prints beside the pin, the minutes and the stop count.
+    let regionName: String
+    let durationMin: Int
+    let stopCount: Int
     let artwork: MapLandmarkArtwork
     let coordinate: CLLocationCoordinate2D
 
@@ -16,6 +20,9 @@ final class QuestMapAnnotation: NSObject, MKAnnotation {
         questID = pin.questID
         questTitle = pin.title
         spokenLabel = pin.accessibilityLabel
+        regionName = pin.regionName
+        durationMin = pin.durationMin
+        stopCount = pin.stopCount
         artwork = MapLandmarkCatalog.artwork(forQuestID: pin.questID)
         coordinate = CLLocationCoordinate2D(latitude: pin.coordinate.lat,
                                             longitude: pin.coordinate.lon)
