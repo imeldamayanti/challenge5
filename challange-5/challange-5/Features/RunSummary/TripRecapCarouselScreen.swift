@@ -13,11 +13,6 @@ import UIStringsKit
 /// `JournalPapersModal`), not a sixth page here; `KultaraRootView.finishCompletionRecap` is what
 /// opens it.
 ///
-/// **The "Skip" link is not in any of the five source frames.** They carry no exit control at all.
-/// It is reused from the redesigned onboarding board's own escape hatch (`AccountEntryGate`'s
-/// "underlined, on every screen") because a five-page carousel with no way out mid-way would trap a
-/// walker who has already seen enough of their own recap — in `inkCream` rather than that board's
-/// `inkQuiet`, since the ground under it is brown here, not paper.
 struct TripRecapCarouselScreen: View {
     let language: ContentLanguage
     let summary: RunSummaryViewModel
@@ -53,21 +48,14 @@ struct TripRecapCarouselScreen: View {
     // MARK: - Chrome shared by every page
 
     private var topBar: some View {
-        VStack(spacing: 4) {
-            HStack {
-                Spacer()
-                Button(UIStrings.string(.onboardingSkip, language)) { onFinish() }
-                    .buttonStyle(HisploraTextLinkButtonStyle(ink: \.inkCream))
-            }
-            HisploraCompletionProgress(
-                completed: page + 1,
-                total: Self.totalPages,
-                accessibilityLabel: String(
-                    format: UIStrings.string(.onboardingProgress, language),
-                    page + 1, Self.totalPages))
-                .padding(.horizontal, 20)
-        }
-        .padding(.top, 8)
+        HisploraCompletionProgress(
+            completed: page + 1,
+            total: Self.totalPages,
+            accessibilityLabel: String(
+                format: UIStrings.string(.onboardingProgress, language),
+                page + 1, Self.totalPages))
+            .padding(.horizontal, 20)
+            .padding(.top, 8)
     }
 
     private var pageHeadlineColor: Color { SRGBColor(hex: "#FDF2DE").color }
@@ -265,8 +253,6 @@ struct TripRecapCarouselScreen: View {
             pageHeadline(UIStrings.string(.tripRecapMemoriesTitle, language))
                 .padding(.horizontal, 43)
 
-            Spacer(minLength: 24)
-
             postcard
                 .accessibilityElement(children: .contain)
 
@@ -278,21 +264,24 @@ struct TripRecapCarouselScreen: View {
         .padding(.bottom, 24)
     }
 
-    /// The tilted kraft paper behind the card — the frame's own `close_letter` group, reproduced
-    /// with the Journal envelope's already-shipped `envelope-body` export rather than a fourth
-    /// export of the same idea, since both are the same object: paper the postcard arrived in.
+    /// The tilted kraft envelope behind the card and the walker's photograph riding half out of
+    /// it — Figma's own `close_letter` (three layered paper exports plus a wax seal) and `Stamp`
+    /// (`921:2917`) groups, reproduced with the Journal's real `HisploraEnvelope` and
+    /// `HisploraStampShape` rather than a fourth flat export of the same paper: sealed, closed,
+    /// nothing rising out of it — the postcard is what is stuck to the front, not what the
+    /// envelope is carrying inside.
     private var postcard: some View {
         ZStack {
-            if let backdrop = HisploraEnvelopeMetrics.bodyImage {
-                backdrop
-                    .resizable()
-                    .aspectRatio(contentMode: .fit)
-                    .frame(width: 320)
-                    .rotationEffect(.degrees(8))
-                    .opacity(0.92)
-                    .accessibilityHidden(true)
+            HisploraEnvelope(stage: .sealed) { EmptyView() }
+                .frame(width: 320)
+                .rotationEffect(.degrees(8))
+                .accessibilityHidden(true)
+
+            VStack(spacing: 0) {
+                postcardCard
+                postcardPhotoStamp
+                    .padding(.top, -50)
             }
-            postcardCard
         }
     }
 
@@ -333,8 +322,6 @@ struct TripRecapCarouselScreen: View {
                         format: UIStrings.string(.tripRecapMinutesUnit, language),
                         summary.durationMinutes))
             }
-
-            postcardPhoto
         }
         .padding(20)
         .frame(width: 300)
@@ -353,17 +340,27 @@ struct TripRecapCarouselScreen: View {
     }
 
     /// The walker's own photograph — the selfie if there is one, the place photo otherwise — set
-    /// into the same perforated die every other stamp in this carousel uses, rather than the
-    /// frame's plain rounded corners: one shape for "this is a keepsake" throughout the flow.
-    @ViewBuilder private var postcardPhoto: some View {
-        if let path = summary.run.journalEntry?.selfiePhotoRelativePath
-            ?? summary.run.journalEntry?.placePhotoRelativePath {
-            TripPhotoImage(photoStore: photoStore, relativePath: path)
-                .aspectRatio(contentMode: .fill)
-                .frame(height: 170)
-                .frame(maxWidth: .infinity)
-                .clipShape(HisploraStampShape(teethAcross: 20), style: HisploraStampShape.fillStyle)
+    /// into the same perforated die every stamp in this carousel uses. Standing apart from the
+    /// card and larger than it, riding half over its lower edge exactly as `921:2917` ("Stamp")
+    /// draws it, rather than folded into the card's own content as a thumbnail. Falls back to a
+    /// plain black pane instead of vanishing when the walk carries no photograph — there is no
+    /// existing "camera-less" fallback for a photo stamp anywhere in the design system, and an
+    /// empty gap where the frame always shows a photograph would read as a broken layout.
+    private var postcardPhotoStamp: some View {
+        let path = summary.run.journalEntry?.selfiePhotoRelativePath
+            ?? summary.run.journalEntry?.placePhotoRelativePath
+        return ZStack {
+            if let path {
+                TripPhotoImage(photoStore: photoStore, relativePath: path)
+                    .aspectRatio(contentMode: .fill)
+            } else {
+                Color.black
+            }
         }
+        .frame(width: 279, height: 205)
+        .clipShape(HisploraStampShape(teethAcross: 20), style: HisploraStampShape.fillStyle)
+        .rotationEffect(.degrees(5.41))
+        .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
     }
 
     /// The small franked stamp and its postmark in the postcard's corner — one of the walk's own
