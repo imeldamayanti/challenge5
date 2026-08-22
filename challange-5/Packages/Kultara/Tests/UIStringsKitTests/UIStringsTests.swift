@@ -41,6 +41,7 @@ struct UIStringsTests {
     @Test func indonesianAndEnglishAreActuallyDifferentText() {
         let deliberatelyIdentical: Set<UIStringKey> = [
             .appName,                 // a name, not a word
+            .tripRecapPostcardTitle,  // "POSTCARD" is the object's printed genre label, not prose
             .settingsLanguageIndonesian,  // "Bahasa Indonesia" is the endonym in both columns
             .unitMetres, .unitKilometres,
             .unitCheckpointSingular, .unitCheckpointPlural,  // "titik" is both singular and plural

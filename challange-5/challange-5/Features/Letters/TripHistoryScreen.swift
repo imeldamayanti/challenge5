@@ -112,9 +112,10 @@ struct TripHistoryScreen: View {
         guard !region.isEmpty, headline.hasSuffix(region), headline != region else {
             return Text(headline).font(upright).tracking(-1.05).foregroundColor(ink)
         }
-        return Text(String(headline.dropLast(region.count)))
+        let head = Text(String(headline.dropLast(region.count)))
             .font(upright).tracking(-1.05).foregroundColor(ink)
-            + Text(region).font(leaning).tracking(-1.05).foregroundColor(ink)
+        let tail = Text(region).font(leaning).tracking(-1.05).foregroundColor(ink)
+        return Text("\(head)\(tail)")
     }
 
     /// `791:6545` — the plate, the caption under it, and a spray of frangipani over its corner.
@@ -171,12 +172,7 @@ struct TripHistoryScreen: View {
         TripFrameBand(height: 379, background: palette.paperTrip) {
             TripFrameGround(token: palette.brownSmoke)
                 .framePlaced(x: 0, y: 120, width: 402, height: 259)
-            (Text(history.expedition.value(for: language))
-                .font(.system(size: 17))
-                .foregroundColor(palette.inkCreamWhite.color)
-             + Text(history.expeditionEmphasis.value(for: language))
-                .font(.system(size: 21, design: .serif).italic())
-                .foregroundColor(palette.inkGiltDeep.color))
+            Text("\(Text(history.expedition.value(for: language)).font(.system(size: 17)).foregroundColor(palette.inkCreamWhite.color))\(Text(history.expeditionEmphasis.value(for: language)).font(.system(size: 21, design: .serif).italic()).foregroundColor(palette.inkGiltDeep.color))")
                 .tracking(-0.34)
                 .lineSpacing(17 * 1.4 - 17 * 1.19)
                 .fixedSize(horizontal: false, vertical: true)

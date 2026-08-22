@@ -512,6 +512,35 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case journeySavedTitle
     case journeySavedRecapAction
 
+    // The trip-completion carousel "See Journey Recap" opens into, before the walk's real Trip
+    // Summary (Figma `205:121`, `205:151`, `205:205`, the "Ngalcer" file).
+    case tripRecapHeadlineTitle
+    case tripRecapHeadlineBody
+    case tripRecapGlanceTitle
+    case tripRecapStatExploredPlaces
+    case tripRecapStatTripDuration
+    case tripRecapStatCompletedQuests
+    case tripRecapStatMemories
+    case tripRecapDurationUnit
+    /// "You explored %d historic places in %@." — the quest's region fills the second placeholder,
+    /// and drops the whole sentence when a withdrawn quest leaves it empty, the same rule
+    /// `ExplorerCardViewModel`'s finished-row detail already follows.
+    case tripRecapExploredTitle
+    case tripRecapExploredTitleNoRegion
+    /// `205:2823`, `205:2867` — shared by both the memory-grid and the postcard page.
+    case tripRecapMemoriesTitle
+    case tripRecapMemoLabel
+    /// "%d Places" — the postcard's "Memo" fact, spelled out rather than abbreviated like the
+    /// glance page's tiles are.
+    case tripRecapPlacesUnit
+    /// "%d Minutes" — the postcard's "Duration" fact.
+    case tripRecapMinutesUnit
+    case tripRecapPostcardTitle
+    /// "from %@" — the postcard's byline, under `tripRecapPostcardTitle`.
+    case tripRecapPostcardFrom
+    case tripRecapShareAction
+    case tripRecapCloseAction
+
     // Profile — the Explorer's Card (Figma `547:2724`)
     case profileHeading
     /// What the card is headed with. There is no account in this build and no name to print, so

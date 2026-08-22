@@ -26,6 +26,11 @@ public struct HisploraPalette: Sendable, Equatable {
     /// `#58453E` rectangle on `81:588`, `98:1588` and `187:866`. It reads as smoke rather than as
     /// earth, and it is what the typewriter and the gilded frame are photographed against.
     public let brownStone: SRGBColor
+    /// The trip-completion carousel's ground — a full-bleed gradient, not a flat brown
+    /// (`205:121`, `205:151`, `205:205`, the "Ngalcer" file). Top stop.
+    public let completionGroundTop: SRGBColor
+    /// The same gradient's bottom stop, reached 86% of the way down the frame.
+    public let completionGroundBottom: SRGBColor
 
     // Papers — the cream grounds the narrative screens are printed on.
     /// Story preview, the typewriter screen.
@@ -200,6 +205,8 @@ public struct HisploraPalette: Sendable, Equatable {
         brownDeep: SRGBColor,
         brownMid: SRGBColor,
         brownStone: SRGBColor,
+        completionGroundTop: SRGBColor,
+        completionGroundBottom: SRGBColor,
         paperCream: SRGBColor,
         paperWarm: SRGBColor,
         paperLight: SRGBColor,
@@ -239,6 +246,8 @@ public struct HisploraPalette: Sendable, Equatable {
         self.brownDeep = brownDeep
         self.brownMid = brownMid
         self.brownStone = brownStone
+        self.completionGroundTop = completionGroundTop
+        self.completionGroundBottom = completionGroundBottom
         self.paperCream = paperCream
         self.paperWarm = paperWarm
         self.paperLight = paperLight
@@ -295,6 +304,8 @@ public struct HisploraPalette: Sendable, Equatable {
         brownDeep: SRGBColor(hex: "#6E2717"),
         brownMid: SRGBColor(hex: "#6E3B26"),
         brownStone: SRGBColor(hex: "#58453E"),
+        completionGroundTop: SRGBColor(hex: "#1C0F0B"),
+        completionGroundBottom: SRGBColor(hex: "#86361D"),
         paperCream: SRGBColor(hex: "#EEE7D2"),
         paperWarm: SRGBColor(hex: "#EADBC7"),
         paperLight: SRGBColor(hex: "#F4EADD"),
@@ -333,6 +344,7 @@ public struct HisploraPalette: Sendable, Equatable {
 
     public var allTokens: [(name: String, value: SRGBColor)] {
         [("brownDeep", brownDeep), ("brownMid", brownMid), ("brownStone", brownStone),
+         ("completionGroundTop", completionGroundTop), ("completionGroundBottom", completionGroundBottom),
          ("paperCream", paperCream), ("paperWarm", paperWarm), ("paperLight", paperLight),
          ("paperTicket", paperTicket), ("inkTicket", inkTicket),
          ("trackWell", trackWell), ("trackDim", trackDim), ("inkQuiet", inkQuiet),
@@ -375,6 +387,20 @@ public struct HisploraPalette: Sendable, Equatable {
                                       foreground: inkGilt, background: ground,
                                       requirement: .bodyText))
         }
+
+        // The trip-completion carousel's gradient ground (`205:121`, `205:151`, `205:205`). Only
+        // `inkCream` is measured here, not the full brown-ground trio above: the carousel's
+        // headline is set in it, but its subtitle is a one-off translucent literal outside the
+        // palette (the same move `TripPageChrome.swift` makes for its own frame-exact colours), so
+        // asserting `inkDusty` or `inkGilt` against this ground would claim a pairing the screen
+        // never draws — and `inkDusty` does not clear body text on the gradient's lighter, orange
+        // end regardless.
+        pairs.append(ContrastPair(label: "inkCream on completionGroundTop",
+                                  foreground: inkCream, background: completionGroundTop,
+                                  requirement: .largeText))
+        pairs.append(ContrastPair(label: "inkCream on completionGroundBottom",
+                                  foreground: inkCream, background: completionGroundBottom,
+                                  requirement: .largeText))
 
         // Type on the four papers.
         for (name, paper) in [("paperCream", paperCream), ("paperWarm", paperWarm),
