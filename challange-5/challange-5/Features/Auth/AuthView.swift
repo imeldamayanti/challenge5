@@ -20,10 +20,15 @@ struct AuthView: View {
     @State private var model: AuthViewModel
     private let onFinish: () -> Void
 
-    init(store: any AppPreferencesStore, language: ContentLanguage, onFinish: @escaping () -> Void) {
+    init(
+        store: any AppPreferencesStore,
+        credentials: any CredentialLinking = NoCredentialLinking(),
+        language: ContentLanguage,
+        onFinish: @escaping () -> Void
+    ) {
         self.language = language
         self.onFinish = onFinish
-        _model = State(initialValue: AuthViewModel(store: store))
+        _model = State(initialValue: AuthViewModel(store: store, credentials: credentials))
     }
 
     var body: some View {
@@ -127,30 +132,35 @@ struct AuthField: View {
     }
 }
 
-/// The two provider rows, the guest row on the sign-up frame, and the line that says why the first
-/// two cannot be used.
+/// The two provider rows, the guest row on the sign-up frame, and a line under them.
 ///
-/// `791:5170`, `791:5173` and `791:5180`. Apple and Google are `disabled` — see `AuthViewModel` for
-/// why a control labelled "Continue with Apple" that does not call `AuthenticationServices` is not
-/// something this app is willing to draw as working. "Continue as a guest" is the one row here that
-/// does what it says.
+/// `791:5170`, `791:5173` and `791:5180`. **Apple is wired to `c2` phase 6's `CredentialLinking`,
+/// Google stays `disabled`** — `config.toml` has no `[auth.external.google]` block and no OAuth
+/// client exists, so adding it would be two providers blocked instead of one.
+/// `authProvidersUnavailable` says that plainly rather than leaving a disabled control with no
+/// stated reason, which is the accessibility failure disabling it was meant to avoid in the first
+/// place.
 struct AuthProviderBlock: View {
     @Environment(\.hisploraPalette) private var palette
 
     let showsGuestRow: Bool
     let language: ContentLanguage
+    @Bindable var model: AuthViewModel
     let onGuest: () -> Void
+
+    /// Owns one `ASAuthorizationController` per screen, not per tap — a fresh coordinator per tap
+    /// would leak the delegate of whichever attempt the walker abandoned mid-sheet.
+    @State private var appleSignIn = AppleSignInCoordinator()
 
     var body: some View {
         VStack(spacing: AuthMetrics.controlGap) {
             Button {
-                // Unreachable: the control is disabled. Left empty rather than given a stand-in
-                // action, so wiring Sign in with Apple later is a change in one place.
+                Task { await startAppleSignIn() }
             } label: {
                 providerLabel(.apple, .authContinueWithApple)
             }
             .buttonStyle(.hisploraProviderDark)
-            .disabled(true)
+            .disabled(model.isSigningInWithApple)
 
             Button {} label: {
                 providerLabel(.google, .authContinueWithGoogle)
@@ -165,12 +175,32 @@ struct AuthProviderBlock: View {
                 .buttonStyle(.hisploraProviderGuest)
             }
 
-            Text(UIStrings.string(.authProvidersUnavailable, language))
+            Text(UIStrings.string(
+                model.providerMessage ?? .authProvidersUnavailable, language))
                 .kultaraFont(.caption)
-                .foregroundStyle(palette.inkMuted.color)
+                // The seal red for a real outcome (something happened, worth noticing); the quiet
+                // ink for the standing caption (nothing has happened yet).
+                .foregroundStyle(
+                    (model.providerMessage == nil ? palette.inkMuted : palette.brownSeal).color)
                 .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, KultaraMetrics.xs)
+                .accessibilityAddTraits(model.providerMessage == nil ? [] : .isStaticText)
+        }
+    }
+
+    /// A cancelled sheet is not reported — the walker chose to stop, the same as tapping away from
+    /// the screen — so only `AppleSignInCoordinator.Failure.invalidResponse` and a genuine
+    /// `CredentialLinking` failure reach `providerMessage`.
+    private func startAppleSignIn() async {
+        do {
+            let result = try await appleSignIn.start()
+            await model.signInWithApple(
+                idToken: result.idToken, nonce: result.nonce, fullName: result.fullName)
+        } catch AppleSignInCoordinator.Failure.cancelled {
+            return
+        } catch {
+            model.reportAppleSignInFailure()
         }
     }
 

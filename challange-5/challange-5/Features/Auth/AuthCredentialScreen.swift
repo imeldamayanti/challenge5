@@ -118,6 +118,7 @@ struct AuthCredentialScreen: View {
             AuthProviderBlock(
                 showsGuestRow: configuration.offersGuestRow,
                 language: language,
+                model: model,
                 onGuest: { model.continueAsGuest() })
             AuthSwitchLine(
                 question: configuration.switchQuestion,

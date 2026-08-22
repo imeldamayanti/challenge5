@@ -189,6 +189,109 @@ struct AuthTests {
         #expect(AccountEntryGate.shouldPresentEntry(store: store))
         #expect(store.explorerDisplayName == nil)
     }
+
+    // MARK: Apple, wired to `c2` phase 6's `CredentialLinking`
+
+    final class SpyCredentialLinking: CredentialLinking, @unchecked Sendable {
+        private let lock = NSLock()
+        private var calls: [(idToken: String, nonce: String, fullName: String?)] = []
+        let answer: CredentialOutcome
+
+        init(answer: CredentialOutcome) { self.answer = answer }
+
+        var callCount: Int { lock.withLock { calls.count } }
+        var lastCall: (idToken: String, nonce: String, fullName: String?)? {
+            lock.withLock { calls.last }
+        }
+
+        func signInWithApple(
+            idToken: String, nonce: String, fullName: String?
+        ) async -> CredentialOutcome {
+            lock.withLock { calls.append((idToken, nonce, fullName)) }
+            return answer
+        }
+
+        func signOut() async {}
+    }
+
+    /// A merge finishes the entry flow exactly like any other successful form — the walker's own
+    /// name comes back from Apple only on first authorisation, and it is kept the same way a typed
+    /// name is.
+    @Test func aSuccessfulAppleSignInFinishesTheFlowAndKeepsTheName() async {
+        let store = InMemoryAppPreferencesStore()
+        let credentials = SpyCredentialLinking(answer: .signedInAndMerged)
+        let model = AuthViewModel(store: store, credentials: credentials)
+
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: "Ayu")
+
+        #expect(credentials.callCount == 1)
+        #expect(credentials.lastCall?.idToken == "a-token")
+        #expect(credentials.lastCall?.nonce == "a-nonce")
+        #expect(model.isFinished)
+        #expect(store.explorerDisplayName == "Ayu")
+        #expect(model.providerMessage == nil)
+        #expect(!model.isSigningInWithApple)
+    }
+
+    /// Signed in, but the merge did not run. The walker still finishes the flow — the walks are on
+    /// the anonymous account, not gone — and is told, because this is the one outcome worth hearing
+    /// about (`CredentialOutcome.signedInWithoutMerge`'s own doc comment).
+    @Test func signingInWithoutAMergeStillFinishesTheFlow() async {
+        let store = InMemoryAppPreferencesStore()
+        let credentials = SpyCredentialLinking(answer: .signedInWithoutMerge)
+        let model = AuthViewModel(store: store, credentials: credentials)
+
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+
+        #expect(model.isFinished)
+        #expect(store.accountEntryCompletedAt != nil)
+    }
+
+    /// Apple returns no name on a repeat sign-in, and that must not erase a name already stored —
+    /// the same rule `signingInInventsNoNameAndLeavesAnExistingOneAlone` holds for email sign-in.
+    @Test func aRepeatAppleSignInLeavesAnExistingNameAlone() async {
+        let store = InMemoryAppPreferencesStore(explorerDisplayName: "Ayu")
+        let model = AuthViewModel(
+            store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
+
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+
+        #expect(model.isFinished)
+        #expect(store.explorerDisplayName == "Ayu")
+    }
+
+    /// A failed sign-in does not finish the flow, and says so under the provider block rather than
+    /// leaving the walker looking at buttons that did nothing.
+    @Test func aFailedAppleSignInStaysOnScreenAndSaysSo() async {
+        let store = InMemoryAppPreferencesStore()
+        let model = AuthViewModel(
+            store: store, credentials: SpyCredentialLinking(answer: .failed))
+
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+
+        #expect(!model.isFinished)
+        #expect(model.providerMessage == .credentialFailedMessage)
+        #expect(store.accountEntryCompletedAt == nil)
+    }
+
+    /// `AppleSignInCoordinator` calls this directly when Apple's own sheet fails before there is
+    /// anything to hand `CredentialLinking` — a different path to the same message.
+    @Test func aFailureBeforeCredentialLinkingIsCalledReportsTheSameMessage() {
+        let model = AuthViewModel(store: InMemoryAppPreferencesStore())
+        model.reportAppleSignInFailure()
+        #expect(model.providerMessage == .credentialFailedMessage)
+        #expect(!model.isFinished)
+    }
+
+    /// A cancelled Apple sheet is not a failure — the walker chose to stop, the same as tapping
+    /// away from the screen — and `AuthProviderBlock.startAppleSignIn` returns without calling
+    /// either of the two paths above. Nothing to assert on the model beyond it being untouched: this
+    /// documents the contract those two report-failure tests deliberately do not cover.
+    @Test func aCancelledSignInReportsNothing() {
+        let model = AuthViewModel(store: InMemoryAppPreferencesStore())
+        #expect(model.providerMessage == nil)
+        #expect(!model.isFinished)
+    }
 }
 
 private extension AuthViewModel {

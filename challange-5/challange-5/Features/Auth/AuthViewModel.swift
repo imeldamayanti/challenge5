@@ -18,11 +18,12 @@ import UIStringsKit
 /// every core flow works in airplane mode, and this screen must not become the first one that does
 /// not.
 ///
-/// **The two provider rows are drawn and disabled**, for the same reason. "Continue with Apple" on a
-/// control that does not invoke `AuthenticationServices` is a false claim, and a false Sign in with
-/// Apple is one App Review declines besides. They stay on screen because they are the frames', and
-/// `authProvidersUnavailable` says why they cannot be used — a disabled control with no stated
-/// reason is the accessibility failure disabling it was meant to avoid.
+/// **Apple is wired; Google is still drawn and disabled.** `c2` phase 6 enabled
+/// `[auth.external.apple]` on the deployed project and shipped `CredentialLinking` — this reads
+/// that rather than duplicating it. Google stays disabled because `config.toml` has no
+/// `[auth.external.google]` block and no OAuth client exists; adding it would be two providers
+/// blocked instead of one. `authProvidersUnavailable` says so, and a disabled control with no
+/// stated reason is the accessibility failure disabling it was meant to avoid.
 @MainActor
 @Observable
 final class AuthViewModel {
@@ -74,10 +75,19 @@ final class AuthViewModel {
     /// dismissing itself, which is how every other screen in this app hands control back.
     private(set) var isFinished = false
 
-    private let store: any AppPreferencesStore
+    /// What Sign in with Apple last said, shown under the provider block. Separate from `problem`,
+    /// which is scoped to one of the three form fields — this is not about a field.
+    private(set) var providerMessage: UIStringKey?
+    /// True for the span of the native Apple sheet, so a second tap cannot start a second flow
+    /// while the first is still on screen.
+    private(set) var isSigningInWithApple = false
 
-    init(store: any AppPreferencesStore) {
+    private let store: any AppPreferencesStore
+    private let credentials: any CredentialLinking
+
+    init(store: any AppPreferencesStore, credentials: any CredentialLinking = NoCredentialLinking()) {
         self.store = store
+        self.credentials = credentials
     }
 
     // MARK: Navigation
@@ -140,6 +150,32 @@ final class AuthViewModel {
             return
         }
         finish(displayName: guestDisplayName)
+    }
+
+    /// The Apple provider row's action. `idToken`/`nonce`/`fullName` come from
+    /// `AppleSignInCoordinator`, which owns talking to `ASAuthorizationController` — this only
+    /// decides what the outcome means for the entry flow.
+    func signInWithApple(idToken: String, nonce: String, fullName: String?) async {
+        providerMessage = nil
+        isSigningInWithApple = true
+        let outcome = await credentials.signInWithApple(
+            idToken: idToken, nonce: nonce, fullName: fullName)
+        isSigningInWithApple = false
+        switch outcome {
+        case .signedInAndMerged, .signedInWithoutMerge:
+            // Apple returns a name only on the very first authorisation a walker ever grants this
+            // app; every later sign-in gets nil, which `finish` already reads as "leave whatever
+            // is stored alone" rather than as a name to erase.
+            finish(displayName: fullName)
+        case .failed:
+            providerMessage = .credentialFailedMessage
+        }
+    }
+
+    /// Apple's own sheet failed before there was anything to hand `credentials`, so there is no
+    /// `CredentialOutcome` to switch on — `AppleSignInCoordinator` calls this directly instead.
+    func reportAppleSignInFailure() {
+        providerMessage = .credentialFailedMessage
     }
 
     private func finish(displayName: String?) {

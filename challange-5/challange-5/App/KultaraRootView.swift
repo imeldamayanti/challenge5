@@ -121,20 +121,24 @@ struct KultaraRootView: View {
                     language: language,
                     onFinish: { showsOnboarding = false })
             } else if showsAuth {
-                // `c2` phase 6. The flow chart's login node, built rather than drawn — but **not
-                // a gate**: every flow works without it, and "Not now" is the same size as the
-                // button beside it. `AuthWireframeView` is gone; nothing else referenced it.
-                CredentialView(
+                // The flow chart's login node, built rather than drawn — but **not a gate**: every
+                // flow works without it. Apple is wired to `c2` phase 6's `CredentialLinking`;
+                // email/password and guest stay local-profile-only, per `AuthViewModel`'s own
+                // account of why. `AuthWireframeView` and `CredentialView` are both gone; this is
+                // the one screen left standing where two were built in parallel.
+                AuthView(
+                    store: environment.preferences,
+                    credentials: environment.credentials,
                     language: language,
-                    onSkip: { showsAuth = false },
-                    onSignIn: { idToken, nonce, name in
-                        let outcome = await environment.credentials.signInWithApple(
-                            idToken: idToken, nonce: nonce, fullName: name)
-                        // A merge moves the rows on the server; this device's copy is unchanged,
-                        // so nothing needs re-reading. A restore on the *next* launch is what
-                        // brings them to another phone (`c2` phase 7).
-                        if outcome != .failed { journalRevision += 1 }
-                        return outcome
+                    onFinish: {
+                        showsAuth = false
+                        // Covers every path that reaches here, not only a merge: harmless to bump
+                        // for a local guest profile too, and simpler than threading the outcome
+                        // back out through `onFinish`'s empty signature. A merge moves the rows on
+                        // the server; this device's copy is unchanged, so nothing needs re-reading
+                        // here — a restore on the *next* launch is what brings them to another
+                        // phone (`c2` phase 7).
+                        journalRevision += 1
                     })
             } else {
                 browser

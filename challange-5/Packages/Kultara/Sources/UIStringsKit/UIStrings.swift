@@ -81,8 +81,8 @@ public enum UIStrings {
         .authSignUpLink: LocalizedText(id: "Daftar", en: "Sign up"),
         .authBack: LocalizedText(id: "Kembali", en: "Back"),
         .authProvidersUnavailable: LocalizedText(
-            id: "Masuk dengan Apple dan Google belum tersambung di versi ini.",
-            en: "Apple and Google sign-in are not connected in this build."),
+            id: "Masuk dengan Google belum tersambung di versi ini.",
+            en: "Google sign-in is not connected in this build."),
         .authInvalidEmail: LocalizedText(
             id: "Masukkan alamat email yang benar.",
             en: "Enter a valid email address."),
