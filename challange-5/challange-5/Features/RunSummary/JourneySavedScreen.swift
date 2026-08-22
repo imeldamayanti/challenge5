@@ -31,7 +31,7 @@ struct JourneySavedScreen: View {
                 TripPageBar(
                     title: "",
                     backLabel: UIStrings.string(.tripPageBack, language),
-                    shareText: nil,
+                    shareState: .hidden,
                     onBack: { dismiss() })
 
                 ScrollView {

@@ -41,7 +41,7 @@ struct WriteJournalScreen: View {
                 TripPageBar(
                     title: UIStrings.string(.writeJournalTitle, language),
                     backLabel: UIStrings.string(.tripPageBack, language),
-                    shareText: nil,
+                    shareState: .hidden,
                     onBack: { dismiss() })
 
                 ScrollView {

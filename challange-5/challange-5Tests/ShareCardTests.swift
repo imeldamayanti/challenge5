@@ -44,6 +44,19 @@ struct ShareCardTests {
         #expect(url == nil)
     }
 
+    /// `TripSummaryScreen`'s "Stop sharing" control depends on this: with no session there is no
+    /// token to revoke with, and a caller that got `true` back for a call that touched nothing
+    /// would think a link stopped working when it did not.
+    @Test func withNoSessionRevokingAnswersFalseRatherThanClaimingSuccess() async {
+        let minter = SupabaseShareCardMinting(
+            configuration: BackendConfiguration(
+                baseURL: URL(string: "https://example.invalid")!,
+                publishableKey: "sb_publishable_test"),
+            session: UnconfiguredSupabaseSession(),
+            deviceID: { UUID() })
+        #expect(await minter.revoke(runID: UUID()) == false)
+    }
+
     /// A slug is the only thing between a stranger and a walker's card, so it is length rather
     /// than prettiness: 32 characters over a 64-symbol alphabet is 192 bits.
     @Test func slugsAreLongUnpredictableAndURLSafe() {

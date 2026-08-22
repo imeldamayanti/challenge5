@@ -15,12 +15,28 @@ import SwiftUI
 /// Back on the left, the page's own name in the middle, share on the right — `791:6488`/`791:6489`
 /// /`791:6490` and `791:6540`/`791:6541`/`791:6542`. SF Pro 19, tracked −0.38, near-black.
 ///
+/// What the share control shows, decided by whoever owns the mint — `TripPageBar` itself is dumb
+/// and only renders whichever case it is handed.
+///
+/// **Minting is lazy, on purpose.** Nothing uploads a walker's recap to a public URL until they
+/// tap share — an eager mint on screen-open would publish a shareable link to a walk the walker
+/// never asked to share. `readyToPrepare` is the tap that starts it; `preparing` covers the brief
+/// upload; `link` is what a real `ShareLink` hands the system sheet once it lands. `textOnly` is
+/// every case where a link either cannot or did not happen — no backend, a failed mint — and is
+/// exactly the plain-text behaviour this control always had before the card existed.
+enum TripShareState {
+    /// No share control at all — the screens that use this bar without anything shareable on them.
+    case hidden
+    case readyToPrepare(action: () -> Void)
+    case preparing
+    case link(URL)
+    case textOnly(String)
+}
+
 /// **The share control is a real `ShareLink`.** It hands the system sheet the recap card's public
-/// link where one exists (`c2` phase 5, `FR-DONE-06`), and a plain-text recap of the page where one
-/// does not — no backend configured, minting failed, or the card is simply still rendering. Either
-/// way the control does a thing it actually does and works offline for the text case (`AD-3`).
-/// `shareURL` is checked first; when the card is later built to replace text everywhere, nothing
-/// here needs to change, because that is already the fallback order.
+/// link where one has been minted (`c2` phase 5, `FR-DONE-06`), and a plain-text recap of the page
+/// everywhere else. Either way the control does a thing it actually does, and the text case works
+/// offline (`AD-3`).
 ///
 /// Both controls are a fixed 44 points (`NFR-A11Y-06`) and carry spoken labels, because a shape is
 /// not a name (`NFR-A11Y-05`).
@@ -29,12 +45,9 @@ struct TripPageBar: View {
 
     let title: String
     let backLabel: String
-    /// The minted recap card's public link, when one exists. Takes priority over `shareText`.
-    var shareURL: URL?
-    /// What the system share sheet is handed with no link minted. `nil` hides the control rather
-    /// than offering an empty share.
-    var shareText: String?
+    var shareState: TripShareState = .hidden
     var shareLabel: String = ""
+    var preparingLabel: String = ""
     let onBack: () -> Void
 
     var body: some View {
@@ -57,17 +70,33 @@ struct TripPageBar: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(backLabel)
                 Spacer(minLength: 0)
-                if let shareURL {
-                    ShareLink(item: shareURL) { shareGlyph }
-                        .accessibilityLabel(shareLabel)
-                } else if let shareText {
-                    ShareLink(item: shareText) { shareGlyph }
-                        .accessibilityLabel(shareLabel)
-                }
+                shareControl
             }
         }
         .frame(height: KultaraMetrics.minimumTapTarget)
         .padding(.horizontal, KultaraMetrics.lg)
+    }
+
+    @ViewBuilder private var shareControl: some View {
+        switch shareState {
+        case .hidden:
+            EmptyView()
+        case .textOnly(let text):
+            ShareLink(item: text) { shareGlyph }
+                .accessibilityLabel(shareLabel)
+        case .link(let url):
+            ShareLink(item: url) { shareGlyph }
+                .accessibilityLabel(shareLabel)
+        case .preparing:
+            ProgressView()
+                .frame(width: KultaraMetrics.minimumTapTarget,
+                       height: KultaraMetrics.minimumTapTarget)
+                .accessibilityLabel(preparingLabel)
+        case .readyToPrepare(let action):
+            Button(action: action) { shareGlyph }
+                .buttonStyle(.plain)
+                .accessibilityLabel(shareLabel)
+        }
     }
 
     private var shareGlyph: some View {

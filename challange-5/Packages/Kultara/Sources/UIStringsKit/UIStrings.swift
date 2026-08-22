@@ -601,6 +601,21 @@ public enum UIStrings {
         .credentialNotMergedMessage: LocalizedText(
             id: "Sudah masuk, tapi perjalanan lamamu belum ikut terbawa. Perjalanan itu tidak hilang.",
             en: "Signed in, but your earlier walks did not come across. They are not lost."),
+        .tripSharePreparing: LocalizedText(
+            id: "Menyiapkan tautan…", en: "Preparing your link…"),
+        .tripShareReflectionsToggle: LocalizedText(
+            id: "Sertakan jawabanmu", en: "Include my written answers"),
+        .tripShareReflectionsHint: LocalizedText(
+            id: "Jawabanmu hanya ikut jika kamu menyalakan ini. Bisa dimatikan kapan saja.",
+            en: "Your answers only go on the card if you turn this on. You can change it any time."),
+        .tripShareStopSharing: LocalizedText(
+            id: "Hentikan berbagi", en: "Stop sharing"),
+        .tripShareStopSharingConfirm: LocalizedText(
+            id: "Tautan ini akan berhenti bekerja untuk siapa pun yang menyimpannya.",
+            en: "This link will stop working for anyone who saved it."),
+        .tripShareStoppedConfirmation: LocalizedText(
+            id: "Berbagi dihentikan.", en: "Sharing turned off."),
+        .tripShareCancel: LocalizedText(id: "Batal", en: "Cancel"),
         .restoreFailedTitle: LocalizedText(
             id: "Belum bisa mengambil perjalananmu",
             en: "Could not fetch your walks"),

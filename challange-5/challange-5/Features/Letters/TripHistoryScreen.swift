@@ -47,7 +47,8 @@ struct TripHistoryScreen: View {
                 TripPageBar(
                     title: UIStrings.string(.journalPaperHistoryEyebrow, language),
                     backLabel: UIStrings.string(.tripPageBack, language),
-                    shareText: history.map(spoken) ?? "\(model.title)\n\n\(model.progressText)",
+                    shareState: .textOnly(
+                        history.map(spoken) ?? "\(model.title)\n\n\(model.progressText)"),
                     shareLabel: UIStrings.string(.tripShare, language),
                     onBack: onClose)
 

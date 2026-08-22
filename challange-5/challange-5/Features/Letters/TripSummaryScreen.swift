@@ -37,12 +37,49 @@ struct TripSummaryScreen: View {
     let shareCards: any ShareCardMinting
     let onClose: () -> Void
 
-    /// The minted link, once minting finishes. `nil` is the ordinary state — no backend, minting
-    /// still running, or it failed — and `TripPageBar` already falls back to `shareText` for all
-    /// three, so there is nothing here to distinguish between them.
+    /// The minted link, once minting finishes. `nil` means no link exists **right now** — nothing
+    /// has been shared yet, the walker stopped sharing, or a mint failed — and is what puts the
+    /// share control back to `.readyToPrepare`.
     @State private var mintedShareURL: URL?
+    /// True for the span of a mint. `TripPageBar` shows a spinner rather than a second tap target,
+    /// so a walker cannot start a second upload while the first is still in flight.
+    @State private var isPreparingShare = false
+    /// A mint that failed once is not retried silently — the control falls back to plain text for
+    /// the rest of this presentation rather than offering a spinner that always ends the same way.
+    @State private var shareMintFailed = false
+    /// The walker's own choice, off by default. `ShareCardArtwork`'s own doc comment states the
+    /// rule this exists to hold: consent to share once is not consent to share always, and the
+    /// absence of a control must not read as silent consent — so the default has to be "no", and
+    /// the choice has to be visible before the walker ever taps share, not discovered afterwards.
+    @State private var includeReflections = false
+    @State private var isConfirmingStopSharing = false
+    @State private var stopSharingConfirmationText: String?
 
     private var language: ContentLanguage { model.language }
+
+    /// Every written answer this walk actually has — never a photo task, never a skip, never an
+    /// empty string a walker left blank. Empty means there is nothing to offer including, and the
+    /// toggle does not appear rather than appearing over nothing.
+    private var candidateReflections: [String] {
+        model.run.orderedCheckpointResults
+            .flatMap(\.taskResults)
+            .compactMap { task -> String? in
+                guard task.type != .photo, !task.skipped,
+                      let text = task.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+                      !text.isEmpty
+                else { return nil }
+                return text
+            }
+    }
+
+    private var shareState: TripShareState {
+        if let mintedShareURL { return .link(mintedShareURL) }
+        if isPreparingShare { return .preparing }
+        if shareCards.isAvailable, !shareMintFailed {
+            return .readyToPrepare(action: { Task { await prepareShare() } })
+        }
+        return .textOnly(shareText)
+    }
 
     /// The summary paper's own title — "Your journey through Badung" — already localized and
     /// interpolated with the walk's region. Read from the paper rather than rebuilt so the page is
@@ -58,10 +95,12 @@ struct TripSummaryScreen: View {
                 TripPageBar(
                     title: UIStrings.string(.journalPaperSummaryEyebrow, language),
                     backLabel: UIStrings.string(.tripPageBack, language),
-                    shareURL: mintedShareURL,
-                    shareText: shareText,
+                    shareState: shareState,
                     shareLabel: UIStrings.string(.tripShare, language),
+                    preparingLabel: UIStrings.string(.tripSharePreparing, language),
                     onBack: onClose)
+
+                shareOptionsBanner
 
                 ScrollView {
                     VStack(spacing: 0) {
@@ -79,33 +118,100 @@ struct TripSummaryScreen: View {
                 .scrollIndicators(.hidden)
             }
         }
-        // One attempt per presentation, not per share tap: a walker who taps share twice while it
-        // is still rendering gets the plain-text fallback both times rather than two uploads
-        // racing to write the same row. `.task` cancels itself if the screen closes mid-render, so
-        // a card is never finished uploading after the walker has already left.
-        .task(id: model.run.id) { await mintShareCardIfAvailable() }
+        .kultaraDialog(
+            isPresented: $isConfirmingStopSharing,
+            title: UIStrings.string(.tripShareStopSharing, language),
+            message: UIStrings.string(.tripShareStopSharingConfirm, language),
+            actions: [
+                KultaraDialogAction(
+                    title: UIStrings.string(.tripShareStopSharing, language),
+                    kind: .destructive) { Task { await stopSharing() } },
+                KultaraDialogAction(
+                    title: UIStrings.string(.tripShareCancel, language),
+                    kind: .cancel) { isConfirmingStopSharing = false },
+            ])
     }
 
-    /// Renders the card off-screen, uploads it, and stores the link `TripPageBar` prefers over
-    /// plain text. Every value on the card is the Run's own snapshot (`AD-4`) — see
-    /// `ShareCardArtwork`'s own account of what is deliberately left off it.
-    private func mintShareCardIfAvailable() async {
-        guard shareCards.isAvailable, mintedShareURL == nil else { return }
+    /// No frame draws this — the recap card did not exist when `791:6414` was drawn — so it is
+    /// built to disappear rather than to fill space: `EmptyView` when there is nothing to offer or
+    /// nothing to stop, which is most of the time this screen is open.
+    @ViewBuilder private var shareOptionsBanner: some View {
+        VStack(spacing: 8) {
+            if !candidateReflections.isEmpty, mintedShareURL == nil {
+                Toggle(isOn: $includeReflections) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(UIStrings.string(.tripShareReflectionsToggle, language))
+                            .kultaraFont(.body)
+                        Text(UIStrings.string(.tripShareReflectionsHint, language))
+                            .kultaraFont(.metadata)
+                            .foregroundStyle(palette.inkQuiet.color)
+                    }
+                }
+                .tint(palette.brownMid.color)
+            }
+            if mintedShareURL != nil {
+                Button(UIStrings.string(.tripShareStopSharing, language)) {
+                    isConfirmingStopSharing = true
+                }
+                .buttonStyle(.hisploraTextLink)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+            if let stopSharingConfirmationText {
+                Text(stopSharingConfirmationText)
+                    .kultaraFont(.metadata)
+                    .foregroundStyle(palette.inkQuiet.color)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+        .padding(.horizontal, KultaraMetrics.lg)
+        .padding(.top, candidateReflections.isEmpty && mintedShareURL == nil
+            && stopSharingConfirmationText == nil ? 0 : KultaraMetrics.sm)
+    }
+
+    /// Renders the card off-screen, uploads it, and stores the link the bar switches to. Every
+    /// value on it is the Run's own snapshot (`AD-4`) except `reflections`, which is the walker's
+    /// own choice from `shareOptionsBanner` — see `ShareCardArtwork`'s own account of the rest of
+    /// what is deliberately left off.
+    ///
+    /// **Called only from a tap**, never automatically: minting is an upload to a public URL, and
+    /// nothing here decides on the walker's behalf that a walk is worth publishing.
+    private func prepareShare() async {
+        guard !isPreparingShare, mintedShareURL == nil else { return }
+        stopSharingConfirmationText = nil
+        isPreparingShare = true
         let artwork = ShareCardArtwork(
             questTitle: model.title,
             placeNames: model.run.orderedCheckpointResults.map(\.snapshotPlaceName),
             stampCount: model.run.awards.filter { $0.type == .stamp }.count,
             dayText: Self.dayText(for: model.run.completedAt ?? model.run.startedAt, language: language),
-            // Nothing has opted in yet — there is no per-card opt-in control built, so the
-            // conservative default is the one `ShareCardArtwork`'s own doc comment states:
-            // consent to share once is not consent to share always, and the absence of a control
-            // must not read as silent consent.
-            reflections: [],
+            reflections: includeReflections ? candidateReflections : [],
             language: language,
             palette: palette)
-        guard let png = artwork.pngData() else { return }
-        mintedShareURL = await shareCards.mint(ShareCardDraft(
+        guard let png = artwork.pngData() else {
+            isPreparingShare = false
+            shareMintFailed = true
+            return
+        }
+        let url = await shareCards.mint(ShareCardDraft(
             runID: model.run.id, png: png, template: "recap-v1"))
+        isPreparingShare = false
+        if let url {
+            mintedShareURL = url
+        } else {
+            // Falls back to plain text for the rest of this presentation rather than a dead
+            // spinner the walker would have to give up on themselves.
+            shareMintFailed = true
+        }
+    }
+
+    /// `revoke` is a real network call and can fail; a failure leaves `mintedShareURL` exactly as
+    /// it was, so the bar still shows a live link rather than one that quietly stopped being real.
+    private func stopSharing() async {
+        isConfirmingStopSharing = false
+        guard await shareCards.revoke(runID: model.run.id) else { return }
+        mintedShareURL = nil
+        shareMintFailed = false
+        stopSharingConfirmationText = UIStrings.string(.tripShareStoppedConfirmation, language)
     }
 
     private static func dayText(for date: Date, language: ContentLanguage) -> String {

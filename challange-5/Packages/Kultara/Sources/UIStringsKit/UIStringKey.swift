@@ -429,6 +429,16 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case credentialMergedMessage
     case credentialNotMergedMessage
 
+    /// `c2` phase 5's second pass: minting is lazy (nothing uploads until the walker taps share),
+    /// an opt-in for including written answers, and a way to turn a link back off.
+    case tripSharePreparing
+    case tripShareReflectionsToggle
+    case tripShareReflectionsHint
+    case tripShareStopSharing
+    case tripShareStopSharingConfirm
+    case tripShareStoppedConfirmation
+    case tripShareCancel
+
     case restoreFailedTitle
     case restoreFailedBody
     case restoreRetryAction
