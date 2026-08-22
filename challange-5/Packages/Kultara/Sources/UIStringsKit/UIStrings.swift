@@ -121,6 +121,9 @@ public enum UIStrings {
             id: "Peta sebenarnya butuh koneksi. Yang tampil peta bergambar.",
             en: "The real map needs a connection. Showing the illustrated map."),
         .questMapUserLocation: LocalizedText(id: "Lokasi kamu", en: "Your location"),
+        .questMapBackToList: LocalizedText(id: "Kembali ke daftar", en: "Back to the list"),
+        .questPopoverDurationFormat: LocalizedText(id: "%d menit", en: "%d mins"),
+        .questPopoverStopsFormat: LocalizedText(id: "%d titik", en: "%d stops"),
         .mapUnavailable: LocalizedText(
             id: "Peta wilayah belum ikut di versi konten ini.",
             en: "This content version ships no region map."),
@@ -439,6 +442,7 @@ public enum UIStrings {
 
         // MARK: Home
         .homeActiveRunHeading: LocalizedText(id: "Sedang berjalan", en: "In progress"),
+        .questCardOngoing: LocalizedText(id: "Sedang berjalan", en: "On going"),
         .homeActiveRunAction: LocalizedText(id: "Lanjutkan", en: "Resume"),
         .homeCompletedHeading: LocalizedText(id: "Sudah selesai", en: "Finished"),
         .homePlaceholderCardsNotice: LocalizedText(

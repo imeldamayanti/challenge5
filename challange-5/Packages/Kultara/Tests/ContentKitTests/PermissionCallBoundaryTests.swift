@@ -165,6 +165,10 @@ struct PermissionCallBoundaryTests {
         "QuestBaseMapView.swift",
         "IllustratedMapOverlay.swift",
         "QuestMapAnnotation.swift",
+        // `1026:3514`'s popover. It lives in UIKit beside the map — the same hit-testing rule
+        // `QuestMapControlsHost` exists for — and it anchors to its marker by converting a
+        // coordinate through `MKMapView.convert`, which only a MapKit import can spell.
+        "QuestMapPopover.swift",
     ]
 
     static let liveMapTileCalls = ["import MapKit", "MKMapView", "Map("]

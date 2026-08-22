@@ -16,6 +16,10 @@ import UIStringsKit
 struct QuestCard: View {
     let row: QuestListRow
     let language: ContentLanguage
+    /// A walk over this quest is still open (`FR-RUN-03`'s state, drawn where the walker browses):
+    /// `850:2289`'s hanging tag on the top-right corner. The words ON GOING are baked into the
+    /// export, so VoiceOver reads `questCardOngoing` instead.
+    var isOngoing: Bool = false
 
     var body: some View {
         PhotoQuestCard(title: row.title, hero: row.heroImageURL.flatMap(BundledImage.load)) {
@@ -29,6 +33,18 @@ struct QuestCard: View {
                 }
             }
         }
+        // Applied outside the card's clip shape: the frame hangs the tag eight points *above*
+        // the photograph (`850:2289` sits at y −8), so clipping it would cut the string off.
+        .overlay(alignment: .topTrailing) {
+            if isOngoing {
+                Image("ongoing-tag")
+                    .resizable()
+                    .frame(width: 66, height: 84)
+                    .offset(y: -8)
+                    .accessibilityHidden(true)
+            }
+        }
+        .accessibilityValue(isOngoing ? UIStrings.string(.questCardOngoing, language) : "")
     }
 
     private var region: some View {

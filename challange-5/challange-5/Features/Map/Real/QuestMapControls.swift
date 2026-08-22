@@ -38,18 +38,20 @@ final class QuestMapControlsHost {
         }
     }
 
-    /// `276:2556`/`276:2557` sit at x 334 in a 402-point frame — 20 points off the trailing edge,
-    /// 48 points square — with the way back opposite them at the standard margin.
-    private static let wandSize: CGFloat = 48
-    private static let wandTrailingInset: CGFloat = 20
+    /// Both buttons sit at x 334 in a 402-point frame — 20 points off the trailing edge, 48 points
+    /// square — with `298:988`'s stack above the wand, and no way back opposite them any more: the
+    /// stack *is* the way back now (`298:988` replaced the chevron).
+    private static let buttonSize: CGFloat = 48
+    private static let trailingInset: CGFloat = 20
 
     let container: PassthroughView
     private let wand = UIButton(type: .system)
-    private let close = UIButton(type: .system)
-    private let glass: UIVisualEffectView
+    private let stack = UIButton(type: .system)
+    private let wandGlass: UIVisualEffectView
+    private let stackGlass: UIVisualEffectView
 
     private var onToggle: () -> Void = {}
-    private var onClose: (() -> Void)?
+    private var onBack: (() -> Void)?
 
     init(controls: QuestMapControls) {
         container = PassthroughView()
@@ -59,13 +61,17 @@ final class QuestMapControlsHost {
         // button is drawn in the closest thing every supported version has and upgraded where the
         // real material exists — rather than shipping a hand-painted approximation of one.
         if #available(iOS 26.0, *) {
-            glass = UIVisualEffectView(effect: UIGlassEffect())
+            wandGlass = UIVisualEffectView(effect: UIGlassEffect())
+            stackGlass = UIVisualEffectView(effect: UIGlassEffect())
         } else {
-            glass = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
+            wandGlass = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
+            stackGlass = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
         }
-        glass.isUserInteractionEnabled = false
-        glass.clipsToBounds = true
-        glass.layer.cornerRadius = Self.wandSize / 2
+        for glass in [wandGlass, stackGlass] {
+            glass.isUserInteractionEnabled = false
+            glass.clipsToBounds = true
+            glass.layer.cornerRadius = Self.buttonSize / 2
+        }
 
         wand.setImage(
             UIImage(systemName: "wand.and.sparkles",
@@ -73,60 +79,65 @@ final class QuestMapControlsHost {
             for: .normal)
         wand.addTarget(self, action: #selector(wandTapped), for: .touchUpInside)
 
-        close.setImage(
-            UIImage(systemName: "chevron.left",
-                    withConfiguration: UIImage.SymbolConfiguration(pointSize: 17, weight: .semibold)),
+        stack.setImage(
+            UIImage(systemName: "rectangle.stack.fill",
+                    withConfiguration: UIImage.SymbolConfiguration(pointSize: 19, weight: .semibold)),
             for: .normal)
-        close.layer.cornerRadius = KultaraMetrics.minimumTapTarget / 2
-        close.addTarget(self, action: #selector(closeTapped), for: .touchUpInside)
+        stack.addTarget(self, action: #selector(stackTapped), for: .touchUpInside)
 
-        for view in [glass, wand, close] as [UIView] {
+        for view in [wandGlass, stackGlass, wand, stack] as [UIView] {
             view.translatesAutoresizingMaskIntoConstraints = false
             container.addSubview(view)
         }
 
         let guide = container.safeAreaLayoutGuide
         NSLayoutConstraint.activate([
-            close.topAnchor.constraint(equalTo: guide.topAnchor, constant: KultaraMetrics.xxl),
-            close.leadingAnchor.constraint(equalTo: guide.leadingAnchor,
-                                           constant: KultaraMetrics.lg),
-            close.widthAnchor.constraint(equalToConstant: KultaraMetrics.minimumTapTarget),
-            close.heightAnchor.constraint(equalToConstant: KultaraMetrics.minimumTapTarget),
+            stack.topAnchor.constraint(equalTo: guide.topAnchor, constant: KultaraMetrics.xxl),
+            stack.trailingAnchor.constraint(equalTo: guide.trailingAnchor,
+                                            constant: -Self.trailingInset),
+            stack.widthAnchor.constraint(equalToConstant: Self.buttonSize),
+            stack.heightAnchor.constraint(equalToConstant: Self.buttonSize),
 
-            wand.topAnchor.constraint(equalTo: guide.topAnchor, constant: KultaraMetrics.xxl),
+            wand.topAnchor.constraint(equalTo: stack.bottomAnchor, constant: KultaraMetrics.md),
             wand.trailingAnchor.constraint(equalTo: guide.trailingAnchor,
-                                           constant: -Self.wandTrailingInset),
-            wand.widthAnchor.constraint(equalToConstant: Self.wandSize),
-            wand.heightAnchor.constraint(equalToConstant: Self.wandSize),
+                                           constant: -Self.trailingInset),
+            wand.widthAnchor.constraint(equalToConstant: Self.buttonSize),
+            wand.heightAnchor.constraint(equalToConstant: Self.buttonSize),
 
-            // The glass is decoration behind the wand and takes no touches of its own.
-            glass.topAnchor.constraint(equalTo: wand.topAnchor),
-            glass.bottomAnchor.constraint(equalTo: wand.bottomAnchor),
-            glass.leadingAnchor.constraint(equalTo: wand.leadingAnchor),
-            glass.trailingAnchor.constraint(equalTo: wand.trailingAnchor),
+            // Each glass is decoration behind its own button and takes no touches of its own.
+            stackGlass.topAnchor.constraint(equalTo: stack.topAnchor),
+            stackGlass.bottomAnchor.constraint(equalTo: stack.bottomAnchor),
+            stackGlass.leadingAnchor.constraint(equalTo: stack.leadingAnchor),
+            stackGlass.trailingAnchor.constraint(equalTo: stack.trailingAnchor),
+
+            wandGlass.topAnchor.constraint(equalTo: wand.topAnchor),
+            wandGlass.bottomAnchor.constraint(equalTo: wand.bottomAnchor),
+            wandGlass.leadingAnchor.constraint(equalTo: wand.leadingAnchor),
+            wandGlass.trailingAnchor.constraint(equalTo: wand.trailingAnchor),
         ])
         container.bringSubviewToFront(wand)
+        container.bringSubviewToFront(stack)
 
         update(controls)
     }
 
     func update(_ controls: QuestMapControls) {
         onToggle = controls.onToggle
-        onClose = controls.onClose
+        onBack = controls.onBack
 
         wand.tintColor = UIColor(controls.palette.seal)
         wand.accessibilityLabel = controls.wandLabel
         wand.isHidden = !controls.showsWand
-        glass.isHidden = !controls.showsWand
+        wandGlass.isHidden = !controls.showsWand
 
-        close.tintColor = UIColor(controls.palette.inkOnSeal)
-        close.backgroundColor = UIColor(controls.palette.sealFill)
-        close.accessibilityLabel = controls.closeLabel
-        close.isHidden = controls.onClose == nil
+        stack.tintColor = UIColor(controls.palette.seal)
+        stack.accessibilityLabel = controls.backLabel
+        stack.isHidden = controls.onBack == nil
+        stackGlass.isHidden = controls.onBack == nil
     }
 
     @objc private func wandTapped() { onToggle() }
-    @objc private func closeTapped() { onClose?() }
+    @objc private func stackTapped() { onBack?() }
 }
 
 /// What the two buttons need, gathered so the representable hands over one value.
@@ -134,9 +145,9 @@ struct QuestMapControls {
     let showsWand: Bool
     let palette: KultaraPalette
     let wandLabel: String
-    let closeLabel: String
+    let backLabel: String
     let onToggle: () -> Void
-    let onClose: (() -> Void)?
+    let onBack: (() -> Void)?
 }
 
 private extension UIColor {

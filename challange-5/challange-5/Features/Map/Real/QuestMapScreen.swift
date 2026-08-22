@@ -5,11 +5,9 @@ import SwiftUI
 import UIStringsKit
 
 /// The discovery map, as `275:2309` and `276:2520` draw it: one map with two grounds, and a
-/// `wand.and.sparkles` that swaps between them.
-///
-/// The frames also draw a `rectangle.stack.fill` above the wand. It is not built, for the same
-/// reason `docs/hisplora-tokens.md` already records it as unbuilt: nothing anywhere says what it
-/// does, and a control whose behaviour is invented is worse than a control that is missing.
+/// `wand.and.sparkles` that swaps between them. Above the wand sits `298:988`'s liquid-glass
+/// `rectangle.stack.fill`, which is now the way back to the list — it replaced the chevron that
+/// used to stand there, and a marker tap opens `1026:3514`'s popover rather than navigating.
 struct QuestMapScreen: View {
 
     @Environment(\.kultaraPalette) private var palette
@@ -71,9 +69,10 @@ struct QuestMapScreen: View {
             wandLabel: UIStrings.string(
                 map.showsIllustrationOverlay ? .questMapShowReal : .questMapShowIllustrated,
                 model.language),
-            closeLabel: UIStrings.string(.questListListTab, model.language),
+            backLabel: UIStrings.string(.questMapBackToList, model.language),
+            language: model.language,
             onToggleMode: { map.toggleMode() },
-            onClose: onClose,
+            onBack: onClose,
             onSelect: onSelect,
             onBasemapFailure: { map.basemapDidFail() },
             onBasemapRecovery: { map.basemapDidLoad() })

@@ -14,9 +14,38 @@ struct RegionMapPin: Sendable, Identifiable, Equatable {
     let questID: String
     let title: String
     let placeName: String
+    /// The city (falling back to the region) a walk starts in — what `1026:3514`'s popover prints
+    /// beside the pin. The start Place's official name is too long for that card.
+    let regionName: String
+    /// The quest's own total, in minutes (`route.totalDurationMin`).
+    let durationMin: Int
+    /// How many checkpoints the walk has.
+    let stopCount: Int
     let point: MapPoint
     let coordinate: Coordinate
     let accessibilityLabel: String
+
+    init(
+        questID: String,
+        title: String,
+        placeName: String,
+        regionName: String = "",
+        durationMin: Int = 0,
+        stopCount: Int = 0,
+        point: MapPoint,
+        coordinate: Coordinate,
+        accessibilityLabel: String
+    ) {
+        self.questID = questID
+        self.title = title
+        self.placeName = placeName
+        self.regionName = regionName
+        self.durationMin = durationMin
+        self.stopCount = stopCount
+        self.point = point
+        self.coordinate = coordinate
+        self.accessibilityLabel = accessibilityLabel
+    }
 
     var id: String { questID }
 }

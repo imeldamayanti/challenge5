@@ -3,6 +3,7 @@ import DesignSystem
 import MapKit
 import RunEngine
 import SwiftUI
+import UIStringsKit
 
 /// The live basemap the discovery map now stands on, with `275:2309`'s chart drawn over it.
 ///
@@ -32,9 +33,12 @@ struct QuestBaseMapView: UIViewRepresentable {
     let userLocationLabel: String
     let showsWandControl: Bool
     let wandLabel: String
-    let closeLabel: String
+    let backLabel: String
+    /// Resolves the popover's copy; the card's own words are per-quest, so they are built where the
+    /// language lives.
+    let language: ContentLanguage
     let onToggleMode: () -> Void
-    let onClose: (() -> Void)?
+    let onBack: (() -> Void)?
     let onSelect: (String) -> Void
     let onBasemapFailure: () -> Void
     let onBasemapRecovery: () -> Void
@@ -79,18 +83,29 @@ struct QuestBaseMapView: UIViewRepresentable {
             map.trailingAnchor.constraint(equalTo: container.trailingAnchor),
         ])
 
+        // The popover sits between the map and the control buttons, in its own passthrough layer —
+        // see `QuestMapPopoverHost` for why it cannot be a SwiftUI overlay.
+        let popover = QuestMapPopoverHost()
+        context.coordinator.popoverHost = popover
+        let popoverContainer = popover.container
+        container.addSubview(popoverContainer)
+
         let host = QuestMapControlsHost(controls: controls)
         context.coordinator.map = map
         context.coordinator.controlsHost = host
 
+        // Popover under the buttons: the buttons must stay hittable above an open card.
         container.addSubview(host.container)
-        host.container.translatesAutoresizingMaskIntoConstraints = false
-        NSLayoutConstraint.activate([
-            host.container.topAnchor.constraint(equalTo: container.topAnchor),
-            host.container.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            host.container.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            host.container.trailingAnchor.constraint(equalTo: container.trailingAnchor),
-        ])
+
+        for overlayContainer in [popoverContainer, host.container] {
+            overlayContainer.translatesAutoresizingMaskIntoConstraints = false
+            NSLayoutConstraint.activate([
+                overlayContainer.topAnchor.constraint(equalTo: container.topAnchor),
+                overlayContainer.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+                overlayContainer.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+                overlayContainer.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            ])
+        }
 
         return container
     }
@@ -107,9 +122,9 @@ struct QuestBaseMapView: UIViewRepresentable {
             showsWand: showsWandControl,
             palette: palette,
             wandLabel: wandLabel,
-            closeLabel: closeLabel,
+            backLabel: backLabel,
             onToggle: onToggleMode,
-            onClose: onClose)
+            onBack: onBack)
     }
 
     /// Opens on the quests rather than on the island. A discovery map whose first frame is open sea
@@ -168,9 +183,13 @@ struct QuestBaseMapView: UIViewRepresentable {
         var parent: QuestBaseMapView
         weak var map: MKMapView?
         var controlsHost: QuestMapControlsHost?
+        var popoverHost: QuestMapPopoverHost?
         private var overlay: IllustratedMapOverlay?
         private weak var renderer: IllustratedMapOverlayRenderer?
         private var installedQuestIDs: Set<String> = []
+        /// The annotation whose card is open, if any. Kept so Start can deselect it before handing
+        /// over to navigation.
+        private var selectedQuest: QuestMapAnnotation?
         private var isShowingIllustration = false
         /// The opening clamp runs once from `makeUIView`, before the map has been laid out, so the
         /// region it reads is a guess at the viewport's aspect and the chart's south edge lands a
@@ -192,6 +211,11 @@ struct QuestBaseMapView: UIViewRepresentable {
                 map.removeAnnotations(map.annotations.compactMap { $0 as? QuestMapAnnotation })
                 map.addAnnotations(view.pins.map(QuestMapAnnotation.init(pin:)))
                 installedQuestIDs = wanted
+                // A quest withdrawn from content cannot keep an open card.
+                if let selected = selectedQuest, !wanted.contains(selected.questID) {
+                    selectedQuest = nil
+                    popoverHost?.dismiss()
+                }
             }
 
             // **Still gated on the decoded image, even though the pyramid needs no decode.**
@@ -323,13 +347,46 @@ struct QuestBaseMapView: UIViewRepresentable {
 
         func mapView(_ mapView: MKMapView, didSelect view: MKAnnotationView) {
             guard let quest = view.annotation as? QuestMapAnnotation else { return }
-            // Deselected immediately: selection here is a navigation, and a marker left in the
-            // selected state is a marker that cannot be tapped again on the way back.
-            mapView.deselectAnnotation(quest, animated: false)
-            parent.onSelect(quest.questID)
+            // A tap now *selects* — the popover opens (`1026:3514`) and the walk starts from its
+            // own Start pill. Selection stays on: tapping the map anywhere else deselects the
+            // annotation, which is what closes the card, and a marker left selected is a card that
+            // is still open rather than a navigation that cannot be repeated.
+            selectedQuest = quest
+            popoverHost?.update(popoverControls(for: quest), in: mapView)
+        }
+
+        func mapView(_ mapView: MKMapView, didDeselect view: MKAnnotationView) {
+            guard view.annotation is QuestMapAnnotation else { return }
+            selectedQuest = nil
+            popoverHost?.dismiss()
+        }
+
+        /// The card's copy, built off the annotation — which carried it off the pin — in the
+        /// screen's language.
+        private func popoverControls(for quest: QuestMapAnnotation) -> QuestMapPopoverControls {
+            let language = parent.language
+            return QuestMapPopoverControls(
+                presentation: QuestMapPopoverPresentation(
+                    title: quest.questTitle,
+                    locationName: quest.regionName,
+                    durationText: String(
+                        format: UIStrings.string(.questPopoverDurationFormat, language),
+                        quest.durationMin),
+                    stopsText: String(
+                        format: UIStrings.string(.questPopoverStopsFormat, language),
+                        quest.stopCount),
+                    startSpokenLabel: UIStrings.string(.runStartAction, language)),
+                palette: parent.hisploraPalette,
+                anchorCoordinate: quest.coordinate,
+                onStart: { [weak self] in
+                    guard let self, let quest = selectedQuest else { return }
+                    if let map { map.deselectAnnotation(quest, animated: false) }
+                    parent.onSelect(quest.questID)
+                })
         }
 
         func mapViewDidChangeVisibleRegion(_ mapView: MKMapView) {
+            popoverHost?.refresh(in: mapView)
             guard !hasSettledOpeningRegion, let overlay else { return }
             hasSettledOpeningRegion = true
             correct(mapView, to: overlay, animated: false)

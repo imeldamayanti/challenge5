@@ -49,19 +49,12 @@ final class DiscoveryFlowUITests: XCTestCase {
             skip.tap()
         }
 
-        // The credential screen stands where the flow chart puts the login node — a real screen
-        // since `c2` phase 6, not the wireframe it replaced. Its "Not now" is what these tests use,
-        // and it is deliberately as easy to press as the Apple button beside it: nothing in the app
-        // is gated on signing in.
-        //
-        // **This label changed when the wireframe went** and the tests were not updated with it, so
-        // every suite that reaches Home stalled ten seconds on a button that no longer existed and
-        // then failed on everything after. Guarded taps hide that kind of break: the tap is
-        // optional, the screen it was meant to dismiss is not.
-        let skipAuth = app.buttons["Not now"]
-        if skipAuth.waitForExistence(timeout: 10) {
-            skipAuth.tap()
-        }
+        // The credential screens stand where the flow chart puts the login node — real screens
+        // since `c2` phase 6, not the wireframes they replaced. The way past them is the guest
+        // route (`passEntryScreens`): an earlier "Not now" button went with the screens' last
+        // redesign, and a guarded tap on it stranded every launch that saw the entry gate — the
+        // same failure a guarded tap hid once before, one screen earlier.
+        passEntryScreens(app)
 
         // `app.launch()` starts a fresh process but not a fresh sandbox: a Run started by an
         // earlier test method in this run is still on disk, and `startOrResumeRun` resumes a draft
@@ -289,8 +282,15 @@ final class DiscoveryFlowUITests: XCTestCase {
         }
 
         marker.tap()
+        // A marker tap now opens `1026:3514`'s popover rather than navigating; the walk starts from
+        // the card's own pill.
+        let startPill = app.buttons["Start at the first checkpoint"].firstMatch
+        XCTAssertTrue(startPill.waitForExistence(timeout: 10),
+                      "A map marker did not open the quest popover")
+        attach(app, named: "quest-popover")
+        startPill.tap()
         XCTAssertTrue(app.buttons[readyToExploreEN].waitForExistence(timeout: 10),
-                      "A map marker did not open the story flow")
+                      "The popover's Start did not open the story flow")
     }
 
     /// `FR-DISC-04`, verified against the rendered screen rather than a view model. The screen this

@@ -119,6 +119,9 @@ final class RegionMapViewModel {
                 questID: quest.id,
                 title: title,
                 placeName: placeName,
+                regionName: quest.city ?? quest.region,
+                durationMin: quest.route.totalDurationMin,
+                stopCount: quest.checkpoints.count,
                 point: point,
                 coordinate: place.coordinate,
                 // NFR-A11Y-02: a marker is a control, so it says what it is and where it starts.
