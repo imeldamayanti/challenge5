@@ -1,5 +1,6 @@
 import ContentKit
 import DesignSystem
+import RunEngine
 import SwiftUI
 import UIStringsKit
 
@@ -32,7 +33,14 @@ struct TripSummaryScreen: View {
     let letter: SealedLetterPresentation
     /// Reads the walker's own photographs back for the Trip Collection.
     let photoStore: any PhotoStore
+    /// Mints the recap card's public link (`c2` phase 5). `NoShareCardMinting` with no backend.
+    let shareCards: any ShareCardMinting
     let onClose: () -> Void
+
+    /// The minted link, once minting finishes. `nil` is the ordinary state — no backend, minting
+    /// still running, or it failed — and `TripPageBar` already falls back to `shareText` for all
+    /// three, so there is nothing here to distinguish between them.
+    @State private var mintedShareURL: URL?
 
     private var language: ContentLanguage { model.language }
 
@@ -50,6 +58,7 @@ struct TripSummaryScreen: View {
                 TripPageBar(
                     title: UIStrings.string(.journalPaperSummaryEyebrow, language),
                     backLabel: UIStrings.string(.tripPageBack, language),
+                    shareURL: mintedShareURL,
                     shareText: shareText,
                     shareLabel: UIStrings.string(.tripShare, language),
                     onBack: onClose)
@@ -70,6 +79,41 @@ struct TripSummaryScreen: View {
                 .scrollIndicators(.hidden)
             }
         }
+        // One attempt per presentation, not per share tap: a walker who taps share twice while it
+        // is still rendering gets the plain-text fallback both times rather than two uploads
+        // racing to write the same row. `.task` cancels itself if the screen closes mid-render, so
+        // a card is never finished uploading after the walker has already left.
+        .task(id: model.run.id) { await mintShareCardIfAvailable() }
+    }
+
+    /// Renders the card off-screen, uploads it, and stores the link `TripPageBar` prefers over
+    /// plain text. Every value on the card is the Run's own snapshot (`AD-4`) — see
+    /// `ShareCardArtwork`'s own account of what is deliberately left off it.
+    private func mintShareCardIfAvailable() async {
+        guard shareCards.isAvailable, mintedShareURL == nil else { return }
+        let artwork = ShareCardArtwork(
+            questTitle: model.title,
+            placeNames: model.run.orderedCheckpointResults.map(\.snapshotPlaceName),
+            stampCount: model.run.awards.filter { $0.type == .stamp }.count,
+            dayText: Self.dayText(for: model.run.completedAt ?? model.run.startedAt, language: language),
+            // Nothing has opted in yet — there is no per-card opt-in control built, so the
+            // conservative default is the one `ShareCardArtwork`'s own doc comment states:
+            // consent to share once is not consent to share always, and the absence of a control
+            // must not read as silent consent.
+            reflections: [],
+            language: language,
+            palette: palette)
+        guard let png = artwork.pngData() else { return }
+        mintedShareURL = await shareCards.mint(ShareCardDraft(
+            runID: model.run.id, png: png, template: "recap-v1"))
+    }
+
+    private static func dayText(for date: Date, language: ContentLanguage) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: language == .id ? "id_ID" : "en_US")
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .none
+        return formatter.string(from: date)
     }
 
     // MARK: - The cream page

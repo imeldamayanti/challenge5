@@ -23,17 +23,22 @@ struct JournalLetterView: View {
     private let section: JournalPaperPresentation.Kind
     /// Reads the walker's own photographs back for the summary's Trip Collection.
     private let photoStore: any PhotoStore
+    /// Mints the summary's recap card (`c2` phase 5). The History page has no card of its own — it
+    /// is an editorial narrative, not a summary, and keeps its own plain-text share.
+    private let shareCards: any ShareCardMinting
     private let onClose: () -> Void
 
     init(model: RunSummaryViewModel,
          letter: SealedLetterPresentation,
          section: JournalPaperPresentation.Kind = .summary,
          photoStore: any PhotoStore,
+         shareCards: any ShareCardMinting = NoShareCardMinting(),
          onClose: @escaping () -> Void) {
         self.model = model
         self.letter = letter
         self.section = section
         self.photoStore = photoStore
+        self.shareCards = shareCards
         self.onClose = onClose
     }
 
@@ -41,7 +46,7 @@ struct JournalLetterView: View {
         switch section {
         case .summary:
             TripSummaryScreen(model: model, letter: letter,
-                              photoStore: photoStore, onClose: onClose)
+                              photoStore: photoStore, shareCards: shareCards, onClose: onClose)
         case .history:
             TripHistoryScreen(model: model, letter: letter, onClose: onClose)
         }

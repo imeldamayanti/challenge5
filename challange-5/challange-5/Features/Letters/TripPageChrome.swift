@@ -15,11 +15,12 @@ import SwiftUI
 /// Back on the left, the page's own name in the middle, share on the right — `791:6488`/`791:6489`
 /// /`791:6490` and `791:6540`/`791:6541`/`791:6542`. SF Pro 19, tracked −0.38, near-black.
 ///
-/// **The share control is a real `ShareLink`, not the share *card*.** The frames draw the glyph and
-/// the recap card `FR-DONE-06` describes is still unbuilt; rather than ship the glyph as a dead
-/// promise, it hands the system sheet a plain-text recap of the page. That is a thing the control
-/// actually does, it works offline (`AD-3`), and it needs no rendering pipeline. When the card is
-/// built it replaces the `item` and nothing else about this bar changes.
+/// **The share control is a real `ShareLink`.** It hands the system sheet the recap card's public
+/// link where one exists (`c2` phase 5, `FR-DONE-06`), and a plain-text recap of the page where one
+/// does not — no backend configured, minting failed, or the card is simply still rendering. Either
+/// way the control does a thing it actually does and works offline for the text case (`AD-3`).
+/// `shareURL` is checked first; when the card is later built to replace text everywhere, nothing
+/// here needs to change, because that is already the fallback order.
 ///
 /// Both controls are a fixed 44 points (`NFR-A11Y-06`) and carry spoken labels, because a shape is
 /// not a name (`NFR-A11Y-05`).
@@ -28,8 +29,10 @@ struct TripPageBar: View {
 
     let title: String
     let backLabel: String
-    /// What the system share sheet is handed. `nil` hides the control rather than offering an
-    /// empty share.
+    /// The minted recap card's public link, when one exists. Takes priority over `shareText`.
+    var shareURL: URL?
+    /// What the system share sheet is handed with no link minted. `nil` hides the control rather
+    /// than offering an empty share.
     var shareText: String?
     var shareLabel: String = ""
     let onBack: () -> Void
@@ -54,20 +57,24 @@ struct TripPageBar: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(backLabel)
                 Spacer(minLength: 0)
-                if let shareText {
-                    ShareLink(item: shareText) {
-                        Image(systemName: "square.and.arrow.up.fill")
-                            .font(.system(size: 19, weight: .regular))
-                            .foregroundStyle(palette.inkDark.color)
-                            .frame(width: KultaraMetrics.minimumTapTarget,
-                                   height: KultaraMetrics.minimumTapTarget)
-                    }
-                    .accessibilityLabel(shareLabel)
+                if let shareURL {
+                    ShareLink(item: shareURL) { shareGlyph }
+                        .accessibilityLabel(shareLabel)
+                } else if let shareText {
+                    ShareLink(item: shareText) { shareGlyph }
+                        .accessibilityLabel(shareLabel)
                 }
             }
         }
         .frame(height: KultaraMetrics.minimumTapTarget)
         .padding(.horizontal, KultaraMetrics.lg)
+    }
+
+    private var shareGlyph: some View {
+        Image(systemName: "square.and.arrow.up.fill")
+            .font(.system(size: 19, weight: .regular))
+            .foregroundStyle(palette.inkDark.color)
+            .frame(width: KultaraMetrics.minimumTapTarget, height: KultaraMetrics.minimumTapTarget)
     }
 }
 

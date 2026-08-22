@@ -492,6 +492,7 @@ struct KultaraRootView: View {
                 letter: letter,
                 section: journalLetterSection,
                 photoStore: environment.photoStore,
+                shareCards: environment.shareCards,
                 // Back to the papers, not out to the shelf. The two pages are reached *through*
                 // `791:5551`, so the way back from one is the choice that opened it — a reader who
                 // finished the summary and wants the history should not have to unseal the envelope

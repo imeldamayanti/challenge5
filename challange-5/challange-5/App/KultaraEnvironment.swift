@@ -48,6 +48,9 @@ struct KultaraEnvironment {
     /// Attaches an identity to the anonymous session (`c2` phase 6), so a reinstall on another
     /// phone can find the walks phase 3 pushed. Nothing in the app is gated on it.
     let credentials: any CredentialLinking
+    /// Mints the recap card's public link (`c2` phase 5, `FR-DONE-06`). `NoShareCardMinting` with
+    /// no backend, so `TripPageBar` falls back to plain text exactly as it did before this shipped.
+    let shareCards: any ShareCardMinting
 
     init(
         repository: any ContentRepository,
@@ -158,6 +161,11 @@ struct KultaraEnvironment {
                 // receive writes. Flushing first and then reporting honestly is the contract.
                 telemetryQueueIsEmpty: { MainActor.assumeIsolated { resolvedTelemetry.queueIsEmpty } })
         } ?? NoCredentialLinking()
+        self.shareCards = backend.map { configuration in
+            SupabaseShareCardMinting(
+                configuration: configuration, session: resolvedSession,
+                deviceID: { [identity = DeviceIdentity()] in identity.current })
+        } ?? NoShareCardMinting()
     }
 
     var runEngine: RunEngine {
