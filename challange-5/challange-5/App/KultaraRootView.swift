@@ -8,6 +8,8 @@ struct KultaraRootView: View {
 
     private let environment: KultaraEnvironment
 
+    @Environment(\.scenePhase) private var scenePhase
+
     @State private var language: ContentLanguage
     @State private var showsOnboarding: Bool
     /// The splash the app-flow chart opens with, which is still a wireframe. Held in `@State`
@@ -43,6 +45,10 @@ struct KultaraRootView: View {
     /// observable — it is a protocol with a file behind it — and a counter is a smaller thing to
     /// own than an observation layer this milestone would use in exactly one place.
     @State private var journalRevision = 0
+    /// `c2` phase 7. True when a restore was attempted and the read did not land. Shown rather than
+    /// swallowed: a walker looking at an empty Journal cannot tell "you had nothing" from "we could
+    /// not fetch it", and only the second is recoverable by trying again.
+    @State private var restoreFailed = false
     /// Which sidequest to present, set by the nearby list, by a notification tap, and by a
     /// foreground region entry (`s3`). Owned by `challange_5App` and handed down, because the
     /// notification delegate and `SystemProximityMonitor.onSideQuestNearby` both have to reach it
@@ -115,13 +121,133 @@ struct KultaraRootView: View {
                     language: language,
                     onFinish: { showsOnboarding = false })
             } else if showsAuth {
-                AuthView(
-                    store: environment.preferences,
+                // `c2` phase 6. The flow chart's login node, built rather than drawn — but **not
+                // a gate**: every flow works without it, and "Not now" is the same size as the
+                // button beside it. `AuthWireframeView` is gone; nothing else referenced it.
+                CredentialView(
                     language: language,
-                    onFinish: { showsAuth = false })
+                    onSkip: { showsAuth = false },
+                    onSignIn: { idToken, nonce, name in
+                        let outcome = await environment.credentials.signInWithApple(
+                            idToken: idToken, nonce: nonce, fullName: name)
+                        // A merge moves the rows on the server; this device's copy is unchanged,
+                        // so nothing needs re-reading. A restore on the *next* launch is what
+                        // brings them to another phone (`c2` phase 7).
+                        if outcome != .failed { journalRevision += 1 }
+                        return outcome
+                    })
             } else {
                 browser
             }
+        }
+        // `AD-5` — one attempt on launch and one on every foreground, and neither blocks a draw.
+        // The document the app already holds was read from disk at construction, so this updates an
+        // answer rather than producing one (`FR-ERR-09`).
+        .task {
+            // `c2` phase 1. Fire-and-forget on purpose: `prepare()` returns before the network is
+            // touched, so the session arrives when it arrives and the quest list never waits for
+            // it. A walker who is offline forever simply never has one.
+            (environment.session as? SupabaseSession)?.prepare()
+            await refreshGovernance()
+            // `c2` phase 7. After the session, because there is nothing to read without one, and
+            // only ever into an empty store — the restorer checks that itself, immediately before
+            // it reads, so a walk started in between is still seen.
+            await restoreWalksIfThisDeviceHasNone()
+        }
+        // `c2` phase 7. The one thing a restore is allowed to put on screen, and only when it
+        // failed: a walker cannot tell an empty Journal that is theirs from one that is a failed
+        // fetch, and only the second is worth trying again. The retry needs no sign-out.
+        .alert(
+            UIStrings.text(.restoreFailedTitle).value(for: language),
+            isPresented: $restoreFailed
+        ) {
+            Button(UIStrings.text(.restoreRetryAction).value(for: language)) {
+                Task { await restoreWalksIfThisDeviceHasNone() }
+            }
+            Button(
+                UIStrings.text(.restoreDismissAction).value(for: language),
+                role: .cancel) {}
+        } message: {
+            Text(UIStrings.text(.restoreFailedBody).value(for: language))
+        }
+        .onChange(of: scenePhase) { _, phase in
+            switch phase {
+            case .active:
+                (environment.session as? SupabaseSession)?.prepare()
+                Task { await refreshGovernance() }
+                // Opportunistic, never on a timer and never on a transition somebody is waiting
+                // for (`NFR-BAT-04`'s reputation, if not its letter).
+                environment.telemetry.flush()
+                // `c2` phase 3. Foreground is one of three triggers — the others are completing a
+                // walk and abandoning one, both raised by `QuestRunViewModel`. Never during arrival,
+                // lore or a task: those are the moments a walker is waiting for a screen.
+                Task { await environment.sync.push() }
+            case .background:
+                environment.telemetry.flush()
+            default:
+                break
+            }
+        }
+    }
+
+    /// `c2` phase 7. A device with no walks asks whether this walker has any elsewhere.
+    ///
+    /// Nothing waits on this and nothing is shown while it runs. **A failure is not silent
+    /// though** — see `RestoreOutcome.succeeded`: a walker cannot tell "you had nothing" from "we
+    /// could not fetch it", and only the second is worth trying again.
+    private func restoreWalksIfThisDeviceHasNone() async {
+        guard let outcome = await environment.restore.restoreIfLocalStoreIsEmpty() else { return }
+        if outcome.restoredRuns > 0 {
+            journalRevision += 1
+        }
+        restoreFailed = !outcome.succeeded
+    }
+
+    /// One kill-switch refresh, and everything that has to follow it.
+    ///
+    /// Nothing here can fail in a way the walker sees: a refresh that does not land keeps the last
+    /// good document, and every step below then re-applies what was already applied.
+    private func refreshGovernance() async {
+        await environment.governance.refresh()
+        // Regions outlive the screen that registered them, so the monitor is told directly rather
+        // than being handed a set at a call site (`FR-SIDE-14`).
+        environment.proximityMonitor.suppressedSideQuestIDs =
+            environment.governance.suppressedSideQuestIDs
+        environment.proximityMonitor.suppressedPlaceIDs =
+            environment.governance.suppressedPlaceIDs
+        environment.proximityMonitor.refreshRegions()
+        abandonSuppressedRuns()
+    }
+
+    /// A walk whose ground has been withdrawn under it ends as `placeSuppressed` rather than
+    /// carrying on to a checkpoint that must not be visited (`AD-5`).
+    ///
+    /// **Active walks only.** A finished walk renders from snapshots taken at completion — its lore,
+    /// place names and citations were copied into the Run — and suppression must never reach into a
+    /// summary of something that already happened.
+    private func abandonSuppressedRuns() {
+        guard let runs = try? environment.runStore.runs() else { return }
+        let engine = environment.runEngine
+        for run in runs where run.state == .active {
+            guard let quest = (try? environment.repository.quest(id: run.questID)) ?? nil else {
+                continue
+            }
+            guard environment.governance.suppresses(
+                questID: run.questID, placeIDs: quest.checkpoints.map(\.placeId))
+            else { continue }
+            guard (try? engine.abandon(runID: run.id, reason: .placeSuppressed)) != nil else {
+                continue
+            }
+            environment.telemetry.questAbandoned(
+                questID: run.questID,
+                lastOrderIndex: run.orderedCheckpointResults.last?.orderIndex ?? -1,
+                reason: AbandonReason.placeSuppressed.rawValue,
+                runID: run.id)
+            // The screen showing that walk has to go with it. Leaving it up would be a run screen
+            // driving a Run the store now calls abandoned.
+            if runDestination?.existingRunID == run.id { runDestination = nil }
+            if profileRunDestination?.existingRunID == run.id { profileRunDestination = nil }
+            journalRevision += 1
         }
     }
 
@@ -213,8 +339,19 @@ struct KultaraRootView: View {
             QuestListView(
                 // Rebuilt when the language changes: every string in the list is resolved at
                 // construction, so the identity of the view model *is* the language.
-                model: QuestListViewModel(repository: environment.repository, language: language),
-                mapModel: RegionMapViewModel(repository: environment.repository, language: language),
+                // `AD-5` — the kill-switch's whole point is that a withdrawn place stops being
+                // offered. The sets are read here, in the body, so a document that arrives on a
+                // foreground rebuilds both surfaces without anything polling for it.
+                model: QuestListViewModel(
+                    repository: environment.repository,
+                    language: language,
+                    suppressedQuestIDs: environment.governance.suppressedQuestIDs,
+                    suppressedPlaceIDs: environment.governance.suppressedPlaceIDs),
+                mapModel: RegionMapViewModel(
+                    repository: environment.repository,
+                    language: language,
+                    suppressedQuestIDs: environment.governance.suppressedQuestIDs,
+                    suppressedPlaceIDs: environment.governance.suppressedPlaceIDs),
                 surface: $questSurface,
                 journal: journal,
                 // `FR-SIDE-07` — a way into a sidequest that does not wait for a notification.
@@ -235,7 +372,11 @@ struct KultaraRootView: View {
         return NearbySideQuestListViewModel(
             repository: environment.repository,
             engine: environment.sideQuestEngine,
-            language: language).rows
+            language: language,
+            // `FR-SIDE-14` — a withdrawn sidequest, or one standing at a withdrawn place,
+            // disappears from every surface.
+            suppressedSideQuestIDs: environment.governance.suppressedSideQuestIDs,
+            suppressedPlaceIDs: environment.governance.suppressedPlaceIDs).rows
     }
 
     private func sideQuestFlow(_ sideQuestID: String) -> some View {
@@ -478,7 +619,9 @@ struct KultaraRootView: View {
                 // `1:4827`'s photograph. The same store the sidequest photo challenge writes to and
                 // the same one "delete all local data" empties (`FR-SET-02`), so a quest photo is
                 // not a fourth aggregate the eraser would have to learn about.
-                photoStore: environment.photoStore)
+                photoStore: environment.photoStore,
+                telemetry: environment.telemetry,
+                sync: environment.sync)
         } content: { model in
             KultaraThemeProvider {
                 QuestRunView(model: model, onOpenRecap: openRecap)
@@ -507,6 +650,10 @@ struct KultaraRootView: View {
                 sideQuestStore: environment.sideQuestStore,
                 proximityMonitor: environment.proximityMonitor,
                 photoStore: environment.photoStore,
+                telemetry: environment.telemetry,
+                session: environment.session,
+                accountDeleter: environment.accountDeleter,
+                syncState: environment.syncState,
                 preferences: environment.preferences),
             storage: environment.storage,
             proximityMonitor: environment.proximityMonitor)

@@ -1,0 +1,28 @@
+// Where the app's backend lives (`c2` phase 0, `03-security-privacy.md` §1).
+//
+// These are build settings rather than Swift literals so that a fork, a staging project or a
+// throwaway test project is a one-file change instead of an edit to source. They are mapped into
+// the generated Info.plist by `INFOPLIST_KEY_KultaraBackend*` in the app target's build settings,
+// and read back by `BackendConfiguration`.
+//
+// WHAT MAY LIVE HERE: the project URL and the PUBLISHABLE key. The publishable key is designed to
+// be public — RLS is what protects the data, which is why isolation is proved with real user
+// tokens over HTTP rather than by hiding this string.
+//
+// WHAT MAY NEVER LIVE HERE, IN ANY BUILD CONFIGURATION: the service-role key. It bypasses RLS
+// entirely, and an installed app is a file somebody can open. This project has already had one
+// production key exposure and rotation; that is the precedent, not a hypothetical. Anything that
+// needs elevated access belongs in an Edge Function.
+
+// `//` opens a comment ANYWHERE in an xcconfig, including inside a value — so a URL written
+// plainly here silently becomes `https:`, and the build still succeeds. `$()` is an empty
+// substitution, but putting it BEFORE the pair does not help: comments are stripped lexically,
+// before any substitution runs, so `https:$()//host` is still cut at the slashes. Splitting the
+// pair so no two slashes are ever adjacent in the source text is what actually works.
+KULTARA_URL_SLASHES = /$()/
+KULTARA_BACKEND_URL = https:$(KULTARA_URL_SLASHES)ppwcxmvetmmwliusliac.supabase.co
+
+// Not sent by phase 0: the kill-switch document is world-readable and `ingest` runs with
+// `verify_jwt = false`, both verified against the deployed project with no header at all. It is
+// carried here because phase 1's session is the first caller that needs it.
+KULTARA_BACKEND_PUBLISHABLE_KEY = sb_publishable_jmtOthQvIRl4QeagXByshQ_f1plTpoO

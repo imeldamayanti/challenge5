@@ -8,7 +8,7 @@ import RunEngine
 /// user what this build actually holds rather than implying it holds everything.
 @MainActor
 protocol LocalDataEraser {
-    func eraseAllLocalData() throws -> ErasureSummary
+    func eraseAllLocalData() async throws -> ErasureSummary
 }
 
 @MainActor
@@ -19,7 +19,7 @@ final class PreferencesOnlyDataEraser: LocalDataEraser {
         self.store = store
     }
 
-    func eraseAllLocalData() throws -> ErasureSummary {
+    func eraseAllLocalData() async throws -> ErasureSummary {
         store.removeAll()
         return ErasureSummary(
             deletedRuns: 0, deletedPhotos: 0, deletedTelemetryEvents: 0, clearedPreferences: true)
@@ -45,6 +45,11 @@ final class PreferencesOnlyDataEraser: LocalDataEraser {
 /// The photo store is a fourth: deleting a sidequest record alone leaves its image file on disk,
 /// which passes every database test and fails `FR-SET-02` — the exact mistake `s4` §7 warns about
 /// (`NFR-PRIV-01`).
+///
+/// The telemetry queue is a fifth (`c2` phase 0). It holds no identifier and no coordinate by
+/// construction — that is what `ops.events` having no user column means on this side of the wire —
+/// but unsent rows are still local data, and leaving them would make the summary's count of deleted
+/// events a number that is true only because nothing counted.
 @MainActor
 final class RunAndPreferencesDataEraser: LocalDataEraser {
 
@@ -52,6 +57,12 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
     private let sideQuestStore: (any SideQuestStore)?
     private let proximityMonitor: (any ProximityMonitoring)?
     private let photoStore: (any PhotoStore)?
+    private let telemetry: AppTelemetry?
+    private let session: (any SupabaseSessionProviding)?
+    /// `c2` phase 3. Once rows exist on the server, local-only erasure makes Settings say something
+    /// untrue (`FR-SET-02`).
+    private let accountDeleter: (any AccountDeleting)?
+    private let syncState: (any SyncStateStore)?
     private let preferences: any AppPreferencesStore
 
     init(
@@ -59,29 +70,65 @@ final class RunAndPreferencesDataEraser: LocalDataEraser {
         sideQuestStore: (any SideQuestStore)? = nil,
         proximityMonitor: (any ProximityMonitoring)? = nil,
         photoStore: (any PhotoStore)? = nil,
+        telemetry: AppTelemetry? = nil,
+        session: (any SupabaseSessionProviding)? = nil,
+        accountDeleter: (any AccountDeleting)? = nil,
+        syncState: (any SyncStateStore)? = nil,
         preferences: any AppPreferencesStore
     ) {
         self.store = store
         self.sideQuestStore = sideQuestStore
         self.proximityMonitor = proximityMonitor
         self.photoStore = photoStore
+        self.telemetry = telemetry
+        self.session = session
+        self.accountDeleter = accountDeleter
+        self.syncState = syncState
         self.preferences = preferences
     }
 
-    func eraseAllLocalData() throws -> ErasureSummary {
+    func eraseAllLocalData() async throws -> ErasureSummary {
         let deletedRuns = try store.deleteAll()
         // Letters go with them. A collection is a record of where somebody has been, and
         // "delete all local data" that left it standing would be the plainest possible lie.
         let deletedSideQuests = try sideQuestStore?.deleteAll() ?? 0
         let deletedProximityAlerts = try proximityMonitor?.deleteAllAlerts() ?? 0
         let deletedPhotos = try photoStore?.deleteAll() ?? 0
+        // A fifth aggregate as of `c2` phase 0: rows queued for the anonymous ingest endpoint, and
+        // the per-walk pseudonymous keys beside them. Neither identifies anybody, and both are
+        // still local data somebody asked to be rid of.
+        let deletedTelemetryEvents = telemetry?.eraseQueue() ?? 0
+        // `c2` phase 1. The stored session is a bearer credential for this walker's own history;
+        // leaving it behind would mean the next launch silently resumes as the same `auth.users`
+        // row somebody just asked to be disconnected from. Detached because erasure is synchronous
+        // and must not start waiting on the Keychain — and because nothing here can fail in a way
+        // the summary should report.
+        // `c2` phase 3. The server copy goes first, then the local session — in that order,
+        // because `delete-account` needs the token the sign-out is about to forget.
+        //
+        // **Awaited, unlike every other network call in this app.** A deletion that did not land is
+        // a walker who has been told their data is gone while it is not, and only they can decide
+        // what to do about that — so this is the one place `01-architecture.md` R4's silence is
+        // wrong, and the outcome goes into the summary rather than into a `try?`.
+        var serverDataDeleted: Bool?
+        if let accountDeleter {
+            serverDataDeleted = await accountDeleter.deleteAccount()
+        }
+        await session?.signOut()
+        // Forgetting what has already been pushed is not optional: without it, a walk written after
+        // erasure could be judged "already sent" against a row that no longer exists.
+        syncState?.forgetAll()
+        // `preferences.removeAll()` takes `deviceID` with it, so the next launch is a new install
+        // as far as `schema.md` §C.2 is concerned. Deliberate: a walker who erases should not stay
+        // the same device to the server.
         preferences.removeAll()
         return ErasureSummary(
             deletedRuns: deletedRuns,
             deletedSideQuests: deletedSideQuests,
             deletedProximityAlerts: deletedProximityAlerts,
             deletedPhotos: deletedPhotos,
-            deletedTelemetryEvents: 0,
-            clearedPreferences: true)
+            deletedTelemetryEvents: deletedTelemetryEvents,
+            clearedPreferences: true,
+            serverDataDeleted: serverDataDeleted)
     }
 }

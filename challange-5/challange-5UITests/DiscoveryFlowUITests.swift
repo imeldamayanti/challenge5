@@ -49,7 +49,19 @@ final class DiscoveryFlowUITests: XCTestCase {
             skip.tap()
         }
 
-        passEntryScreens(app)
+        // The credential screen stands where the flow chart puts the login node — a real screen
+        // since `c2` phase 6, not the wireframe it replaced. Its "Not now" is what these tests use,
+        // and it is deliberately as easy to press as the Apple button beside it: nothing in the app
+        // is gated on signing in.
+        //
+        // **This label changed when the wireframe went** and the tests were not updated with it, so
+        // every suite that reaches Home stalled ten seconds on a button that no longer existed and
+        // then failed on everything after. Guarded taps hide that kind of break: the tap is
+        // optional, the screen it was meant to dismiss is not.
+        let skipAuth = app.buttons["Not now"]
+        if skipAuth.waitForExistence(timeout: 10) {
+            skipAuth.tap()
+        }
 
         // `app.launch()` starts a fresh process but not a fresh sandbox: a Run started by an
         // earlier test method in this run is still on disk, and `startOrResumeRun` resumes a draft
@@ -113,15 +125,50 @@ final class DiscoveryFlowUITests: XCTestCase {
         let confirm = app.buttons["Delete"]
         if confirm.waitForExistence(timeout: timeout) { confirm.tap() }
 
-        app.buttons["Quests"].firstMatch.tap()
+        // **Leave Settings by its Back button, not by tapping a tab.**
+        //
+        // Settings is pushed over the tab bar, so `app.buttons["Quests"].tap()` was hitting a bar
+        // that is behind it and doing nothing — the app stayed on Settings, and every later tap in
+        // the test landed behind the same screen. That is the whole of the long-standing
+        // "Profile did not offer a way into the app preferences" failure: by the time
+        // `openSettings` ran, the app was *already on Settings*, where "Settings" is the title
+        // static text and not a button, so the button lookup could never succeed.
+        //
+        // It was read for weeks as a tab-bar or Dynamic Type problem. It is neither: the tab bar is
+        // a real `Button` with a `contentShape` and a minimum tap target, and it works — it was
+        // simply not on top.
+        let back = app.buttons["Back"].firstMatch
+        if back.waitForExistence(timeout: timeout) { back.tap() }
+
+        let quests = app.buttons["Quests"].firstMatch
+        if quests.waitForExistence(timeout: timeout) { quests.tap() }
     }
 
     /// Settings is no longer a tab: the flow reaches it as Profile → App preferences.
     private func openSettings(_ app: XCUIApplication, timeout: TimeInterval = 10) {
-        app.buttons["Profile"].firstMatch.tap()
-        let preferences = app.buttons["Settings"].firstMatch
-        XCTAssertTrue(preferences.waitForExistence(timeout: timeout),
-                      "Profile did not offer a way into the app preferences")
+        // **The same wait-then-retry `resetAppData` already had**, and its absence here is what
+        // made these two tests red for weeks under "Profile did not offer a way into the app
+        // preferences". The tap was on faith: right after the launch flow dismisses, the floating
+        // tab bar can still be settling, so a tap lands short of the bar, nothing happens, and the
+        // Explorer's Card is never on screen for the scroll-into-reach loop below to find. It was
+        // read as a Dynamic Type problem because the larger size makes the layout pass slower and
+        // the race easier to lose.
+        let profile = app.buttons["Profile"].firstMatch
+        _ = profile.waitForExistence(timeout: timeout)
+        profile.tap()
+
+        var preferences = app.buttons["Settings"].firstMatch
+        if !preferences.waitForExistence(timeout: timeout) {
+            // One retry: a mistimed first tap changed nothing, so Profile is still reachable —
+            // cheaper than chasing the exact settle time.
+            profile.tap()
+            preferences = app.buttons["Settings"].firstMatch
+        }
+        XCTAssertTrue(preferences.waitForExistence(timeout: timeout), """
+            Profile did not offer a way into the app preferences.
+            Buttons on screen: \(app.buttons.allElementsBoundByIndex.map(\.label))
+            Static texts: \(app.staticTexts.allElementsBoundByIndex.prefix(12).map(\.label))
+            """)
 
         // `exists` is not `isHittable`. At the largest accessibility size the profile's two
         // controls run past the fold and the lower one lands under the floating tab bar, so the

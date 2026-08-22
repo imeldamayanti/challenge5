@@ -49,12 +49,20 @@ enum WireframeCatalog {
             id: "Splash → Onboarding → Login/Register → Home. Nama aplikasi belum diputuskan, jadi wordmark-nya masih kosong.",
             en: "Splash → Onboarding → Login/Register → Home. The app has no name yet, so the wordmark is deliberately empty."))
 
-    // `login` and `register` were drawings of "sign in, then reach Home". This file's own rule:
-    // when a screen is built for real, its wireframe entry is deleted with it. `Features/Auth/` is
-    // those screens now (Figma `791:5145`, `791:5109`, `822:2235`) — and the product decision the
-    // notes here asked for was taken rather than dodged: nothing is stored on a server, the
-    // credentials are validated for shape and discarded, and what survives is a local display name.
-    // `AuthViewModel` carries the whole account of it.
+    static let register = WireframeSpec(
+        title: LocalizedText(id: "Register", en: "Register"),
+        purpose: LocalizedText(
+            id: "Membuat akun baru.",
+            en: "Create a new account."),
+        blocks: [
+            LocalizedText(id: "Nama tampilan", en: "Display name"),
+            LocalizedText(id: "Email", en: "Email"),
+            LocalizedText(id: "Kata sandi dan konfirmasi", en: "Password and confirmation"),
+            LocalizedText(id: "Persetujuan syarat dan privasi", en: "Terms and privacy consent"),
+        ],
+        flowNote: LocalizedText(
+            id: "Sama seperti Login: butuh backend, dan butuh keputusan soal data pribadi sebelum dibangun.",
+            en: "Same as Login: needs a backend, and needs a personal-data decision before it is built."))
 
     // MARK: Journal branch
     //

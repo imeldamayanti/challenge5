@@ -101,19 +101,36 @@ already shipping that pipe) and a retry.
 The one exception is account deletion, which is a promise: `FR-SET-02` erasure has to
 be able to tell the user whether the server copy is gone.
 
-## 5. Transport choice — SDK or `URLSession`
+## 5. Transport choice — decided: `supabase-swift`
 
-**Not decided. Decide in phase 1, record it there.** Both are defensible:
+**Decided 2026-08-21 by the owner: the SDK.** `supabase-swift` **2.55.1**, pinned
+`upToNextMinor`, linked to the **app target only** — `ContentKit`, `RunEngine` and
+`DesignSystem` stay Foundation-and-each-other, which is what `ImportBoundaryTests`
+holds and what keeps `swift test` a two-second macOS run.
 
-- **`supabase-swift`** gives auth token refresh, storage resumable uploads and
-  PostgREST query building for free. It is a dependency in a codebase that currently
-  has exactly zero, and it pulls its own transitive tree.
-- **`URLSession` directly** keeps the dependency count at zero and the surface tiny —
-  C2 makes maybe eight distinct calls. Token refresh and multipart upload are then
-  yours to write and to get wrong.
+What it buys is the part C2 would otherwise have to write and get wrong: auth token
+refresh (phase 1, phase 6), storage upload (phase 4) and PostgREST query building
+(phase 3).
 
-The seam is the same either way: everything above `SupabaseClient` is unaware. Pick
-in phase 1 with the token-refresh cost measured, not guessed.
+Four things about how it is wired, each a decision rather than a default:
+
+- **Four products are linked, not the umbrella**: `Auth`, `PostgREST`, `Storage`,
+  `Functions`. **`Realtime` is deliberately absent.** It holds a WebSocket open, which
+  is a battery cost on a walking app for a feature C2 has none of — and a client that
+  keeps a socket up is one step from behaving like the reachability check `AD-3` bans.
+  Linking the `Supabase` umbrella would pull it in, along with CryptoSwift and
+  swift-secp256k1, neither of which is otherwise resolved.
+- **Six transitive packages arrive with it**: swift-crypto, swift-asn1,
+  swift-http-types, swift-concurrency-extras, swift-clocks, xctest-dynamic-overlay.
+  That is the real price of this decision in a repo that had exactly zero third-party
+  dependencies. It is not hidden by being conventional.
+- **`Package.resolved` is now tracked** for the app project, and `.gitignore` carries a
+  narrow negation to allow it. Ignoring it was harmless while every package was local;
+  with a third-party graph it means every machine and every CI run is free to resolve
+  something different, which is a supply-chain hole rather than a convenience.
+- **The seam does not move.** `SupabaseClient` still lives in `challange-5/Services/`
+  and everything above it is unaware, exactly as §2 says. If the SDK turns out to be
+  the wrong call, replacing it is work inside one folder.
 
 ## 6. Ordering of a push
 

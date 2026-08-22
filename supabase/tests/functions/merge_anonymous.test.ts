@@ -55,7 +55,7 @@ Deno.test("5.2 linking an unused email keeps the same user_id and every row", as
       Authorization: `Bearer ${anon.token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ email: `linked-${crypto.randomUUID()}@example.test`, password: "pw-12345678" }),
+    body: JSON.stringify({ email: `linked-${crypto.randomUUID()}@example.test`, password: "Pw-12345678" }),
   });
   assertEquals(res.status, 200, await res.text());
 
@@ -75,7 +75,7 @@ Deno.test("5.3 linking an email that already exists is rejected", async () => {
       Authorization: `Bearer ${anon.token}`,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ email: existing.email, password: "pw-12345678" }),
+    body: JSON.stringify({ email: existing.email, password: "Pw-12345678" }),
   });
   assert(res.status >= 400, `expected a rejection, got ${res.status}`);
   await res.body?.cancel();

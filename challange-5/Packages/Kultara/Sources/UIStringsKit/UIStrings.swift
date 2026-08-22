@@ -579,6 +579,36 @@ public enum UIStrings {
 
         // MARK: Journal — Sealed Letters
         .journalSealedHeading: LocalizedText(id: "Surat Tersegel", en: "Sealed Letters"),
+        .shareCardEyebrow: LocalizedText(id: "Sebuah perjalanan", en: "A walk taken"),
+        .shareCardStampCount: LocalizedText(id: "{count} cap", en: "{count} stamps"),
+        .shareIncludeAnswersLabel: LocalizedText(
+            id: "Sertakan catatan yang kamu tulis",
+            en: "Include the notes you wrote"),
+        .shareRevokeAction: LocalizedText(id: "Matikan tautannya", en: "Turn the link off"),
+        .credentialTitle: LocalizedText(
+            id: "Simpan perjalananmu", en: "Keep your walks"),
+        .credentialBody: LocalizedText(
+            id: "Tanpa masuk pun semua tetap berjalan. Masuk hanya berarti perjalananmu bisa ditemukan lagi kalau kamu ganti ponsel.",
+            en: "Everything works without signing in. Signing in only means your walks can be found again if you change phones."),
+        .credentialSkipAction: LocalizedText(id: "Nanti saja", en: "Not now"),
+        .credentialSignOutAction: LocalizedText(id: "Keluar", en: "Sign out"),
+        .credentialFailedMessage: LocalizedText(
+            id: "Belum berhasil masuk. Perjalananmu di ponsel ini tidak berubah.",
+            en: "That did not sign you in. Nothing on this phone has changed."),
+        .credentialMergedMessage: LocalizedText(
+            id: "Sudah masuk. Perjalanan yang kamu buat sebelumnya ikut terbawa.",
+            en: "Signed in. The walks you made before came with you."),
+        .credentialNotMergedMessage: LocalizedText(
+            id: "Sudah masuk, tapi perjalanan lamamu belum ikut terbawa. Perjalanan itu tidak hilang.",
+            en: "Signed in, but your earlier walks did not come across. They are not lost."),
+        .restoreFailedTitle: LocalizedText(
+            id: "Belum bisa mengambil perjalananmu",
+            en: "Could not fetch your walks"),
+        .restoreFailedBody: LocalizedText(
+            id: "Perjalanan yang pernah kamu simpan mungkin masih ada. Kami belum berhasil mengambilnya, bukan berarti tidak ada.",
+            en: "Walks you saved before may still be there. We could not fetch them — that is not the same as you having none."),
+        .restoreRetryAction: LocalizedText(id: "Coba lagi", en: "Try again"),
+        .restoreDismissAction: LocalizedText(id: "Nanti saja", en: "Not now"),
         .journalUnsealAction: LocalizedText(id: "Buka Segelnya", en: "Unseal the Journey"),
         .journalSealedEmptyTitle: LocalizedText(
             id: "Belum ada surat", en: "No letters yet"),

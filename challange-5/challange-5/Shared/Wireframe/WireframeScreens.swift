@@ -47,11 +47,6 @@ struct SplashWireframeView: View {
     }
 }
 
-// `AuthWireframeView` is **gone**, deleted with its `login` and `register` catalogue entries in
-// the commit that shipped the real screens (this file's own rule at the top). What replaced them:
-// `Features/Auth/` — `AuthCredentialScreen` in its two configurations and `GuestNameScreen`, from
-// Figma `791:5145`, `791:5109` and `822:2235`, reached exactly where the drawing was.
-
 // MARK: - Journal branch
 //
 // `CreateJournalWireframeView` is **gone**, deleted with its catalogue entry in the commit that

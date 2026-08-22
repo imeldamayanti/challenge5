@@ -6,9 +6,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 A native iOS app (SwiftUI, iOS 18.0) for story-led cultural heritage walking quests in Bali. Users walk a fixed-order route of physical checkpoints, unlock narrative lore at each one, and finish with a shareable recap.
 
-Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. The share card, the recall survey and proximity alerts are not built; photo tasks are, as of 2026-08-19. Telemetry and the kill-switch are **half** built: the server side is deployed and the client kits (`TelemetryKit`, `GovernanceKit`) exist and are tested, but nothing in the app calls either — see `.claude/plans/supabase/c1-client-phase0.plan.md` §6. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
+Milestone 5 (Discovery & Preview) is implemented, and Milestone 6 ships the quest run as a vertical slice: start, arrival at each checkpoint, lore, written tasks, clue, completion, and a summary rendered from the Run's own snapshots. The share card, the recall survey and proximity alerts are not built; photo tasks are, as of 2026-08-19. **The app is wired to the backend as of 2026-08-21** (`.claude/plans/supabase/c2-wiring/`). It signs in anonymously, applies the kill-switch, sends anonymous telemetry, pushes a walk to `app.*`, uploads a photograph's two derivatives, and restores a walker's walks onto a device that has none. Sign in with Apple is enabled on prod (blocker B8, closed) and the share card's serve function is deployed and switched on — both unverified end to end on a real device, since the Simulator can produce neither a real Apple identity token nor exercise a shared link the way a stranger would. See also `.claude/plans/m6-quest-run-vertical-slice.plan.md`.
 
-Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — **is done**: 110 tests in `challange-5Tests`, all passing, plus the two source-scanning guards in the package. `.claude/plans/supabase/b0`–`b3` built and deployed a Supabase backend, and `.claude/plans/supabase/c1-client-phase0.plan.md` added the kill-switch publisher, `GovernanceKit` and `TelemetryKit` — **none of which the app calls yet**, deliberately.
+Milestone 8 (`.claude/plans/m8-qa-fixes.plan.md`) then did two things: fixed six QA findings, and put the run flow on a second visual direction ("Hisplora") taken from Figma. Both are shipped. `.claude/plans/m7-restore-test-guards.plan.md` — restoring the 112 tests commit `b597b5b` deleted — **is done**: 110 tests in `challange-5Tests`, all passing, plus the two source-scanning guards in the package. `.claude/plans/supabase/b0`–`b3` built and deployed a Supabase backend, `c1-client-phase0.plan.md` added the kill-switch publisher, `GovernanceKit` and `TelemetryKit`, and **`c2-wiring/` connected all of it to the app**. Phases 0–4 and 7 are `COMPLETE`; phase 6's provider is live but unverified on device; phase 5 (share card) is deployed at the owner's explicit instruction over an unresolved consent question — `docs/consent-log.md` did not change. `c2-wiring/PROGRESS.md` is the file to read first.
+
+**The app's bundle id changed mid-session: `com.umar.hisplora` → `com.astungkara.hisplora`**, to match the Apple Sign in Services ID. Every `simctl launch`/`simctl install` example anywhere in this file's history used the old id.
 
 ## Directory layout
 
@@ -380,23 +382,52 @@ Still unguarded:
   outstanding, no owner named). `theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources` does *not*
   cover it — that test asserts on `CheckpointPresentation`, which still carries every accuracy label
   and citation. The omission is in the view.
-- **Three XCUITests are red, and all three are pre-existing.** Re-verified 2026-08-20 in a clean
+- **Twelve of thirteen XCUITests pass as of 2026-08-21**, up from ten. Two of the three
+  long-standing red ones are fixed; the third turned out to be a different and more interesting
+  failure once the navigation bug in front of it was cleared — see below. Re-verified 2026-08-20 in a clean
   worktree at `65f9465`, which is the only reason they can be called pre-existing rather than
   assumed to be:
-  - `testTheWholeFlowSurvivesTheLargestDynamicTypeSize` and
-    `testQuestListAndSettingsAreReachable` both fail at `DiscoveryFlowUITests.swift:105` —
-    "Profile did not offer a way into the app preferences" — which is the *existence* check, before
-    the scroll-into-reach loop. The tap on the floating bar's Profile does not switch the tab, so
-    the Explorer's Card is never on screen to be scrolled. **This is no longer size-specific.** An
-    earlier note here said the default-size test was green and that this narrowed the fault to the
-    content size; that is now false, and what it actually narrows to is the mistimed tab-bar tap.
-    `resetLocalData` carries a one-retry workaround for exactly that failure; `openSettings` does
-    not, and giving it one is the obvious next move.
+  - **They were fixed on 2026-08-21, and the cause was none of the things this note spent weeks
+    guessing at.** The dump that solved it printed what was actually on screen at the assertion:
+    `"Language"`, `"Delete all local data"`, a `"Back"` button, and `"Settings"` present only as a
+    **static text**. The app was still *on the Settings screen*.
+    `resetAppData` deletes local data and then taps `app.buttons["Quests"]` to get back — but
+    Settings is pushed **over** the tab bar, so that tap hit a bar behind it and did nothing. Every
+    later tap in the test landed behind the same screen, and `openSettings` then looked for a
+    *button* called "Settings" on the Settings screen, where it is the title. It leaves by the Back
+    button now.
+    Three earlier theories were tested and are all wrong, which is worth keeping so nobody re-tries
+    them: it is not a mistimed tap (the one-retry changed nothing), not the accessibility label
+    (`ExplorerCardView` uses `UIStrings.settingsTitle` = `"Settings"` in EN), and not XCUITest
+    centre-tapping a padded control (a coordinate tap changed nothing). `KultaraTabBar` is a real
+    `Button` with a `contentShape` and a minimum tap target, and it works — it was simply not on
+    top.
+    **The lesson worth carrying: a guarded tap (`if x.waitForExistence { x.tap() }`) hides a
+    navigation failure completely.** Both defects found here — this one and the stale
+    `"Skip for now"` label — were invisible for exactly that reason. When a test asserts on
+    something missing, print what *is* there before theorising.
+  - **`testTheWholeFlowSurvivesTheLargestDynamicTypeSize` is still red, and it is an XCUITest
+    problem rather than an app one.** With the Settings-on-top bug cleared it gets further and then
+    XCUITest retries the Profile tap three times over sixty seconds, never sees the app go idle,
+    and it is terminated — "application is not running" with **no crash report**.
+    **Driving the same path by hand at `AccessibilityXXXL` does not reproduce it**: the app
+    launches, onboarding and Home render, the Profile tab switches, and the process sits at 0% CPU.
+    So the app is not hanging; XCUITest's *wait-for-idle* never settles, which points at a
+    ever-running animation somewhere in the hierarchy — the Journal's idle envelope turn is the
+    obvious candidate, since `HisploraEnvelopeFlip`'s idle cycle is explicitly designed to have
+    nowhere to arrive, and `HisploraPulsingMapMarker` breathes on a loop as well. **The hypothesis
+    is untested.** Whoever picks it up: quiescence, not performance, is the thing to look at.
   - `testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow` fails at
     `DiscoveryFlowUITests.swift:227` — "A map marker did not open the story flow".
   - `SideQuestFlowUITests.testReopeningACompletedSidequestReplaysWithoutAwardingAgain` is **flaky,
     not red**: it failed once on "The delete confirmation dialog did not appear" and passed on a
     re-run of the same build. Do not treat a single failure of it as a regression without a re-run.
+- **`JournalPapersTests.openingWhileTurnedReturnsTheCardToItsFrontFirst` was flaky and is fixed.**
+  It failed five times on 2026-08-21 and passed on every re-run, because it slept a fixed 400 ms
+  and then asserted a callback had fired — the turn is wall-clock work, and under a parallel suite
+  on a busy machine it overruns. It polls to a five-second deadline now. **The general lesson,
+  since this codebase has several animation-adjacent tests: a test that asserts "eventually" should
+  wait for the thing, not for the clock.**
 
 ## Two visual directions, split at a screen boundary
 
@@ -463,6 +494,43 @@ direction: it is a full-bleed preview under a translucent black bar, which is th
 own language rather than this app's.
 
 `docs/hisplora-tokens.md` records where each token was sampled, every measured ratio, and — importantly — the frames' content that was deliberately **not** built: the AI-generated portrait of a named historical figure (a `FR-CP-05` claim with no source or consent record), the external-maps handoff (`AD-3`), and the map screenshot (`FR-MAP-01`).
+
+## The backend, from the app's side
+
+Nine files under `challange-5/Services/` are the whole of it, and **nothing above them
+knows they exist**. Deleting any one removes a capability and breaks nothing else.
+
+| File | Does |
+|---|---|
+| `BackendConfiguration.swift` | Where the project is. Read from `Backend.plist`, written by a build phase from `Config/Backend.xcconfig` |
+| `GovernanceGate.swift` | The kill-switch (`AD-5`). Last good document from disk at construction, refreshed on launch and every foreground |
+| `AppTelemetry.swift` | Four anonymous events, per-walk random keys, no identifier of any kind |
+| `SupabaseSession.swift` | The anonymous session. Keychain-stored, refreshed inside a 60 s margin |
+| `DeviceIdentity.swift` | One UUID per install. Not a device identifier; erasure resets it |
+| `SyncRecords.swift` | The wire shapes. `nonisolated`, in `Services/`, never in `RunEngine` |
+| `SyncCoordinator.swift` | Pushes a walk. Idempotent upserts, backoff, and `EdgeFunctionAccountDeleter` |
+| `SyncStateStore.swift` | `runID -> the updatedAt that landed`, so an unchanged walk is not re-sent |
+| `PhotoUploader.swift` | Two objects per photograph, and structurally unable to see a sidequest's |
+| `RunRestorer.swift` | Brings walks back, **only into an empty store** |
+| `CredentialLinking.swift` | Sign in with Apple and `merge-anonymous` |
+
+Six rules hold the shape, and each cost something to learn:
+
+- **Nothing waits on the network.** Every call is fire-and-forget except one:
+  `delete-account` during `FR-SET-02` erasure, which is awaited because a walker told
+  their data is gone while it is not cannot act on something only they can decide about.
+- **No reachability check anywhere** (`AD-3`). `noModuleChecksReachability` scans for it.
+- **Two silences are broken deliberately**, and only two: a failed account deletion and a
+  failed restore. Both are shown; everything else is `try?`.
+- **The service-role key never enters the app.** Operator credentials live in `.env.local`
+  (gitignored) and `supabase/scripts/publish-suppressions.sh` reads them.
+- **`revision`, tombstones and conflict resolution were cut**, because there is one writer
+  and restore only ever runs into an empty store. `c2-wiring/phases/phase-2-sync-identity.md`
+  says what brings each back.
+- **The simulator lies twice.** Its unified log renders every message from this process as
+  `<compose failure>` — read `Library/Application Support/supabase-trace.log` instead
+  (debug builds only) — and its **Keychain survives `simctl uninstall`**, so
+  delete-and-relaunch is not a cold install for session purposes.
 
 ## Content
 

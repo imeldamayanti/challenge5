@@ -61,6 +61,9 @@ protocol AppPreferencesStore: AnyObject {
     /// `FR-PROX-03`, `NFR-PRIV-10` — off by default, and only ever turned on from the Settings row
     /// that explains it. Nothing else in the app reads or writes this.
     var nearbyAlertsEnabled: Bool { get set }
+    /// The per-install id lives on `DeviceIdentity`, not here — see that type for why it has to be
+    /// `Sendable` and this protocol cannot be. `removeAll()` still forgets it, so `FR-SET-02` stays
+    /// one call.
     func removeAll()
 }
 
@@ -153,6 +156,9 @@ final class UserDefaultsAppPreferencesStore: AppPreferencesStore {
         defaults.removeObject(forKey: Self.explorerDisplayNameKey)
         defaults.removeObject(forKey: Self.safetyNoticeAckedQuestIDsKey)
         defaults.removeObject(forKey: Self.nearbyAlertsEnabledKey)
+        // `FR-SET-02`. The next read mints a new one, so a user who erases stops being the same
+        // install to the server as well as to this device.
+        DeviceIdentity(defaults: defaults).forget()
     }
 }
 

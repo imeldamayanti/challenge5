@@ -85,6 +85,19 @@ public actor TelemetryService {
         store.save(file)
     }
 
+    /// Re-reads the queue from the store, discarding whatever this actor held in memory.
+    ///
+    /// The one caller is `FR-SET-02` erasure, which empties the file directly and then tells the
+    /// actor about it. The alternative — an `erase()` on this type — reads better and is worse: the
+    /// eraser is synchronous by protocol, so awaiting an actor there would push `async` up through
+    /// the Settings view model and into the view, for a call whose result nobody reads.
+    ///
+    /// The window it leaves is one event recorded between the file being emptied and this running.
+    /// That is microseconds, on a screen reached only when no walk is in progress.
+    public func reload() {
+        file = store.load()
+    }
+
     /// One opportunistic flush. Returns true when the server took the batch.
     ///
     /// Callers are expected to ignore the result. It is returned for the tests and for a caller

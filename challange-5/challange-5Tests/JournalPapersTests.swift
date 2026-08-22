@@ -94,7 +94,16 @@ struct JournalPapersTests {
         // The opening's own beats are zero-length under Reduce Motion, but the turn back is not —
         // it runs whatever the reader's motion setting is, because the flap and the wax are drawn
         // on the front and an opening that started on the back would swing a flap nobody can see.
-        try await Task.sleep(for: .milliseconds(400))
+        //
+        // **Polled to a deadline rather than slept for a fixed 400 ms.** The fixed sleep failed
+        // five times on 2026-08-21 and passed on every re-run: the turn is wall-clock work, and
+        // under a parallel suite on a busy machine it overruns. A test that asserts "the callback
+        // eventually fires" should wait for the callback, not for the clock — the sleep was
+        // measuring the machine.
+        let deadline = ContinuousClock.now.advanced(by: .seconds(5))
+        while finished == nil, ContinuousClock.now < deadline {
+            try await Task.sleep(for: .milliseconds(20))
+        }
 
         #expect(model.flip == .front)
         #expect(finished != nil)

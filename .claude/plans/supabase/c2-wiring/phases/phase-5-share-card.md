@@ -3,11 +3,43 @@
 **Size:** 3 days · **Depends on:** phases 1, 4
 **Demo sentence:** "I sent someone who does not have the app a link to my finished walk. Then I revoked it, and the same link stopped working."
 
-**Status:** `BLOCKED` · **Started:** — · **Completed:** —
+**Status:** `DEPLOYED` — live on prod, at the owner's explicit instruction over the consent caveat · **Started:** 2026-08-21 · **Completed:** 2026-08-21
 
 <!-- MAINTAIN THIS FILE. See phase 0's header for the rules. -->
 
-## This phase is blocked before it is started
+## Deployed 2026-08-21, at the owner's explicit instruction
+
+**The consent question was still unanswered when this was switched on.** Asked
+directly — "share cards would publish a walk through 5 real Bali sites whose consent
+is a self-grant nobody has asked them to sign; deploy anyway?" — the owner chose
+"Yes, deploy it now." That is recorded here rather than treated as resolved: the
+consent position in `docs/consent-log.md` has **not changed**, and this decision does
+not change it either. It is the owner's product call to make, and they made it
+knowingly.
+
+What actually happened, in order:
+
+1. `supabase config push --project-ref ppwcxmvetmmwliusliac` — no-op for the function
+   itself (`config push` doesn't carry function `verify_jwt`, only `functions deploy`
+   does).
+2. `supabase functions deploy share --project-ref ppwcxmvetmmwliusliac` — live,
+   `verify_jwt: false`, confirmed via `functions list`.
+3. Smoke-tested against prod before touching the client: an unknown slug and a
+   malformed slug both `404`, a `POST` is `405` — the same shape `share.test.ts`
+   asserts locally.
+4. `SupabaseShareCardMinting.isAvailable` flipped to `true`. `NoShareCardMinting`
+   (the no-backend case) stays `false` — that one is not the consent switch, it is
+   "there is nothing to mint against."
+5. `ShareCardTests` rewritten for the new reality: the no-backend case is still off,
+   a configured backend is now available, and a third test proves "available" does
+   not mean "unconditional" — minting still needs a real session.
+
+**What is still not built**, unchanged from before: the `ShareLink` URL replacement
+and the revoke control. `mint()` can now return a real URL, but nothing in the Trip
+pages calls it yet — they still hand over plain text. Building that is a further
+step, not part of this one; ask if it should happen next.
+
+## Why it was blocked before it was started
 
 Not on engineering. On [`../03-security-privacy.md`](../03-security-privacy.md) §4:
 
@@ -50,43 +82,76 @@ A column that looks like a control and is not one is worse than no column.
 
 ### Server — the serve function
 
-- [ ] A fifth Edge Function: `GET /functions/v1/share/{slug}`, `verify_jwt = false`.
-- [ ] Looks up the slug, checks `revoked_at` and `expires_at` **per request**, then
+- [x] `supabase/functions/share/index.ts`, `verify_jwt = false`. **Written and not
+      deployed** — `functions list` shows the same four as before.
+- [x] Looks up the slug, checks `revoked_at`, `expires_at` **and `deleted_at`** per
+      request, then
       streams the object or 404s.
-- [ ] Never returns a long-lived signed URL to the caller. That is the defect.
-- [ ] A slug that was never minted 404s rather than erroring — an error message that
+- [x] **Never returns a signed URL at all.** It signs one internally for 60 seconds and
+      streams the bytes, so no credential outlives the revocation. `Cache-Control:
+      no-store` for the same reason: a CDN holding a revoked card for five minutes is five
+      minutes of a link the walker believes is off.
+- [x] One response shape for **every** refusal — unknown, revoked, expired, deleted — so
+      a stranger cannot tell them apart. Slugs are matched against a fixed shape before
+      anything is looked up, so a malformed path never reaches PostgREST as a filter value.
+      The original note said an error message that
       distinguishes "revoked" from "never existed" is an enumeration oracle.
-- [ ] One additive migration if a `security definer` accessor is needed, in the same
+- [x] **No migration was needed.** The function holds the service role from its own
+      environment and reads one row by an opaque slug; a `security definer` accessor would
+      have been a second way to do what it can already do. Nothing was added
       shape as `c1`'s 0014. **Additive only** — a non-additive migration here is a
       stop-and-ask.
-- [ ] `config.toml` updated with the new function's `verify_jwt`, and verified with
+- [~] `config.toml` has the `[functions.share] verify_jwt = false` entry **locally and
+      unpushed**, with a comment saying why. Verifying it with `functions list` is part of
+      the deploy that has not happened. The original note:
       `supabase functions list` — `config push` does **not** apply it, `functions
       deploy` does.
 
 ### Client — minting
 
-- [ ] Render the recap card (`FR-DONE-06`). **It does not exist**; the Trip Summary's
+- [x] `ShareCardArtwork` renders `FR-DONE-06` at a fixed 1080 × 1350 canvas — a card is
+      an image with one job, and letting it reflow with Dynamic Type would make every
+      walker's card a different picture. The palette is passed in rather than read from
+      the environment, because `ImageRenderer` draws outside the view tree. Previously
       `ShareLink` hands over plain text today, deliberately, so the screen does not
       promise a card it cannot produce.
-- [ ] Upload to `share-cards` under `{user_id}/…`, same prefix rule as photos.
-- [ ] Mint a slug, write the `app.share_cards` row.
-- [ ] Replace the `ShareLink`'s `item` with the URL. **The bar does not otherwise
+- [x] Uploads to `share-cards` under `{user_id}/…`, same prefix rule as photos. **Bytes
+      before the row**, which is the opposite of `app.photos` and deliberate: a photograph
+      with no bytes is an orphan the sweeper finds, but a share row with no bytes is a live
+      link serving nothing to whoever the walker just sent it to.
+- [x] Mints a 32-character slug over a 64-symbol alphabet — 192 bits — and writes the
+      row. A slug is the only thing between a stranger and a walker's card, so it is length
+      rather than prettiness.
+- [~] Replace the `ShareLink`'s `item` with the URL. — Not done, because there is no URL
+      to put there while `isAvailable` is `false`; the Trip pages keep handing over plain
+      text exactly as before. This is the one line to change when sharing is switched on.
+      **The bar does not otherwise
       change** — that was the plan when the plain-text version shipped.
 
 ### Client — revoking
 
-- [ ] A way to revoke from the app, and it has to be findable. A revocation control
+- [~] A way to revoke from the app. `revoke(runID:)` exists and sets `revoked_at` rather
+      than deleting — so the record that a card was shared survives, which is a thing a
+      walker might want to see. **No control renders it yet**, because there is nothing to
+      revoke. Build the control in the same pass that turns sharing on; a revocation
+      control
       nobody can reach is the same as no revocation.
-- [ ] Revoking sets `revoked_at`; the serve function stops serving on the next
+- [x] Revoking sets `revoked_at`; the serve function stops serving on the next
       request.
 
 ### Content of the card
 
-- [ ] Rendered from the **Run's own snapshots** (`AD-4`, `FR-RUN-06`), never from live
+- [x] Rendered from the **Run's own snapshots** (`AD-4`, `FR-RUN-06`), and
+      `ShareCardBoundaryTests` scans the file to prove it reaches for no repository. Never
+      from live
       content. A walk shared after a place is withdrawn still renders what the walker
       saw.
-- [ ] Carries no coordinates, no accuracy, no timestamps finer than the day.
-- [ ] Carries the walker's own written answers only if they opt in per share. They
+- [x] Carries no coordinates, no accuracy, no timestamps finer than the day — scanned
+      for, not reviewed. A time of day plus a named place is a statement about where a
+      person was and when, to the minute, forwarded to strangers.
+- [x] Carries the walker's own written answers only if they opt in per share —
+      `reflections` is empty unless the caller fills it. Consent to share once is not
+      consent to share always. They
       wrote those for themselves.
 
 ## Exit criteria

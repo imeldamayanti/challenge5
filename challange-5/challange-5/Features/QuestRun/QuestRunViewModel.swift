@@ -99,6 +99,11 @@ final class QuestRunViewModel {
     /// one to be walked: with no store the camera is simply not offered, and every photo task is
     /// still resolvable by skipping (`AD-2`).
     private let photoStore: (any PhotoStore)?
+    private let telemetry: AppTelemetry?
+    /// `c2` phase 3. Two of the three push triggers are here — a walk completing and a walk being
+    /// abandoned — because they are the two moments after which a walk will not change again for a
+    /// while, and both leave the walker standing still rather than waiting for a screen.
+    private let sync: (any RunSyncing)?
     /// Whether this device has a camera at all. Injected rather than read here so the rule is a value
     /// a test can set — the Simulator has none, and a screen that offers a control the hardware
     /// cannot honour is worse on a walk than one that says so.
@@ -178,7 +183,11 @@ final class QuestRunViewModel {
         // capture device, so the sheet offered a camera and the camera screen then had to explain
         // there was none. This is the same question `CameraSession.start()` asks, so the two screens
         // cannot disagree about whether a photograph is possible.
-        hasCameraHardware: Bool = AVCaptureDevice.default(for: .video) != nil
+        hasCameraHardware: Bool = AVCaptureDevice.default(for: .video) != nil,
+        // `c2` phase 0. Optional, and nil in every test: telemetry is a side channel, and a view
+        // model that needed one to be constructed would have made it a dependency of the walk.
+        telemetry: AppTelemetry? = nil,
+        sync: (any RunSyncing)? = nil
     ) {
         guard let quest = (try? repository.quest(id: questID)) ?? nil else { return nil }
         self.engine = engine
@@ -186,6 +195,8 @@ final class QuestRunViewModel {
         self.preferences = preferences
         self.photoStore = photoStore
         self.hasCameraHardware = hasCameraHardware
+        self.telemetry = telemetry
+        self.sync = sync
         self.sampling = ArrivalSampling(
             locationProvider: locationProvider,
             language: language,
@@ -448,6 +459,7 @@ final class QuestRunViewModel {
     private func record(method: ArrivalMethod, accuracyM: Double?) {
         guard let checkpoint = currentCheckpoint else { return }
         do {
+            let wasAlreadyWalking = run != nil
             if let existing = run {
                 run = try engine.recordArrival(
                     runID: existing.id, checkpointID: checkpoint.id,
@@ -461,12 +473,64 @@ final class QuestRunViewModel {
                     questID: quest.id, language: language,
                     method: method, accuracyM: accuracyM)
             }
+            reportArrival(
+                checkpointID: checkpoint.id,
+                method: method,
+                accuracyM: accuracyM,
+                startedAWalk: !wasAlreadyWalking)
             arriveAtCurrentCheckpoint()
         } catch let error as RunEngineError {
             message = describe(error)
         } catch {
             message = String(describing: error)
         }
+    }
+
+    /// The three events a walk's spine produces (`schema.md` §B.7, `NFR-OBS-01`).
+    ///
+    /// All of them are recorded *after* the engine has written, so an event never claims something
+    /// the store does not hold. None of them carries a coordinate: an arrival reports a checkpoint
+    /// id and a band, and the band is computed inside `AppTelemetry` from a figure that goes no
+    /// further (`NFR-PRIV-02`).
+    ///
+    /// A manual override reports its **last known** accuracy, which is what explains why the
+    /// override was needed; with none at all the band would be a fiction, so the arrival goes
+    /// unreported rather than reported wrongly.
+    private func reportArrival(
+        checkpointID: String, method: ArrivalMethod, accuracyM: Double?, startedAWalk: Bool
+    ) {
+        guard let telemetry, let run else { return }
+        if startedAWalk {
+            telemetry.questStarted(
+                questID: run.questID,
+                contentVersion: run.contentVersion,
+                language: run.language.rawValue,
+                runID: run.id)
+        }
+        if let accuracyM {
+            telemetry.checkpointArrived(
+                checkpointID: checkpointID,
+                accuracyMetres: accuracyM,
+                arrivalMethod: method.rawValue,
+                runID: run.id)
+        }
+        guard run.state == .completed, let completedAt = run.completedAt else { return }
+        telemetry.questCompleted(
+            questID: run.questID,
+            durationMinutes: max(1, Int(completedAt.timeIntervalSince(run.startedAt) / 60)),
+            manualOverrideCount: run.checkpointResults.filter { $0.arrivalMethod == .manual }.count,
+            runID: run.id)
+        // A finished walk is one of the three moments a flush is allowed (`c2` phase 0): the
+        // walker is standing still, reading, and not waiting on a transition.
+        telemetry.flush()
+        pushCompletedOrAbandonedWalk()
+    }
+
+    /// `c2` phase 3. Detached and unawaited: a push is never something a screen waits on, and a
+    /// push that does not land leaves the walk dirty for the next foreground (`AD-3`, R4).
+    private func pushCompletedOrAbandonedWalk() {
+        guard let sync else { return }
+        Task { await sync.push() }
     }
 
     private func arriveAtCurrentCheckpoint() {
@@ -975,6 +1039,12 @@ final class QuestRunViewModel {
         isConfirmingAbandon = false
         guard let run else { return }
         self.run = (try? engine.abandon(runID: run.id, reason: .userChoice)) ?? run
+        telemetry?.questAbandoned(
+            questID: run.questID,
+            lastOrderIndex: run.orderedCheckpointResults.last?.orderIndex ?? -1,
+            reason: AbandonReason.userChoice.rawValue,
+            runID: run.id)
+        pushCompletedOrAbandonedWalk()
         screenDisappeared()
         stage = .finished
     }
