@@ -119,11 +119,12 @@ struct QuestRunView: View {
             .sheet(isPresented: Binding(get: { model.isPresentingQuestAvailability },
                                         set: { if !$0 { model.advanceFromQuestAvailability() } })) {
                 questAvailability
-                    // `.large`, not `.medium`: at medium the fixed-height column cannot hold the
-                    // frame's two-line headline beside the tilted scroll, and SwiftUI answers the
-                    // squeeze by truncating the place name mid-word — worse than any detent
-                    // argument. `921:3869` draws the sheet with air around all three parts.
-                    .presentationDetents([.large])
+                    // Half screen first (`.medium`, owner instruction 2026-08-23 — the frame's own
+                    // 540 of 874 is nearer two thirds), with `.large` one drag away so the largest
+                    // type sizes can still spread the column instead of clipping under the pill.
+                    // The screen's own layout is built compact enough for `.medium` at default
+                    // sizes — see `QuestAvailabilityScreen`.
+                    .presentationDetents([.medium, .large])
                     .presentationDragIndicator(.visible)
             }
             .task(id: model.stage) {

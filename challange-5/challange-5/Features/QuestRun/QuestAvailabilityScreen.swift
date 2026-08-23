@@ -15,6 +15,13 @@ import UIStringsKit
 /// **The count is real, not the frame's sample "3".** `title` reads the checkpoint's own filtered
 /// task count (`FR-TASK-06`), so it says "1 Quest" for every place the shipped content carries
 /// today rather than a number nothing backs (`AD-4`).
+///
+/// **Two deviations from the frame, both the owner's instruction of 2026-08-23.** The sheet stands
+/// at half screen (`.medium` first detent, `921:3870`'s own 540 of 874 is nearer two thirds) and
+/// its ground is **white**, not this direction's cream — `921:3870`'s own fill is
+/// `backgrounds/primary---elevated = white`. The palette has no white token, so the view takes
+/// `Color.white` directly; the inks stay palette tokens, and both read *better* on white than on
+/// `paperSheet` (white is strictly brighter than #FDF2DE, so every measured pair only widens).
 struct QuestAvailabilityScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -22,18 +29,22 @@ struct QuestAvailabilityScreen: View {
     let title: String
     let onContinue: () -> Void
 
+    /// The scroll at the size half a screen holds. `921:3869` draws it 194 wide inside a 540-point
+    /// sheet; scaled to the `.medium` detent the same fraction of the sheet is 157.
+    private static let glyphWidth: CGFloat = 157
+
     /// `921:3869` hangs its headline 56 points up into the tilted scroll's bounding box — the
     /// box's lower corners are empty paper-shadow space, and the roll end is what the words sit
     /// under. Without this pull-up a centred column reads a full corner of air below the picture.
-    private static let titleOverlap: CGFloat = 56
+    /// Scaled with the glyph to the half-screen sheet.
+    private static let titleOverlap: CGFloat = 44
 
     var body: some View {
-        VStack(spacing: KultaraMetrics.xl) {
-            Spacer(minLength: KultaraMetrics.xxl)
-
+        VStack(spacing: 0) {
             HisploraAvailabilityGlyph(
-                width: 194,
+                width: Self.glyphWidth,
                 tiltDegrees: HisploraScrollArt.mapHintTiltDegrees)
+                .padding(.top, KultaraMetrics.sm)
                 .padding(.bottom, -Self.titleOverlap)
 
             VStack(spacing: KultaraMetrics.md) {
@@ -55,14 +66,14 @@ struct QuestAvailabilityScreen: View {
             }
             .padding(.horizontal, KultaraMetrics.xl)
 
-            Spacer(minLength: KultaraMetrics.xxl)
+            Spacer(minLength: KultaraMetrics.lg)
 
             Button(UIStrings.string(.questAvailabilityContinue, language), action: onContinue)
                 .buttonStyle(.hisploraPillOnPaper)
                 .padding(.horizontal, KultaraMetrics.xl)
                 .padding(.bottom, KultaraMetrics.xl)
         }
-        .frame(maxWidth: .infinity)
-        .background(palette.paperSheet.color)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Color.white)
     }
 }
