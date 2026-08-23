@@ -69,9 +69,6 @@ public enum UIStrings {
         .authContinueWithApple: LocalizedText(
             id: "Lanjut dengan Apple",
             en: "Continue with Apple"),
-        .authContinueWithGoogle: LocalizedText(
-            id: "Lanjut dengan Google",
-            en: "Continue with Google"),
         .authContinueAsGuest: LocalizedText(
             id: "Lanjut sebagai tamu",
             en: "Continue as a guest"),
@@ -80,9 +77,6 @@ public enum UIStrings {
         .authNoAccount: LocalizedText(id: "Belum punya akun?", en: "Don't have an account?"),
         .authSignUpLink: LocalizedText(id: "Daftar", en: "Sign up"),
         .authBack: LocalizedText(id: "Kembali", en: "Back"),
-        .authProvidersUnavailable: LocalizedText(
-            id: "Masuk dengan Google belum tersambung di versi ini.",
-            en: "Google sign-in is not connected in this build."),
         .authInvalidEmail: LocalizedText(
             id: "Masukkan alamat email yang benar.",
             en: "Enter a valid email address."),

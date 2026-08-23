@@ -59,16 +59,12 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case authOr
     case authOrSpoken
     case authContinueWithApple
-    case authContinueWithGoogle
     case authContinueAsGuest
     case authHaveAccount
     case authSignInLink
     case authNoAccount
     case authSignUpLink
     case authBack
-    /// Why the two provider rows are drawn but cannot be used. Not in the frames: a disabled
-    /// control with no stated reason is the accessibility failure disabling it was meant to avoid.
-    case authProvidersUnavailable
     /// The three things a form can be wrong about, shown under the field they belong to rather
     /// than as an alert.
     case authInvalidEmail

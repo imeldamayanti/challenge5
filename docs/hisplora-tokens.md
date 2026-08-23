@@ -1488,34 +1488,33 @@ The one place in the table the display serif is set bold. Its own role rather th
 frames set a heavier, smaller title because it stands alone on a cream page with no illustration
 over it.
 
-### One new packaged picture, and it is a blocker
+### One new packaged picture, since removed
 
 `google-mark.png` (87 × 88, drawn at 21.57 × 22) — `791:5174`, exported at 4× rather than drawn.
 Never hand-authored: it is a trademark with a published geometry, and an approximation is worse than
 none. PNG rather than SVG for the reason `Package.swift` forces — `Resources/Images` is copied
 wholesale and everything in it is read through `UIImage(data:)`.
 
-**Whether it ships is a decision with an owner, and it is not taken.** Google's brand terms allow
-the "G" on a real Google Sign-In control and nowhere else, and this build has no identity provider
+**Removed on 2026-08-23 with the "Continue with Google" row.** Google's brand terms allow the "G"
+on a real Google Sign-In control and nowhere else, and this build has no identity provider
 behind the button. This sits beside the `docs/consent-log.md` blockers and the History page's
 citations, not instead of them.
 
-### The two provider rows are drawn and disabled
+### The provider rows
 
-`791:5170` and `791:5173` are on screen exactly as the frames draw them, and neither can be used. A
-control labelled "Continue with Apple" that does not call `AuthenticationServices` is a false claim,
-and a false Sign in with Apple is one App Review declines besides. `791:5180` ("Continue as a
-guest") is the one row here that does what it says.
+`791:5170` is on screen exactly as the frame draws it and **is wired** — it calls
+`AuthenticationServices` through `AppleSignInCoordinator`, so it is not one of those false claims App
+Review declines. Google's row (`791:5173`) was removed on 2026-08-23 rather than left
+drawn-and-disabled; see the note above. `791:5180` ("Continue as a guest") is the other row here,
+and the one that does exactly what it says.
 
-Two consequences worth writing down:
+One consequence worth writing down:
 
-- **They are not faded.** `HisploraProviderButtonStyle` takes `dimsWhenDisabled:` and both provider
-  rows pass `false`, which is the opposite of what a style usually wants. Fading composites the fill
-  into the cream — near-black turns to mud and the white row all but disappears — so the screen
-  would be drawing two colours nobody sampled and the measured pairs would stop describing what is
-  on it. `.disabled` still stops the tap and still makes VoiceOver announce them as dimmed.
-- **A line under them says why**, which the frames do not draw. A disabled control with no stated
-  reason is the accessibility failure disabling it was meant to avoid.
+- **Apple's row is not faded when disabled.** `HisploraProviderButtonStyle` takes `dimsWhenDisabled:`
+  and Apple's row passes `false`, which is the opposite of what a style usually wants. Fading
+  composites the fill into the cream — near-black turns to mud — so the screen would be drawing a
+  colour nobody sampled and the measured pairs would stop describing what is on it. `.disabled`
+  still stops the tap and still makes VoiceOver announce it as dimmed.
 
 ### What is behind these screens
 

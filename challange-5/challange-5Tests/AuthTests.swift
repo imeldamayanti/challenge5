@@ -194,22 +194,28 @@ struct AuthTests {
 
     final class SpyCredentialLinking: CredentialLinking, @unchecked Sendable {
         private let lock = NSLock()
-        private var calls: [(idToken: String, nonce: String, fullName: String?)] = []
+        private var calls: [
+            (idToken: String, nonce: String, givenName: String?, familyName: String?)
+        ] = []
         let answer: CredentialOutcome
+        /// What `storedDisplayName` answers — the name an earlier sign-in left on the account.
+        var storedName: String?
 
         init(answer: CredentialOutcome) { self.answer = answer }
 
         var callCount: Int { lock.withLock { calls.count } }
-        var lastCall: (idToken: String, nonce: String, fullName: String?)? {
+        var lastCall: (idToken: String, nonce: String, givenName: String?, familyName: String?)? {
             lock.withLock { calls.last }
         }
 
         func signInWithApple(
-            idToken: String, nonce: String, fullName: String?
+            idToken: String, nonce: String, givenName: String?, familyName: String?
         ) async -> CredentialOutcome {
-            lock.withLock { calls.append((idToken, nonce, fullName)) }
+            lock.withLock { calls.append((idToken, nonce, givenName, familyName)) }
             return answer
         }
+
+        func storedDisplayName() async -> String? { storedName }
 
         func signOut() async {}
     }
@@ -222,7 +228,7 @@ struct AuthTests {
         let credentials = SpyCredentialLinking(answer: .signedInAndMerged)
         let model = AuthViewModel(store: store, credentials: credentials)
 
-        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: "Ayu")
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", givenName: "Ayu", familyName: nil)
 
         #expect(credentials.callCount == 1)
         #expect(credentials.lastCall?.idToken == "a-token")
@@ -242,7 +248,7 @@ struct AuthTests {
         let credentials = SpyCredentialLinking(answer: .signedInWithoutMerge)
         let model = AuthViewModel(store: store, credentials: credentials)
 
-        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: "Ayu")
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", givenName: "Ayu", familyName: nil)
 
         #expect(model.isFinished)
         #expect(store.accountEntryCompletedAt != nil)
@@ -255,59 +261,50 @@ struct AuthTests {
         let model = AuthViewModel(
             store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
 
-        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", givenName: nil, familyName: nil)
 
         #expect(model.isFinished)
         #expect(store.explorerDisplayName == "Ayu")
     }
 
     /// Apple hands a name only on the very first authorisation; every later one returns nil. With
-    /// no name from Apple and none already stored, finishing the flow would land a walker on a card
-    /// headed by their role forever — the entry screens are shown once per install, so nothing would
-    /// ever ask again. The flow stops on the name screen instead: the same ask the guest screen
-    /// makes, reached because Apple could not answer it.
-    @Test func anAppleSignInWithNoNameAsksForOne() async {
+    /// no name from Apple and none already stored, the flow still finishes — one tap signed the
+    /// walker in, and asking them to type a name right after is the second ask this screen was
+    /// built not to make. The account's own copy of the name is fetched behind the walker instead:
+    /// the entry finishes immediately, and the store fills when the fetch lands.
+    @Test func anAppleSignInWithNoNameFetchesTheOneTheAccountKeeps() async {
         let store = InMemoryAppPreferencesStore()
-        let model = AuthViewModel(
-            store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
+        let credentials = SpyCredentialLinking(answer: .signedInAndMerged)
+        credentials.storedName = "Alief"
+        let model = AuthViewModel(store: store, credentials: credentials)
 
-        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
-
-        #expect(!model.isFinished)
-        #expect(model.stage == .nameAfterApple)
-        #expect(store.accountEntryCompletedAt == nil)
-        #expect(store.explorerDisplayName == nil)
-    }
-
-    /// The name screen after Apple is the guest screen's ask, and its answer is kept the same way.
-    @Test func aNameTypedAfterAppleIsKeptLikeAnyOther() async {
-        let store = InMemoryAppPreferencesStore()
-        let model = AuthViewModel(
-            store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
-        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
-
-        model.guestDisplayName = "  Wayan  "
-        model.submitGuest()
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", givenName: nil, familyName: nil)
 
         #expect(model.isFinished)
-        #expect(store.explorerDisplayName == "Wayan")
         #expect(store.accountEntryCompletedAt != nil)
+        // The fetch runs off the entry flow, so the test waits for the thing rather than for the
+        // clock: bounded yielding until the store fills, never a fixed sleep.
+        for _ in 0..<10_000 where store.explorerDisplayName == nil {
+            await Task.yield()
+        }
+        #expect(store.explorerDisplayName == "Alief")
     }
 
-    /// The entry screens are not a gate (`KultaraRootView`'s own account of them), so backing out of
-    /// the name screen still enters the app — named by role rather than trapped on this screen by a
-    /// name nobody can make Apple hand over.
-    @Test func backingOutOfTheNameScreenStillEntersTheApp() async {
+    /// The same sign-in with nothing on the account either: the card stays role-named and nothing
+    /// is invented.
+    @Test func anAppleSignInWithNoNameAnywhereStaysRoleNamed() async {
         let store = InMemoryAppPreferencesStore()
         let model = AuthViewModel(
             store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
-        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
 
-        model.back()
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", givenName: nil, familyName: nil)
 
         #expect(model.isFinished)
-        #expect(store.explorerDisplayName == nil)
         #expect(store.accountEntryCompletedAt != nil)
+        for _ in 0..<10_000 where store.explorerDisplayName != nil {
+            await Task.yield()
+        }
+        #expect(store.explorerDisplayName == nil)
     }
 
     /// A failed sign-in does not finish the flow, and says so under the provider block rather than
@@ -317,7 +314,7 @@ struct AuthTests {
         let model = AuthViewModel(
             store: store, credentials: SpyCredentialLinking(answer: .failed))
 
-        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", givenName: nil, familyName: nil)
 
         #expect(!model.isFinished)
         #expect(model.providerMessage == .credentialFailedMessage)

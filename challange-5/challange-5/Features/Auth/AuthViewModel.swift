@@ -18,26 +18,22 @@ import UIStringsKit
 /// every core flow works in airplane mode, and this screen must not become the first one that does
 /// not.
 ///
-/// **Apple is wired; Google is still drawn and disabled.** `c2` phase 6 enabled
+/// **Apple is the one provider on screen, and it is wired.** `c2` phase 6 enabled
 /// `[auth.external.apple]` on the deployed project and shipped `CredentialLinking` — this reads
-/// that rather than duplicating it. Google stays disabled because `config.toml` has no
-/// `[auth.external.google]` block and no OAuth client exists; adding it would be two providers
-/// blocked instead of one. `authProvidersUnavailable` says so, and a disabled control with no
-/// stated reason is the accessibility failure disabling it was meant to avoid.
+/// that rather than duplicating it. Google's row was removed rather than left disabled: a control
+/// with no `[auth.external.google]` block behind it and no OAuth client anywhere is a promise the
+/// app cannot keep, and Google's own brand terms allow their mark only on a real Google Sign-In
+/// control — which this never was.
 @MainActor
 @Observable
 final class AuthViewModel {
 
     /// The three frames, in the order the flow chart reaches them. `signUp` is first: the entry
     /// point named in the brief, and the screen onboarding hands over to.
-    ///
-    /// `nameAfterApple` is not a frame of its own — it renders the guest screen's ask, reached when
-    /// Sign in with Apple succeeded but Apple handed over no name to keep.
     enum Stage: String, Sendable, CaseIterable {
         case signUp
         case signIn
         case guestName
-        case nameAfterApple
     }
 
     /// Which field a message belongs under. Kept as one value rather than three optionals so a
@@ -115,17 +111,10 @@ final class AuthViewModel {
     }
 
     /// The guest screen's back chevron (`822:2235`). It returns to the screen that offered the
-    /// guest route rather than to a fixed one, so the way back is the way in. On the name screen
-    /// reached after Apple there is no screen before it — Apple has already signed the walker in —
-    /// so backing out finishes the entry without a name, which is what the entry screens being
-    /// *not a gate* means (`KultaraRootView`'s account of them): named by role, never trapped here.
+    /// guest route rather than to a fixed one, so the way back is the way in.
     func back() {
         problem = nil
-        if stage == .nameAfterApple {
-            finish(displayName: nil)
-        } else {
-            stage = .signUp
-        }
+        stage = .signUp
     }
 
     /// Anything the walker types clears the standing message.
@@ -163,28 +152,41 @@ final class AuthViewModel {
         finish(displayName: guestDisplayName)
     }
 
-    /// The Apple provider row's action. `idToken`/`nonce`/`fullName` come from
+    /// The Apple provider row's action. `idToken`/`nonce` and both name parts come from
     /// `AppleSignInCoordinator`, which owns talking to `ASAuthorizationController` — this only
     /// decides what the outcome means for the entry flow.
-    func signInWithApple(idToken: String, nonce: String, fullName: String?) async {
+    ///
+    /// A successful sign-in always finishes the flow. Apple hands a name only on the very first
+    /// authorisation a walker ever grants this app; every later one gets nil, which `finish`
+    /// already reads as "leave whatever is stored alone" rather than as a name to erase. With
+    /// nothing stored either, the walker enters right away and the account's own copy of the name —
+    /// saved there by an earlier sign-in that did get one — arrives in the store when it lands,
+    /// which the Explorer's Card reads on its next look. Asking them to type a name right after a
+    /// one-tap sign-in is the second ask this screen was built not to make.
+    func signInWithApple(idToken: String, nonce: String, givenName: String?, familyName: String?) async {
         providerMessage = nil
         isSigningInWithApple = true
         let outcome = await credentials.signInWithApple(
-            idToken: idToken, nonce: nonce, fullName: fullName)
+            idToken: idToken, nonce: nonce, givenName: givenName, familyName: familyName)
         isSigningInWithApple = false
         switch outcome {
         case .signedInAndMerged, .signedInWithoutMerge:
-            // Apple returns a name only on the very first authorisation a walker ever grants this
-            // app; every later sign-in gets nil, which `finish` already reads as "leave whatever
-            // is stored alone" rather than as a name to erase. With nothing stored either, the
-            // entry screens would never ask again — they show once per install — so the flow stops
-            // on the guest screen's ask instead of landing a walker the card names by role forever.
-            if let fullName {
-                finish(displayName: fullName)
-            } else if store.explorerDisplayName != nil {
-                finish(displayName: nil)
+            if let givenName {
+                // The card heads its reader by their given name; the surname travels to the
+                // account metadata with the sign-in above, but never onto the card unasked.
+                finish(displayName: givenName)
             } else {
-                stage = .nameAfterApple
+                // The entry screens are not a gate, so nothing here waits on the network. A fetch
+                // that fails is the offline case and leaves the card role-named; one that succeeds
+                // fills the store, which every reader of it re-reads on its next appearance.
+                finish(displayName: nil)
+                if store.explorerDisplayName == nil {
+                    Task { [store, credentials] in
+                        if let stored = await credentials.storedDisplayName() {
+                            store.explorerDisplayName = stored
+                        }
+                    }
+                }
             }
         case .failed:
             providerMessage = .credentialFailedMessage

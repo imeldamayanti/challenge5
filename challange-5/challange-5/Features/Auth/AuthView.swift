@@ -41,9 +41,7 @@ struct AuthView: View {
                 case .signIn:
                     AuthCredentialScreen(
                         configuration: .signIn, model: model, language: language)
-                case .guestName, .nameAfterApple:
-                    // One screen for both asks: the copy ("What should we call you?") is the same,
-                    // and what differs — where back goes — is `AuthViewModel.back`'s to decide.
+                case .guestName:
                     GuestNameScreen(model: model, language: language)
                 }
             }
@@ -134,14 +132,14 @@ struct AuthField: View {
     }
 }
 
-/// The two provider rows, the guest row on the sign-up frame, and a line under them.
+/// The Apple row, the guest row on the sign-up frame, and a line under them.
 ///
-/// `791:5170`, `791:5173` and `791:5180`. **Apple is wired to `c2` phase 6's `CredentialLinking`,
-/// Google stays `disabled`** — `config.toml` has no `[auth.external.google]` block and no OAuth
-/// client exists, so adding it would be two providers blocked instead of one.
-/// `authProvidersUnavailable` says that plainly rather than leaving a disabled control with no
-/// stated reason, which is the accessibility failure disabling it was meant to avoid in the first
-/// place.
+/// `791:5170` and `791:5180`. **Apple is wired to `c2` phase 6's `CredentialLinking`.** Google's
+/// row was removed rather than left drawn-and-disabled: with no `[auth.external.google]` block and
+/// no OAuth client behind it, a "Continue with Google" pill is a promise the app cannot keep — and
+/// Google's brand terms allow their mark only on a working Google Sign-In control, which made the
+/// shipped mark itself a pre-public blocker (`docs/hisplora-tokens.md`). A failed sign-in says so
+/// under the block rather than leaving a walker looking at buttons that did nothing.
 struct AuthProviderBlock: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -164,12 +162,6 @@ struct AuthProviderBlock: View {
             .buttonStyle(.hisploraProviderDark)
             .disabled(model.isSigningInWithApple)
 
-            Button {} label: {
-                providerLabel(.google, .authContinueWithGoogle)
-            }
-            .buttonStyle(.hisploraProviderLight)
-            .disabled(true)
-
             if showsGuestRow {
                 Button(action: onGuest) {
                     providerLabel(.guest, .authContinueAsGuest)
@@ -177,17 +169,16 @@ struct AuthProviderBlock: View {
                 .buttonStyle(.hisploraProviderGuest)
             }
 
-            Text(UIStrings.string(
-                model.providerMessage ?? .authProvidersUnavailable, language))
-                .kultaraFont(.caption)
-                // The seal red for a real outcome (something happened, worth noticing); the quiet
-                // ink for the standing caption (nothing has happened yet).
-                .foregroundStyle(
-                    (model.providerMessage == nil ? palette.inkMuted : palette.brownSeal).color)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, KultaraMetrics.xs)
-                .accessibilityAddTraits(model.providerMessage == nil ? [] : .isStaticText)
+            if let message = model.providerMessage {
+                Text(UIStrings.string(message, language))
+                    .kultaraFont(.caption)
+                    // The seal red for a real outcome (something happened, worth noticing).
+                    .foregroundStyle(palette.brownSeal.color)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.top, KultaraMetrics.xs)
+                    .accessibilityAddTraits(.isStaticText)
+            }
         }
     }
 
@@ -198,7 +189,8 @@ struct AuthProviderBlock: View {
         do {
             let result = try await appleSignIn.start()
             await model.signInWithApple(
-                idToken: result.idToken, nonce: result.nonce, fullName: result.fullName)
+                idToken: result.idToken, nonce: result.nonce,
+                givenName: result.givenName, familyName: result.familyName)
         } catch AppleSignInCoordinator.Failure.cancelled {
             return
         } catch {
