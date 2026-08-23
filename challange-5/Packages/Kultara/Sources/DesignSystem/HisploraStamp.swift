@@ -25,9 +25,25 @@ public struct HisploraStampShape: Shape {
     public static let fillStyle = FillStyle(eoFill: true)
 
     private let teethAcross: CGFloat
+    /// An explicit count down the sides, for the one die whose two pitches differ — `921:2262`,
+    /// the write-journal stamp, cuts 14 bites across (touching, pitch 25.85 on its 362-point
+    /// paper) but only 13 down (pitch 41.8, spaced apart). `nil` keeps the derived count, which
+    /// is what every other stamp wants: one pitch, bites touching on all four edges.
+    private let teethDown: CGFloat?
+    /// How much of the limiting pitch each bite's diameter takes. `nil` (the default) is 1 —
+    /// bites touching, which is what the franked dies draw. The Journey Saved photo dies
+    /// (`921:2938`/`2943`'s vector, 9 bites across at pitch 15.2 and 13 down at 14.4) cut a
+    /// 10.5-point bite at both pitches — spaced apart — which is a span of about 0.71.
+    private let biteSpan: CGFloat?
 
-    public init(teethAcross: CGFloat = HisploraStampShape.teethAcross) {
+    public init(
+        teethAcross: CGFloat = HisploraStampShape.teethAcross,
+        teethDown: CGFloat? = nil,
+        biteSpan: CGFloat? = nil
+    ) {
         self.teethAcross = teethAcross
+        self.teethDown = teethDown
+        self.biteSpan = biteSpan
     }
 
     public func path(in rect: CGRect) -> Path {
@@ -35,10 +51,10 @@ public struct HisploraStampShape: Shape {
         // drawing mistake rather than as perforation.
         let across = max(4, teethAcross.rounded())
         let pitch = rect.width / across
-        let down = max(4, (rect.height / pitch).rounded())
+        let down = max(4, (teethDown ?? (rect.height / pitch)).rounded())
         let stepX = rect.width / across
         let stepY = rect.height / down
-        let radius = min(stepX, stepY) / 2
+        let radius = min(stepX, stepY) / 2 * min(biteSpan ?? 1, 1)
 
         var path = Path()
         path.addRect(rect)
@@ -94,6 +110,9 @@ public struct HisploraStampCard<Picture: View>: View {
     private let title: String
     private let subtitle: String
     private let showsFranking: Bool
+    private let teethAcross: CGFloat
+    private let teethDown: CGFloat?
+    private let biteSpan: CGFloat?
     private let picture: Picture
 
     /// 152 × 206 — the perforated frame `547:2851` exports (`Images/badges-frame.svg`), and the
@@ -112,15 +131,26 @@ public struct HisploraStampCard<Picture: View>: View {
     ///   words — reproduced at a readable size they would be larger than the stamp. So the
     ///   envelope's stamps are the paper alone, and the Explorer's Card, where the same stamp is
     ///   set six times larger, is where the names are actually printed and read.
+    /// - Parameters teethAcross/teethDown/biteSpan: the perforation, for callers holding a die
+    ///   whose cut differs from the card family's own. The completion carousel's stamps
+    ///   (`921:2793`'s vector) cut 9 bites across and 13 down, spaced — the same die the
+    ///   Journey Saved photo stamps hold — while the default stays the touching 14 the
+    ///   Explorer's Card was measured against.
     public init(
         title: String,
         subtitle: String,
         showsFranking: Bool = true,
+        teethAcross: CGFloat = HisploraStampShape.teethAcross,
+        teethDown: CGFloat? = nil,
+        biteSpan: CGFloat? = nil,
         @ViewBuilder picture: () -> Picture
     ) {
         self.title = title
         self.subtitle = subtitle
         self.showsFranking = showsFranking
+        self.teethAcross = teethAcross
+        self.teethDown = teethDown
+        self.biteSpan = biteSpan
         self.picture = picture()
     }
 
@@ -135,7 +165,10 @@ public struct HisploraStampCard<Picture: View>: View {
             // plain rectangle, which is what shipped before this was caught on device. Under even-odd
             // the half of each circle inside the rectangle is subtracted and the half outside is
             // added — a bump with a notch beside it, which is what a perforation is.
-            .clipShape(HisploraStampShape(), style: FillStyle(eoFill: true))
+            .clipShape(
+                HisploraStampShape(
+                    teethAcross: teethAcross, teethDown: teethDown, biteSpan: biteSpan),
+                style: FillStyle(eoFill: true))
             // `705:2769`'s own drop shadow — the grid is lifted off the sheet as a stack of stuck-on
             // objects. Only on the franked size: on the envelope these are 26 points across and a
             // shadow at that scale is dirt on the paper.

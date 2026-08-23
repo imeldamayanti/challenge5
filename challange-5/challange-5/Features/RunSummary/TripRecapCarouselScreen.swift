@@ -55,7 +55,9 @@ struct TripRecapCarouselScreen: View {
                 format: UIStrings.string(.onboardingProgress, language),
                 page + 1, Self.totalPages))
             .padding(.horizontal, 20)
-            .padding(.top, 8)
+            // The frames draw the segments 47 points below the safe-area top (y 106 on their
+            // 874-point canvas, under a 59-point status bar) — not hugging it.
+            .padding(.top, 47)
     }
 
     private var pageHeadlineColor: Color { SRGBColor(hex: "#FDF2DE").color }
@@ -72,16 +74,34 @@ struct TripRecapCarouselScreen: View {
     // MARK: - Completion 1 (`205:121`) — the headline
 
     private var headlinePage: some View {
+        // The frame's verticals: emblem centred at y≈299 of 874, the text block starting at 447 —
+        // 48 below the artwork — and everything after left to the bottom spacer.
         VStack(spacing: 16) {
-            Spacer(minLength: 100)
+            Spacer(minLength: 140)
 
-            HisploraTripArtworkImage(HisploraTripArtwork.emblem)
-                .frame(width: 239, height: 239)
+            // `921:2689`'s `Ellipse 531` — a blurred warm disc standing behind the artwork, the
+            // halo the frame draws under its emblem (a 485-point circle behind a 200-point one).
+            // Subtle on this gradient by design. The frame zooms its emblem to cover its box
+            // (`921:2707`'s image is scaled past it); `.fit` would render the shipped asset's
+            // 530×471 at 200×178 and the medallion reads a size too small.
+            HisploraTripArtworkImage(HisploraTripArtwork.emblem, contentMode: .fill)
+                .frame(width: 200, height: 200)
+                .clipped()
+                .background {
+                    Circle()
+                        .fill(SRGBColor(hex: "#6E3B26").color)
+                        .blur(radius: 61.5)
+                        .padding(-142.5)
+                }
                 .accessibilityHidden(true)
 
-            Spacer(minLength: 24)
+            Spacer(minLength: 32)
 
-            pageHeadline(UIStrings.string(.tripRecapHeadlineTitle, language))
+            // The frame breaks the headline after "History"; forced here rather than in the
+            // string table, the same way the memories page breaks after "From".
+            pageHeadline(
+                UIStrings.string(.tripRecapHeadlineTitle, language)
+                    .replacingOccurrences(of: " History ", with: " History\n"))
 
             Text(UIStrings.string(.tripRecapHeadlineBody, language))
                 .font(.system(size: 17))
@@ -92,24 +112,22 @@ struct TripRecapCarouselScreen: View {
             Spacer()
         }
         .padding(.horizontal, 50)
-        .padding(.top, 60)
     }
 
     // MARK: - Completion 2 (`205:151`) — the stat grid
 
     private var glancePage: some View {
-        VStack(spacing: 32) {
-            Spacer(minLength: 100)
-
+        // Headline at the template's y≈151; the frame's grid starts at y 278, 52 below it.
+        VStack(spacing: 52) {
             pageHeadline(UIStrings.string(.tripRecapGlanceTitle, language))
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
                 HisploraCompletionStatTile(
                     systemImage: "location.fill",
                     label: UIStrings.string(.tripRecapStatExploredPlaces, language),
                     value: "\(summary.placesExploredCount)",
                     fill: SRGBColor(hex: "#93C6DE"), border: SRGBColor(hex: "#A9D6EA"),
-                    ink: SRGBColor(hex: "#69311E"))
+                    ink: SRGBColor(hex: "#69311E"), textInk: SRGBColor(hex: "#61301A"))
                 HisploraCompletionStatTile(
                     systemImage: "person.crop.circle.badge.clock.fill",
                     label: UIStrings.string(.tripRecapStatTripDuration, language),
@@ -134,26 +152,24 @@ struct TripRecapCarouselScreen: View {
 
             Spacer()
         }
-        .padding(.top, 60)
+        .padding(.top, 89)
     }
 
-    // MARK: - Completion 3 (`205:205`) — the stamp collage
+    // MARK: - Completion 3 (`205:205`, re-drawn `921:2773`) — the stamp collage
 
     private var stampsPage: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 100)
-
             pageHeadline(exploredTitle)
                 .padding(.horizontal, 43)
 
-            Spacer(minLength: 40)
-
+            // The frame's collage centres at y≈488 of 874 — 98 points below the headline block.
             stampCollage
+                .padding(.top, 98)
                 .accessibilityElement(children: .contain)
 
             Spacer()
         }
-        .padding(.top, 60)
+        .padding(.top, 89)
     }
 
     private var exploredTitle: String {
@@ -183,6 +199,7 @@ struct TripRecapCarouselScreen: View {
                 HisploraStampCard(
                     title: stamp.placeName,
                     subtitle: stamp.region,
+                    teethAcross: 9, teethDown: 13, biteSpan: 0.67,
                     artworkName: stamp.artworkName)
                     .frame(width: 114)
                     .rotationEffect(.degrees(placement.rotation))
@@ -200,10 +217,15 @@ struct TripRecapCarouselScreen: View {
     /// the walker actually took, captioned with the place, and the quest's own legend standing in
     /// alone when there are none, rather than an empty screen.
     private var memoriesPage: some View {
+        // The frame pins its headline at y≈151 from the screen top (safe area + 89) and gives
+        // the rest to the grid — the old leading `Spacer` negotiated with the greedy
+        // ScrollView and let the headline float to mid-screen.
         VStack(spacing: 24) {
-            Spacer(minLength: 100)
-
-            pageHeadline(UIStrings.string(.tripRecapMemoriesTitle, language))
+            // The frame breaks the headline after "From"; the string is shared with the
+            // postcard page, so the break is forced here rather than in the string table.
+            pageHeadline(
+                UIStrings.string(.tripRecapMemoriesTitle, language)
+                    .replacingOccurrences(of: " From ", with: " From\n"))
                 .padding(.horizontal, 43)
 
             ScrollView {
@@ -211,11 +233,11 @@ struct TripRecapCarouselScreen: View {
                     featuredLegend
                     photoGrid
                 }
-                .padding(.horizontal, 36)
-                .padding(.vertical, 24)
+                .padding(.horizontal, 57.5)
+                .padding(.bottom, 24)
             }
         }
-        .padding(.top, 60)
+        .padding(.top, 89)
     }
 
     /// Standing alone, centred, exactly as `TripSummaryScreen.featuredLegend` draws it — never a
@@ -234,7 +256,17 @@ struct TripRecapCarouselScreen: View {
     @ViewBuilder private var photoGrid: some View {
         let photos = summary.capturedPhotos
         if !photos.isEmpty {
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 32) {
+            // The frame's own cell metrics: 134.048-wide medallions on an 18.952 column gap and
+            // a 10.5 row gap, the pair of columns centred on the screen (57/58 side margins).
+            // Fixed columns rather than flexible ones, or the medallion floats in a wider cell
+            // and the drawn gap doubles.
+            LazyVGrid(
+                columns: [
+                    GridItem(.fixed(134.048), spacing: 18.952),
+                    GridItem(.fixed(134.048)),
+                ],
+                spacing: 10.5
+            ) {
                 ForEach(Array(photos.enumerated()), id: \.element.id) { _, photo in
                     TripCollectionMedallion(frame: .tall, eyebrow: nil, caption: photo.placeName) {
                         TripPhotoImage(photoStore: photoStore, relativePath: photo.relativePath)
@@ -247,10 +279,11 @@ struct TripRecapCarouselScreen: View {
     // MARK: - Completion 5 (`921:2867`) — the postcard
 
     private var postcardPage: some View {
-        VStack(spacing: 20) {
-            Spacer(minLength: 90)
-
-            pageHeadline(UIStrings.string(.tripRecapMemoriesTitle, language))
+        VStack(spacing: 27) {
+            // Same headline placement as the memories page — y≈151, broken after "From".
+            pageHeadline(
+                UIStrings.string(.tripRecapMemoriesTitle, language)
+                    .replacingOccurrences(of: " From ", with: " From\n"))
                 .padding(.horizontal, 43)
 
             postcard
@@ -260,8 +293,8 @@ struct TripRecapCarouselScreen: View {
 
             actionButtons
         }
-        .padding(.top, 60)
-        .padding(.bottom, 24)
+        .padding(.top, 89)
+        .padding(.bottom, 28)
     }
 
     /// The tilted kraft envelope behind the card and the walker's photograph riding half out of
@@ -272,21 +305,27 @@ struct TripRecapCarouselScreen: View {
     /// envelope is carrying inside.
     private var postcard: some View {
         ZStack {
+            // The frame's kraft envelope is 337 points across, tilted the other way — its top
+            // edge rises to the right, which is a negative angle here.
             HisploraEnvelope(stage: .sealed) { EmptyView() }
-                .frame(width: 320)
-                .rotationEffect(.degrees(8))
+                .frame(width: 337)
+                .rotationEffect(.degrees(-8))
                 .accessibilityHidden(true)
 
             VStack(spacing: 0) {
                 postcardCard
                 postcardPhotoStamp
-                    .padding(.top, -50)
+                    .padding(.top, -51)
             }
         }
     }
 
+    /// `921:2892`'s card at its own 292.7 × 192.8: the title block and the memo/duration facts
+    /// down the left, the franked stamp up the right corner, and the walker's words written over
+    /// ruled lines in the right column — the frame's address side, carrying the journal text
+    /// instead of an address.
     private var postcardCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(spacing: 10) {
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 2) {
                     Text(UIStrings.string(.tripRecapPostcardTitle, language))
@@ -296,45 +335,67 @@ struct TripRecapCarouselScreen: View {
                     Text(String(
                         format: UIStrings.string(.tripRecapPostcardFrom, language),
                         region.isEmpty ? summary.title : region))
-                        .font(.custom("Snell Roundhand", size: 21, relativeTo: .body))
+                        .font(.custom("Snell Roundhand", size: 20.4, relativeTo: .body))
                         .foregroundStyle(SRGBColor(hex: "#A33921").color)
                 }
                 Spacer(minLength: 0)
                 postcardStamp
             }
 
-            if let journalText = summary.run.journalEntry?.text, !journalText.isEmpty {
-                Text(journalText)
-                    .font(.system(size: 13))
-                    .foregroundStyle(SRGBColor(hex: "#221D1D").color)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            VStack(alignment: .leading, spacing: 6) {
-                postcardFact(
-                    label: UIStrings.string(.tripRecapMemoLabel, language),
-                    value: String(
-                        format: UIStrings.string(.tripRecapPlacesUnit, language),
-                        summary.placesExploredCount))
-                postcardFact(
-                    label: UIStrings.string(.tripDuration, language),
-                    value: String(
-                        format: UIStrings.string(.tripRecapMinutesUnit, language),
-                        summary.durationMinutes))
+            HStack(alignment: .top, spacing: 14) {
+                VStack(alignment: .leading, spacing: 5) {
+                    postcardFact(
+                        label: UIStrings.string(.tripRecapMemoLabel, language),
+                        value: String(
+                            format: UIStrings.string(.tripRecapPlacesUnit, language),
+                            summary.placesExploredCount))
+                    postcardFact(
+                        label: UIStrings.string(.tripDuration, language),
+                        value: String(
+                            format: UIStrings.string(.tripRecapMinutesUnit, language),
+                            summary.durationMinutes))
+                }
+                Spacer(minLength: 0)
+                journalOverLines
+                    .frame(width: 120)
             }
         }
-        .padding(20)
-        .frame(width: 300)
+        .padding(.leading, 22)
+        .padding(.trailing, 14)
+        .padding(.vertical, 12)
+        .frame(width: 292.74, height: 192.78, alignment: .top)
         .background(SRGBColor(hex: "#F5F1E5").color)
     }
 
+    /// The right column: the journal text set over the frame's seven ruled lines (12.7 points
+    /// apart). The lines stand whether or not there is anything written — an unwritten postcard
+    /// still shows its address rules.
+    private var journalOverLines: some View {
+        ZStack(alignment: .top) {
+            VStack(spacing: 12.2) {
+                ForEach(0..<7, id: \.self) { _ in
+                    Rectangle()
+                        .fill(SRGBColor(hex: "#58453E").color.opacity(0.35))
+                        .frame(height: 0.5)
+                }
+            }
+            Text(summary.run.journalEntry?.text ?? "")
+                .font(.system(size: 10))
+                .tracking(-0.17)
+                .foregroundStyle(SRGBColor(hex: "#221D1D").color)
+                .frame(width: 120, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
     private func postcardFact(label: String, value: String) -> some View {
-        HStack(spacing: 4) {
-            Text("\(label):")
-                .font(.system(size: 13, weight: .semibold, design: .serif))
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text("\(label) :")
+                .font(.system(size: 10, design: .serif))
+                .tracking(-0.57)
                 .foregroundStyle(SRGBColor(hex: "#58453E").color)
             Text(value)
-                .font(.system(size: 13))
+                .font(.custom("Snell Roundhand", size: 11, relativeTo: .body))
                 .foregroundStyle(SRGBColor(hex: "#A33921").color)
         }
     }
@@ -350,15 +411,24 @@ struct TripRecapCarouselScreen: View {
         let path = summary.run.journalEntry?.selfiePhotoRelativePath
             ?? summary.run.journalEntry?.placePhotoRelativePath
         return ZStack {
+            Color.white
             if let path {
                 TripPhotoImage(photoStore: photoStore, relativePath: path)
                     .aspectRatio(contentMode: .fill)
+                    .frame(width: 250.9, height: 181.5)
+                    .clipped()
             } else {
                 Color.black
+                    .frame(width: 250.9, height: 181.5)
             }
         }
-        .frame(width: 279, height: 205)
-        .clipShape(HisploraStampShape(teethAcross: 20), style: HisploraStampShape.fillStyle)
+        .frame(width: 279.185, height: 205.7)
+        // The frame's big photo die is the same perforation as the Journey Saved stamps —
+        // 9 bites across, 13 down, spaced — scaled up 1.96×, with the photo inset ~6% onto the
+        // white paper rather than bleeding to the teeth.
+        .clipShape(
+            HisploraStampShape(teethAcross: 9, teethDown: 13, biteSpan: 0.71),
+            style: HisploraStampShape.fillStyle)
         .rotationEffect(.degrees(5.41))
         .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
     }
@@ -368,15 +438,18 @@ struct TripRecapCarouselScreen: View {
     /// place rather than one hardcoded regardless of which quest was walked.
     @ViewBuilder private var postcardStamp: some View {
         if let firstStamp = stamps.first {
-            ZStack(alignment: .topTrailing) {
+            // The frame's corner stamp (36.4 × 49.5 at 2.92°) with the bronze emblem riding its
+            // *left* edge — 34 points, centred 29 left of and 5 above the stamp's centre.
+            ZStack {
                 HisploraStampCard(
                     title: firstStamp.placeName, subtitle: firstStamp.region,
                     showsFranking: false, artworkName: firstStamp.artworkName)
-                    .frame(width: 44)
-                    .rotationEffect(.degrees(3))
-                HisploraTripArtworkImage(HisploraTripArtwork.emblem)
-                    .frame(width: 28, height: 28)
-                    .offset(x: 10, y: -10)
+                    .frame(width: 37)
+                    .rotationEffect(.degrees(2.92))
+                HisploraTripArtworkImage(HisploraTripArtwork.emblem, contentMode: .fill)
+                    .frame(width: 34, height: 34)
+                    .clipShape(Circle())
+                    .offset(x: -29, y: -5)
             }
             .accessibilityHidden(true)
         }
@@ -391,7 +464,9 @@ struct TripRecapCarouselScreen: View {
                     Image(systemName: "square.and.arrow.up.fill")
                     Text(UIStrings.string(.tripRecapShareAction, language))
                         .fontWeight(.semibold)
+                        .tracking(-0.34)
                 }
+                .font(.system(size: 17))
                 .foregroundStyle(.white)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 17)
@@ -403,6 +478,7 @@ struct TripRecapCarouselScreen: View {
 
             Button(UIStrings.string(.tripRecapCloseAction, language)) { onFinish() }
                 .font(.system(size: 17, weight: .medium))
+                .tracking(-0.51)
                 .foregroundStyle(SRGBColor(hex: "#151311").color)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 17)

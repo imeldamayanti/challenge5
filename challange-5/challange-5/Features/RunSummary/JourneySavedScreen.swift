@@ -13,7 +13,6 @@ import UIStringsKit
 /// not have to know *how* that screen is reached (switching tabs and opening the journal-letter
 /// overlay is `KultaraRootView`'s concern, not this one's).
 struct JourneySavedScreen: View {
-    @Environment(\.hisploraPalette) private var palette
     @Environment(\.dismiss) private var dismiss
 
     let language: ContentLanguage
@@ -26,7 +25,8 @@ struct JourneySavedScreen: View {
     let onSeeRecap: () -> Void
 
     var body: some View {
-        HisploraStage(ground: \.paperSheet, grain: true) {
+        // The frame's own ground: `#F3EEE1`, a grayer cream than `paperSheet`.
+        HisploraStage(groundColor: SRGBColor(hex: "#F3EEE1"), grain: true) {
             VStack(spacing: 0) {
                 TripPageBar(
                     title: "",
@@ -35,10 +35,13 @@ struct JourneySavedScreen: View {
                     onBack: { dismiss() })
 
                 ScrollView {
-                    VStack(spacing: KultaraMetrics.xl) {
+                    VStack(spacing: 40) {
+                        // New York Medium 31, the frame's own title weight — one step lighter
+                        // than the carousel headlines.
                         Text(UIStrings.string(.journeySavedTitle, language))
-                            .font(.system(size: 32, weight: .semibold, design: .serif))
-                            .foregroundStyle(palette.inkDark.color)
+                            .font(.system(size: 31, weight: .medium, design: .serif))
+                            .tracking(-0.93)
+                            .foregroundStyle(SRGBColor(hex: "#1A1A1A").color)
                             .multilineTextAlignment(.center)
                             .accessibilityAddTraits(.isHeader)
 
@@ -47,12 +50,15 @@ struct JourneySavedScreen: View {
                         if !text.isEmpty {
                             Text(text)
                                 .font(.system(size: 15))
-                                .foregroundStyle(palette.inkDark.color)
+                                .tracking(-0.3)
+                                .foregroundStyle(SRGBColor(hex: "#403838").color)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(KultaraMetrics.lg)
+                                .padding(.vertical, 16)
+                                .padding(.horizontal, 10)
                                 .background(
-                                    palette.paperCard.color, in: RoundedRectangle(cornerRadius: 16))
+                                    Color.white.opacity(0.45),
+                                    in: RoundedRectangle(cornerRadius: 12))
                         }
 
                         Button(UIStrings.string(.journeySavedRecapAction, language)) {
@@ -60,67 +66,56 @@ struct JourneySavedScreen: View {
                         }
                         .buttonStyle(.hisploraPillOnPaper)
                     }
-                    .padding(KultaraMetrics.lg)
+                    .padding(.horizontal, 20)
                     .padding(.top, KultaraMetrics.md)
+                    .padding(.bottom, KultaraMetrics.lg)
                 }
             }
         }
         .navigationBarBackButtonHidden()
     }
 
-    // MARK: - The photographs and the seal
+    // MARK: - The photographs and the medallion (`921:2937`/`2943`/`2946`)
 
+    /// The frame's collage, re-expressed as offsets from its own centre: the portrait die
+    /// (121 × 164.2) sits up-left at −8.17°, the landscape one (the same die's 142 × 192.8 box
+    /// turned on its side) up-right at +5.41°, and the bronze emblem — 101 points, the same
+    /// `trip-emblem` artwork the carousel's headline page carries — overlaps both from below.
     @ViewBuilder private var photoCollage: some View {
-        if placePhoto != nil || selfiePhoto != nil {
-            ZStack {
-                if let placePhoto {
-                    polaroid(placePhoto)
-                        .rotationEffect(.degrees(-6))
-                        .offset(x: -34)
-                }
-                if let selfiePhoto {
-                    polaroid(selfiePhoto)
-                        .rotationEffect(.degrees(6))
-                        .offset(x: 34, y: 14)
-                }
-                sealArtwork
-                    .offset(y: 58)
+        ZStack {
+            if let placePhoto {
+                photoStamp(placePhoto, dieWidth: 121, dieHeight: 164.227)
+                    .rotationEffect(.degrees(-8.17))
+                    .offset(x: -74, y: -16)
             }
-            .frame(height: 190)
-            .accessibilityHidden(true)
-        } else {
-            sealArtwork.accessibilityHidden(true)
+            if let selfiePhoto {
+                photoStamp(selfiePhoto, dieWidth: 192.824, dieHeight: 142.07)
+                    .rotationEffect(.degrees(5.41))
+                    .offset(x: 56, y: -22)
+            }
+            HisploraTripArtworkImage(HisploraTripArtwork.emblem, contentMode: .fill)
+                .frame(width: 101, height: 101)
+                .clipShape(Circle())
+                .offset(x: -12.5, y: 62)
         }
+        .frame(height: 230)
+        .accessibilityHidden(true)
     }
 
-    private func polaroid(_ image: UIImage) -> some View {
+    /// A photograph set into the frame's own photo die: white paper, the picture inset ~6% all
+    /// round, and the perforation the die's vector cuts — 9 bites across and 13 down, spaced
+    /// (a 0.71 bite span), which is what `biteSpan:` exists for.
+    private func photoStamp(_ image: UIImage, dieWidth: CGFloat, dieHeight: CGFloat) -> some View {
         Image(uiImage: image)
             .resizable()
             .aspectRatio(contentMode: .fill)
-            .frame(width: 118, height: 138)
+            .frame(width: dieWidth * 0.873, height: dieHeight * 0.877)
             .clipped()
-            .padding(8)
-            .padding(.bottom, 18)
+            .frame(width: dieWidth, height: dieHeight)
             .background(Color.white)
-            .shadow(color: .black.opacity(0.2), radius: 4, y: 2)
-    }
-
-    /// The stamp franked on `247:1880`'s arrival, reused here rather than a new export — a seal is
-    /// decoration, and the same one already shipped for the checkpoint stamp says the same thing.
-    @ViewBuilder private var sealArtwork: some View {
-        if let seal = HisploraWaxSealMetrics.questSeal {
-            seal
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(
-                    width: HisploraWaxSealMetrics.questSealSize.width,
-                    height: HisploraWaxSealMetrics.questSealSize.height)
-        } else {
-            Circle()
-                .fill(palette.mapMarker.color)
-                .frame(
-                    width: HisploraWaxSealMetrics.questSealSize.width,
-                    height: HisploraWaxSealMetrics.questSealSize.width)
-        }
+            .clipShape(
+                HisploraStampShape(teethAcross: 9, teethDown: 13, biteSpan: 0.71),
+                style: HisploraStampShape.fillStyle)
+            .shadow(color: .black.opacity(0.18), radius: 4, y: 3)
     }
 }

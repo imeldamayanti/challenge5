@@ -529,6 +529,7 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case writeJournalAddPlacePhoto
     case writeJournalAddSelfie
     case writeJournalSaveAction
+    case writeJournalKeyboardDone
     case journeySavedTitle
     case journeySavedRecapAction
 

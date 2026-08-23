@@ -136,8 +136,15 @@ public extension HisploraStampCard where Picture == HisploraStampArtworkImage {
     /// A stamp franked with one of the packaged drawings. `nil` — an unknown place, or content that
     /// has been withdrawn — falls back to the aged paper the window showed before the drawings
     /// existed, which is the honest empty state rather than a borrowed picture.
-    init(title: String, subtitle: String, showsFranking: Bool = true, artworkName: String?) {
-        self.init(title: title, subtitle: subtitle, showsFranking: showsFranking) {
+    init(
+        title: String, subtitle: String, showsFranking: Bool = true,
+        teethAcross: CGFloat = HisploraStampShape.teethAcross,
+        teethDown: CGFloat? = nil, biteSpan: CGFloat? = nil,
+        artworkName: String?
+    ) {
+        self.init(
+            title: title, subtitle: subtitle, showsFranking: showsFranking,
+            teethAcross: teethAcross, teethDown: teethDown, biteSpan: biteSpan) {
             HisploraStampArtworkImage(name: artworkName)
         }
     }
