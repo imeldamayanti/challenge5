@@ -83,11 +83,100 @@ import Testing
         #expect(sequence.animation(of: .unrolling) != nil)
     }
 
+    /// Every moving beat hands over before it has finished, which is what keeps the opening one
+    /// movement instead of four. A `hold` equal to its `duration` is the stutter this replaced.
+    @Test func everyMovingBeatHandsOverBeforeItSettles() {
+        let sequence = HisploraScrollUnsealSequence(rendersImmediately: false)
+        for beat in [HisploraScrollUnsealStage.widening, .unbinding, .unrolling] {
+            #expect(sequence.hold(of: beat) < sequence.duration(of: beat))
+            #expect(sequence.hold(of: beat) > .zero)
+        }
+    }
+
+    /// The overlap is a tail, not a chord. A beat that gives away more than a third of itself starts
+    /// the next one while this one is still visibly travelling, and the two read as a collision.
+    @Test func theOverlapIsATailRatherThanAChord() {
+        let sequence = HisploraScrollUnsealSequence(rendersImmediately: false)
+        for beat in [HisploraScrollUnsealStage.widening, .unbinding, .unrolling] {
+            let overlap = sequence.duration(of: beat) - sequence.hold(of: beat)
+            #expect(overlap.seconds < sequence.duration(of: beat).seconds / 3)
+        }
+    }
+
+    /// A skipped opening waits for nothing, the same way it animates nothing.
+    @Test func reducedMotionHoldsOnNoBeatAtAll() {
+        let sequence = HisploraScrollUnsealSequence(rendersImmediately: true)
+        for beat in HisploraScrollUnsealStage.allCases {
+            #expect(sequence.hold(of: beat) == .zero)
+        }
+    }
+
+    // MARK: The idle shake
+
+    /// The shake starts and ends at rest, so switching it off when the roll is tapped cannot catch
+    /// the picture mid-tip more often than not.
+    @Test func theShakeIsPunctuationBetweenRests() {
+        let beats = HisploraScrollIdleShake.Beat.allCases
+        #expect(beats.first == .rest)
+        #expect(beats.last?.tiltDegrees != 0)
+        // The rest is the great majority of the loop — this is what makes it an invitation rather
+        // than an object that vibrates.
+        #expect(HisploraScrollIdleShake.Beat.rest.seconds
+            > HisploraScrollIdleShake.shakeSeconds * 4)
+    }
+
+    /// Each tip is smaller than the one before it. A shake that does not damp reads as a rendering
+    /// fault rather than as an object being nudged.
+    @Test func theShakeDampsTipByTip() {
+        let tips = HisploraScrollIdleShake.Beat.allCases.filter { $0 != .rest }
+        let sizes = tips.map { abs($0.tiltDegrees) }
+        #expect(sizes == sizes.sorted(by: >))
+        #expect(zip(tips, tips.dropFirst()).allSatisfy { $0.tiltDegrees.sign != $1.tiltDegrees.sign },
+                "the tips alternate — a shake that leans the same way twice is a drift")
+    }
+
+    /// Small enough not to compete with the opening the tap starts, and slow enough not to buzz.
+    @Test func theShakeStaysUnderTheThresholdOfAnAnimation() {
+        for beat in HisploraScrollIdleShake.Beat.allCases {
+            #expect(abs(beat.tiltDegrees) <= 4)
+            #expect(abs(beat.lift) <= 8)
+        }
+        #expect(HisploraScrollIdleShake.cycleSeconds >= 2.5)
+        #expect(HisploraScrollIdleShake.captionFloor > 0.5,
+                "a caption that fades further than this reads as broken, not as breathing")
+    }
+
     /// The tilt is the frame's, not a second copy of it that can drift. It is also constant — see
     /// `sealedTiltDegrees`.
     @Test func theRestingTiltIsTheFramesOwn() {
         #expect(HisploraScrollUnsealSequence.sealedTiltDegrees
             == TransitionScrollMetrics.rotationDegrees)
+    }
+
+    /// **The roll's drawn length is the canvas's diagonal extent, not its width.** Framing the
+    /// canvas at the sheet's own width drew a roll half again too long, because `rotationDegrees`
+    /// stands a picture that runs corner to corner. This is the conversion that stopped it, asserted
+    /// against the frame's two measurements rather than against a number somebody typed.
+    @Test func aTurnedRollIsAskedForByItsDrawnLengthNotItsCanvas() {
+        let sheetWidth: CGFloat = 362
+        let canvas = TransitionScrollMetrics.canvasWidth(forTurnedWidth: sheetWidth)
+        #expect(canvas < sheetWidth, "the canvas is always narrower than the roll it presents")
+        // Round-trips: a canvas this wide draws a roll exactly the sheet's width.
+        let drawn = canvas * (TransitionScrollMetrics.boxWidthFraction
+            / TransitionScrollMetrics.widthFraction)
+        #expect(abs(drawn - sheetWidth) < 0.01)
+    }
+
+    /// The roll rests at the size `293:1599` draws it and opens to the sheet's, and those two are
+    /// within a few points of each other — so `widening` is the roll settling into the sheet's box,
+    /// not a growth spurt. A target that needs the picture to change size by more than a tenth means
+    /// the conversion above has been dropped again.
+    @Test func theRollBarelyChangesSizeAsItWidens() {
+        let screen: CGFloat = 402, margin: CGFloat = 20
+        let resting = TransitionScrollMetrics.canvasWidth(
+            forTurnedWidth: screen * TransitionScrollMetrics.boxWidthFraction)
+        let opened = TransitionScrollMetrics.canvasWidth(forTurnedWidth: screen - margin * 2)
+        #expect(abs(opened - resting) / resting < 0.1)
     }
 
     // MARK: The slices

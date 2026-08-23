@@ -20,12 +20,15 @@ enum TaskSheetLayout {
     static let titleBarTop: CGFloat = 13
     static let titleBarHeight: CGFloat = KultaraMetrics.minimumTapTarget
 
-    /// `447:1903` sits at y = 114 under a title box ending at 108.
-    static let titleToProgress: CGFloat = 6
-
-    /// The determinate bar the frame draws 4 points tall, in a row padded 20 above and below.
-    static let progressBarHeight: CGFloat = 4
-    static let progressBarPadding: CGFloat = 14
+    /// The gap between the title row and the sheet.
+    ///
+    /// **`447:1903`'s determinate progress bar used to stand here and has been removed by request.**
+    /// It was the frame's own object and it counted the run's real tasks rather than the frame's
+    /// invented three — but the shipped checkpoints carry one task each, so it drew a bar that was
+    /// either empty or full and never anything else. Its old row (6 above, a 4-point bar, 14 each
+    /// side of it) is folded into this one number, so the sheet keeps standing where the frame draws
+    /// it instead of jumping 32 points up the screen when the bar went.
+    static let titleToSheet: CGFloat = 6 + 4 + 28
 
     /// The sheet is drawn at y = 190, 62 under the bar's box. Held at 44 rather than the frame's 62:
     /// the frame draws a photo task, whose sheet is one pill deep, and a written task's field, save
@@ -36,26 +39,40 @@ enum TaskSheetLayout {
     /// How far the sheet's head roll stands below the top of the safe area — the number the
     /// transition screen has to land its unrolled parchment on.
     static var sheetTopInset: CGFloat {
-        titleBarTop + titleBarHeight + titleToProgress
-            + progressBarHeight + progressBarPadding * 2 + sheetTop
+        titleBarTop + titleBarHeight + titleToSheet + sheetTop
     }
 
-    /// How far the sheet's foot roll hangs *below* the bottom of the safe area.
+    /// How tall the sheet stands when nothing has measured the real one yet.
     ///
-    /// **This one is a typical case, not a measurement, and the difference is worth stating.** The
-    /// sheet is content-sized — it has to be, so the words can grow (`NFR-A11Y-01`) — and it lives in
-    /// a `ScrollView`, so it runs on under the bottom safe-area inset instead of stopping at it. On
-    /// the shipped tasks at the default text size its foot lands about this far past that edge, and
-    /// that is what the transition's parchment is drawn to. A much shorter task would leave the
-    /// crossfade shortening the page a little; a longer one scrolls, and its visible foot is the
-    /// screen's edge again. The head roll, which is the edge the eye actually tracks, is exact either
-    /// way.
-    static let sheetFootOvershoot: CGFloat = 33
+    /// **This replaced an arithmetic that was wrong by two hundred points.** The sheet used to be
+    /// drawn as "everything left on the screen, plus 33" on the theory that a content-sized sheet
+    /// inside a `ScrollView` runs on past the bottom safe-area inset. It does not: on the shipped
+    /// written tasks at the default text size the foot roll settles about 127 points *above* the
+    /// bottom of the screen, so the transition unrolled a parchment 219 points longer than the one
+    /// it then cross-faded into and the foot roll jumped up the screen at the hand-over. Measured on
+    /// iPhone 17 Pro / iOS 26.5: head roll at 199, foot roll ending at 747, on an 874-point stage.
+    ///
+    /// It is an absolute rather than a fraction of the screen *because* the sheet is content-sized —
+    /// the same task on a shorter phone draws the same words at the same size and stands the same
+    /// height, and it is the screen underneath that has less room.
+    ///
+    /// A fallback, not a constant: `TaskDetailScreen` measures the real sheet and reports it, and
+    /// from the second checkpoint on the transition unrolls to the height the destination will
+    /// actually be. This is what the *first* one uses, and what a photo task — a sheet one pill deep
+    /// — is still approximated by.
+    static let estimatedSheetHeight: CGFloat = 549
 
     /// The box the sheet occupies inside a stage `height` points tall, measured from the top of the
     /// safe area — which is where a `GeometryReader` inside `HisploraStage` measures from too.
-    static func sheetBox(inStageOfHeight height: CGFloat) -> (top: CGFloat, height: CGFloat) {
+    ///
+    /// - Parameter measuredHeight: the height `TaskDetailScreen` last reported for the sheet this
+    ///   transition is opening into, when there is one.
+    static func sheetBox(inStageOfHeight height: CGFloat,
+                         measuredHeight: CGFloat? = nil) -> (top: CGFloat, height: CGFloat) {
         let top = sheetTopInset
-        return (top, max(0, height - top + sheetFootOvershoot))
+        let sheet = measuredHeight ?? estimatedSheetHeight
+        // Never longer than the room below the header — a measurement taken at an accessibility text
+        // size can exceed the screen, and the transition has no scroll view to run on into.
+        return (top, max(0, min(sheet, height - top)))
     }
 }

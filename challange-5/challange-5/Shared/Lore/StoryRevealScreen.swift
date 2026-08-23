@@ -338,6 +338,9 @@ struct StoryTransitionScreen: View {
     /// The place being walked to, from content. Not drawn — it is what VoiceOver is told this
     /// control opens.
     let placeName: String
+    /// How tall the sheet this hands over to will be, when a previous checkpoint has measured one.
+    /// Nil on the first transition of a walk, where `TaskSheetLayout` falls back to its estimate.
+    var destinationSheetHeight: CGFloat?
     let onContinue: () -> Void
 
     @State private var stage: HisploraScrollUnsealStage = .sealed
@@ -350,7 +353,8 @@ struct StoryTransitionScreen: View {
         HisploraStage(ground: \.brownStone) {
             Button(action: unseal) {
                 GeometryReader { proxy in
-                    let box = TaskSheetLayout.sheetBox(inStageOfHeight: proxy.size.height)
+                    let box = TaskSheetLayout.sheetBox(inStageOfHeight: proxy.size.height,
+                                                       measuredHeight: destinationSheetHeight)
                     ZStack(alignment: .top) {
                         VStack(spacing: 0) {
                             Spacer(minLength: 0)
@@ -360,6 +364,10 @@ struct StoryTransitionScreen: View {
                                 .foregroundStyle(palette.inkDusty.color)
                                 .multilineTextAlignment(.center)
                                 .fixedSize(horizontal: false, vertical: true)
+                                // Breathing on the roll's own clock while nothing has been tapped,
+                                // so the words and the picture read as one object asking for the
+                                // tap rather than as two things animating near each other.
+                                .hisploraIdlePulse(isActive: stage == .sealed)
                                 // The words are an instruction for a tap that has already happened.
                                 .opacity(stage == .sealed ? 1 : 0)
                                 // 788 of 874, which is 52 above the home indicator's own room.
@@ -367,7 +375,8 @@ struct StoryTransitionScreen: View {
                         }
                         .frame(maxWidth: .infinity)
 
-                        scroll(restingOffset: proxy.size.height / 2 - (box.top + box.height / 2))
+                        scroll(in: proxy.size.width,
+                               restingOffset: proxy.size.height / 2 - (box.top + box.height / 2))
                             .frame(width: proxy.size.width - TaskSheetLayout.margin * 2,
                                    height: box.height)
                             .offset(y: box.top)
@@ -402,7 +411,10 @@ struct StoryTransitionScreen: View {
             var beat = stage.next
             while let current = beat {
                 withAnimation(sequence.animation(of: current)) { stage = current }
-                try? await Task.sleep(for: sequence.duration(of: current))
+                // `hold`, not `duration`: each beat starts while the one before it is still easing
+                // out, so the opening never comes to a full stop between them
+                // (`HisploraScrollUnsealSequence.hold(of:)`).
+                try? await Task.sleep(for: sequence.hold(of: current))
                 beat = current.next
             }
             onContinue()
@@ -422,9 +434,19 @@ struct StoryTransitionScreen: View {
     /// (`TaskSheetLayout`). The tied roll still *rests* where `293:1595` puts it, on the screen's
     /// centre line, and settles into the box as it grows: moving the resting picture would be
     /// redrawing the frame to serve the animation.
-    private func scroll(restingOffset: CGFloat) -> some View {
+    private func scroll(in stageWidth: CGFloat, restingOffset: CGFloat) -> some View {
         ZStack {
-            sealedRoll
+            // Both widths are the *turned* roll's length put through
+            // `canvasWidth(forTurnedWidth:)`, never the canvas width directly — see that function
+            // for why passing the sheet's own 362 here drew a roll half again too long.
+            sealedRoll(width: TransitionScrollMetrics.canvasWidth(
+                forTurnedWidth: stage == .sealed
+                    ? stageWidth * TransitionScrollMetrics.boxWidthFraction
+                    : stageWidth - TaskSheetLayout.margin * 2))
+                // The shake rides on the resting picture only, and comes off it the instant the tap
+                // lands — a loop left running under `widening` would be a second animation writing
+                // the same rotation and offset.
+                .hisploraIdleShake(isActive: stage == .sealed)
                 .offset(y: stage == .sealed ? restingOffset : 0)
                 .opacity(stage.showsSealedRoll ? 1 : 0)
             HisploraParchmentUnroll(openFraction: stage.openFraction)
@@ -439,7 +461,7 @@ struct StoryTransitionScreen: View {
     /// the screen centres the scroll between two `Spacer`s on a 874-point ground, the overflow is 56
     /// points on each side, and there is far more slack than that above the caption. Reserving the
     /// turned box would mean laying out against a size that changes with the angle.
-    @ViewBuilder private var sealedRoll: some View {
+    @ViewBuilder private func sealedRoll(width: CGFloat) -> some View {
         if let image = TransitionScrollMetrics.image {
             image
                 .resizable()
@@ -447,11 +469,14 @@ struct StoryTransitionScreen: View {
                 // Growing the frame rather than scaling the view: the width is what has to end up
                 // matching the parchment's, and a `scaleEffect` would leave the layout at the tied
                 // roll's size while the picture stood wider than it.
-                .containerRelativeFrame(.horizontal, alignment: .center) { width, _ in
-                    stage == .sealed
-                        ? width * TransitionScrollMetrics.widthFraction
-                        : width - TaskSheetLayout.margin * 2
-                }
+                //
+                // **A plain `.frame`, not `containerRelativeFrame`.** The container-relative form
+                // re-runs its closure against the container on each layout pass and SwiftUI
+                // interpolates the *result*, which on device stepped rather than travelled — the
+                // roll jumped to a couple of intermediate widths instead of growing. The caller
+                // already knows the stage's width, so the interpolated value is an ordinary
+                // animatable frame here.
+                .frame(width: width)
                 // Constant, not animated: the asset is drawn on a diagonal and this is what stands
                 // it level (`HisploraScrollUnsealSequence.sealedTiltDegrees`). Turning it to zero
                 // during the opening tips the level roll over onto that diagonal.

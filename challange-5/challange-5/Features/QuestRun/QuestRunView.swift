@@ -60,9 +60,21 @@ struct QuestRunView: View {
             //
             // Each stage still runs its own entrance — the typewriter, the scroll, the reveal's own
             // fade — on top of this.
-            .transition(.opacity)
-            .animation(.easeInOut(duration: 0.35), value: model.stage)
-            .kultaraSpeckledGround(palette.paper)
+            // Asymmetric rather than a plain cross-fade, and the asymmetry is the whole point: with
+            // both halves fading over the same window the compositor shows a quarter of the ground
+            // through the middle of the change, so two screens that draw the *same* parchment still
+            // dipped darker at the seam. Holding the outgoing screen at full opacity for the first
+            // 0.24 s keeps the stack opaque the whole way across, and the incoming one arrives on
+            // top of a page that never dimmed.
+            .transition(.asymmetric(
+                insertion: .opacity.animation(.easeOut(duration: 0.32)),
+                removal: .opacity.animation(.easeIn(duration: 0.26).delay(0.24))))
+            .animation(.easeInOut(duration: 0.5), value: model.stage)
+            // **The ground under the cross-fade has to be the ground of the screens crossing it.**
+            // `palette.paper` is the museum's cream, and on the story flow — brown on both sides of
+            // most stage changes — it printed a bright flash for as long as the fade lasted. That
+            // was the most visible fault in the hand-over out of the transition screen.
+            .kultaraSpeckledGround(isOnStoryFlow ? hisplora.brownStone : palette.paper)
             .navigationTitle(isOnStoryFlow ? "" : model.quest.title.value(for: language))
             .kultaraInlineNavigationTitle()
             .toolbar(isOnStoryFlow ? .hidden : .visible, for: .navigationBar)
@@ -328,8 +340,6 @@ struct QuestRunView: View {
                 draft: Binding(
                     get: { model.taskDrafts[task.id] ?? "" },
                     set: { model.taskDrafts[task.id] = $0 }),
-                completedTasks: model.resolvedTaskCount,
-                totalTasks: model.taskCount,
                 portraitURL: model.cutsceneImageURL,
                 photoDraft: model.photoDraft(for: task).map { Image(uiImage: $0) },
                 isCameraAvailable: model.isCameraAvailable,
@@ -343,7 +353,8 @@ struct QuestRunView: View {
                 onRemovePhoto: { model.removePhotoDraft(task) },
                 onContinue: { model.advanceFromTaskDetail() },
                 onOpenSiteMap: { model.presentSiteMap() },
-                onBack: { model.retreatFromStoryStage() })
+                onBack: { model.retreatFromStoryStage() },
+                onMeasureSheetHeight: { model.recordTaskSheetHeight($0) })
                 // `1:4681`, over the sheet. A cover rather than a stage for the same reason the site
                 // plan is one: the camera is opened and dismissed back to the same task.
                 .fullScreenCover(
@@ -421,6 +432,7 @@ struct QuestRunView: View {
         StoryTransitionScreen(
             language: language,
             placeName: model.currentPlaceName,
+            destinationSheetHeight: model.taskSheetHeight,
             onContinue: { model.advanceFromTransition() })
     }
 
@@ -474,9 +486,10 @@ struct QuestRunView: View {
                     Spacer(minLength: 40)
                     LocationStateHeading(state: model.locationState, language: language)
 
-                    // The frame's `Maps` rectangle at `20, 328`, 362 × 218.89. Held aside for now:
-                    // what fills it is `RunRouteMapView`, the drawn canvas (`FR-MAP-01` rules out
-                    // the Google Maps imagery the frame pastes in).
+                    // The frame's `Maps` rectangle at `20, 328`, 362 × 218.89. What fills it is
+                    // the live basemap the frame pastes in — `ArrivalRouteMap`, which falls back to
+                    // the drawn canvas on a load that actually failed. See that type for how far
+                    // the `FR-MAP-01` deviation reaches and what still holds `FR-OFF-03`.
                     // The frame's gap is 100, measured off a lead it draws on one line. SF Pro Text
                     // is set a touch wider than the SF Pro Display the frame specifies, so the same
                     // sentence wraps to two here and 59 is what puts the map back at the drawn 328.
@@ -536,13 +549,12 @@ struct QuestRunView: View {
     /// the location preview the walk between checkpoints otherwise lacks.
     @ViewBuilder private var routeMap: some View {
         if let route = model.routeMap {
-            // No chrome: this screen is on the story flow's brown ground, and the map's own heading
-            // and distance row are inked for paper. The heading above and `arrivalNumbers` below
-            // carry both, in inks the Hisplora palette measures.
-            RunRouteMapView(route: route,
+            // No chrome either way: this screen is on the story flow's brown ground, and the drawn
+            // map's own heading and distance row are inked for paper. The heading above and
+            // `arrivalNumbers` below carry both, in inks the Hisplora palette measures.
+            ArrivalRouteMap(route: route,
                             language: language,
-                            totalCheckpoints: model.totalCheckpoints,
-                            showsChrome: false)
+                            totalCheckpoints: model.totalCheckpoints)
         }
     }
 

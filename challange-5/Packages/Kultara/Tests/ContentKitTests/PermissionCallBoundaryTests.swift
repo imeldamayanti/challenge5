@@ -167,12 +167,34 @@ struct PermissionCallBoundaryTests {
         "QuestMapAnnotation.swift",
     ]
 
+    /// The **one** in-quest file allowed to draw live tiles, and the reason, written down rather
+    /// than implied — the same shape of record `liveBasemapOwningFiles` is.
+    ///
+    /// `223:2004` ("Not Quite There") pastes a real street map into its map slot, and on 2026-08-21
+    /// the owner instructed that the screen match the frame. So the arrival screen's slot is now an
+    /// `MKMapView`. This is a **deviation from `FR-MAP-01`, not a reading of it**: the requirement
+    /// is about the walk, and this is the walk.
+    ///
+    /// What keeps `FR-OFF-03` from being traded away with it: `ArrivalRouteMap` falls back to
+    /// `RunRouteMapView` — the authored `route.geojson` on a `Canvas` — on
+    /// `mapViewDidFailLoadingMap`, which is a report of a failed load and not a reachability check
+    /// (`AD-3`). A walker with the radio off still sees where the next checkpoint is, and nothing
+    /// else on that screen is gated on tiles.
+    ///
+    /// The amendment is `docs/prd-amendments/fr-map-01-arrival-basemap.md` and is **unsigned**.
+    /// `theRunItselfNeverDrawsAMapFromLiveTiles` below still bans every other file under
+    /// `Features/QuestRun/`, which is what stops this from becoming a general permission.
+    static let arrivalBasemapOwningFiles: Set<String> = [
+        "ArrivalRouteMapView.swift",
+    ]
+
     static let liveMapTileCalls = ["import MapKit", "MKMapView", "Map("]
 
     @Test func onlyTheDiscoveryBasemapDrawsMapsFromLiveTiles() throws {
+        let permitted = Self.liveBasemapOwningFiles.union(Self.arrivalBasemapOwningFiles)
         let offenders = try Self.occurrences(of: Self.liveMapTileCalls, under: Self.appTarget)
             .filter { offender in
-                !Self.liveBasemapOwningFiles.contains { offender.hasPrefix($0 + ":") }
+                !permitted.contains { offender.hasPrefix($0 + ":") }
             }
         #expect(offenders.isEmpty, "\(offenders)")
     }
@@ -181,14 +203,46 @@ struct PermissionCallBoundaryTests {
     /// widen this one by accident.
     ///
     /// `FR-MAP-01`/`FR-OFF-03` are about the walk. `RunRouteMapView` projects the authored
-    /// `route.geojson` onto a `Canvas` and must never become a MapKit view — a walker inside a
+    /// `route.geojson` onto a `Canvas` and **must never become a MapKit view** — a walker inside a
     /// covered market with no signal still has to be able to see where the next checkpoint is.
+    /// That is precisely why it survives as `ArrivalRouteMap`'s fallback rather than being deleted
+    /// when the arrival slot went to live tiles on 2026-08-21.
+    ///
+    /// One file is exempted, by name, and `arrivalBasemapOwningFiles` carries the reason. Every
+    /// other file under `Features/QuestRun/` — `RunRouteMapView` included — still turns this red on
+    /// the first `import MapKit`.
     @Test func theRunItselfNeverDrawsAMapFromLiveTiles() throws {
         let run = Self.appTarget
             .appendingPathComponent("Features")
             .appendingPathComponent("QuestRun")
         let offenders = try Self.occurrences(of: Self.liveMapTileCalls, under: run)
+            .filter { offender in
+                !Self.arrivalBasemapOwningFiles.contains { offender.hasPrefix($0 + ":") }
+            }
         #expect(offenders.isEmpty, "\(offenders)")
+    }
+
+    /// And the drawn fallback is still drawn. Without this, the exemption above could be widened by
+    /// simply moving the canvas into the exempt file and deleting it — which is the one change that
+    /// would turn a scoped deviation into losing `FR-OFF-03` outright.
+    @Test func theDrawnRunMapSurvivesAsTheOfflineFallback() throws {
+        let canvas = Self.appTarget
+            .appendingPathComponent("Features")
+            .appendingPathComponent("QuestRun")
+            .appendingPathComponent("RunRouteMapView.swift")
+        let source = try String(contentsOf: canvas, encoding: .utf8)
+        #expect(source.contains("Canvas {"))
+        #expect(!source.contains("import MapKit"))
+
+        let arrival = Self.appTarget
+            .appendingPathComponent("Features")
+            .appendingPathComponent("QuestRun")
+            .appendingPathComponent("ArrivalRouteMapView.swift")
+        let wrapper = try String(contentsOf: arrival, encoding: .utf8)
+        #expect(wrapper.contains("RunRouteMapView("),
+                "The live basemap must fall back to the drawn map (FR-OFF-03).")
+        #expect(wrapper.contains("mapViewDidFailLoadingMap"),
+                "The fallback must be driven by a failed load, never by a reachability check (AD-3).")
     }
 
     /// And no package target may reach for it at all. `ContentKit` and `RunEngine` are Foundation
