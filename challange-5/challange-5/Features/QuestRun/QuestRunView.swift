@@ -570,9 +570,16 @@ struct QuestRunView: View {
             // No chrome either way: this screen is on the story flow's brown ground, and the drawn
             // map's own heading and distance row are inked for paper. The heading above and
             // `arrivalNumbers` below carry both, in inks the Hisplora palette measures.
+            // `drawsRoute: false` — `223:2004` pastes in a plain street map, with no route line, no
+            // bearing dashes and no arrival ring drawn over it. This screen is the walker being
+            // told they are not there yet, and the frame answers that with where the place is and
+            // where they are standing. The distance and the fix quality are still stated as text
+            // (`FR-ARR-05`), and the route itself is still drawn on every surface that is about the
+            // route — nothing was removed from the walk, only from this picture.
             ArrivalRouteMap(route: route,
                             language: language,
-                            totalCheckpoints: model.totalCheckpoints)
+                            totalCheckpoints: model.totalCheckpoints,
+                            drawsRoute: false)
         }
     }
 

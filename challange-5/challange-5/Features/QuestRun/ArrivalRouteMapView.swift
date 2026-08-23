@@ -33,6 +33,12 @@ struct ArrivalRouteMap: View {
     let route: RunRoutePresentation
     let language: ContentLanguage
     let totalCheckpoints: Int
+    /// Whether the route line, the bearing dashes and the arrival radius are drawn on top of the
+    /// tiles. `223:2004` draws none of them — its map slot is a plain street map carrying the
+    /// walker and the place, and nothing else — so the "Not Quite There" screen passes `false`.
+    /// The default stays `true` for any surface that is about the route rather than about the
+    /// walker not being at it yet.
+    var drawsRoute: Bool = true
 
     /// Set only by a load that failed. Never by a guess about connectivity.
     @State private var basemapFailed = false
@@ -47,6 +53,7 @@ struct ArrivalRouteMap: View {
             } else {
                 ArrivalBaseMapView(route: route,
                                    palette: .standard,
+                                   drawsRoute: drawsRoute,
                                    onFailure: { basemapFailed = true })
                     .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.cardCornerRadius,
                                                 style: .continuous))
@@ -71,10 +78,16 @@ struct ArrivalRouteMap: View {
 
 /// The `MKMapView` itself, carrying the same four marks the drawn canvas carries: the arrival
 /// radius at true scale, the authored route line, the numbered stops, and the walker.
+///
+/// With `drawsRoute` false it carries none of them: the tiles, the place the walker is heading for,
+/// and the walker. That is `223:2004` as drawn, and it is the state where the other three marks say
+/// least — a walker who is not there yet is being told where to go, not shown a gate they have not
+/// reached and a line they are not on.
 struct ArrivalBaseMapView: UIViewRepresentable {
 
     let route: RunRoutePresentation
     let palette: HisploraPalette
+    var drawsRoute: Bool = true
     let onFailure: () -> Void
 
     func makeCoordinator() -> Coordinator { Coordinator(self) }
@@ -122,10 +135,26 @@ struct ArrivalBaseMapView: UIViewRepresentable {
     /// carries the rest of the truth.
     static let maximumFramedUserDistanceM: CLLocationDistance = 50_000
 
-    static func framedCoordinates(_ route: RunRoutePresentation) -> [Coordinate] {
-        var framed = route.line + route.stops.map(\.coordinate)
+    /// The place being walked to. `target` is the authored coordinate the arrival rule is measured
+    /// against; the target stop is the same place read off the route, and is the fallback for a
+    /// presentation built without one.
+    static func targetCoordinate(of route: RunRoutePresentation) -> Coordinate? {
+        route.target ?? route.stops.first(where: \.isTarget)?.coordinate
+    }
+
+    /// What the camera has to hold. With the route drawn that is the whole walk; without it, only
+    /// the place being walked to — framing a line that is not on the map would open the camera on
+    /// empty streets either side of the one pin there is.
+    static func framedCoordinates(_ route: RunRoutePresentation,
+                                  drawsRoute: Bool = true) -> [Coordinate] {
+        var framed: [Coordinate]
+        if drawsRoute {
+            framed = route.line + route.stops.map(\.coordinate)
+        } else {
+            framed = targetCoordinate(of: route).map { [$0] } ?? []
+        }
         if let user = route.userPosition {
-            let anchor = route.target ?? route.stops.first(where: \.isTarget)?.coordinate
+            let anchor = targetCoordinate(of: route)
             if let anchor, Geo.distanceM(user, anchor) <= maximumFramedUserDistanceM {
                 framed.append(user)
             } else if anchor == nil {
@@ -137,8 +166,9 @@ struct ArrivalBaseMapView: UIViewRepresentable {
 
     /// The rectangle the map opens on. A single point has no extent, so it is given one — an
     /// `MKMapRect` of zero size zooms MapKit to its maximum and draws one building.
-    static func region(for route: RunRoutePresentation) -> MKCoordinateRegion? {
-        let coordinates = framedCoordinates(route)
+    static func region(for route: RunRoutePresentation,
+                       drawsRoute: Bool = true) -> MKCoordinateRegion? {
+        let coordinates = framedCoordinates(route, drawsRoute: drawsRoute)
         guard let first = coordinates.first else { return nil }
 
         var minLat = first.lat, maxLat = first.lat
@@ -176,41 +206,45 @@ struct ArrivalBaseMapView: UIViewRepresentable {
 
         func apply(to map: MKMapView, from view: ArrivalBaseMapView) {
             let route = view.route
-            let signature = Self.signature(of: route)
+            let signature = Self.signature(of: route, drawsRoute: view.drawsRoute)
             guard signature != appliedSignature else { return }
             appliedSignature = signature
 
             map.removeAnnotations(map.annotations)
             map.removeOverlays(map.overlays)
 
-            if let target = route.target, route.targetRadiusM > 0 {
-                map.addOverlay(
-                    MKCircle(center: CLLocationCoordinate2D(latitude: target.lat,
-                                                            longitude: target.lon),
-                             radius: route.targetRadiusM),
-                    level: .aboveRoads)
-            }
-
-            if route.line.count >= 2 {
-                let points = route.line.map {
-                    CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon)
+            if view.drawsRoute {
+                if let target = route.target, route.targetRadiusM > 0 {
+                    map.addOverlay(
+                        MKCircle(center: CLLocationCoordinate2D(latitude: target.lat,
+                                                                longitude: target.lon),
+                                 radius: route.targetRadiusM),
+                        level: .aboveRoads)
                 }
-                map.addOverlay(MKPolyline(coordinates: points, count: points.count),
-                               level: .aboveRoads)
+
+                if route.line.count >= 2 {
+                    let points = route.line.map {
+                        CLLocationCoordinate2D(latitude: $0.lat, longitude: $0.lon)
+                    }
+                    map.addOverlay(MKPolyline(coordinates: points, count: points.count),
+                                   level: .aboveRoads)
+                }
+
+                // The bearing to the target — dashed, because it is a direction and not a path
+                // anybody should walk. Only drawn when the fix is close enough to be on the same
+                // map.
+                if let user = route.userPosition,
+                   let target = route.target,
+                   Geo.distanceM(user, target) <= ArrivalBaseMapView.maximumFramedUserDistanceM {
+                    let points = [CLLocationCoordinate2D(latitude: user.lat, longitude: user.lon),
+                                  CLLocationCoordinate2D(latitude: target.lat, longitude: target.lon)]
+                    map.addOverlay(ArrivalBearingLine(coordinates: points, count: points.count),
+                                   level: .aboveRoads)
+                }
             }
 
-            // The bearing to the target — dashed, because it is a direction and not a path anybody
-            // should walk. Only drawn when the fix is close enough to be on the same map.
-            if let user = route.userPosition,
-               let target = route.target,
-               Geo.distanceM(user, target) <= ArrivalBaseMapView.maximumFramedUserDistanceM {
-                let points = [CLLocationCoordinate2D(latitude: user.lat, longitude: user.lon),
-                              CLLocationCoordinate2D(latitude: target.lat, longitude: target.lon)]
-                map.addOverlay(ArrivalBearingLine(coordinates: points, count: points.count),
-                               level: .aboveRoads)
-            }
-
-            map.addAnnotations(route.stops.map {
+            let stops = view.drawsRoute ? route.stops : route.stops.filter(\.isTarget)
+            map.addAnnotations(stops.map {
                 ArrivalStopAnnotation(orderIndex: $0.orderIndex,
                                       isReached: $0.isReached,
                                       isTarget: $0.isTarget,
@@ -218,11 +252,12 @@ struct ArrivalBaseMapView: UIViewRepresentable {
                                       lon: $0.coordinate.lon)
             })
             if let user = route.userPosition,
-               ArrivalBaseMapView.framedCoordinates(route).contains(user) {
+               ArrivalBaseMapView.framedCoordinates(route, drawsRoute: view.drawsRoute)
+                   .contains(user) {
                 map.addAnnotation(ArrivalUserAnnotation(lat: user.lat, lon: user.lon))
             }
 
-            if let region = ArrivalBaseMapView.region(for: route) {
+            if let region = ArrivalBaseMapView.region(for: route, drawsRoute: view.drawsRoute) {
                 map.setRegion(map.regionThatFits(region), animated: false)
             }
         }
@@ -230,13 +265,13 @@ struct ArrivalBaseMapView: UIViewRepresentable {
         /// Everything drawn, and nothing else. The sampler republishes the presentation on every
         /// tick with an unchanged route and an unchanged fix; a signature over what is drawn is
         /// what stops that from re-laying the map out sixty times a walk.
-        static func signature(of route: RunRoutePresentation) -> String {
+        static func signature(of route: RunRoutePresentation, drawsRoute: Bool = true) -> String {
             let stops = route.stops
                 .map { "\($0.orderIndex)\($0.isReached ? "r" : "-")\($0.isTarget ? "t" : "-")" }
                 .joined(separator: ",")
             let user = route.userPosition.map { "\($0.lat),\($0.lon)" } ?? "none"
             let target = route.target.map { "\($0.lat),\($0.lon)" } ?? "none"
-            return "\(route.line.count)|\(stops)|\(user)|\(target)|\(route.targetRadiusM)"
+            return "\(route.line.count)|\(stops)|\(user)|\(target)|\(route.targetRadiusM)|\(drawsRoute)"
         }
 
         // MARK: Delegate
