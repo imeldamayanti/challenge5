@@ -48,23 +48,36 @@ struct AuthCredentialScreen: View {
     let language: ContentLanguage
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: AuthMetrics.blockGap) {
-                masthead
-                credentials
-                HisploraRuleDivider(
-                    label: UIStrings.string(.authOr, language),
-                    accessibilityLabel: UIStrings.string(.authOrSpoken, language))
-                providers
+        GeometryReader { geo in
+            ScrollView {
+                VStack(spacing: 0) {
+                    masthead
+                    // The frames spread their content across the full screen, so the gaps between
+                    // the page's four blocks stretch on a tall screen and fall back to the frames'
+                    // own steps when the keyboard squeezes the page — a spacer's `minLength` is
+                    // the frame's number, and the stretch is what kills the dead band under the
+                    // form on the screens the frames were drawn for.
+                    Spacer(minLength: AuthMetrics.titleBand)
+                    credentials
+                    Spacer(minLength: AuthMetrics.blockGap)
+                    HisploraRuleDivider(
+                        label: UIStrings.string(.authOr, language),
+                        accessibilityLabel: UIStrings.string(.authOrSpoken, language))
+                    Spacer(minLength: AuthMetrics.blockGap)
+                    providers
+                }
+                .padding(.horizontal, AuthMetrics.margin)
+                .padding(.top, AuthMetrics.titleTop)
+                .padding(.bottom, KultaraMetrics.xxl)
+                // At least the viewport, so the spacers have something to stretch into — and
+                // alignment .top, so a form taller than the viewport simply scrolls as it did.
+                .frame(minWidth: geo.size.width, minHeight: geo.size.height, alignment: .top)
             }
-            .padding(.horizontal, AuthMetrics.margin)
-            .padding(.top, AuthMetrics.titleTop)
-            .padding(.bottom, KultaraMetrics.xxl)
+            // The form is taller than the keyboard leaves room for on the smaller phones, so a swipe
+            // over the page puts the keyboard away rather than the walker having to find a Done key
+            // this design does not draw.
+            .scrollDismissesKeyboard(.interactively)
         }
-        // The form is taller than the keyboard leaves room for on the smaller phones, so a swipe
-        // over the page puts the keyboard away rather than the walker having to find a Done key
-        // this design does not draw.
-        .scrollDismissesKeyboard(.interactively)
     }
 
     private var masthead: some View {
@@ -74,10 +87,6 @@ struct AuthCredentialScreen: View {
             .multilineTextAlignment(.center)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityAddTraits(.isHeader)
-            // 65 on the frame between the title's box and the first field. A floor rather than a
-            // height: at an accessibility size the title grows downwards and the form follows it
-            // rather than being written over (`NFR-A11Y-01`).
-            .padding(.bottom, AuthMetrics.titleBand - AuthMetrics.blockGap)
     }
 
     /// `791:5154` and `791:5152`: the fields, then the one filled action under them.

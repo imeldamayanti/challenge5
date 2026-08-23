@@ -16,7 +16,8 @@ final class AppleSignInCoordinator: NSObject {
     struct Result: Sendable {
         let idToken: String
         let nonce: String
-        let fullName: String?
+        let givenName: String?
+        let familyName: String?
     }
 
     enum Failure: Error {
@@ -65,10 +66,15 @@ extension AppleSignInCoordinator: ASAuthorizationControllerDelegate {
         }
         // Apple hands over a name only the first time a walker ever authorises this app; every
         // later sign-in returns nil, which `AuthViewModel.finish` already treats as "leave whatever
-        // is stored alone" rather than as a name to overwrite with nothing.
-        let name = credential.fullName.flatMap { PersonNameComponentsFormatter().string(from: $0) }
+        // is stored alone" rather than as a name to overwrite with nothing. Both parts travel:
+        // the card heads the reader by their given name only, but `CredentialLinking` stores the
+        // whole name on the account so nothing Apple says once is lost.
+        let given = credential.fullName?.givenName
+        let family = credential.fullName?.familyName
         continuation?.resume(returning: Result(
-            idToken: idToken, nonce: nonce, fullName: (name?.isEmpty == true) ? nil : name))
+            idToken: idToken, nonce: nonce,
+            givenName: (given?.isEmpty == true) ? nil : given,
+            familyName: (family?.isEmpty == true) ? nil : family))
         continuation = nil
     }
 

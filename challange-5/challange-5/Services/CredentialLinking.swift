@@ -17,7 +17,13 @@ import RunEngine
 nonisolated protocol CredentialLinking: Sendable {
     /// Signs in with the identity token Apple just issued, merging the anonymous account's rows
     /// into it. Answers what happened, in the walker's terms.
-    func signInWithApple(idToken: String, nonce: String, fullName: String?) async -> CredentialOutcome
+    func signInWithApple(
+        idToken: String, nonce: String, givenName: String?, familyName: String?
+    ) async -> CredentialOutcome
+    /// The display name this walker's account already carries server-side, if any. Apple hands its
+    /// name over only on the very first authorisation and never again, so the account itself is
+    /// the only place a later sign-in can recover one from.
+    func storedDisplayName() async -> String?
     /// Forgets the credential and returns to walking anonymously. Local only.
     func signOut() async
 }
@@ -58,7 +64,7 @@ nonisolated struct SupabaseCredentialLinking: CredentialLinking {
     }
 
     func signInWithApple(
-        idToken: String, nonce: String, fullName: String?
+        idToken: String, nonce: String, givenName: String?, familyName: String?
     ) async -> CredentialOutcome {
         // Captured **before** the sign-in, because signing in replaces the session and the
         // anonymous token is the thing `merge-anonymous` needs in order to know what to move.
@@ -71,12 +77,75 @@ nonisolated struct SupabaseCredentialLinking: CredentialLinking {
             return .failed
         }
 
+        // Apple hands its name over once and never again, so the account is where it is kept —
+        // `raw_user_meta_data`, merged rather than replaced, read back by `storedDisplayName` on
+        // every later sign-in that arrives without one. `full_name`/`given_name`/`family_name`
+        // are the keys Supabase's own docs use; `display_name` stays the given name alone,
+        // which is what the Explorer's Card heads its reader by. Fire-and-forget: the entry flow
+        // never waits on the network, and a failed save costs a walker their role-named card,
+        // not their walks.
+        Self.debugTrace("apple name from sheet: given=\(givenName ?? "nil") family=\(familyName ?? "nil")")
+        if givenName != nil || familyName != nil {
+            var data: [String: AnyJSON] = [:]
+            if let givenName { data["given_name"] = .string(givenName) }
+            if let familyName { data["family_name"] = .string(familyName) }
+            let whole = [givenName, familyName].compactMap(\.self).joined(separator: " ")
+            if !whole.isEmpty {
+                data["full_name"] = .string(whole)
+                data["display_name"] = .string(givenName ?? whole)
+            }
+            Task { [client] in
+                do {
+                    _ = try await client.update(user: .init(data: data))
+                    Self.debugTrace("apple name update: ok \(data.keys.sorted().joined(separator: ","))")
+                } catch {
+                    Self.debugTrace("apple name update FAILED: \(error)")
+                }
+            }
+        }
+
+        #if DEBUG
+        if givenName == nil && familyName == nil {
+            Self.debugTrace(
+                "apple handed no name — expected on repeat authorisations; revoke in "
+                + "Settings → Sign-In & Security → Sign in with Apple to receive one again")
+        }
+        #endif
+
         guard let anonymousToken, telemetryQueueIsEmpty() else {
             // Nothing to merge, or the queue is not settled. The walker is signed in either way,
             // and their anonymous walks are still where they were.
             return .signedInWithoutMerge
         }
         return await merge(anonymousToken: anonymousToken) ? .signedInAndMerged : .signedInWithoutMerge
+    }
+
+    /// The name the account carries, read from the same metadata the sign-in above writes. A fetch
+    /// that fails is the offline case and answers `nil`, never an error — the caller has a role-named
+    /// card to fall back to and no reason to be told.
+    func storedDisplayName() async -> String? {
+        guard let user = try? await client.user() else { return nil }
+        return user.userMetadata["display_name"]?.stringValue
+    }
+
+    /// One line in the same debug trace file `ConsoleSupabaseLogger` writes, so what Apple handed
+    /// over and whether the metadata save landed are readable next to the SDK's own account of the
+    /// sign-in. Release builds compile none of it — same rule as every other trace here.
+    private nonisolated static func debugTrace(_ line: String) {
+        #if DEBUG
+        guard let directory = try? FileManager.default.url(
+            for: .applicationSupportDirectory, in: .userDomainMask,
+            appropriateFor: nil, create: true) else { return }
+        let url = directory.appendingPathComponent("supabase-trace.log")
+        let entry = Data("\(Date()) [apple-name] \(line)\n".utf8)
+        if let handle = try? FileHandle(forWritingTo: url) {
+            defer { try? handle.close() }
+            _ = try? handle.seekToEnd()
+            try? handle.write(contentsOf: entry)
+        } else {
+            try? entry.write(to: url)
+        }
+        #endif
     }
 
     func signOut() async {
@@ -107,8 +176,9 @@ nonisolated struct SupabaseCredentialLinking: CredentialLinking {
 /// What the app uses with no backend, and what the tests use by default.
 nonisolated struct NoCredentialLinking: CredentialLinking {
     func signInWithApple(
-        idToken: String, nonce: String, fullName: String?
+        idToken: String, nonce: String, givenName: String?, familyName: String?
     ) async -> CredentialOutcome { .failed }
+    func storedDisplayName() async -> String? { nil }
     func signOut() async {}
 }
 
