@@ -723,6 +723,17 @@ public enum UIStrings {
         .tripRecapShareAction: LocalizedText(id: "Bagikan", en: "Share"),
         .tripRecapCloseAction: LocalizedText(id: "Tutup Ringkasan", en: "Close Summary"),
 
+        // The share-story card and its variant picker (`921:2543`–`921:2960`). The card's printed
+        // words reuse the postcard keys above — it is the same postcard at render scale — so this
+        // table carries only what the picker adds and the footer.
+        .shareStoryFromBrand: LocalizedText(id: "cerita dari %@", en: "story from %@"),
+        .shareStorySheetTitle: LocalizedText(id: "Bagikan Cerita", en: "Share Story"),
+        .shareStoryVariantPhoto: LocalizedText(id: "Kartu foto", en: "Photo card"),
+        .shareStoryVariantBrown: LocalizedText(id: "Kartu cokelat", en: "Brown card"),
+        .shareStoryPreviewLabel: LocalizedText(
+            id: "Pratinjau kartu cerita, %@",
+            en: "Story card preview, %@"),
+
         // MARK: Profile — the Explorer's Card
         .profileHeading: LocalizedText(id: "Kartu Penjelajah", en: "Explorer’s Card"),
         .profileExplorerName: LocalizedText(id: "Penjelajah", en: "Explorer"),

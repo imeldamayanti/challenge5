@@ -23,6 +23,10 @@ struct TripRecapCarouselScreen: View {
     let onFinish: () -> Void
 
     @State private var page = 0
+    /// Opens the share-story picker (`921:2543`'s header). The card images are rendered *there*,
+    /// when this turns true — never here, where a swipe through the carousel would pay for two
+    /// 1080 px renders nobody asked for yet.
+    @State private var showsShareStory = false
 
     private static let totalPages = 5
 
@@ -41,6 +45,7 @@ struct TripRecapCarouselScreen: View {
                 topBar
             }
         }
+        .sheet(isPresented: $showsShareStory) { shareStorySheet }
         .navigationBarBackButtonHidden()
         .statusBarHidden(false)
     }
@@ -386,7 +391,7 @@ struct TripRecapCarouselScreen: View {
 
     private var actionButtons: some View {
         HStack(spacing: 12) {
-            ShareLink(item: shareText) {
+            Button { showsShareStory = true } label: {
                 HStack(spacing: 10) {
                     Image(systemName: "square.and.arrow.up.fill")
                     Text(UIStrings.string(.tripRecapShareAction, language))
@@ -411,8 +416,40 @@ struct TripRecapCarouselScreen: View {
         .padding(.horizontal, 20)
     }
 
-    /// What the share sheet is handed — plain text, the same move `TripPageBar`'s own `ShareLink`
-    /// makes: the recap *card* `FR-DONE-06` describes is still unbuilt.
+    // MARK: - The share-story picker (`921:2543`)
+
+    /// Built here, when the sheet opens — which is what makes the photograph's read from the store
+    /// lazy too. The ground the input carries is the caller's own decision: the walker's selfie if
+    /// there is one, the place photo otherwise, brown when there is neither — the same
+    /// selfie-then-place-photo rule `postcardPhotoStamp` follows.
+    private var shareStorySheet: some View {
+        ShareStoryPickerSheet(
+            language: language,
+            input: ShareStoryCard.Input(
+                regionTitle: region.isEmpty ? summary.title : region,
+                journalText: summary.run.journalEntry?.text,
+                placesCount: summary.placesExploredCount,
+                durationMinutes: summary.durationMinutes,
+                stamp: stamps.first.map {
+                    ShareStoryCard.Input.Stamp(
+                        placeName: $0.placeName, region: $0.region, artworkName: $0.artworkName)
+                },
+                postmarkArtworkName: HisploraTripArtwork.emblem,
+                language: language,
+                ground: photoPath
+                    .flatMap { photoStore.image(atRelativePath: $0) }
+                    .map(ShareStoryCard.Input.Ground.photo) ?? .brown),
+            fallbackText: shareText)
+    }
+
+    private var photoPath: String? {
+        summary.run.journalEntry?.selfiePhotoRelativePath
+            ?? summary.run.journalEntry?.placePhotoRelativePath
+    }
+
+    /// What Share hands over if both card renders somehow come back nil — plain text, the move
+    /// this button used before the card existed — so the control can never dead-end. The normal
+    /// path never touches it.
     private var shareText: String {
         [UIStrings.string(.tripRecapMemoriesTitle, language),
          "\u{201C}\(summary.title)\u{201D}",

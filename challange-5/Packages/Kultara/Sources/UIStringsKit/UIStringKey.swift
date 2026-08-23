@@ -561,6 +561,21 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case tripRecapShareAction
     case tripRecapCloseAction
 
+    // The share-story card (`FR-DONE-06`, Figma `921:2543`/`921:2598`/`921:2654`/`921:2960`) — the
+    // variant picker the carousel's Share button opens, and the card's own footer. The card's other
+    // words reuse the postcard's keys above, because it is the same postcard at render scale.
+    /// "story from %@" — the card's footer; the argument is always "Hisplora", the visual
+    /// direction's name as the Journal surfaces already print it.
+    case shareStoryFromBrand
+    /// The picker sheet's title, under the grabber.
+    case shareStorySheetTitle
+    /// The photo-ground variant's thumbnail label.
+    case shareStoryVariantPhoto
+    /// The brown-ground variant's thumbnail label.
+    case shareStoryVariantBrown
+    /// The preview's VoiceOver label — "%@" is which variant is selected.
+    case shareStoryPreviewLabel
+
     // Profile — the Explorer's Card (Figma `547:2724`)
     case profileHeading
     /// What the card is headed with. There is no account in this build and no name to print, so
