@@ -19,9 +19,18 @@ exactly the case `FR-MAP-01` was written about.
 ## What changed in the code
 
 `Features/QuestRun/ArrivalRouteMapView.swift` fills frame `223:2004`'s 362 × 218.89 "Maps"
-rectangle with an `MKMapView`, carrying the same four marks the drawn canvas carried: the arrival
-radius at true scale (`MKCircle` at `targetRadiusM`), the authored route line, the numbered stops in
-their three states, and the walker's dot.
+rectangle with an `MKMapView`, able to carry the same four marks the drawn canvas carried: the
+arrival radius at true scale (`MKCircle` at `targetRadiusM`), the authored route line, the numbered
+stops in their three states, and the walker's dot.
+
+**On the arrival screen itself three of those four are switched off** (`drawsRoute: false`, on the
+owner's instruction of 2026-08-24): `223:2004` pastes in a plain street map, and the screen now
+matches it — the target stop and the walker, on tiles, with no route line, no bearing dashes and no
+arrival ring drawn over them. Nothing about the amendment below changes with it. The route display
+this document is about is the *drawn canvas*, which is unchanged and is still what a failed load
+falls back to, and the distance and fix quality are still stated as text (`FR-ARR-05`). Any surface
+that is about the route rather than about the walker not being at it yet still gets all four marks
+— `drawsRoute` defaults to `true`.
 
 Four properties of the implementation are what the proposal below rests on:
 
