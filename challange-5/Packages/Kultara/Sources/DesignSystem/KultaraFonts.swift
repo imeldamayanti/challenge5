@@ -38,6 +38,15 @@ public enum KultaraFonts {
     public static let italicName = "InstrumentSerif-Italic"
     /// Special Elite, Apache 2.0 (licence shipped beside the face).
     public static let typewriterName = "SpecialElite-Regular"
+    /// Bodoni Moda's Regular PostScript name — what `Font.custom` resolves by. The *file* ships
+    /// under a different name (`bodoniResourceName`): it is a variable font whose default instance
+    /// is Regular, so the PostScript name and the resource name are not the same string.
+    public static let bodoniName = "BodoniModa-Regular"
+    /// The variable font's file name inside `Resources/Fonts`, for the lookup only.
+    private static let bodoniResourceName = "BodoniModa-Variable"
+    /// Shadows Into Light Two, SIL OFL 1.1 (licence shipped beside the face). File name and
+    /// PostScript name coincide.
+    public static let handwritingName = "ShadowsIntoLightTwo-Regular"
 
     /// Registration is done once, on first use, and its result is remembered. `static let` gives
     /// the once-only semantics and the thread safety without a lock.
@@ -47,6 +56,18 @@ public enum KultaraFonts {
     /// reflows every heading, while this one missing only costs the sheet its costume. Each falls
     /// back on its own rather than one absence disabling the other.
     public static let typewriterIsAvailable: Bool = registerFace(typewriterName)
+
+    /// Both share-story postcard faces (`921:2654`, `921:2960`), kept apart from the roles above
+    /// for the same reason the typewriter is: they are costume faces that belong to the one object
+    /// — the shareable story card (`FR-DONE-06`) — and used anywhere else they are a novelty. The
+    /// card is a fixed-canvas render, so neither face carries a Dynamic Type fallback size here;
+    /// what each caller does when a flag comes back false is the caller's own documented trade.
+    ///
+    /// Bodoni Moda sets the postcard's printed labels ("POSTCARD", "Memo :", "Duration :") and
+    /// Shadows Into Light Two stands in for the walker's handwriting. One flag each, so a missing
+    /// engraving face costs the printing and not the handwriting, and the other way round.
+    public static let bodoniIsAvailable: Bool = registerFace(bodoniResourceName)
+    public static let handwritingIsAvailable: Bool = registerFace(handwritingName)
 
     private static func register() -> Bool {
         [regularName, italicName].allSatisfy(registerFace)
