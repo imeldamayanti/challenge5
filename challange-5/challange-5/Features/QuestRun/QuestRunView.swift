@@ -486,15 +486,26 @@ struct QuestRunView: View {
                     Spacer(minLength: 40)
                     LocationStateHeading(state: model.locationState, language: language)
 
-                    // The frame's `Maps` rectangle at `20, 328`, 362 × 218.89. Held aside for now:
-                    // what fills it is `RunRouteMapView`, the drawn canvas (`FR-MAP-01` rules out
-                    // the Google Maps imagery the frame pastes in).
+                    // The frame's `Maps` rectangle at `20, 328`, 362 × 218.89, corner radius 8.
+                    // Owner instruction, 2026-08-23: this slot is a live map now — the frame pastes
+                    // a street map of the checkpoint's neighbourhood into it, and it draws a real
+                    // one (`ArrivalLiveMapView`). That narrows `FR-MAP-01`'s ban a second time; the
+                    // line that still holds is the run's own route canvas, which stays drawn and is
+                    // asserted separately by `PermissionCallBoundaryTests`.
+                    //
                     // The frame's gap is 100, measured off a lead it draws on one line. SF Pro Text
                     // is set a touch wider than the SF Pro Display the frame specifies, so the same
                     // sentence wraps to two here and 59 is what puts the map back at the drawn 328.
                     Spacer(minLength: 59)
-                    routeMap
-                        .frame(height: 218.89)
+                    if let route = model.routeMap {
+                        ArrivalLiveMapView(
+                            target: route.target,
+                            userPosition: route.userPosition,
+                            targetName: route.targetName,
+                            accessibilityLabel: arrivalMapAccessibility(route))
+                            .frame(height: 218.89)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                    }
 
                     Spacer(minLength: 24)
                 }
@@ -516,6 +527,18 @@ struct QuestRunView: View {
                 .padding(.bottom, 30)
             }
         }
+    }
+
+    /// The live map spoken as the drawn one was: which checkpoint, how far left, by name. A map is
+    /// not readable by VoiceOver, so the same facts are stated (`NFR-A11Y-05`).
+    private func arrivalMapAccessibility(_ route: RunRoutePresentation) -> String {
+        if let distance = route.distanceRemainingText {
+            return String(format: UIStrings.string(.runMapAccessibility, language),
+                          model.currentIndex + 1, model.totalCheckpoints,
+                          distance, route.targetName)
+        }
+        return String(format: UIStrings.string(.runMapNoPosition, language),
+                      model.currentIndex + 1, model.totalCheckpoints, route.targetName)
     }
 
     /// `FR-ARR-05` — the distance and the fix quality, as numbers that move. Present in every state

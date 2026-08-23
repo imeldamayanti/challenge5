@@ -147,7 +147,7 @@ struct PermissionCallBoundaryTests {
         #expect(offenders.isEmpty, "\(offenders)")
     }
 
-    /// The three files of the discovery map's live basemap, and nothing else.
+    /// The files allowed to draw a map from live tiles, and nothing else.
     ///
     /// **This list is a narrowing of an outright ban, and the reason is written down rather than
     /// implied.** `FR-MAP-01` bans live map tiles for *in-quest* use, on the stated ground that
@@ -160,7 +160,7 @@ struct PermissionCallBoundaryTests {
     ///
     /// Matched on file NAME for the same reason `arrivalOwningFiles` is: moving one of these
     /// between folders keeps the guard green, and a *new* file reaching for MapKit turns it red.
-    /// That is the sensitivity that matters — the danger is a fourth caller, not a rename.
+    /// That is the sensitivity that matters — the danger is a fifth caller, not a rename.
     static let liveBasemapOwningFiles: Set<String> = [
         "QuestBaseMapView.swift",
         "IllustratedMapOverlay.swift",
@@ -169,11 +169,16 @@ struct PermissionCallBoundaryTests {
         // `QuestMapControlsHost` exists for — and it anchors to its marker by converting a
         // coordinate through `MKMapView.convert`, which only a MapKit import can spell.
         "QuestMapPopover.swift",
+        // The arrival screen's map slot (`223:2046`), by owner instruction of 2026-08-23: the
+        // frame pastes a street map into it, and it draws a real one. It is one transient state
+        // inside a walk, not a navigation surface — the camera is set once from content, nothing
+        // decides arrival from it, and the run's route canvas (`RunRouteMapView`) stays drawn.
+        "ArrivalLiveMapView.swift",
     ]
 
     static let liveMapTileCalls = ["import MapKit", "MKMapView", "Map("]
 
-    @Test func onlyTheDiscoveryBasemapDrawsMapsFromLiveTiles() throws {
+    @Test func onlyTheAllowlistedFilesDrawMapsFromLiveTiles() throws {
         let offenders = try Self.occurrences(of: Self.liveMapTileCalls, under: Self.appTarget)
             .filter { offender in
                 !Self.liveBasemapOwningFiles.contains { offender.hasPrefix($0 + ":") }
@@ -187,6 +192,8 @@ struct PermissionCallBoundaryTests {
     /// `FR-MAP-01`/`FR-OFF-03` are about the walk. `RunRouteMapView` projects the authored
     /// `route.geojson` onto a `Canvas` and must never become a MapKit view — a walker inside a
     /// covered market with no signal still has to be able to see where the next checkpoint is.
+    /// The arrival screen's one live-map slot is allowlisted above and lives under `Shared/`
+    /// precisely so this scan keeps biting anything else under `Features/QuestRun/`.
     @Test func theRunItselfNeverDrawsAMapFromLiveTiles() throws {
         let run = Self.appTarget
             .appendingPathComponent("Features")

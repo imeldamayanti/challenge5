@@ -108,3 +108,29 @@ that reasoning inline, so the second caller is recorded rather than absorbed.
 Until all three happen, `Features/Map/Real/` is shipped code without a requirement behind it, and
 `PermissionCallBoundaryTests.onlyTheDiscoveryBasemapDrawsMapsFromLiveTiles` is the only thing
 recording how far the deviation reaches.
+
+## Second narrowing, 2026-08-23 — the arrival screen's map slot
+
+**Still unsigned. Still no owner named. Recorded the same way: in this document and in
+`PermissionCallBoundaryTests`, not by silence.**
+
+The arrival screen ("Not Quite There", frame `223:2004`) draws a map slot from frame `223:2046`.
+Until 2026-08-23 that slot was `RunRouteMapView`'s drawn canvas. On the owner's instruction of this
+date it is now a live `MKMapView` (`Shared/Components/ArrivalLiveMapView.swift`), matching what the
+frame itself pastes — a street map of the checkpoint's neighbourhood.
+
+What bounds it:
+
+- One transient state inside one screen, not a navigation surface. The camera is set once from
+  content and never follows a fix (`FR-MAP-03` posture); nothing decides arrival from it.
+- `RunRouteMapView` is untouched and still drawn everywhere else the run shows a route — the line
+  `theRunItselfNeverDrawsAMapFromLiveTiles` holds, asserted separately.
+- `PermissionCallBoundaryTests` names `ArrivalLiveMapView.swift` in the allowlist, so a fifth
+  caller turns red rather than shipping quietly.
+- Offline the tiles drop out and the annotations stay; there is no reachability check and no
+  fallback swap (`AD-3`).
+
+Signing this document now covers both narrowings — the discovery basemap above and the arrival
+slot here. The "What signing this requires" list applies unchanged, with step 3's note extended:
+CLAUDE.md's map bullet should describe two live surfaces, both under this amendment, with the run's
+route canvas still drawn and still guarded against MapKit.
