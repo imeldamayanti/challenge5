@@ -136,12 +136,14 @@ public struct HisploraFieldRow: View {
     }
 }
 
-/// The entry screens' one primary action: a seal-red capsule with a white label (`791:5152`,
+/// The entry screens' one primary action: a black capsule with a white label (`791:5152`,
 /// `791:5116`, `822:2241`).
 ///
-/// It needs no hairline. The fill measures 8.77:1 on the cream it stands on, so it is its own
-/// boundary — the same argument `hisploraPillOnPaper` makes about the near-black pill, and the
-/// reason neither of them carries `buttonRing`.
+/// **Black at the owner's instruction of 2026-08-23**, in place of the frames' seal red. The
+/// deviation from the sampled Figma value is deliberate and recorded in `docs/hisplora-tokens.md`.
+/// It needs no hairline: black on the cream measures far past the 3:1 a boundary wants, so it is
+/// its own boundary — the same argument `hisploraPillOnPaper` makes about the near-black pill, and
+/// the reason neither of them carries `buttonRing`.
 public struct HisploraSealPillButtonStyle: ButtonStyle {
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.isEnabled) private var isEnabled
@@ -158,7 +160,7 @@ public struct HisploraSealPillButtonStyle: ButtonStyle {
             .padding(.vertical, 11)
             .frame(maxWidth: .infinity)
             .frame(minHeight: KultaraMetrics.minimumTapTarget)
-            .background(palette.brownSeal.color, in: Capsule())
+            .background(Color.black, in: Capsule())
             .opacity(configuration.isPressed ? 0.85 : 1)
             .opacity(isEnabled ? 1 : 0.4)
     }
@@ -168,8 +170,7 @@ public extension ButtonStyle where Self == HisploraSealPillButtonStyle {
     static var hisploraSealPill: HisploraSealPillButtonStyle { HisploraSealPillButtonStyle() }
 }
 
-/// One identity-provider row: a mark, then a label, on a filled capsule (`791:5170`, `791:5173`,
-/// `791:5180`).
+/// One identity-provider row: a mark, then a label, on a filled capsule (`791:5170`, `791:5180`).
 ///
 /// The fill and the ink are keypaths because the frames draw two of these on the same screen in
 /// opposite polarities — near-black with white type for Apple, white with grey type for the rest —
@@ -185,13 +186,12 @@ public struct HisploraProviderButtonStyle: ButtonStyle {
 
     /// - Parameter dimsWhenDisabled: whether a disabled row is faded.
     ///
-    ///   It is on by default and off for the two provider rows, which is the opposite of what a
-    ///   style usually wants and is deliberate. Fading these composites the fill into the cream —
-    ///   near-black turns to mud and the white row all but disappears — so a screen that is
-    ///   *reproducing a frame* would be drawing two colours nobody sampled, and the measured pairs
-    ///   would stop describing what is on it. The rows keep their fills; `.disabled` still stops
-    ///   the tap and still makes VoiceOver announce them as dimmed, and the line under them says
-    ///   why in words (`NFR-A11Y-05`).
+    ///   It is on by default and off for Apple's row, which is the opposite of what a style usually
+    ///   wants and is deliberate. Fading it composites the fill into the cream — near-black turns
+    ///   to mud — so a screen that is *reproducing a frame* would be drawing a colour nobody
+    ///   sampled, and the measured pairs would stop describing what is on it. The row keeps its
+    ///   fill; `.disabled` still stops the tap and still makes VoiceOver announce it as dimmed
+    ///   (`NFR-A11Y-05`).
     public init(
         fill: KeyPath<HisploraPalette, SRGBColor>,
         ink: KeyPath<HisploraPalette, SRGBColor>,
@@ -223,13 +223,6 @@ public extension ButtonStyle where Self == HisploraProviderButtonStyle {
     static var hisploraProviderDark: HisploraProviderButtonStyle {
         HisploraProviderButtonStyle(
             fill: \.buttonFill, ink: \.inkOnButton, dimsWhenDisabled: false)
-    }
-
-    /// `791:5173` — the stamp's white paper carrying the quiet ink, which is the one pair on this
-    /// screen already measured for a caption on white. Never dimmed, for the same reason.
-    static var hisploraProviderLight: HisploraProviderButtonStyle {
-        HisploraProviderButtonStyle(
-            fill: \.paperStamp, ink: \.inkMuted, dimsWhenDisabled: false)
     }
 
     /// `791:5180` — the same white row, for the one control here that is not disabled.
@@ -275,54 +268,17 @@ public struct HisploraRuleDivider: View {
     }
 }
 
-/// The Google mark on `791:5174`, exported from the frame at 4× rather than drawn.
-///
-/// **Never hand-authored.** It is a trademark with a published geometry, and an approximation of
-/// one is worse than none — the same rule that keeps `HisploraOnboardingArt` an export. It ships as
-/// PNG because `Package.swift` copies `Resources/Images` wholesale into the app bundle and
-/// everything in there is read through `UIImage(data:)`, which does not decode SVG.
-///
-/// **This mark is a pre-public blocker, not a settled asset.** Google's brand terms allow the "G"
-/// on a real Google Sign-In control and nowhere else, and this build has no identity provider
-/// behind the button — see `docs/hisplora-tokens.md`, beside the consent-log blockers. It is drawn
-/// here so the screen is the frame's; whether it ships is a decision with an owner.
-public enum HisploraGoogleMark {
-
-    static let resourceName = "google-mark"
-
-    /// The export's own proportions, width over height — `791:5174` draws it 21.57 × 22.
-    public static let aspectRatio: CGFloat = 21.57 / 22.0
-
-    /// Whether the artwork shipped, so a dropped PNG is a value a test can see rather than a blank
-    /// gap in a row of buttons.
-    public static var isAvailable: Bool { url != nil }
-
-    static var url: URL? {
-        Bundle.module.url(forResource: resourceName, withExtension: "png", subdirectory: "Images")
-    }
-
-    public static let image: Image? = {
-        #if canImport(UIKit)
-        guard let url, let data = try? Data(contentsOf: url), let image = UIImage(data: data)
-        else { return nil }
-        return Image(uiImage: image)
-        #else
-        return nil
-        #endif
-    }()
-}
-
 /// The mark inside a provider row, at the height the frames set it.
 ///
 /// Decoration: the button's own label names the provider, so a missing file costs the row its
-/// picture and nothing else (`NFR-A11Y-04`).
+/// picture and nothing else (`NFR-A11Y-04`). Google's row and mark were removed rather than left
+/// drawn-and-disabled — see `AuthProviderBlock` in the app target for why.
 public struct HisploraProviderMark: View {
 
     /// Which mark a row carries. Apple's is an SF Symbol — the platform ships it, and it is the one
     /// place a system glyph is the *correct* asset rather than a stand-in for an export.
     public enum Provider: Sendable {
         case apple
-        case google
         case guest
     }
 
@@ -341,13 +297,6 @@ public struct HisploraProviderMark: View {
                 Image(systemName: "applelogo")
                     .font(.system(size: 18, weight: .regular))
                     .symbolRenderingMode(.monochrome)
-            case .google:
-                if let image = HisploraGoogleMark.image {
-                    image
-                        .resizable()
-                        .scaledToFit()
-                        .frame(width: 22 * HisploraGoogleMark.aspectRatio, height: 22)
-                }
             case .guest:
                 // Monochrome, or SF Symbols draws this one in its own two colours and it becomes
                 // the brightest object on a page of browns.
