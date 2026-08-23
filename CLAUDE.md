@@ -1096,6 +1096,35 @@ with the splash still auto-advancing and still a drawing.
   (`HisploraEnvelopeSequence.animation(of:)`) instead of one 900 ms ease for all four, and the page
   fades in over 200 ms rather than cross-fading across its whole travel, so it reads as coming out
   of the pocket rather than appearing in front of the envelope.
+- **The proximity notification is a teaser now, and it opens a card and a page rather than the
+  sidequest flow.** `670:1826`, `670:1832`, `1108:2636`, `1108:2780` and `949:2461` landed
+  2026-08-23 as one journey: watch notification → tap → `NewDiscoveryPopup` over Home → "Read Story"
+  → `SideQuestDiscoveryScreen`. Six things about it:
+  - **`SideQuestRouter` carries two fields, not one.** `pendingSideQuestID` is a deliberate tap in
+    the nearby list and still opens `SideQuestFlowView` — notice, story, challenge — unchanged.
+    `discoveredSideQuestID` is a proximity event (a notification tap, or a region firing with the
+    app open) and opens the card. Folding them back together turns one journey silently into the
+    other.
+  - **The notification's title and body are fixed teaser copy** (`discoveryNotificationTitle`/`Body`),
+    and the sidequest's synopsis rides in `userInfo["synopsis"]` for the watch's long look to print.
+    Still no coordinates in the payload (`FR-PROX-15`).
+  - **The page is drawn, not composed**, on `TripFrame`/`TripFrameBand`/`TripFramePage` — the same
+    machinery and the same trade as `TripHistoryScreen`, Dynamic Type included. Its prose is
+    `SideQuestDiscoveryText`, keyed by **sidequest** id, with `sq-park23` the one entry; anything
+    else falls back to `SideQuestDiscoveryLore`, which prints that sidequest's own lore with the
+    accuracy labels and citations. Same shape and same debt as `QuestHistoryText`.
+  - **The drawn page's nine sentences are unsourced and its two photographs have no provenance.**
+    Same footing as the History page, recorded in `docs/hisplora-tokens.md`, and a pre-public
+    blocker.
+  - **`670:1832` reverses `s14` D1/D2 for the long look.** The radar disc is gone; the notification
+    now wears `91:182`'s gold frame, whose nine measured fractions moved to `OrnateFramedSlot` so
+    the two watch surfaces share the drawing and nothing else. **It has not been seen** — a
+    standalone watch simulator cannot present it, because the watch app never requests notification
+    authorization (on a real pair the notification is forwarded from the phone).
+  - **Developer tools gained "Simulate passing a place (in-app card)".** The original button forces
+    the OS notification and therefore can never reach the card, which only appears when the app is
+    foregrounded. The new one raises `onSideQuestNearby` directly. Both `#if DEBUG`, both skip
+    `ProximityGate`.
 - **The three entry screens ship, and there is still no account behind them.** `791:5145`
   (Sign Up), `791:5109` (Sign In) and `822:2235` (Guest) landed 2026-08-21 as `Features/Auth/`,
   replacing `AuthWireframeView`. Six things about them:

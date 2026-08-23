@@ -82,6 +82,21 @@ struct DeveloperToolsSection: View {
                         .frame(minHeight: KultaraMetrics.minimumTapTarget)
                 }
                 .disabled(selectedSideQuestID == nil)
+
+                // The other half of the same simulation. The button above forces the OS
+                // notification (the watch's long look, and "is the pipeline alive"); this one
+                // raises the in-app path, which is what a region firing with the app open does and
+                // the only way to reach `1108:2780`'s New Discovery card from a desk.
+                Button {
+                    guard let selectedSideQuestID else { return }
+                    model.simulateNearbyWhileOpen(selectedSideQuestID)
+                } label: {
+                    Text("Simulate passing a place (in-app card)")
+                        .kultaraFont(.buttonLabel)
+                        .foregroundStyle(palette.seal.color)
+                        .frame(minHeight: KultaraMetrics.minimumTapTarget)
+                }
+                .disabled(selectedSideQuestID == nil)
             }
 
             Text(UIStrings.string(.devSimulatePassingNote, language))

@@ -25,23 +25,9 @@ struct SideQuestWatchCardView: View {
     /// unit every figure below is expressed in, and nothing in SwiftUI hands them over for free.
     @State private var cardWidth: CGFloat = 0
 
-    /// From Figma `91:182` — node metadata for geometry, pixel sampling of the render for colour,
-    /// metadata winning where they disagree (`s14` Global Constraints).
-    private enum Metrics {
-        /// `Group 103` is 99 wide in a 205-wide frame, with aspect 99/116.
-        static let frameWidthFraction: CGFloat = 99.0 / 205.0
-        static let frameAspectRatio: CGFloat = 99.0 / 116.0
-        /// The frame sits 24 units below the card's top edge. Figma measures that against the card's
-        /// *height*, but this view is laid out inside a scroll view, where reading the height back
-        /// would make the padding depend on the content it pads — so it is expressed against the
-        /// width instead, off the same 205-unit frame. Same distance, no layout loop.
-        static let frameTopInsetFraction: CGFloat = 24.0 / 205.0
-        /// `image 22`, the slot the photo fills, is 71.69 × 91.45 inside the 99 × 116 group and
-        /// centred at (15.5 + 71.69/2, 13.275 + 91.45/2).
-        static let slotWidthFraction: CGFloat = 71.68751525878906 / 99.0
-        static let slotHeightFraction: CGFloat = 91.44999694824219 / 116.0
-        static let slotCentre = UnitPoint(x: 0.5191, y: 0.5087)
-    }
+    // The gold frame's own measured fractions live in `OrnateFramedSlot` — `670:1832` put the
+    // same drawing on the notification long look, and two copies of nine fractions is two places
+    // for the next re-export to be applied in half.
 
     /// `91:182`'s ground, sampled down the centre column. Exposed rather than applied here: see
     /// `sideQuestCardGround()` below for why the screen paints it and this view does not.
@@ -57,13 +43,12 @@ struct SideQuestWatchCardView: View {
     /// gradient the caption actually sits over. `NFR-A11Y-03` — contrast is measured here, not
     /// reviewed, and this ground is exactly the one CLAUDE.md records shipping a real contrast bug on.
     private static let captionInk = Color(hex: 0x151311).opacity(0.65)
-    private static let slotFill = Color(hex: 0x804A34)
 
     var body: some View {
         VStack(spacing: 12) {
-            framedSlot
-                .frame(width: frameWidth, height: frameWidth / Metrics.frameAspectRatio)
-                // .padding(.top, cardWidth * Metrics.frameTopInsetFraction)
+            OrnateFramedSlot(heroImage: heroImage)
+                .frame(width: frameWidth,
+                       height: frameWidth / OrnateFramedSlot.Metrics.aspectRatio)
             Text(synopsis)
                 .font(.footnote)
                 .foregroundStyle(Self.ink)
@@ -76,48 +61,7 @@ struct SideQuestWatchCardView: View {
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { cardWidth = $0 }
     }
 
-    private var frameWidth: CGFloat { cardWidth * Metrics.frameWidthFraction }
-
-    /// The slot is drawn *behind* the frame and deliberately overshoots the frame's visible aperture:
-    /// `image 22` is 0.724 × 0.788 of the group, while the PNG's transparent oval measures 0.640 ×
-    /// 0.679 of the file. That gap is the bevel, and a photo sized to the aperture instead of the
-    /// slot would leave a hairline of ground showing around its edge.
-    private var framedSlot: some View {
-        GeometryReader { proxy in
-            let box = proxy.size
-            ZStack {
-                slot
-                    .frame(width: box.width * Metrics.slotWidthFraction,
-                           height: box.height * Metrics.slotHeightFraction)
-                    .clipShape(Ellipse())
-                    .position(x: box.width * Metrics.slotCentre.x,
-                              y: box.height * Metrics.slotCentre.y)
-                // `.scaledToFill()` plus `.clipped()` reproduces what Figma does with this fill: the
-                // PNG's own aspect is 447/558 = 0.801 against the 0.853 box it is placed in, and the
-                // file is cropped top and bottom rather than stretched — measured, not assumed.
-                Image("OrnateFrame")
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: box.width, height: box.height)
-                    .clipped()
-                    .accessibilityHidden(true)
-            }
-        }
-    }
-
-    /// `FR-WATCH-06` — a flat brand-palette fill, never a likeness this app invented, unless a future
-    /// content update ships a real, sourced, cited `heroImageAsset`. Every sidequest today has none.
-    @ViewBuilder
-    private var slot: some View {
-        if let heroImage {
-            Image(uiImage: heroImage)
-                .resizable()
-                .scaledToFill()
-                .accessibilityLabel("Photo of the place this sidequest is about")
-        } else {
-            Self.slotFill.accessibilityHidden(true)
-        }
-    }
+    private var frameWidth: CGFloat { cardWidth * OrnateFramedSlot.Metrics.widthFraction }
 
     /// `91:182` draws this as a filled dark-brown ground pinned to the bottom edge with centred text,
     /// which on watchOS is the platform's own signature for the primary action button. Anything

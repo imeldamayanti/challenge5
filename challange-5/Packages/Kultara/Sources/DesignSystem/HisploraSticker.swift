@@ -27,11 +27,11 @@ public enum HisploraStickerArtwork {
     /// Every sticker this module packages. Held as a list so `HisploraStickerTests` fails when one
     /// stops shipping, rather than a screen quietly losing a layer nobody notices is gone.
     public static let names = [
-        "sticker-1-04", "sticker-1-08", "sticker-1-25",
+        "sticker-1-04", "sticker-1-08", "sticker-1-21", "sticker-1-25",
         "sticker-2-02", "sticker-2-03", "sticker-2-09", "sticker-2-11", "sticker-2-16",
         "sticker-2-18", "sticker-2-26", "sticker-2-28", "sticker-2-30",
-        "sticker-3-09", "sticker-3-16", "sticker-3-18", "sticker-3-24", "sticker-3-27",
-        "sticker-3-32"
+        "sticker-3-07", "sticker-3-09", "sticker-3-16", "sticker-3-18", "sticker-3-24",
+        "sticker-3-27", "sticker-3-32"
     ]
 
     /// The drawing, or `nil` when it is not packaged — which every caller renders as nothing at
@@ -48,8 +48,17 @@ public enum HisploraStickerArtwork {
         names.allSatisfy { url(named: $0) != nil }
     }
 
+    /// PNG first, JPEG second.
+    ///
+    /// Every cut-out here is a PNG because every cut-out has an alpha channel — that is what makes
+    /// it a cut-out. The two exceptions are the Discovery page's photographs (`949:2470`,
+    /// `949:2471`), which are rectangular photographs with nothing to knock out: as PNGs they cost
+    /// 2.8 MB between them and as JPEGs 0.6 MB, in a bundle this file's own doc comment already
+    /// warns about. The extension is asked rather than assumed so a caller never has to know which
+    /// of the two a drawing happens to be.
     static func url(named name: String) -> URL? {
         Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Images")
+            ?? Bundle.module.url(forResource: name, withExtension: "jpg", subdirectory: "Images")
     }
 
     private static let cache = ArtworkCache()
@@ -101,8 +110,25 @@ public enum HisploraTripArtwork {
     /// `791:6468` — the 147 × 147 gilt frame the grid's collectibles sit in.
     public static let medallionSquare = "medallion-square"
 
+    /// `949:2470` — the split gate the Discovery page opens on, with the airport behind it.
+    ///
+    /// > **A photograph with no provenance recorded**, in the same class as `king` and `plate`.
+    /// > It is a real place photographed by somebody, and nothing in this repository says who or
+    /// > under what licence. `docs/hisplora-tokens.md` carries it beside the other two; it has to
+    /// > be resolved before anything public.
+    public static let discoveryGate = "discovery-gate"
+    /// `949:2471` — the second photograph, the grove under a flat sky. Same provenance gap.
+    public static let discoveryGrove = "discovery-grove"
+    /// `949:2477` — the hand-drawn highlighter stroke under a picked-out phrase.
+    ///
+    /// A raster rather than a `Shape`, unlike `HisploraHighlightMark`: the exported vector is 146
+    /// cubic segments of a double brush stroke, and transcribing that many control points into
+    /// Swift produces a file nobody can check against the drawing.
+    public static let marker = "history-marker"
+
     public static let names = [plate, king, torn, ornament, arrow,
-                               emblem, legend, medallionTall, medallionSquare]
+                               emblem, legend, medallionTall, medallionSquare,
+                               discoveryGate, discoveryGrove, marker]
 
     public static func image(named name: String) -> Image? {
         HisploraStickerArtwork.image(named: name)

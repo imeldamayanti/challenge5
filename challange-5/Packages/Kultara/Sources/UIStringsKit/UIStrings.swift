@@ -775,5 +775,20 @@ public enum UIStrings {
 
         // MARK: Sidequest proximity notifications — FR-WATCH-07
         .sideQuestNotificationOpenInApp: LocalizedText(id: "Buka di Aplikasi", en: "Open in App"),
+
+        // MARK: Discovery — `670:1826`, `1108:2780`, `949:2461`
+        .discoveryNotificationTitle: LocalizedText(
+            id: "Pada suatu masa...", en: "Once upon a time..."),
+        .discoveryNotificationBody: LocalizedText(
+            id: "Tepat di titik ini ada satu momen sejarah yang nyata.",
+            en: "This exact spot has a real history moment."),
+        .discoveryPopupTitle: LocalizedText(id: "Penemuan Baru!", en: "New Discovery!"),
+        .discoveryPopupBody: LocalizedText(
+            id: "Sebuah kisah tersembunyi terbuka di lokasimu sekarang.",
+            en: "A hidden story has been unlocked at your current location."),
+        .discoveryPopupAction: LocalizedText(id: "Baca Kisah", en: "Read Story"),
+        .discoveryPopupDismiss: LocalizedText(id: "Tutup penemuan", en: "Dismiss discovery"),
+        .discoveryPageTitle: LocalizedText(id: "Penemuan", en: "Discovery"),
+        .discoverySaveAndShare: LocalizedText(id: "Simpan dan Bagikan", en: "Save and Share"),
     ]
 }

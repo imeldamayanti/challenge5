@@ -70,6 +70,13 @@ struct KultaraRootView: View {
     /// Bumped when a sidequest record changes, so the collection and the nearby list are rebuilt
     /// for the same reason `journalRevision` exists.
     @State private var sideQuestRevision = 0
+    /// The Discovery page (`949:2461`) a walker opened from the New Discovery card, drawn full
+    /// screen over whatever tab they were on.
+    ///
+    /// Held here rather than derived from the router because the card and the page are two steps
+    /// of one journey: "Read Story" clears the router and sets this, so backing out of the page
+    /// returns to Home rather than to the card the walker has already answered.
+    @State private var discoveryPage: SideQuestDiscoveryPresentation?
 
     /// Which walk the run screen should open, and whether an existing draft is being replaced.
     private struct RunDestination: Identifiable, Hashable {
@@ -297,6 +304,52 @@ struct KultaraRootView: View {
         .fullScreenCover(item: $completionRecapRun) { run in
             completionRecapScreen(for: run)
         }
+        // `1108:2636` — the card is an overlay over whatever tab is showing, with its own wash
+        // across the whole screen, rather than a sheet. A sheet would slide the tab bar's own
+        // chrome around and leave Home visible and *bright* underneath, which is the opposite of
+        // what the frame draws.
+        .overlay {
+            if let discovery = discoveryCard {
+                NewDiscoveryPopup(
+                    presentation: discovery,
+                    onReadStory: {
+                        router.discoveredSideQuestID = nil
+                        discoveryPage = discovery
+                    },
+                    onDismiss: { router.discoveredSideQuestID = nil })
+                    .transition(.opacity)
+            }
+        }
+        .animation(.easeOut(duration: 0.2), value: router.discoveredSideQuestID)
+        .fullScreenCover(item: $discoveryPage) { discovery in
+            HisploraStage(ground: \.paperTrip, grain: false) {
+                SideQuestDiscoveryScreen(
+                    presentation: discovery,
+                    onClose: { discoveryPage = nil })
+            }
+        }
+    }
+
+    /// The New Discovery card, or `nil`.
+    ///
+    /// Gated exactly as `sideQuestCover` is, and for the same requirement: `FR-SIDE-01` and
+    /// `FR-PROX-08` forbid interrupting a walker who is mid-quest, and `ProximityGate` deciding
+    /// not to *send* an alert is a different gate from this one, which decides whether anything is
+    /// ever *presented*. A letter, the papers modal and the recap carousel are all full-screen
+    /// moments a card over the top of would simply be a bug.
+    ///
+    /// `nil` also when content has no such sidequest — a kill-switch withdrawal between the region
+    /// firing and the tap arriving. Nothing is shown rather than an empty card.
+    private var discoveryCard: SideQuestDiscoveryPresentation? {
+        guard runDestination == nil, journalLetter == nil, journalPapers == nil,
+              completionRecapRun == nil, discoveryPage == nil,
+              router.pendingSideQuestID == nil,
+              let sideQuestID = router.discoveredSideQuestID
+        else { return nil }
+        return SideQuestDiscoveryResolver.resolve(
+            sideQuestID: sideQuestID,
+            repository: environment.repository,
+            language: language)
     }
 
     /// `nil` while a walk is in progress, which suppresses both entry paths at once — the nearby

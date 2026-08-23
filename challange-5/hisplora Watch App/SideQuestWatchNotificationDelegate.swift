@@ -49,7 +49,7 @@ final class SideQuestWatchNotificationDelegate: NSObject, UNUserNotificationCent
            let sideQuestID = content.userInfo["sideQuestID"] as? String {
             let card = OpenedSideQuestCard(
                 sideQuestID: sideQuestID,
-                synopsis: content.body,
+                synopsis: SideQuestNotificationController.synopsis(from: content),
                 heroImage: SideQuestNotificationController.loadHeroImage(from: content.attachments))
             log.debug("opening card for \(sideQuestID, privacy: .public)")
             Task { @MainActor [onTap] in onTap?(card) }
