@@ -687,6 +687,9 @@ public enum UIStrings {
             id: "Tambah Foto Tempat", en: "Add Place Photo"),
         .writeJournalAddSelfie: LocalizedText(id: "Tambah Swafotomu", en: "Add Your Selfie"),
         .writeJournalSaveAction: LocalizedText(id: "Simpan", en: "Save"),
+        /// The keyboard accessory's Done on the write-journal field — puts the keyboard away so
+        /// the photo slots are reachable again.
+        .writeJournalKeyboardDone: LocalizedText(id: "Selesai", en: "Done"),
         .journeySavedTitle: LocalizedText(
             id: "Perjalananmu Tersimpan!", en: "Your Journey is Saved!"),
         .journeySavedRecapAction: LocalizedText(
@@ -701,7 +704,7 @@ public enum UIStrings {
             en: "You’ve completed this story and walked through the places, uncovered the past, "
                 + "and experienced a piece of Bali’s living heritage."),
         .tripRecapGlanceTitle: LocalizedText(
-            id: "Perjalananmu Sekilas", en: "Your Journey at a Glance"),
+            id: "Perjalananmu Sekilas", en: "Your Journey at A Glance"),
         .tripRecapStatExploredPlaces: LocalizedText(id: "Tempat Dijelajahi", en: "Explored Places"),
         .tripRecapStatTripDuration: LocalizedText(id: "Durasi Perjalanan", en: "Trip Duration"),
         .tripRecapStatCompletedQuests: LocalizedText(id: "Quest Selesai", en: "Completed Quests"),

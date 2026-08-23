@@ -29,10 +29,12 @@ public struct HisploraCompletionStage<Content: View>: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .background {
                 ZStack {
+                    // The frame's gradient reaches its end colour at 86% of the height and
+                    // holds it, rather than darkening all the way to the bottom edge.
                     LinearGradient(
-                        colors: [
-                            palette.completionGroundTop.color,
-                            palette.completionGroundBottom.color,
+                        stops: [
+                            .init(color: palette.completionGroundTop.color, location: 0),
+                            .init(color: palette.completionGroundBottom.color, location: 0.86),
                         ],
                         startPoint: .top, endPoint: .bottom)
                     // The lightest fleck, the same one every dark Hisplora ground picks — the
@@ -94,10 +96,13 @@ public struct HisploraCompletionStatTile: View {
     let fill: SRGBColor
     let border: SRGBColor
     let ink: SRGBColor
+    /// The frame draws tile 1's *text* a step darker (`#61301A`) than its icon (`#69311E`);
+    /// `nil` keeps the icon's ink for everything, which is what the other three tiles do.
+    let textInk: SRGBColor?
 
     public init(
         systemImage: String, label: String, value: String, unit: String? = nil,
-        fill: SRGBColor, border: SRGBColor, ink: SRGBColor
+        fill: SRGBColor, border: SRGBColor, ink: SRGBColor, textInk: SRGBColor? = nil
     ) {
         self.systemImage = systemImage
         self.label = label
@@ -106,12 +111,15 @@ public struct HisploraCompletionStatTile: View {
         self.fill = fill
         self.border = border
         self.ink = ink
+        self.textInk = textInk
     }
 
     public var body: some View {
-        VStack(spacing: 0) {
+        let text = textInk ?? ink
+        return VStack(spacing: 0) {
             Image(systemName: systemImage)
-                .font(.system(size: 32))
+                .font(.system(size: 45))
+                .tracking(-1.36)
                 .foregroundStyle(ink.color)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .accessibilityHidden(true)
@@ -124,18 +132,19 @@ public struct HisploraCompletionStatTile: View {
                 Text(label)
                     .font(.system(size: 15))
                     .tracking(-0.3)
-                    .foregroundStyle(ink.color)
+                    .foregroundStyle(text.color)
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(value)
                         .font(.system(size: 31, weight: .black, design: .serif))
                         .tracking(-0.93)
-                        .foregroundStyle(ink.color)
+                        .foregroundStyle(text.color)
                     if let unit {
                         Text(unit)
                             .font(.system(size: 25))
-                            .foregroundStyle(ink.color)
+                            .tracking(-0.93)
+                            .foregroundStyle(text.color)
                     }
                 }
             }

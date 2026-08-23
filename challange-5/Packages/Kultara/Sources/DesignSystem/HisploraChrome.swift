@@ -22,6 +22,7 @@ public extension EnvironmentValues {
 /// fixed editorial pairing, the way a printed page is. See `HisploraPalette` for the argument.
 public struct HisploraStage<Content: View>: View {
     private let ground: KeyPath<HisploraPalette, SRGBColor>
+    private let groundColor: SRGBColor?
     private let grain: Bool
     private let content: Content
 
@@ -37,6 +38,22 @@ public struct HisploraStage<Content: View>: View {
     ) {
         self.ground = ground
         self.grain = grain
+        self.groundColor = nil
+        self.content = content()
+    }
+
+    /// A literal ground, for the screens whose frames stand on a cream no token carries — the
+    /// completion flow's two paper screens (`921:2256`, `921:2932`) draw `#F3EEE1`, a grayer
+    /// cream than `paperSheet`. Two screens share it; if a third appears, promote it to the
+    /// palette (which would also put it under the measured contrast pairs).
+    public init(
+        groundColor: SRGBColor,
+        grain: Bool = false,
+        @ViewBuilder content: () -> Content
+    ) {
+        self.ground = \.brownDeep
+        self.grain = grain
+        self.groundColor = groundColor
         self.content = content()
     }
 
@@ -48,7 +65,7 @@ public struct HisploraStage<Content: View>: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             // Token first, speckle over it — `Speckle.swift` explains why that ordering is what
             // keeps `HisploraThemeTests`' measured pairs describing what is actually on screen.
-            .kultaraSpeckledGround(palette[keyPath: ground])
+            .kultaraSpeckledGround(groundColor ?? palette[keyPath: ground])
     }
 }
 
