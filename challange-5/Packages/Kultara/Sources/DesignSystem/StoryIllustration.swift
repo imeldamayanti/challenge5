@@ -5,11 +5,13 @@ import SwiftUI
 /// the bundle, with `isAvailable` exposed so a dropped resource fails a test rather than shipping a
 /// blank page.
 ///
-/// One picture for every checkpoint's story reveal, not one per place — the content tree has no
-/// per-place illustration field (`heroImageAsset` exists only on `Quest`), and this is chrome the
-/// screen draws, the same way `KultaraTypewriter` always shows the same machine regardless of which
-/// quest is running. `public`, unlike its siblings: `StoryRevealScreen` lives in the app target, not
-/// in this module, so the loaded image has to cross that boundary.
+/// One picture for every surface that ships no drawing of its own — the sidequest story letters,
+/// and any Place whose content carries no `storyArtwork`. It used to be every checkpoint's story
+/// reveal; since `964:3212` and its three siblings shipped as `Place.storyArtwork`, the four
+/// places they belong to draw their own art full bleed instead, and this stays what those without
+/// one get. Chrome either way, the same way `KultaraTypewriter` always shows the same machine
+/// regardless of which quest is running. `public`, unlike its siblings: `StoryRevealScreen` lives
+/// in the app target, not in this module, so the loaded image has to cross that boundary.
 ///
 /// **The geometry below is why this is not simply a `.fill` in a fixed-height box.** `293:1643`
 /// draws the picture full-bleed at the screen's own width, so its height follows from its aspect

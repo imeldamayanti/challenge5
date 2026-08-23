@@ -24,7 +24,8 @@ enum ContentFactory {
         close: TimeOfDay = TimeOfDay(hour: 17, minute: 0),
         mapPoint: MapPoint? = nil,
         siteMap: PlaceSiteMap? = nil,
-        approachMap: PlaceApproachMap? = nil
+        approachMap: PlaceApproachMap? = nil,
+        storyArtwork: PlaceStoryArtwork? = nil
     ) -> Place {
         Place(
             id: id,
@@ -46,7 +47,8 @@ enum ContentFactory {
             consentRecordId: consentRecordId,
             mapPoint: mapPoint,
             siteMap: siteMap,
-            approachMap: approachMap)
+            approachMap: approachMap,
+            storyArtwork: storyArtwork)
     }
 
     static func task(

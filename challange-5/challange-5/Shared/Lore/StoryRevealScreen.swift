@@ -61,14 +61,29 @@ struct StoryRevealScreen: View {
     /// does not extend to a new one by inference. Flipping this default would silently re-open a
     /// decision that has an owner.
     var showsProvenance: Bool = false
-    /// The illustration behind the page, when a specific one exists for this run. The content tree
-    /// has no per-place illustration field, so this is `nil` in the shipped quest and the screen
-    /// falls back to `StoryIllustrationMetrics.image` — the frame's own art (`293:1646`), packaged
-    /// with the design system as chrome rather than authored as content, the same way the
-    /// typewriter's machine photograph is one picture for every quest rather than one per place.
+    /// The Place's own illustration behind the page, when content ships one (`Place.storyArtwork`,
+    /// `964:3212` and its three siblings). Drawn **full bleed** — one picture behind the whole
+    /// page, the words running over its lower half — rather than as the packaged strip below,
+    /// because that is how the frames draw it. `nil` keeps the old treatment: the packaged art
+    /// (`StoryIllustrationMetrics.image`, `293:1643`) as a strip that ends where the words begin,
+    /// the same fallback every surface without a drawing of its own still uses.
     let illustrationURL: URL?
+    /// Phrases the frames ring with the hand-drawn mark (`964:3223` and its siblings), matched
+    /// against the joined passage at this run's language. Empty draws no marks; a phrase the text
+    /// does not contain is ignored rather than an error.
+    var markedPhrases: [String] = []
     let onFinish: () -> Void
     let onBack: () -> Void
+
+    /// The full-bleed layout's own numbers, read off the four frames. A separate enum from
+    /// `StoryIllustrationMetrics` because those describe the *strip* — the packaged art cut where
+    /// the words begin — and these describe what happens when a Place ships a drawing of its own
+    /// and the words run over it instead.
+    private enum FullBleedLayout {
+        /// How far down the page the words begin, as a fraction of the screen's height: 557 of the
+        /// 874-point frame.
+        static let textStartFraction: CGFloat = 557.0 / 874.0
+    }
 
     /// How far the page has got through the designer's sequence. A single enum rather than three
     /// booleans, because the states are ordered and only one of them is ever current.
@@ -92,16 +107,34 @@ struct StoryRevealScreen: View {
 
     var body: some View {
         HisploraStage(ground: \.paperWarm) {
-            // The bar is a sibling rather than an overlay on the scroll: the scroll ignores the top
-            // safe area so the picture runs under the status bar as `293:1646` does, and an overlay
-            // on it would be pinned to the screen's physical top edge along with it. In a `ZStack`
-            // the bar keeps the safe area the reader's status bar actually occupies.
-            ZStack(alignment: .top) {
+            // Two treatments, split at whether this Place ships a drawing of its own. The seam
+            // falls between two whole layouts of one screen — never halfway through either.
+            if illustrationURL != nil {
+                fullBleed
+            } else {
+                packagedStrip
+            }
+        }
+    }
+
+    /// The Place's own drawing, laid behind the whole page exactly as the frames lay it: full
+    /// bleed and under the status bar, the words beginning at the frame's 557-of-874 line and
+    /// running over the drawing's lower half.
+    ///
+    /// The bar and the footer are siblings of the scroll for the same reasons the strip layout's
+    /// are: the scroll ignores the top safe area, and the footer hangs off its bottom edge so it
+    /// stays clear of the home indicator while floating over the drawing.
+    private var fullBleed: some View {
+        ZStack(alignment: .top) {
+            drawingBackdrop
+            GeometryReader { proxy in
                 ScrollView {
                     VStack(alignment: .leading, spacing: 0) {
-                        // Full-bleed, and the one element that carries no horizontal margin: it
-                        // spans edge to edge, and up under the status bar as the frame draws it.
-                        illustration
+                        // The words' starting line, held as a fraction of the screen's height so
+                        // the layout survives a different device — the same reason the strip's
+                        // heights live in `StoryIllustrationMetrics`.
+                        Color.clear
+                            .frame(height: proxy.size.height * FullBleedLayout.textStartFraction)
                         if showsProvenance {
                             provenanceClaims
                                 .padding(.horizontal, Self.margin)
@@ -113,10 +146,61 @@ struct StoryRevealScreen: View {
                     .padding(.bottom, KultaraMetrics.lg)
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                .ignoresSafeArea(edges: .top)
                 .safeAreaInset(edge: .bottom) { footer }
-                topBar
             }
+            .ignoresSafeArea(edges: .top)
+            topBar
+        }
+    }
+
+    /// The drawing itself, filling the viewport and clipped to it — the composite is drawn at the
+    /// frame's own 402×874 proportions, so `.scaledToFill` matches its width and lets the height
+    /// overflow on a different device. A missing decode is the ground colour, never a blank page.
+    private var drawingBackdrop: some View {
+        GeometryReader { proxy in
+            Group {
+                if let illustrationURL, let image = BundledImage.load(illustrationURL) {
+                    image
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    palette.paperWarm.color
+                }
+            }
+            .frame(width: proxy.size.width, height: proxy.size.height)
+            .clipped()
+            .accessibilityHidden(true)
+        }
+        .ignoresSafeArea(edges: .top)
+    }
+
+    /// The old treatment, kept whole for every surface that ships no drawing of its own: the
+    /// packaged art as a strip that ends where the words begin.
+    private var packagedStrip: some View {
+        // The bar is a sibling rather than an overlay on the scroll: the scroll ignores the top
+        // safe area so the picture runs under the status bar as `293:1646` does, and an overlay
+        // on it would be pinned to the screen's physical top edge along with it. In a `ZStack`
+        // the bar keeps the safe area the reader's status bar actually occupies.
+        ZStack(alignment: .top) {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    // Full-bleed, and the one element that carries no horizontal margin: it
+                    // spans edge to edge, and up under the status bar as the frame draws it.
+                    illustration
+                    if showsProvenance {
+                        provenanceClaims
+                            .padding(.horizontal, Self.margin)
+                    } else {
+                        passage
+                            .padding(.horizontal, Self.margin)
+                    }
+                }
+                .padding(.bottom, KultaraMetrics.lg)
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .ignoresSafeArea(edges: .top)
+            .safeAreaInset(edge: .bottom) { footer }
+            topBar
         }
     }
 
@@ -172,11 +256,13 @@ struct StoryRevealScreen: View {
                 }
             }
             if reveal >= .passage {
-                // Cut to one paragraph, as `293:1643` sets it. Display only — the lore is
-                // untouched, and the labelled treatment below shows every claim whole because a
-                // trimmed claim is a claim without its citation (`FR-CP-05`).
-                HisploraTypewriterText(
-                    StoryPassageMetrics.passageText(text),
+                // The whole passage now — `293:1643` cut to its first paragraph, but `964:3212`
+                // and its siblings set every block, so the join is what shows. Display only — the
+                // lore is untouched, and the labelled treatment below shows every claim whole
+                // because a trimmed claim is a claim without its citation (`FR-CP-05`).
+                HisploraMarkedPassage(
+                    text,
+                    markedPhrases: markedPhrases,
                     font: .system(size: 17),
                     onComplete: { advance(to: .marked) })
             }

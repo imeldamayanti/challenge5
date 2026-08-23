@@ -225,6 +225,31 @@ public struct PlaceApproachMap: Codable, Sendable, Equatable, Hashable {
     }
 }
 
+/// The illustration behind a checkpoint's Story Reveal page (`964:3212` and its three siblings),
+/// shipped per Place rather than as one packaged drawing for every quest.
+///
+/// It carries a `sourceRef` for the same reason `PlaceSiteMap` does: these drawings are generated
+/// illustrations of real places, not surveys, so `FR-CP-05` applies to what they depict exactly
+/// as it applies to a `LoreBlock`, and the owning Place's `sources` carries an entry that says so.
+/// The screen renders the passage over the drawing without the citation (the signed Story Reveal
+/// exception); the provenance lives here, where content review reads it.
+///
+/// Unlike the two maps above it is decoration in one sense: nothing on screen asserts a measurement
+/// read off it. What makes it content anyway is that each drawing belongs to one place and asserts
+/// how that place looks — the same reasoning that keeps `heroImageAsset` validated on `Quest`
+/// rather than packaged with the design system.
+public struct PlaceStoryArtwork: Codable, Sendable, Equatable, Hashable {
+    /// Path within the content bundle's `assets/`, checked by validator rule V14.
+    public let asset: String
+    /// Index into the owning Place's `sources`, checked by validator rule V3.
+    public let sourceRef: Int
+
+    public init(asset: String, sourceRef: Int) {
+        self.asset = asset
+        self.sourceRef = sourceRef
+    }
+}
+
 public struct Place: Codable, Sendable, Equatable, Identifiable {
     public let id: String
     /// `NFR-I18N-04` — a Place name renders in its official local form in both languages.
@@ -252,6 +277,9 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
     /// The drawn map of the streets around these grounds, when content ships one. Optional for the
     /// same reason `siteMap` is: most Places will never have one drawn.
     public let approachMap: PlaceApproachMap?
+    /// The illustration behind this Place's Story Reveal page, when content ships one. Optional —
+    /// without it the screen falls back to its packaged art (`StoryIllustrationMetrics`).
+    public let storyArtwork: PlaceStoryArtwork?
 
     public init(
         id: String,
@@ -272,7 +300,8 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         consentRecordId: String,
         mapPoint: MapPoint? = nil,
         siteMap: PlaceSiteMap? = nil,
-        approachMap: PlaceApproachMap? = nil
+        approachMap: PlaceApproachMap? = nil,
+        storyArtwork: PlaceStoryArtwork? = nil
     ) {
         self.id = id
         self.nameOfficial = nameOfficial
@@ -293,6 +322,7 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         self.mapPoint = mapPoint
         self.siteMap = siteMap
         self.approachMap = approachMap
+        self.storyArtwork = storyArtwork
     }
 
     public init(from decoder: any Decoder) throws {
@@ -316,6 +346,7 @@ public struct Place: Codable, Sendable, Equatable, Identifiable {
         mapPoint = try c.decodeIfPresent(MapPoint.self, forKey: .mapPoint)
         siteMap = try c.decodeIfPresent(PlaceSiteMap.self, forKey: .siteMap)
         approachMap = try c.decodeIfPresent(PlaceApproachMap.self, forKey: .approachMap)
+        storyArtwork = try c.decodeIfPresent(PlaceStoryArtwork.self, forKey: .storyArtwork)
     }
 }
 

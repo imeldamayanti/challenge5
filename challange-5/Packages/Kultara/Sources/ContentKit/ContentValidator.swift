@@ -315,6 +315,23 @@ public enum ContentValidator {
                 }
             }
 
+            // V14 and V3, over the story artwork — the Story Reveal's background drawing
+            // (`964:3212` and its three siblings). Same two checks as the maps above, for the same
+            // reasons: a path that resolves to nothing renders a blank page, and a `sourceRef`
+            // past the Place's sources is a claim about a real place with nothing behind it.
+            if let storyArtwork = place.storyArtwork {
+                if !assets.exists(storyArtwork.asset) {
+                    findings.append(ValidationFinding(
+                        rule: .v14, path: path,
+                        message: "Story artwork asset \"\(storyArtwork.asset)\" does not exist."))
+                }
+                if storyArtwork.sourceRef < 0 || storyArtwork.sourceRef >= place.sources.count {
+                    findings.append(ValidationFinding(
+                        rule: .v3, path: path,
+                        message: "storyArtwork cites source index \(storyArtwork.sourceRef); the Place has \(place.sources.count) source(s)."))
+                }
+            }
+
             // V13 — FR-ARR-07
             if !(30...250).contains(place.arrivalRadiusM) {
                 findings.append(ValidationFinding(

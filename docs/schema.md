@@ -138,6 +138,7 @@ When absent, the map surface is not offered at all rather than shown empty.
 | `consentRecordId` | must resolve to a `granted`, unexpired record (NFR-GOV-01) |
 | `mapPoint` | `{ x, y }`, each within 0…1 — position on `manifest.regionMap`, required for every Place a quest visits when a region map ships (V17) |
 | `siteMap` | optional `{ asset, aspectRatio, sourceRef }` — the drawn plan of these grounds. `asset` must exist (V14); `sourceRef` must index this Place's `sources` (V3) |
+| `storyArtwork` | optional `{ asset, sourceRef }` — the generated illustration behind this Place's Story Reveal page (`964:3212` and its three siblings). `asset` must exist (V14); `sourceRef` must index this Place's `sources` (V3), and that citation carries the `BELUM DIVERIFIKASI` prefix because the drawing is generated, not surveyed |
 
 **`mapPoint` is authored, not derived from `coordinate`.** The region map is an illustration:
 hand-drawn, taller than the island is, with a stylised coastline. Projecting a real coordinate onto
@@ -150,6 +151,14 @@ annotated — how many metres across the walls stand. Those are claims about a r
 `FR-CP-05` applies to them exactly as it applies to a `LoreBlock`, and the index resolves against the
 Place's own `sources` in the same way. The site-map screen prints that citation under the drawing, so
 a plan nobody has verified says so on the screen rather than in a JSON file nobody opens.
+
+**`storyArtwork` carries one for the same reason, with the screen's exception noted.** A generated
+illustration of a real place is still an assertion about how that place looks, so it cites a
+`BELUM DIVERIFIKASI` entry in the Place's own sources — but the Story Reveal renders over it without
+printing the citation (the signed `FR-CP-05` exception for that page). The provenance lives here,
+where content review reads it, rather than on the walker's screen. Optional: without it the Story
+Reveal falls back to its packaged strip (`293:1643`), which is what every surface without a drawing
+of its own shows.
 
 It lives on `Place` rather than on `Quest` because the grounds belong to the place, not to the walk
 across it: two quests visiting the same puri show the same plan. It is optional, and most Places will
@@ -304,7 +313,7 @@ CI fails on any of these. This is the enforcement mechanism for requirements tha
 |---|---|---|
 | V1 | Every `LocalizedText` has non-empty `id` and `en` | NFR-I18N-02 |
 | V2 | Every `Place.sources` has ≥ 1 entry | NFR-CONT-02 |
-| V3 | Every `LoreBlock` has `accuracy` and ≥ 1 `sourceRefs`; every `sourceRef` — a lore block's or `Place.siteMap`'s — indexes an existing source | NFR-CONT-01, FR-CP-05 |
+| V3 | Every `LoreBlock` has `accuracy` and ≥ 1 `sourceRefs`; every `sourceRef` — a lore block's, `Place.siteMap`'s or `Place.storyArtwork`'s — indexes an existing source | NFR-CONT-01, FR-CP-05 |
 | V4 | Every `Place.consentRecordId` resolves; status `granted`; `expiresAt` in the future | NFR-GOV-01/03 |
 | V5 | Every ConsentRecord has `grantedByName`, `grantedByRole`, `regionOwner` | NFR-GOV-02/07 |
 | V6 | No photo task at a Place with `photoPolicy.level == "prohibited"` | FR-TASK-06 |
@@ -315,7 +324,7 @@ CI fails on any of these. This is the enforcement mechanism for requirements tha
 | V11 | `distanceSource == "walking-directions"` | NFR-CONT-05 |
 | V12 | `proximityRadiusM > startCheckpoint.place.arrivalRadiusM` | FR-PROX-11 |
 | V13 | `arrivalRadiusM` within 30–250 | FR-ARR-07 |
-| V14 | Every asset path referenced exists, including `Place.siteMap.asset`; `siteMap.aspectRatio > 0` | — |
+| V14 | Every asset path referenced exists, including `Place.siteMap.asset` and `Place.storyArtwork.asset`; `siteMap.aspectRatio > 0` | — |
 | V15 | Total content payload ≤ 200 MB (leaves headroom under the 250 MB app budget) | NFR-PERF-07 |
 | V16 | `hardLatestStart` matches recomputation from visiting hours | FR-DISC-06 |
 | V17 | When `manifest.regionMap` is present, every Place a quest visits has a `mapPoint` within 0…1 | FR-DISC-02/03 |
