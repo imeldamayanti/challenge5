@@ -50,8 +50,15 @@ struct QuestAvailabilityScreen: View {
     /// inset already supplies 34 of that, so the code adds 21.
     private static let buttonBottomPadding: CGFloat = 21
 
+    /// `921:3462` draws a 1-point hairline above and below the header block
+    /// (`separators/vibrant`, #E6E6E6). The palette has no token for it — same standing as the
+    /// white ground above.
+    private static let separatorInk = Color(red: 0xE6 / 255, green: 0xE6 / 255, blue: 0xE6 / 255)
+
     var body: some View {
         VStack(spacing: 0) {
+            separator
+
             HisploraAvailabilityGlyph(
                 width: Self.glyphWidth,
                 tiltDegrees: HisploraScrollArt.mapHintTiltDegrees)
@@ -79,6 +86,8 @@ struct QuestAvailabilityScreen: View {
 
             Spacer(minLength: KultaraMetrics.lg)
 
+            separator
+
             Button(UIStrings.string(.questAvailabilityContinue, language), action: onContinue)
                 .buttonStyle(.hisploraPillOnPaper)
                 .padding(.horizontal, Self.buttonSidePadding)
@@ -86,5 +95,13 @@ struct QuestAvailabilityScreen: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white)
+    }
+
+    /// `921:3465` / `921:3473` — 24-point side insets, one point tall.
+    private var separator: some View {
+        Rectangle()
+            .fill(Self.separatorInk)
+            .frame(height: 1)
+            .padding(.horizontal, 24)
     }
 }
