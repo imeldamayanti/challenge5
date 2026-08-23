@@ -36,15 +36,26 @@ struct QuestAvailabilityScreen: View {
     /// `921:3869` hangs its headline 56 points up into the tilted scroll's bounding box — the
     /// box's lower corners are empty paper-shadow space, and the roll end is what the words sit
     /// under. Without this pull-up a centred column reads a full corner of air below the picture.
-    /// Scaled with the glyph to the half-screen sheet.
-    private static let titleOverlap: CGFloat = 44
+    /// Scaled with the glyph to the half-screen sheet (56 × 437/540).
+    private static let titleOverlap: CGFloat = 45
+
+    /// `921:3869`'s own 28 (Header 16 + Middle 12) scaled to the half-height sheet (× 437/540).
+    private static let glyphTopPadding: CGFloat = 23
+
+    /// The frame's button is 362 of a 402 screen — a 20-point side margin, kept absolute because
+    /// width does not shrink with the sheet.
+    private static let buttonSidePadding: CGFloat = 20
+
+    /// The frame hangs its button 55 above the sheet's bottom edge; the sheet's own home-indicator
+    /// inset already supplies 34 of that, so the code adds 21.
+    private static let buttonBottomPadding: CGFloat = 21
 
     var body: some View {
         VStack(spacing: 0) {
             HisploraAvailabilityGlyph(
                 width: Self.glyphWidth,
                 tiltDegrees: HisploraScrollArt.mapHintTiltDegrees)
-                .padding(.top, KultaraMetrics.sm)
+                .padding(.top, Self.glyphTopPadding)
                 .padding(.bottom, -Self.titleOverlap)
 
             VStack(spacing: KultaraMetrics.md) {
@@ -70,8 +81,8 @@ struct QuestAvailabilityScreen: View {
 
             Button(UIStrings.string(.questAvailabilityContinue, language), action: onContinue)
                 .buttonStyle(.hisploraPillOnPaper)
-                .padding(.horizontal, KultaraMetrics.xl)
-                .padding(.bottom, KultaraMetrics.xl)
+                .padding(.horizontal, Self.buttonSidePadding)
+                .padding(.bottom, Self.buttonBottomPadding)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Color.white)
