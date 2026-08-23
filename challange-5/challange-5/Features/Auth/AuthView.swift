@@ -41,7 +41,9 @@ struct AuthView: View {
                 case .signIn:
                     AuthCredentialScreen(
                         configuration: .signIn, model: model, language: language)
-                case .guestName:
+                case .guestName, .nameAfterApple:
+                    // One screen for both asks: the copy ("What should we call you?") is the same,
+                    // and what differs — where back goes — is `AuthViewModel.back`'s to decide.
                     GuestNameScreen(model: model, language: language)
                 }
             }

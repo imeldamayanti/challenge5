@@ -43,8 +43,13 @@ struct UIStringsTests {
         // And a fourth: a loanword that *is* the Indonesian word. "Email" is what an Indonesian
         // form is labelled with; "surel" is the formal coinage and nobody types their address into
         // it. Exempted by name, because unlike the specifiers there is no property to test for.
+        // A fifth kind: a word printed on an *artifact* rather than said to the reader. The trip
+        // recap's postcard carries POSTCARD printed on its face in both languages, because a real
+        // postcard says POSTCARD whatever language its sender writes in — translating it would be
+        // repainting the object, not localising it.
         let identicalByDesign: Set<UIStringKey> = [
-            .appName, .unitMetres, .unitKilometres, .authEmailPlaceholder]
+            .appName, .unitMetres, .unitKilometres, .authEmailPlaceholder,
+            .tripRecapPostcardTitle]
         for key in UIStringKey.allCases where !identicalByDesign.contains(key) {
             guard let text = UIStrings.table[key] else { continue }
             // The specifiers themselves carry letters (`%1$d`), so they come out before the
