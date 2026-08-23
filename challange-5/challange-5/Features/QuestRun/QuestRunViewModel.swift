@@ -670,6 +670,28 @@ final class QuestRunViewModel {
     /// is this" cannot answer "where did the walker come from".
     private var stageBeforeTaskDetail: Stage = .checkpointDetail
 
+    /// How tall `TaskDetailScreen` last drew its parchment, in points.
+    ///
+    /// **The transition unrolls a sheet it cannot see.** `StoryTransitionScreen` opens a parchment
+    /// and then cross-fades into the real task sheet, so the two have to end at the same height or
+    /// the foot roll jumps at the seam — and the real one is content-sized, so nothing but the
+    /// destination itself knows what that height is. The sheet reports it here as it lays out and
+    /// the next transition unrolls to it; the first one of a walk uses
+    /// `TaskSheetLayout.estimatedSheetHeight`, which is the same number measured once by hand.
+    ///
+    /// Deliberately not per task id: the shipped written tasks are within a few points of each
+    /// other, and keeping one value means a walker who reaches checkpoint two has a measurement
+    /// rather than an estimate even though it came from checkpoint one's words. A photo task's sheet
+    /// is genuinely shorter, and its own measurement corrects the transition after it.
+    private(set) var taskSheetHeight: CGFloat?
+
+    /// Called by `TaskDetailScreen` as it lays out. Ignores anything implausible so a mid-transition
+    /// or zero-sized pass cannot poison the next opening.
+    func recordTaskSheetHeight(_ height: CGFloat) {
+        guard height > 120, height.isFinite else { return }
+        taskSheetHeight = height
+    }
+
     /// Opening one task's own sheet from the menu (`1:4904` → `1:4711`).
     ///
     /// Guarded on the task actually being at this checkpoint. Not defensiveness: the presentation's

@@ -73,6 +73,9 @@ public struct HisploraScrollUnsealSequence: Sendable, Equatable {
         case .widening: return .milliseconds(520)
         case .unbinding: return .milliseconds(300)
         case .unrolling: return .milliseconds(950)
+        case .widening: return .milliseconds(520)
+        case .unbinding: return .milliseconds(300)
+        case .unrolling: return .milliseconds(950)
         // Long enough to read as the sheet settling, short enough that nobody waits on it.
         case .open: return .milliseconds(240)
         }
@@ -85,8 +88,8 @@ public struct HisploraScrollUnsealSequence: Sendable, Equatable {
     /// `duration(of:)` meant every beat ran to a full stop before the next one started, so the roll
     /// grew, stopped, faded, stopped, unrolled, stopped. Overlapping the tails hands the motion from
     /// one beat to the next without the object ever coming to rest mid-sequence. The overlap is
-    /// small on purpose: the two beats that *change identity* (`unbinding`'s cross-fade) must still
-    /// land on a silhouette that has finished growing, so `widening` keeps most of its tail.
+    /// small on purpose: the beat that *changes identity* (`unbinding`'s cross-fade) must still land
+    /// on a silhouette that has finished growing, so `widening` keeps most of its tail.
     public func hold(of stage: HisploraScrollUnsealStage) -> Duration {
         guard !rendersImmediately else { return .zero }
         switch stage {
@@ -116,6 +119,7 @@ public struct HisploraScrollUnsealSequence: Sendable, Equatable {
         // the object changing size at the moment it changes identity.
         case .unbinding: return .easeInOut(duration: seconds)
         // Paper coming off a rod does not accelerate. It starts, it runs, it eases into rest.
+        case .unrolling: return .timingCurve(0.32, 0, 0.12, 1, duration: seconds)
         case .unrolling: return .timingCurve(0.32, 0, 0.12, 1, duration: seconds)
         }
     }
@@ -184,6 +188,21 @@ public struct HisploraParchmentUnroll: View, Animatable {
         }
     }
 
+    /// **The paper is uncovered, never stretched, and that is the whole difference.**
+    ///
+    /// The first pass drew the whole paper band and put a `scaleEffect(y: open)` on it, so at a
+    /// third open the sheet was the finished picture squashed to a third of its height — the grain,
+    /// the vignette and the bowed sides all compressed with it. On screen that reads as a rubber
+    /// band being pulled, which is exactly what `verticalscroll2.mp4` does *not* do: in the
+    /// reference render the paper is at its final scale from the first frame it is visible, and what
+    /// changes is how much of it has come off the rolls.
+    ///
+    /// So the band is cut in two and each half is drawn at full size, clipped to what has unrolled:
+    /// the head roll's half peels down from the top of the band, the foot roll's half peels up from
+    /// the bottom, and the two meet in the middle at `open == 1`. At that moment the four slices are
+    /// contiguous rows of one picture, so the last frame of the opening and the settled sheet are
+    /// the same pixels rather than two things that nearly agree.
+    ///
     /// **The rolls are absolute, not fractions of the box.** They were fractions while the sheet was
     /// a plain stretch and both ends grew together; now that the settled sheet pins them
     /// (`HisploraParchmentMetrics.rollCaps`), a roll that is a fraction of a 700-point box opens at
@@ -194,17 +213,21 @@ public struct HisploraParchmentUnroll: View, Animatable {
         let top = HisploraParchmentMetrics.rollHeadHeight
         let bottom = HisploraParchmentMetrics.rollFootHeight
         let paper = max(0, size.height - top - bottom)
+        let shown = paper * open
+        // Split odd pixels toward the foot rather than rounding both halves, so the two never sum
+        // to less than `shown` and leave a hairline of ground between them.
+        let offHead = (shown / 2).rounded(.down)
+        let offFoot = shown - offHead
         return VStack(spacing: 0) {
             slice(image, in: size, from: 0, height: top)
-            slice(image, in: size, from: top, height: paper)
-                // The layout box stays the full sheet's and the paper shrinks inside it, so the
-                // band's centre never moves: the rolls travel out from the middle, which is what
-                // the reference render does.
-                .scaleEffect(y: open, anchor: .center)
-                .frame(height: paper * open)
+            slice(image, in: size, from: top, height: offHead)
+            slice(image, in: size, from: top + paper - offFoot, height: offFoot)
             slice(image, in: size, from: top + paper, height: bottom)
         }
-        .frame(width: size.width, height: size.height)
+        // The layout box stays the full sheet's and the stack shrinks inside it, so the band's
+        // centre never moves: the rolls travel out from the middle, which is what the reference
+        // render does.
+        .frame(width: size.width, height: size.height, alignment: .center)
         .accessibilityHidden(true)
     }
 
@@ -243,74 +266,117 @@ public enum HisploraParchmentUnrollMetrics {
     public static let closedHeight: CGFloat = topRollHeight + bottomRollHeight
 }
 
-/// How the tied roll moves while nobody has touched it yet — the idle beat before `sealed` becomes
-/// `widening`.
+/// The tied roll's idle shake — what it does while nobody has tapped it yet.
 ///
 /// **A screen whose only control is a picture has to say that it is one.** `293:1595` draws the
 /// scroll at rest and prints "Tap to reveal" under it, and on device the picture read as decoration:
 /// the words were doing all the work, and a reader who did not look at the foot of the screen had
-/// nothing telling them the object was live. A slow drift makes the roll the thing that invites the
-/// tap, which is what the frame's composition assumes.
+/// nothing telling them the object was live.
 ///
-/// It is deliberately below the threshold where it reads as an animation playing — one breath every
-/// three and a half seconds, seven points of travel, under two degrees of sway. Anything larger
-/// competes with the opening the tap starts.
+/// **It is a shake rather than a drift, and that was the correction.** A slow rise-and-fall reads as
+/// an object floating — atmosphere, not an invitation. Four quick tips damping out, then a long
+/// still hold, reads as the roll asking to be picked up. The proportions are what carry that: the
+/// whole shake is under half a second and the rest between shakes is more than four times as long,
+/// so the screen is at rest most of the time and the movement is an event rather than a state.
 ///
 /// **Reduce Motion stops it entirely rather than shrinking it.** There is nowhere for an idle loop
 /// to arrive, so a collapsed version of it is a still picture — which is what a reader who asked for
 /// less movement should get (`NFR-A11Y-05`).
-public enum HisploraScrollIdleMotion {
-    /// How far the roll rises off its resting line at the top of the breath, in points.
-    public static let floatOffset: CGFloat = 7
-    /// The sway, in degrees, applied *around* the roll's own drawn tilt rather than replacing it.
-    public static let tiltDegrees: Double = 1.6
-    /// How much the roll grows at the top of the breath, as a fraction of its own size.
-    public static let scaleRange: CGFloat = 0.014
-    /// One half-breath. The loop autoreverses, so a full rise-and-fall is twice this.
-    public static let period: Double = 3.4
-    /// How long the drift takes to come to rest once the roll has been tapped. Short, so it is out
-    /// of the way before `widening` is doing anything the eye can follow.
-    public static let settle: Double = 0.18
+public enum HisploraScrollIdleShake {
+
+    /// One tip of the shake. The loop runs these in order, forever, starting and ending at rest.
+    public enum Beat: String, Sendable, CaseIterable {
+        /// Still, and by far the longest of them — the shake is punctuation between rests.
+        case rest
+        case tipBack
+        case tipForward
+        case tipBackAgain
+        case tipForwardAgain
+
+        /// The sway, in degrees, applied *around* the roll's own drawn tilt rather than replacing
+        /// it. Each tip is smaller than the one before: a shake that does not damp reads as a
+        /// glitch rather than as an object being nudged.
+        public var tiltDegrees: Double {
+            switch self {
+            case .rest: return 0
+            case .tipBack: return -3.4
+            case .tipForward: return 2.6
+            case .tipBackAgain: return -1.6
+            case .tipForwardAgain: return 0.7
+            }
+        }
+
+        /// How far the roll lifts on this beat, in points. Small, and only on the first two: a
+        /// shake that also travels reads as the object being thrown rather than knocked.
+        public var lift: CGFloat {
+            switch self {
+            case .rest: return 0
+            case .tipBack: return -5
+            case .tipForward: return -3
+            case .tipBackAgain: return -1.5
+            case .tipForwardAgain: return 0
+            }
+        }
+
+        /// How long this beat lasts, in seconds.
+        public var seconds: Double {
+            switch self {
+            case .rest: return 2.2
+            case .tipBack: return 0.13
+            case .tipForward: return 0.11
+            case .tipBackAgain: return 0.1
+            case .tipForwardAgain: return 0.09
+            }
+        }
+    }
+
+    /// The whole loop, rest included.
+    public static var cycleSeconds: Double {
+        Beat.allCases.reduce(0) { $0 + $1.seconds }
+    }
+
+    /// How long the shake itself runs, without the rest it punctuates.
+    public static var shakeSeconds: Double {
+        Beat.allCases.filter { $0 != .rest }.reduce(0) { $0 + $1.seconds }
+    }
+
     /// How faint the caption goes at the bottom of its own breath. It shares the roll's clock so the
-    /// two read as one object breathing, not as two things animating near each other.
+    /// two read as one object asking rather than as two things animating near each other.
     public static let captionFloor: Double = 0.62
 }
 
-/// Applies `HisploraScrollIdleMotion` to whatever it wraps for as long as `isActive`.
-///
-/// The repeating animation is attached to the phase value rather than to the view, so switching
-/// `isActive` off swaps the repeat for a single short easing back to rest instead of leaving a
-/// forever-animation running underneath the sequence that follows it.
-private struct HisploraIdleDrift: ViewModifier {
+/// Runs `HisploraScrollIdleShake` on whatever it wraps for as long as `isActive`.
+private struct HisploraIdleShakeModifier: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     let isActive: Bool
-    let sways: Bool
-    @State private var lifted = false
 
     private var running: Bool { isActive && !reduceMotion }
-    private var phase: CGFloat { (running && lifted) ? 1 : 0 }
 
     func body(content: Content) -> some View {
-        content
-            .scaleEffect(1 + HisploraScrollIdleMotion.scaleRange * phase)
-            .rotationEffect(
-                .degrees(sways ? HisploraScrollIdleMotion.tiltDegrees * Double(phase) : 0))
-            .offset(y: -HisploraScrollIdleMotion.floatOffset * phase)
-            .animation(
-                running
-                    ? .easeInOut(duration: HisploraScrollIdleMotion.period)
-                        .repeatForever(autoreverses: true)
-                    : .easeOut(duration: HisploraScrollIdleMotion.settle),
-                value: phase)
-            // Started here rather than at `init`, so the first breath begins on the frame the screen
-            // actually appears on instead of part-way through.
-            .onAppear { lifted = true }
+        if running {
+            // `PhaseAnimator` rather than a chain of `repeatForever` animations on separate
+            // properties: the beats have different lengths, and a repeating animation per property
+            // makes each one loop on its own clock — the tilt and the lift drift apart within a
+            // few cycles and the shake stops looking like one movement.
+            PhaseAnimator(HisploraScrollIdleShake.Beat.allCases) { beat in
+                content
+                    .rotationEffect(.degrees(beat.tiltDegrees))
+                    .offset(y: beat.lift)
+            } animation: { beat in
+                // The tips are linear-ish and quick; coming back to rest is where the weight is.
+                beat == .rest
+                    ? .spring(duration: beat.seconds * 0.35, bounce: 0.2)
+                    : .easeInOut(duration: beat.seconds)
+            }
+        } else {
+            content
+        }
     }
 }
 
-/// The caption's half of the same breath — opacity only, since the words sit at a measured distance
-/// from the home indicator and must not move off it.
+/// The caption's half of the same invitation — opacity only, since the words sit at a measured
+/// distance from the home indicator and must not move off it.
 private struct HisploraIdlePulse: ViewModifier {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -320,29 +386,28 @@ private struct HisploraIdlePulse: ViewModifier {
     private var running: Bool { isActive && !reduceMotion }
 
     func body(content: Content) -> some View {
-        let dim = (running && lifted) ? HisploraScrollIdleMotion.captionFloor : 1
+        let dim = (running && lifted) ? HisploraScrollIdleShake.captionFloor : 1
         content
             .opacity(dim)
             .animation(
                 running
-                    ? .easeInOut(duration: HisploraScrollIdleMotion.period)
+                    ? .easeInOut(duration: HisploraScrollIdleShake.cycleSeconds / 2)
                         .repeatForever(autoreverses: true)
-                    : .easeOut(duration: HisploraScrollIdleMotion.settle),
+                    : .easeOut(duration: 0.18),
                 value: dim)
+            // Started here rather than at `init`, so the first breath begins on the frame the
+            // screen actually appears on instead of part-way through.
             .onAppear { lifted = true }
     }
 }
 
 public extension View {
-    /// The sealed scroll's idle breath — see `HisploraScrollIdleMotion`.
-    ///
-    /// - Parameter sways: whether the drift adds its own rotation. False for anything already drawn
-    ///   at a fixed angle it must not be nudged off.
-    func hisploraIdleDrift(isActive: Bool, sways: Bool = true) -> some View {
-        modifier(HisploraIdleDrift(isActive: isActive, sways: sways))
+    /// The sealed scroll's idle shake — see `HisploraScrollIdleShake`.
+    func hisploraIdleShake(isActive: Bool) -> some View {
+        modifier(HisploraIdleShakeModifier(isActive: isActive))
     }
 
-    /// The caption's opacity half of the same breath.
+    /// The caption's opacity half of the same invitation.
     func hisploraIdlePulse(isActive: Bool) -> some View {
         modifier(HisploraIdlePulse(isActive: isActive))
     }

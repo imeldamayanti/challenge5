@@ -44,9 +44,6 @@ struct TaskDetailScreen: View {
     /// The answer being typed. Not persisted until saved — `FR-RUN-01` is about completed actions,
     /// and a half-typed sentence is not one.
     @Binding var draft: String
-    /// How far through this checkpoint's tasks the walker is — `447:1903`'s thin determinate bar.
-    let completedTasks: Int
-    let totalTasks: Int
     let portraitURL: URL?
     /// The photograph just taken for this task, before it is submitted — `1:4850`'s 88-point
     /// thumbnail. Nil on a written task, and on a photo task the walker has not shot yet.
@@ -72,21 +69,23 @@ struct TaskDetailScreen: View {
     let onContinue: () -> Void
     let onOpenSiteMap: () -> Void
     let onBack: () -> Void
+    /// Reports the parchment's laid-out height so the transition that opens *into* this screen can
+    /// unroll to the same one — see `QuestRunViewModel.taskSheetHeight` for why nothing else can
+    /// know it.
+    var onMeasureSheetHeight: (CGFloat) -> Void = { _ in }
 
     private static let margin: CGFloat = TaskSheetLayout.margin
 
     var body: some View {
         HisploraStage(ground: \.brownStone) {
-            // The title bar and progress bar are a fixed header, not scrolling content — only
-            // `sheet` scrolls. Mirrors `LocationVerifiedScreen`'s header/`ScrollView` split rather
-            // than putting the bar inside the scrolled `VStack`, which let it scroll off with the
-            // sheet.
+            // The title bar is a fixed header, not scrolling content — only `sheet` scrolls. Mirrors
+            // `LocationVerifiedScreen`'s header/`ScrollView` split rather than putting the bar
+            // inside the scrolled `VStack`, which let it scroll off with the sheet.
             VStack(spacing: 0) {
                 titleBar
                 // Every gap here is `TaskSheetLayout`'s, because the transition screen unrolls its
                 // parchment onto the same numbers — see that type for why the two must agree.
-                Spacer(minLength: TaskSheetLayout.titleToProgress)
-                progressBar
+                Spacer(minLength: TaskSheetLayout.titleToSheet)
                 ScrollView {
                     VStack(spacing: 0) {
                         // The sheet is drawn at y = 190, 62 under the bar's box.
@@ -172,24 +171,6 @@ struct TaskDetailScreen: View {
         }
     }
 
-    /// `447:1903` — the iOS determinate linear bar, filled to how many of this checkpoint's tasks are
-    /// resolved. `FR-CP-08` is checkpoints out of total and lives on the checkpoint screen; this is
-    /// the finer count, inside one stop.
-    private var progressBar: some View {
-        ProgressView(
-            value: Double(completedTasks),
-            total: Double(max(totalTasks, 1)))
-            .progressViewStyle(.linear)
-            .tint(palette.inkOnButton.color)
-            // The frame's own 4 points, stated rather than inherited from the style's intrinsic
-            // height — same reason the title row above is pinned.
-            .frame(height: TaskSheetLayout.progressBarHeight)
-            .padding(.vertical, TaskSheetLayout.progressBarPadding)
-            .accessibilityLabel(
-                String(format: UIStrings.string(.checkpointDetailProgressLabel, language),
-                       completedTasks, totalTasks))
-    }
-
     private var sheet: some View {
         HisploraParchmentSheet {
             VStack(spacing: 0) {
@@ -226,6 +207,9 @@ struct TaskDetailScreen: View {
             }
             .frame(maxWidth: .infinity)
         }
+        // Read off the parchment itself rather than off the scrolled column: the column carries the
+        // gap above the sheet and a bottom padding, and the transition has to match the *picture*.
+        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { onMeasureSheetHeight($0) }
     }
 
     /// The shapes the foot of the sheet takes: resolved, a photo task in one of its three states, or
@@ -426,7 +410,10 @@ struct TaskDetailScreen: View {
             .buttonStyle(.plain)
             .accessibilityHint(UIStrings.string(.taskDetailSeeMapHint, language))
             .padding(.horizontal, Self.margin)
-            .padding(.bottom, 30)
+            // Lower than the Submit pill's 30 by request: the hint is a quiet second offer rather
+            // than the screen's action, and sitting it closer to the home indicator is what stops it
+            // reading as one.
+            .padding(.bottom, 14)
         }
     }
 

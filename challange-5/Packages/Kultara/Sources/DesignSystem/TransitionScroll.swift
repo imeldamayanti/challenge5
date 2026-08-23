@@ -52,6 +52,23 @@ public enum TransitionScrollMetrics {
     public static let boxWidthFraction: CGFloat = 364.93 / 402.0
     public static let boxAspectRatio: CGFloat = 364.93 / 363.905
 
+    /// The width to give the *untumed* picture so the level roll it draws is `turned` points long.
+    ///
+    /// **This is the difference between the frame you set and the object the reader sees, and
+    /// getting it wrong is a 38% error.** The asset draws its roll on a diagonal across a
+    /// 264.247 × 252.026 canvas and `rotationDegrees` stands it level, so the roll's *length* is the
+    /// canvas's diagonal extent — 364.93 — not the canvas's width. Framing the canvas at the task
+    /// sheet's 362 therefore drew a roll about 500 points long on a 402-point screen: the transition
+    /// grew the scroll far past the sheet it was about to become, which is what "kebesaran" was.
+    ///
+    /// At rest the two happen to agree — the frame draws the canvas at 264.247, which presents a
+    /// 364.93-long roll, and the sheet is 362 wide — so the honest consequence of this correction is
+    /// that `widening` barely changes the roll's size at all. That is right: what that beat is
+    /// actually for is the roll leaving the screen's centre line and settling into the sheet's box.
+    public static func canvasWidth(forTurnedWidth turned: CGFloat) -> CGFloat {
+        turned * (widthFraction / boxWidthFraction)
+    }
+
     public static let image: Image? = {
         #if canImport(UIKit)
         guard let url = imageURL,
