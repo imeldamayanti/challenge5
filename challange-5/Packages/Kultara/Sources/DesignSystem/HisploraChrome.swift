@@ -81,24 +81,52 @@ public struct HisploraStage<Content: View>: View {
 /// the ground — under the 3:1 the edge it is outlining clears twenty times over. `ring: nil` is that case, and it is a decision the caller makes because
 /// only the caller knows which ground the pill is standing on.
 public struct HisploraPillButtonStyle: ButtonStyle {
+
+    /// The two sets of numbers this one control is drawn at.
+    ///
+    /// `standard` is what the story flow's frames set and what every caller before the availability
+    /// sheet reproduces. `sheetAction` is `921:3892`'s: SF Pro **Semibold** at −0.34 tracking inside
+    /// 17 points of vertical padding, which is what makes the 58-point pill that frame draws where
+    /// `standard` lands at 52. The difference is the frame's, not a preference — the same reason
+    /// `HisploraLightPillButtonStyle` carries its own copy of those metrics — so it is a case here
+    /// rather than a second near-duplicate style.
+    public enum Metrics: Sendable {
+        case standard
+        case sheetAction
+
+        var weight: Font.Weight { self == .sheetAction ? .semibold : .medium }
+        var tracking: CGFloat { self == .sheetAction ? -0.34 : 0 }
+        var verticalPadding: CGFloat { self == .sheetAction ? 17 : KultaraMetrics.lg }
+        /// A floor rather than a fixed height, for `HisploraLightPillButtonStyle`'s reason: SwiftUI's
+        /// line box is a little shorter than Figma's 1.4 leading, and an accessibility size has to be
+        /// allowed to make the capsule taller instead of being clipped.
+        var minimumHeight: CGFloat { self == .sheetAction ? 58 : KultaraMetrics.minimumTapTarget }
+    }
+
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.isEnabled) private var isEnabled
 
     private let ring: KeyPath<HisploraPalette, SRGBColor>?
+    private let metrics: Metrics
 
-    public init(ring: KeyPath<HisploraPalette, SRGBColor>? = \.buttonRing) {
+    public init(
+        ring: KeyPath<HisploraPalette, SRGBColor>? = \.buttonRing,
+        metrics: Metrics = .standard
+    ) {
         self.ring = ring
+        self.metrics = metrics
     }
 
     public func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 17, weight: .medium))
+            .font(.system(size: 17, weight: metrics.weight))
+            .tracking(metrics.tracking)
             .foregroundStyle(palette.inkOnButton.color)
             .multilineTextAlignment(.center)
             .padding(.horizontal, KultaraMetrics.lg)
-            .padding(.vertical, KultaraMetrics.lg)
+            .padding(.vertical, metrics.verticalPadding)
             .frame(maxWidth: .infinity)
-            .frame(minHeight: KultaraMetrics.minimumTapTarget)
+            .frame(minHeight: metrics.minimumHeight)
             .background(palette.buttonFill.color, in: Capsule())
             .overlay {
                 if let ring {
@@ -207,6 +235,12 @@ public extension ButtonStyle where Self == HisploraPillButtonStyle {
 
     /// The same pill with no hairline — see the type's note on why a cream ground drops it.
     static var hisploraPillOnPaper: HisploraPillButtonStyle { HisploraPillButtonStyle(ring: nil) }
+
+    /// `921:3892`'s action, on the white availability sheet: no ring for `hisploraPillOnPaper`'s
+    /// reason, and the frame's own 58-point metrics.
+    static var hisploraSheetPill: HisploraPillButtonStyle {
+        HisploraPillButtonStyle(ring: nil, metrics: .sheetAction)
+    }
 }
 
 public extension ButtonStyle where Self == HisploraTextLinkButtonStyle {

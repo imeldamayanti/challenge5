@@ -1125,6 +1125,26 @@ with the splash still auto-advancing and still a drawing.
     the OS notification and therefore can never reach the card, which only appears when the app is
     foregrounded. The new one raises `onSideQuestNearby` directly. Both `#if DEBUG`, both skip
     `ProximityGate`.
+- **A walker's name from Sign in with Apple is kept before the network, not after it, and it is
+  the whole name.** Both changed 2026-08-24. Apple issues a name exactly once per Apple ID per app;
+  `AuthViewModel.signInWithApple` used to write it only on a successful `CredentialOutcome`, so any
+  failure downstream discarded the only copy that would ever exist and left the Explorer's Card
+  reading "Explorer" for good. It now writes `store.explorerDisplayName` before the call and lets
+  the credential decide only whether the *entry* completes. Three notes:
+  - **The card carries given + family**, where it used to head its reader by the given name alone.
+    `AuthViewModel.wholeName` is the join, `CredentialLinking` writes the same string to
+    `display_name` as to `full_name`, and `storedDisplayName()` reads `full_name` → `name` →
+    the two parts → `display_name` rather than `display_name` only — an account whose metadata
+    Supabase populated from the identity token answered nil under the old single-key read.
+  - **The failure that made this visible was configuration, not code.** The Apple provider's
+    `client_id` must equal the app's `PRODUCT_BUNDLE_IDENTIFIER`; a mismatch makes
+    `signInWithIdToken` fail, which reaches the app as `.failed` and nothing else.
+    `supabase/config.toml` holding the right value is not enough — it is applied by
+    `supabase config push`, and until that runs the deployed project keeps the old one.
+  - **A build with no `Backend.plist` answers `.failed` for every Apple sign-in**
+    (`NoCredentialLinking`), which is a normal working app and not a defect — but it is
+    indistinguishable on screen from the mismatch above. `Library/Application Support/supabase-trace.log`
+    is where the two separate.
 - **The three entry screens ship, and there is still no account behind them.** `791:5145`
   (Sign Up), `791:5109` (Sign In) and `822:2235` (Guest) landed 2026-08-21 as `Features/Auth/`,
   replacing `AuthWireframeView`. Six things about them:

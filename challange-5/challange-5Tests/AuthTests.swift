@@ -321,6 +321,47 @@ struct AuthTests {
         #expect(store.accountEntryCompletedAt == nil)
     }
 
+    /// Apple issues a name exactly once per Apple ID per app. A sign-in that fails downstream — a
+    /// provider whose Services ID does not match the build's bundle id, an offline attempt, a build
+    /// with no backend at all — used to throw that one copy away with it, and every later
+    /// authorisation arrives with nil, so the card read "Explorer" forever. The name is kept; the
+    /// entry still does not complete.
+    @Test func aFailedAppleSignInStillKeepsTheNameAppleWillNeverSendAgain() async {
+        let store = InMemoryAppPreferencesStore()
+        let model = AuthViewModel(
+            store: store, credentials: SpyCredentialLinking(answer: .failed))
+
+        await model.signInWithApple(
+            idToken: "a-token", nonce: "a-nonce", givenName: "Ayu", familyName: "Kartika")
+
+        #expect(!model.isFinished)
+        #expect(store.accountEntryCompletedAt == nil)
+        #expect(store.explorerDisplayName == "Ayu Kartika")
+    }
+
+    /// Both halves go on the card, not the given name alone — `822:2249`'s promise, and what
+    /// `CredentialLinking` already stores on the account as `full_name`.
+    @Test func anAppleSignInKeepsTheWholeNameOnTheCard() async {
+        let store = InMemoryAppPreferencesStore()
+        let model = AuthViewModel(
+            store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
+
+        await model.signInWithApple(
+            idToken: "a-token", nonce: "a-nonce", givenName: "Ayu", familyName: "Kartika")
+
+        #expect(model.isFinished)
+        #expect(store.explorerDisplayName == "Ayu Kartika")
+    }
+
+    /// Apple can hand over a surname with no given name, and a blank part must not become a space.
+    @Test func onlyTheNamePartsAppleActuallySentAreJoined() {
+        #expect(AuthViewModel.wholeName(givenName: "Ayu", familyName: nil) == "Ayu")
+        #expect(AuthViewModel.wholeName(givenName: nil, familyName: "Kartika") == "Kartika")
+        #expect(AuthViewModel.wholeName(givenName: "Ayu", familyName: "  ") == "Ayu")
+        #expect(AuthViewModel.wholeName(givenName: nil, familyName: nil) == nil)
+        #expect(AuthViewModel.wholeName(givenName: " ", familyName: " ") == nil)
+    }
+
     /// `AppleSignInCoordinator` calls this directly when Apple's own sheet fails before there is
     /// anything to hand `CredentialLinking` — a different path to the same message.
     @Test func aFailureBeforeCredentialLinkingIsCalledReportsTheSameMessage() {

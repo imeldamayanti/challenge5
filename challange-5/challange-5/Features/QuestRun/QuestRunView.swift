@@ -113,18 +113,23 @@ struct QuestRunView: View {
                 KultaraThemeProvider { manualOverrideSheet }
                     .kultaraManualOverrideSheetPresentation()
             }
-            // `921:3851` — a sheet over whichever explanation (place notice or story reveal) it was
+            // `921:3869` — a sheet over whichever explanation (place notice or story reveal) it was
             // reached from, dismissal treated the same as Continue (`AD-2`: nothing here gates
             // progression, so there is no dead end to guard against).
             .sheet(isPresented: Binding(get: { model.isPresentingQuestAvailability },
                                         set: { if !$0 { model.advanceFromQuestAvailability() } })) {
                 questAvailability
-                    // Half screen first (`.medium`, owner instruction 2026-08-23 — the frame's own
-                    // 540 of 874 is nearer two thirds), with `.large` one drag away so the largest
-                    // type sizes can still spread the column instead of clipping under the pill.
-                    // The screen's own layout is built compact enough for `.medium` at default
-                    // sizes — see `QuestAvailabilityScreen`.
-                    .presentationDetents([.medium, .large])
+                    // The frame's own height rather than `.medium`: `921:3870` is 540 tall, which is
+                    // what its 487 points of content plus 53 of foot come to, and at `.medium`'s half
+                    // the column and the pill have ~100 points less than the drawing gives them —
+                    // which is the squeeze that made every padding in `QuestAvailabilityScreen` read
+                    // wrong however exactly it was set. `.height` rather than `.fraction`, because a
+                    // fraction is taken against the detent maximum (the screen less its top inset,
+                    // ~803 here) and not against the 874 the frame is drawn on, so the same number
+                    // means a different sheet on every device. SwiftUI caps a height detent at that
+                    // maximum on its own, so a screen too short for 540 gets the tallest it has.
+                    // `.large` stays one drag away for the largest type sizes.
+                    .presentationDetents([.height(Self.availabilitySheetHeight), .large])
                     .presentationDragIndicator(.visible)
             }
             .task(id: model.stage) {
@@ -307,6 +312,10 @@ struct QuestRunView: View {
             EmptyView()
         }
     }
+
+    /// `921:3870` — the availability sheet is 540 points tall, which is `921:3871`'s 487 of content
+    /// and the 53 the frame leaves under the pill.
+    private static let availabilitySheetHeight: CGFloat = 540
 
     private var questAvailability: some View {
         QuestAvailabilityScreen(

@@ -80,10 +80,11 @@ nonisolated struct SupabaseCredentialLinking: CredentialLinking {
         // Apple hands its name over once and never again, so the account is where it is kept —
         // `raw_user_meta_data`, merged rather than replaced, read back by `storedDisplayName` on
         // every later sign-in that arrives without one. `full_name`/`given_name`/`family_name`
-        // are the keys Supabase's own docs use; `display_name` stays the given name alone,
-        // which is what the Explorer's Card heads its reader by. Fire-and-forget: the entry flow
-        // never waits on the network, and a failed save costs a walker their role-named card,
-        // not their walks.
+        // are the keys Supabase's own docs use, and `display_name` now carries the whole name too:
+        // it used to hold the given name alone, back when that was what the Explorer's Card headed
+        // its reader by, and a stored half-name is what a later sign-in would have read back.
+        // Fire-and-forget: the entry flow never waits on the network, and a failed save costs a
+        // walker their role-named card, not their walks.
         Self.debugTrace("apple name from sheet: given=\(givenName ?? "nil") family=\(familyName ?? "nil")")
         if givenName != nil || familyName != nil {
             var data: [String: AnyJSON] = [:]
@@ -92,7 +93,7 @@ nonisolated struct SupabaseCredentialLinking: CredentialLinking {
             let whole = [givenName, familyName].compactMap(\.self).joined(separator: " ")
             if !whole.isEmpty {
                 data["full_name"] = .string(whole)
-                data["display_name"] = .string(givenName ?? whole)
+                data["display_name"] = .string(whole)
             }
             Task { [client] in
                 do {
@@ -123,9 +124,25 @@ nonisolated struct SupabaseCredentialLinking: CredentialLinking {
     /// The name the account carries, read from the same metadata the sign-in above writes. A fetch
     /// that fails is the offline case and answers `nil`, never an error — the caller has a role-named
     /// card to fall back to and no reason to be told.
+    ///
+    /// **Four keys, not one.** Reading `display_name` alone answered nil for every account whose
+    /// metadata was written by something other than the branch above — an account Supabase populated
+    /// from the identity token's own claims (`name`), or one saved by a build that wrote the parts
+    /// and not the join. A walker in that state signs in successfully and still reads "Explorer",
+    /// which is the symptom this exists to close. The order prefers the whole name, then the parts,
+    /// and takes `display_name` last precisely because older builds left the given name alone there.
     func storedDisplayName() async -> String? {
         guard let user = try? await client.user() else { return nil }
-        return user.userMetadata["display_name"]?.stringValue
+        let metadata = user.userMetadata
+        func text(_ key: String) -> String? {
+            let value = metadata[key]?.stringValue?
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            return (value?.isEmpty ?? true) ? nil : value
+        }
+        if let whole = text("full_name") ?? text("name") { return whole }
+        let parts = [text("given_name"), text("family_name")].compactMap(\.self)
+        if !parts.isEmpty { return parts.joined(separator: " ") }
+        return text("display_name")
     }
 
     /// One line in the same debug trace file `ConsoleSupabaseLogger` writes, so what Apple handed

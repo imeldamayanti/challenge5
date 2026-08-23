@@ -163,34 +163,57 @@ final class AuthViewModel {
     /// saved there by an earlier sign-in that did get one — arrives in the store when it lands,
     /// which the Explorer's Card reads on its next look. Asking them to type a name right after a
     /// one-tap sign-in is the second ask this screen was built not to make.
+    ///
+    /// **The name is written before the network call, and that ordering is the fix.** Apple issues
+    /// it exactly once per Apple ID per app and never again; storing it only on a successful
+    /// outcome meant any failure downstream — a provider whose Services ID does not match the
+    /// build's bundle id, an offline sign-in, a build with no backend configured at all, all three
+    /// of which answer `.failed` — threw away the only copy the walker was ever going to be
+    /// offered, and left the Explorer's Card reading "Explorer" forever after. The credential is
+    /// still what decides whether the *entry* completes; the name is not a credential.
+    ///
+    /// **Both halves go on the card.** It used to head its reader by the given name alone with the
+    /// surname kept on the account — owner instruction of 2026-08-24 is the whole name, which is
+    /// also what `822:2249` promises and what `CredentialLinking` already stores as `full_name`.
     func signInWithApple(idToken: String, nonce: String, givenName: String?, familyName: String?) async {
         providerMessage = nil
         isSigningInWithApple = true
+        let appleName = Self.wholeName(givenName: givenName, familyName: familyName)
+        if let appleName {
+            store.explorerDisplayName = appleName
+        }
         let outcome = await credentials.signInWithApple(
             idToken: idToken, nonce: nonce, givenName: givenName, familyName: familyName)
         isSigningInWithApple = false
         switch outcome {
         case .signedInAndMerged, .signedInWithoutMerge:
-            if let givenName {
-                // The card heads its reader by their given name; the surname travels to the
-                // account metadata with the sign-in above, but never onto the card unasked.
-                finish(displayName: givenName)
-            } else {
-                // The entry screens are not a gate, so nothing here waits on the network. A fetch
-                // that fails is the offline case and leaves the card role-named; one that succeeds
-                // fills the store, which every reader of it re-reads on its next appearance.
-                finish(displayName: nil)
-                if store.explorerDisplayName == nil {
-                    Task { [store, credentials] in
-                        if let stored = await credentials.storedDisplayName() {
-                            store.explorerDisplayName = stored
-                        }
+            finish(displayName: appleName)
+            // The entry screens are not a gate, so nothing here waits on the network. A fetch
+            // that fails is the offline case and leaves the card role-named; one that succeeds
+            // fills the store, which every reader of it re-reads on its next appearance.
+            if appleName == nil, store.explorerDisplayName == nil {
+                Task { [store, credentials] in
+                    if let stored = await credentials.storedDisplayName() {
+                        store.explorerDisplayName = stored
                     }
                 }
             }
         case .failed:
             providerMessage = .credentialFailedMessage
         }
+    }
+
+    /// Apple's two name parts as one string, or nil when it handed over neither.
+    ///
+    /// Whitespace-only parts are dropped rather than joined, so a credential carrying `" "` for a
+    /// surname cannot leave a card headed with a trailing space — `AppPreferencesStore` trims what
+    /// it is given, but only the whole string, and by then the join has already happened.
+    static func wholeName(givenName: String?, familyName: String?) -> String? {
+        let whole = [givenName, familyName]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: " ")
+        return whole.isEmpty ? nil : whole
     }
 
     /// Apple's own sheet failed before there was anything to hand `credentials`, so there is no
