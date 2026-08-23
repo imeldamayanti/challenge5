@@ -639,4 +639,29 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// The "Open in App" action title on the `sidequest-nearby` notification category, registered
     /// by `SideQuestNotificationCategory.register(language:)` in the phone target.
     case sideQuestNotificationOpenInApp
+
+    // MARK: Discovery — the notification, the popup and the page (`670:1826`, `1108:2780`, `949:2461`)
+
+    /// `670:1826` — what the watch's short look and the phone's banner are titled.
+    ///
+    /// A teaser rather than the sidequest's own title, which is the board's decision and not an
+    /// accident: the notification is the hook, the long look carries the synopsis, and the page
+    /// carries the story. The sidequest's synopsis travels in `userInfo` so the long look can
+    /// still print it.
+    case discoveryNotificationTitle
+    /// `670:1826` — the line under that title.
+    case discoveryNotificationBody
+    /// `1108:2783` — the popup's heading.
+    case discoveryPopupTitle
+    /// `1108:2784` — the line under it.
+    case discoveryPopupBody
+    /// `1108:2786` — the popup's one control.
+    case discoveryPopupAction
+    /// Spoken name for the scrim behind the popup, which is a real control (tapping it dismisses)
+    /// and therefore has to be named (`NFR-A11Y-05`).
+    case discoveryPopupDismiss
+    /// `949:2464` — the Discovery page's bar title.
+    case discoveryPageTitle
+    /// `949:2493` — the page's closing control.
+    case discoverySaveAndShare
 }

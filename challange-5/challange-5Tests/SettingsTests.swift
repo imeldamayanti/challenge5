@@ -228,6 +228,10 @@ final class StubProximityMonitor: ProximityMonitoring {
 
     #if DEBUG
     func simulateEntry(sideQuestID: String) { onSideQuestNearby?(sideQuestID) }
+    /// Added with the New Discovery card (`1108:2780`), which is the only surface the in-app half
+    /// of the simulation reaches. Same shape as `simulateEntry` here, because in a double there is
+    /// nothing to distinguish "posted a notification" from "raised the in-app path".
+    func simulateNearbyWhileOpen(sideQuestID: String) { onSideQuestNearby?(sideQuestID) }
     /// Added to `ProximityMonitoring` on 2026-08-18 (`a0288e7`), which stopped this suite
     /// compiling again. Nothing here asserts on it, and a double that posted a real notification
     /// would be the thing the debug tool exists to test manually.

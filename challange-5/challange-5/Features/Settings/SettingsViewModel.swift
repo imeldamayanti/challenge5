@@ -146,6 +146,10 @@ final class SettingsViewModel {
         proximityMonitor.simulateEntry(sideQuestID: sideQuestID)
     }
 
+    func simulateNearbyWhileOpen(_ sideQuestID: String) {
+        proximityMonitor.simulateNearbyWhileOpen(sideQuestID: sideQuestID)
+    }
+
     func fireHardcodedTestNotification() {
         proximityMonitor.fireHardcodedTestNotification()
     }

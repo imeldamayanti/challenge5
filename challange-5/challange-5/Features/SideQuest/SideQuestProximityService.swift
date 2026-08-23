@@ -72,6 +72,19 @@ protocol ProximityMonitoring: AnyObject {
     /// counts. Debug builds only, and the whole conformance is one `#if DEBUG` case among several
     /// that a Release build simply does not compile.
     func simulateEntry(sideQuestID: String)
+    /// The **in-app** half of the same tool: raises `onSideQuestNearby` directly, which is what a
+    /// region firing while the app is open does, and what the New Discovery card (`1108:2780`) is
+    /// presented by.
+    ///
+    /// Separate from `simulateEntry` rather than folded into it, because the two exercise genuinely
+    /// different surfaces and `simulateEntry` deliberately *forces the OS notification* — that is
+    /// what makes it useful for the watch's long look and for "is the notification pipeline alive
+    /// at all". Without this second button the discovery card is unreachable from a desk: it only
+    /// appears when the app is foregrounded, and `simulateEntry` always takes the other branch.
+    ///
+    /// No gate at all, not even `ProximityGate`'s — same reasoning `simulateEntry`'s
+    /// `forceNotification` gives.
+    func simulateNearbyWhileOpen(sideQuestID: String)
     /// A pure OS-pipeline check: fixed title/body, no content lookup, no `ProximityGate`, no
     /// location authorization at all. If this doesn't appear, nothing in this file can be the
     /// cause — the answer is in iOS Settings → Notifications for this app.
@@ -197,6 +210,11 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
         handleRegionEntered(identifier: sideQuestID, forceNotification: true)
     }
 
+    func simulateNearbyWhileOpen(sideQuestID: String) {
+        log.debug("simulating in-app nearby for \(sideQuestID, privacy: .public)")
+        onSideQuestNearby?(sideQuestID)
+    }
+
     func fireHardcodedTestNotification() {
         UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
             let content = UNMutableNotificationContent()
@@ -316,8 +334,8 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             log.debug("posting OS notification for \(identifier, privacy: .public)")
             postNotification(
                 sideQuestID: identifier,
-                title: sideQuest.title.value(for: language),
-                body: sideQuest.synopsis.value(for: language),
+                synopsis: sideQuest.synopsis.value(for: language),
+                language: language,
                 heroImageAsset: sideQuest.heroImageAsset)
         }
     }
@@ -348,9 +366,23 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
     private static func limits(for targetID: String) -> ProximityGate.Limits { ProximityGate.Limits() }
     #endif
 
+    /// `670:1826` — the short look is a **teaser**, and the sidequest's own words travel beside it.
+    ///
+    /// The board splits the three surfaces deliberately: the notification says *something is here*
+    /// ("Once upon a time…" / "This exact spot has a real history moment."), the watch's long look
+    /// (`670:1832`) prints the synopsis, and the Discovery page (`949:2461`) carries the story. So
+    /// `title` and `body` are fixed copy from the string table, and `synopsis` rides in `userInfo`
+    /// for whatever expands the notification.
+    ///
+    /// **`userInfo` still carries no coordinates** (`FR-PROX-15`) — the synopsis is content the
+    /// receiving device already ships; it is passed rather than looked up because the watch target
+    /// links neither `ContentKit` nor the bundle it reads.
     private func postNotification(
-        sideQuestID: String, title: String, body: String, heroImageAsset: String?
+        sideQuestID: String, synopsis: String, language: ContentLanguage,
+        heroImageAsset: String?
     ) {
+        let title = UIStrings.string(.discoveryNotificationTitle, language)
+        let body = UIStrings.string(.discoveryNotificationBody, language)
         // `requestAuthorization` only shows a dialog the first time a decision hasn't been made;
         // once granted or denied it just reports that back. Asking here — rather than trusting
         // `enable()` already ran it — means the debug "simulate passing a place" button (which
@@ -367,7 +399,7 @@ final class SystemProximityMonitor: NSObject, ProximityMonitoring, CLLocationMan
             content.title = title
             content.body = body
             // `userInfo` carries the id and nothing else — no coordinates in a payload (`FR-PROX-15`).
-            content.userInfo = ["sideQuestID": sideQuestID]
+            content.userInfo = ["sideQuestID": sideQuestID, "synopsis": synopsis]
             content.sound = .default
             // `FR-WATCH-07` — the phone now registers `SideQuestNotificationCategory` (with its
             // "Open in App" action) unconditionally at launch via `configureProximity`, so an

@@ -28,14 +28,18 @@ struct challange_5App: App {
     /// on a later `onAppear` (a scene reactivation) costs nothing.
     @MainActor
     private func configureProximity(_ environment: KultaraEnvironment) {
-        notificationDelegate.onTap = { sideQuestID in router.pendingSideQuestID = sideQuestID }
+        // A tap on a proximity notification is the discovery journey (`1108:2780` → `949:2461`),
+        // not the nearby list's. `SideQuestRouter` carries the two separately and says why.
+        notificationDelegate.onTap = { sideQuestID in router.discoveredSideQuestID = sideQuestID }
         UNUserNotificationCenter.current().delegate = notificationDelegate
         // `FR-ONB-05` — the app's language, not the device's; mirrors the resolve call in
         // `SideQuestProximityService.handleRegionEntered`.
         let language = LanguageResolver.resolve(override: environment.preferences.preferredLanguage)
         SideQuestNotificationCategory.register(language: language)
+        // Same journey as a notification tap — the region fired, the app just happened to be
+        // open when it did.
         environment.proximityMonitor.onSideQuestNearby = { sideQuestID in
-            router.pendingSideQuestID = sideQuestID
+            router.discoveredSideQuestID = sideQuestID
         }
         environment.proximityMonitor.refreshRegions()
     }

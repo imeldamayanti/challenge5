@@ -1620,3 +1620,89 @@ generated from the shipped content and copied in with
 `xcrun simctl get_app_container <udid> com.umar.hisplora data` puts a letter on the shelf directly.
 That is a fixture for looking at a screen, not a way to test the engine — nothing about arrival,
 ordering or awards is exercised by it.
+
+## The Discovery flow — `670:1826`, `670:1832`, `1108:2636`, `1108:2780`, `949:2461`
+
+Five frames landed on 2026-08-23 as one journey: a proximity notification on the watch, the New
+Discovery card the tap opens on the phone, and the Discovery page behind "Read Story".
+
+**No new palette token and no new type role.** Every colour the five frames use already had a
+measured token — `paperTrip` `#F3EEE1` for the card and the page, `brownDeep` `#6E2717` for the
+caption, `brownSmoke` `#564D48` for the closing band, `inkCreamWhite` and `inkGiltDeep` for the
+words on it, `buttonFill` for both pills. The two grounds on the watch are local `Color(hex:)`
+values in the watch target, which links no package.
+
+**One recorded deviation.** `1108:2784`'s body is drawn in `#727272`, which measures **3.92:1** on
+`paperTrip` — under the 4.5:1 that 15-point body text wants. It ships as `inkMuted` `#5E5A5A`, which
+measures **5.43:1** on the same ground. Same handling as `fieldRing` and `trackDim`: where a sampled
+value fails, the theme yields and the deviation is written down (`NFR-A11Y-03`).
+
+**Three new cut-outs, two photographs and one stroke.** `sticker-1-21`, `sticker-3-07` (the key) and
+`sticker-3-26` (the binoculars) join the eighteen, resampled to three times the size they are drawn
+at, and `HisploraStickerTests` pins the count at twenty. `history-marker` is `949:2477`'s
+highlighter stroke — 146 cubic segments in the export, so it ships as a 399 × 45 raster rather than
+as a transcribed `Shape` the way `HisploraHighlightMark` does; a path nobody can check against the
+drawing is worse than a PNG.
+
+**The two photographs ship as JPEGs, and that is a bundle-size decision.** `discovery-gate`
+(`949:2470`) and `discovery-grove` (`949:2471`) are rectangular photographs with no alpha: 2.8 MB
+between them as PNG against 0.6 MB as JPEG at quality 82. `HisploraStickerArtwork.url(named:)` asks
+for `png` then `jpg` so no caller has to know which a drawing is, and
+`theDiscoveryPhotographsResolveThroughTheJPEGFallback` guards it.
+
+> **Both photographs are pre-public blockers.** They are photographs of real places by somebody, and
+> nothing in this repository records who or under what licence. They sit beside `history-king`,
+> `history-plate` and `google-mark.png` on the same list, and beside `docs/consent-log.md`'s
+> blockers, not instead of them. `SideQuestDiscoveryText`'s prose is the second half of the same
+> problem: nine sentences about the Majapahit landing at Tuban with no citation and no `sources`
+> entry, shipping on the same footing as `QuestHistoryText` and needing the same thing before
+> anything public.
+
+**The notification's copy is a teaser, and that is the board's split.** `670:1826` titles the short
+look "Once upon a time…" over "This exact spot has a real history moment." — not the sidequest's own
+title and synopsis, which is what the phone sent before. The synopsis now travels in
+`userInfo["synopsis"]` so `670:1832`'s long look can still print it, and
+`SideQuestNotificationController.synopsis(from:)` falls back to `content.body` for a notification
+from a build that predates the split. `userInfo` still carries no coordinates (`FR-PROX-15`).
+
+**`670:1832` reverses `s14` D1/D2 for the long look only.** Those decisions gave the notification
+`91:176`'s radar disc and the watch app's own screen `91:182`'s gold frame, on the grounds that a
+card you glanced at and a screen you navigated to are different places. The new board puts the gold
+frame on the notification as well, so the radar is gone. The principle survives in that the two are
+still two files with different grounds, different type and different closing lines — only the
+frame's nine measured fractions are shared, in `OrnateFramedSlot`. **The painted portrait both
+frames set into that frame is deliberately not packaged**: it is the same unsourced likeness
+`history-king` is, and every sidequest still has `heroImageAsset == nil`, so the slot draws the flat
+`#804A34` fill `FR-WATCH-06` asks for.
+
+`670:1841`'s ornament is drawn rather than exported — four concentric rings of `#B44934` at 5%, the
+stroke thinning outward, in `NotificationRingPattern`.
+
+### What was seen
+
+**The phone half was verified on iPhone 17 / iOS 26.5 on 2026-08-23**: the notification's teaser copy
+in a real banner, the New Discovery card over the dimmed screen, and the whole Discovery page —
+masthead, both photographs, the binoculars, the caption, the highlighter stroke under "Majapahit
+Empire.", both cut-outs over the right margin, the justified paragraph, the procession over the dark
+band with `Gajah Mada,` in gilt, and the "Save and Share" pill.
+
+No screenshots are filed for it, and that is worth a sentence rather than a silent gap: `xcrun
+simctl io <udid> screenshot` served **SpringBoard's home screen** on three consecutive captures
+while the Discovery page was plainly on the panel — a second flavour of the stale-frame problem this
+file already records against the Journal's turn. Capture it with a recording, or from the panel, not
+with `simctl io`.
+
+**The watch's long look was not.** It builds and runs, but a standalone watch simulator cannot
+present it: the watch app never calls `requestAuthorization` — on a real paired watch the
+notification is *forwarded from the iPhone*, which is the production path — so `simctl push` to the
+watch delivers nothing to expand. Seeing `670:1832` needs a real paired watch, or an Xcode
+notification-payload run destination, and neither has been done.
+
+### The debug tool gained a second button
+
+"Simulate passing a place" always forces the OS notification, which is what makes it useful for the
+watch and for "is the notification pipeline alive at all" — and which means it can never reach the
+New Discovery card, because that card only appears when the app is foregrounded. **"Simulate passing
+a place (in-app card)"** raises `onSideQuestNearby` directly, which is what a region firing with the
+app open does. Both are `#if DEBUG`, both skip `ProximityGate` for the reason `forceNotification`
+already gave.

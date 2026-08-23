@@ -28,8 +28,21 @@ final class SideQuestNotificationController: WKUserNotificationHostingController
     override func didReceive(_ notification: UNNotification) {
         let content = notification.request.content
         log.debug("didReceive category=\(content.categoryIdentifier, privacy: .public) attachments=\(content.attachments.count, privacy: .public)")
-        synopsis = content.body
+        synopsis = Self.synopsis(from: content)
         heroImage = Self.loadHeroImage(from: content.attachments)
+    }
+
+    /// `670:1826`/`670:1832` split the copy: the short look is a teaser and the long look prints
+    /// the sidequest's own synopsis, so `content.body` is no longer the synopsis and the synopsis
+    /// travels in `userInfo` beside the id (`SideQuestProximityService.postNotification`).
+    ///
+    /// Falls back to the body, which is what a notification from a build that predates the split
+    /// carries — those still expand into something readable rather than an empty card.
+    ///
+    /// Internal rather than `private` for the same reason `loadHeroImage` is: the tap path in
+    /// `SideQuestWatchNotificationDelegate` has to read exactly what the long look read.
+    static func synopsis(from content: UNNotificationContent) -> String {
+        (content.userInfo["synopsis"] as? String) ?? content.body
     }
 
     /// Best-effort only. `UNNotificationAttachment.url` is a security-scoped URL, and

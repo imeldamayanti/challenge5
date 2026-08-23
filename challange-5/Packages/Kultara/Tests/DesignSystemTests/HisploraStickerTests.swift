@@ -18,22 +18,32 @@ struct HisploraStickerTests {
         #expect(HisploraStickerArtwork.allAreAvailable)
     }
 
-    /// The nine page illustrations the two frames place — the plate, the portrait, the torn scrap,
-    /// the pen rule, the arrow, the summary's emblem, the Trip Collection's legend, and the two
-    /// gilt medallion frames.
+    /// The twelve page illustrations the three frames place — the plate, the portrait, the torn
+    /// scrap, the pen rule, the arrow, the summary's emblem, the Trip Collection's legend, the two
+    /// gilt medallion frames, and the Discovery page's two photographs and highlighter stroke.
     @Test func everyPageIllustrationIsPackaged() {
         #expect(HisploraTripArtwork.allAreAvailable)
-        #expect(HisploraTripArtwork.names.count == 9)
+        #expect(HisploraTripArtwork.names.count == 12)
     }
 
-    /// **The set is eighteen, and the number is the guard.** Four of these letter something into
+    /// The two Discovery photographs ship as JPEGs, which is why `url(named:)` asks for both
+    /// extensions. A loader that only knew `png` would find neither and the page would open on two
+    /// empty boxes — with nothing logged, because a missing drawing is rendered as no drawing.
+    @Test func theDiscoveryPhotographsResolveThroughTheJPEGFallback() {
+        for name in [HisploraTripArtwork.discoveryGate, HisploraTripArtwork.discoveryGrove] {
+            let url = HisploraStickerArtwork.url(named: name)
+            #expect(url?.pathExtension == "jpg", "\(name) should be packaged as a JPEG")
+        }
+    }
+
+    /// **The set is twenty, and the number is the guard.** Four of these letter something into
     /// the picture and one page illustration is a likeness of a named historical figure; the owner
     /// asked on 2026-08-20 for the frames reproduced exactly, so all of it ships and the sourcing
     /// is carried as a recorded decision rather than as a refusal. This test exists so the set
     /// cannot drift silently in either direction — a sticker quietly added or quietly dropped is a
     /// change to what the app asserts, and it should have to be made here on purpose.
     @Test func theSetIsExactlyWhatTheTwoPagesPlace() {
-        #expect(HisploraStickerArtwork.names.count == 18)
+        #expect(HisploraStickerArtwork.names.count == 20)
         for lettered in ["sticker-3-32", "sticker-2-26", "sticker-2-02"] {
             #expect(HisploraStickerArtwork.names.contains(lettered))
         }
