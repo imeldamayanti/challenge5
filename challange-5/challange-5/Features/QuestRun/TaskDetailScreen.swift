@@ -86,16 +86,32 @@ struct TaskDetailScreen: View {
                 // Every gap here is `TaskSheetLayout`'s, because the transition screen unrolls its
                 // parchment onto the same numbers — see that type for why the two must agree.
                 Spacer(minLength: TaskSheetLayout.titleToSheet)
-                ScrollView {
+                // **The sheet stands still whenever it fits, and only scrolls when it cannot.**
+                // `1:4711` is one page, not a scrolling document: a parchment that slides under a
+                // pinned title bar reads as the paper coming loose. The written task's sheet was
+                // running a few points past the viewport at the default text size, which was enough
+                // to make the whole page draggable. The first candidate is the page as drawn; the
+                // `ScrollView` is what an accessibility text size falls back to, because a sheet
+                // taller than the screen with no way to reach its skip would be the worse failure
+                // (`FR-TASK-02`, `NFR-A11Y-02`).
+                ViewThatFits(in: .vertical) {
                     VStack(spacing: 0) {
                         // The sheet is drawn at y = 190, 62 under the bar's box.
                         Spacer(minLength: TaskSheetLayout.sheetTop)
                         sheet
+                        Spacer(minLength: 0)
                     }
-                    .padding(.bottom, KultaraMetrics.xl)
                     .frame(maxWidth: .infinity)
+                    ScrollView {
+                        VStack(spacing: 0) {
+                            Spacer(minLength: TaskSheetLayout.sheetTop)
+                            sheet
+                        }
+                        .padding(.bottom, KultaraMetrics.xl)
+                        .frame(maxWidth: .infinity)
+                    }
+                    .scrollBounceBehavior(.basedOnSize)
                 }
-                .scrollBounceBehavior(.basedOnSize)
             }
             .padding(.horizontal, Self.margin)
             // `1:4827` replaces the map hint with Submit once a photograph is waiting. One inset,
