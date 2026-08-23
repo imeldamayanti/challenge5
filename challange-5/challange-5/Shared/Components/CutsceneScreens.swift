@@ -19,91 +19,149 @@ import UIStringsKit
 /// without this file changing. Until then the frame carries the quest's own hero image, which is
 /// content with provenance behind it.
 
-/// `98:1588` — "A Legend Will Guide Your Journey", the covered frame, and the hint that says how
-/// to uncover it.
+
+/// `98:1588` into `187:866` — the covered frame the walker rubs clear, and the subject named once
+/// it is. **One view, two phases, deliberately.**
 ///
-/// **The interaction is the screen.** The frame opens obscured, the walker rubs it clear
-/// (`223:1987` is that same frame with the picture showing), and when enough of it is gone the
-/// flow moves itself on to `187:866`. Nothing is tapped in the drawn design; the picture coming
-/// out from under the hand *is* the transition.
+/// They were two screens (`CutsceneIntroScreen` and `CutscenePortraitScreen`) swapped by the run's
+/// stage, which meant the hand-over was a cross-fade between two pictures of the *same* framed
+/// portrait drawn ~100 points apart and at slightly different widths. Two nearly-identical frames
+/// dissolving into each other does not read as one object moving; it reads as a cut, and it was the
+/// most visible seam on the story flow. Drawn as one view whose layout depends on `phase`, the
+/// frame keeps its identity across the change and SwiftUI moves it — so the object the walker just
+/// uncovered with their thumb travels to where the next page wants it, and only the words around it
+/// cross-fade.
 ///
-/// Two things the frame does not draw and this screen has anyway, both of them requirements:
+/// The two stages are unchanged: `QuestRunViewModel` still has `.cutsceneIntro` and
+/// `.cutscenePortrait`, and the back chevron still steps between them. What changed is that
+/// `QuestRunView` routes both to this one branch, so the stage change is a layout change rather
+/// than a view replacement.
+///
+/// **What the phases carry.** `.legend`: "A Legend Will Guide Your Journey", the covered frame, and
+/// the hint that says how to uncover it. Nothing is tapped in the drawn design — the picture coming
+/// out from under the hand *is* the transition. `.portrait`: the subject named, the quest's hook
+/// beneath it, and the action to begin.
+///
+/// Two things the frames do not draw and this screen has anyway, both of them requirements:
 ///
 /// - Under Reduce Motion or VoiceOver the picture is uncovered from the first frame, because a rub
 ///   is not an animation anyone can opt out of and it is not a control a screen reader can find
-///   (`NFR-A11Y-04`, `NFR-A11Y-05`). **That is the only case that draws a button**, and it has to
-///   stay: with the cover already gone there is no gesture left to make, so without it those
-///   readers reach a screen with no way out of it.
-/// - The quest's own title sits in the header, as `447:1870` draws it — from content, never the
-///   name the frame bakes in (`AD-4`, `FR-RUN-06`).
+///   (`NFR-A11Y-04`, `NFR-A11Y-05`). **That is the only case that draws a button on `.legend`**,
+///   and it has to stay: with the cover already gone there is no gesture left to make, so without
+///   it those readers reach a screen with no way out of it. Reduce Motion also drops the morph to a
+///   plain short fade — the whole point of moving the frame is motion.
+/// - The quest's own title sits in the header on both phases, as `447:1870` draws it — from
+///   content, never the name the frames bake in (`AD-4`, `FR-RUN-06`).
+///
+/// **Two titles, and they are not the same title.** The quest's name is in the bar. `subjectName`
+/// below the picture stays what the frame uses it for: the *subject* of the portrait. The call site
+/// must not pass the quest's name to both, or the page prints it twice.
 ///
 /// The rub used to grow a fallback button after ten seconds, for whoever did not think to try the
 /// gesture. It is gone at the designer's instruction — the drawn design has no such control and the
 /// hint under the frame is what tells the walker what to do. The cost is real and is theirs to
 /// carry: a walker who never swipes has no other way forward.
-struct CutsceneIntroScreen: View {
+struct CutsceneSequenceScreen: View {
+
+    /// Which of the two frames is being drawn. Named for what is on the page rather than for the
+    /// stage, because the stage names are the run's vocabulary and this view only knows about
+    /// pictures and words.
+    enum Phase: Equatable { case legend, portrait }
+
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
 
     let language: ContentLanguage
+    let phase: Phase
     /// The quest's title, for the header. Content, not a literal.
     let questTitle: String
     let portraitURL: URL?
     let portraitLabel: String
+    /// The subject of the portrait, from content. Never a baked-in name (`AD-4`).
+    let subjectName: String
+    let subjectSubtitle: String?
+    /// `quest.hookLore`, already resolved to the run's language. Cut to `CutsceneLeadMetrics` for
+    /// display: the frame draws a lead here, not the passage.
+    let hook: String
     let onAdvance: () -> Void
+    let onStart: () -> Void
     let onBack: () -> Void
 
     @State private var hasAdvanced = false
+    /// Bumped when the walker steps *back* to `.legend`, which resets the reveal to covered.
+    ///
+    /// Load-bearing rather than tidy. When these were two screens, backing out of `187:866` threw
+    /// the intro screen away and built a fresh one, so the frame was covered again and the rub was
+    /// there to be made. One view keeps its state, so without this the walker returns to a page
+    /// whose picture is already clear, whose gesture can never complete again, and which therefore
+    /// has no way forward at all.
+    @State private var revealGeneration = 0
 
     /// The rub is skipped outright for the same two settings `HisploraScratchReveal` reads, so the
     /// action has to be there from the start rather than after the wait.
     private var rubIsAvailable: Bool { !(reduceMotion || voiceOverEnabled) }
+
+    private var isLegend: Bool { phase == .legend }
+
+    /// What carries the frame from one page to the other. A spring rather than a curve, because the
+    /// frame is a physical object on this screen and the walker has just had a thumb on it; it
+    /// overdamped (0.88) so the gold does not wobble at the end of its travel.
+    ///
+    /// Under Reduce Motion the frame must not travel at all, so the change becomes the short fade
+    /// it was before.
+    private var morph: Animation {
+        reduceMotion ? .easeInOut(duration: 0.2) : .spring(response: 0.52, dampingFraction: 0.88)
+    }
+
+    /// The words step out quickly and the next set arrives after them, rather than the two of them
+    /// dissolving through each other in the middle. The delay is a little under the frame's travel,
+    /// so the page settles and *then* reads.
+    private var wordsSwap: AnyTransition {
+        .asymmetric(
+            insertion: .opacity.combined(with: .offset(y: reduceMotion ? 0 : 12))
+                .animation(.easeOut(duration: 0.30).delay(reduceMotion ? 0 : 0.16)),
+            removal: .opacity.animation(.easeIn(duration: 0.16)))
+    }
 
     var body: some View {
         HisploraStage(ground: \.brownStone) {
             VStack(spacing: 0) {
                 header
                 ScrollView {
-                    VStack(spacing: KultaraMetrics.xl) {
-                        Text(UIStrings.string(.cutsceneLegendTitle, language))
-                            .kultaraFont(.storyDisplay)
-                            .foregroundStyle(palette.inkCream.color)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .accessibilityAddTraits(.isHeader)
+                    VStack(spacing: isLegend ? KultaraMetrics.xl : KultaraMetrics.lg) {
+                        if isLegend { legendTitle }
                         revealableFrame
-                            .padding(.horizontal, KultaraMetrics.xl)
-                        Text(UIStrings.string(.cutsceneSwipeHint, language))
-                            .font(.system(size: 15))
-                            .foregroundStyle(palette.inkDusty.color)
-                            .multilineTextAlignment(.center)
-                            .fixedSize(horizontal: false, vertical: true)
-                            // Sits further under the frame than the stack's own rhythm puts it:
-                            // the hint is an instruction about the picture above it, and with no
-                            // control beneath it any more, the gap is what separates the two.
-                            .padding(.top, KultaraMetrics.xl)
+                            // `98:1588` sets the frame wider than `187:866` does. Both numbers are
+                            // the frames' own; the change between them is part of what travels.
+                            .padding(.horizontal,
+                                     isLegend ? KultaraMetrics.xl : KultaraMetrics.xxl)
+                        if isLegend { swipeHint } else { subject }
                     }
-                    .padding(.top, KultaraMetrics.xl)
+                    .padding(.top, isLegend ? KultaraMetrics.xl : KultaraMetrics.lg)
                     .padding(.bottom, KultaraMetrics.lg)
                 }
                 .scrollBounceBehavior(.basedOnSize)
-                // Only where the rub cannot happen at all. Under Reduce Motion or VoiceOver the
-                // picture is uncovered from the first frame and there is no gesture to make, so
-                // without this the screen has no way out for those readers
-                // (`NFR-A11Y-04`, `NFR-A11Y-05`).
-                if !rubIsAvailable {
-                    Button(UIStrings.string(.cutsceneRevealAction, language), action: advanceOnce)
-                        .buttonStyle(.hisploraPill)
-                }
+                footAction
             }
             .padding(KultaraMetrics.lg)
+            // Attached here rather than left to `QuestRunView`'s stage animation, which is the
+            // cross-fade curve every *other* stage change runs on. This one is not a cross-fade.
+            .animation(morph, value: phase)
+        }
+        .onChange(of: phase) { previous, current in
+            guard previous == .portrait, current == .legend else { return }
+            hasAdvanced = false
+            revealGeneration += 1
         }
     }
 
     /// `447:1870` and `187:1093` — the quest's name centred, the back chevron over it on the left.
     /// A `ZStack` rather than a three-column `HStack`, so a long title stays centred on the screen
     /// instead of being pushed off it by the chevron's width.
+    ///
+    /// Identical on both phases, which is why it is outside the part that changes: the bar is the
+    /// one thing on this screen that must not move when the page does.
     private var header: some View {
         ZStack {
             Text(questTitle)
@@ -122,8 +180,81 @@ struct CutsceneIntroScreen: View {
         }
     }
 
+    private var legendTitle: some View {
+        Text(UIStrings.string(.cutsceneLegendTitle, language))
+            .kultaraFont(.storyDisplay)
+            .foregroundStyle(palette.inkCream.color)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityAddTraits(.isHeader)
+            .transition(wordsSwap)
+    }
+
+    private var swipeHint: some View {
+        Text(UIStrings.string(.cutsceneSwipeHint, language))
+            .font(.system(size: 15))
+            .foregroundStyle(palette.inkDusty.color)
+            .multilineTextAlignment(.center)
+            .fixedSize(horizontal: false, vertical: true)
+            // Sits further under the frame than the stack's own rhythm puts it: the hint is an
+            // instruction about the picture above it, and with no control beneath it any more, the
+            // gap is what separates the two.
+            .padding(.top, KultaraMetrics.xl)
+            .transition(wordsSwap)
+    }
+
+    /// `187:866`'s half of the page — the subject named, then the hook.
+    private var subject: some View {
+        VStack(spacing: KultaraMetrics.lg) {
+            VStack(spacing: KultaraMetrics.sm) {
+                Text(subjectName)
+                    .kultaraFont(.storyDisplay)
+                    .foregroundStyle(palette.inkCream.color)
+                    .multilineTextAlignment(.center)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .accessibilityAddTraits(.isHeader)
+                if let subjectSubtitle {
+                    Text(subjectSubtitle)
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(palette.inkCream.color)
+                        .multilineTextAlignment(.center)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Text(CutsceneLeadMetrics.leadText(hook))
+                .font(.system(size: 15))
+                .foregroundStyle(palette.inkDusty.color)
+                .multilineTextAlignment(.center)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, KultaraMetrics.lg)
+        }
+        .transition(wordsSwap)
+    }
+
+    /// `.portrait` always carries its action. `.legend` carries one only where the rub cannot
+    /// happen at all — under Reduce Motion or VoiceOver the picture is uncovered from the first
+    /// frame and there is no gesture to make, so without this the screen has no way out for those
+    /// readers (`NFR-A11Y-04`, `NFR-A11Y-05`).
+    @ViewBuilder private var footAction: some View {
+        if !isLegend {
+            Button(UIStrings.string(.cutsceneStartAction, language), action: onStart)
+                .buttonStyle(.hisploraPill)
+                .transition(wordsSwap)
+        } else if !rubIsAvailable {
+            Button(UIStrings.string(.cutsceneRevealAction, language), action: advanceOnce)
+                .buttonStyle(.hisploraPill)
+                .transition(wordsSwap)
+        }
+    }
+
     /// The gilded frame with the picture under a cover. The reveal wraps only the *picture*, not
     /// the ornament: rubbing the carved gold away would say the frame is what is being uncovered.
+    ///
+    /// The reveal stays mounted on `.portrait` as well, and that is what makes the frame one object
+    /// across the change rather than two. It costs nothing there — by the time this page is reached
+    /// the cover has either been rubbed off or was never drawn — but it must not keep the gesture,
+    /// or a drag over the picture is swallowed instead of scrolling the page.
     private var revealableFrame: some View {
         KultaraPortraitFrame(accessibilityLabel: portraitLabel) {
             HisploraScratchReveal(
@@ -133,13 +264,16 @@ struct CutsceneIntroScreen: View {
                 // it: the walker is meant to see that there is a picture there and that it is not
                 // legible yet. A flat grey plate reads as an empty frame, which is what shipped.
                 cover: { HisploraPortraitCover(url: portraitURL) })
+                .id(revealGeneration)
         }
+        .allowsHitTesting(isLegend)
         // The reveal is a gesture on a picture, and VoiceOver reaches it as the button below.
-        .accessibilityHint(UIStrings.string(.cutsceneSwipeHint, language))
+        .accessibilityHint(isLegend ? UIStrings.string(.cutsceneSwipeHint, language) : "")
     }
 
-    /// A beat after the last stroke, so the picture is seen whole before the screen changes. The
-    /// walker rubbed it clear; showing them nothing of what they uncovered wastes the moment.
+    /// A beat after the last stroke, so the picture is seen whole before the page changes. The
+    /// walker rubbed it clear; showing them nothing of what they uncovered wastes the moment. The
+    /// cover's own fade out is 0.35 s, so this also lets it finish before the frame starts moving.
     private func advanceAfterReveal() {
         Task { @MainActor in
             try? await Task.sleep(for: .milliseconds(650))
@@ -151,96 +285,9 @@ struct CutsceneIntroScreen: View {
     /// button is on screen while the frame is still rubbable. Advancing twice would skip `187:866`
     /// entirely.
     private func advanceOnce() {
-        guard !hasAdvanced else { return }
+        guard !hasAdvanced, isLegend else { return }
         hasAdvanced = true
         onAdvance()
-    }
-}
-
-/// `187:866` — the subject named, with the quest's hook beneath it and the action to begin.
-///
-/// **Two titles, and they are not the same title.** The quest's name sits in the top bar, as it
-/// does on `447:1870` and `187:1093` — the page had a bare back chevron and no name on it, which
-/// left this the one story stage a reader could land on without being told which walk they were
-/// starting. `title` below the picture stays what the frame uses it for: the *subject* of the
-/// portrait. The call site must not pass the quest's name to both, or the page prints it twice.
-struct CutscenePortraitScreen: View {
-    @Environment(\.hisploraPalette) private var palette
-
-    let language: ContentLanguage
-    let portraitURL: URL?
-    let portraitLabel: String
-    /// The quest's title, centred in the top bar. Content, never a literal (`AD-4`, `FR-RUN-06`).
-    let questTitle: String
-    /// The subject of the portrait, from content. Never a baked-in name (`AD-4`).
-    let title: String
-    let subtitle: String?
-    /// `quest.hookLore`, already resolved to the run's language. Cut to `CutsceneLeadMetrics` for
-    /// display: the frame draws a lead here, not the passage.
-    let hook: String
-    let onStart: () -> Void
-    let onBack: () -> Void
-
-    var body: some View {
-        HisploraStage(ground: \.brownStone) {
-            VStack(spacing: 0) {
-                header
-                ScrollView {
-                    VStack(spacing: KultaraMetrics.lg) {
-                        HisploraFramedImage(url: portraitURL, label: portraitLabel)
-                            .padding(.horizontal, KultaraMetrics.xxl)
-                        VStack(spacing: KultaraMetrics.sm) {
-                            Text(title)
-                                .kultaraFont(.storyDisplay)
-                                .foregroundStyle(palette.inkCream.color)
-                                .multilineTextAlignment(.center)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .accessibilityAddTraits(.isHeader)
-                            if let subtitle {
-                                Text(subtitle)
-                                    .font(.system(size: 17, weight: .semibold))
-                                    .foregroundStyle(palette.inkCream.color)
-                                    .multilineTextAlignment(.center)
-                                    .fixedSize(horizontal: false, vertical: true)
-                            }
-                        }
-                        Text(CutsceneLeadMetrics.leadText(hook))
-                            .font(.system(size: 15))
-                            .foregroundStyle(palette.inkDusty.color)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(3)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.horizontal, KultaraMetrics.lg)
-                    }
-                    .padding(.vertical, KultaraMetrics.lg)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                Button(UIStrings.string(.cutsceneStartAction, language), action: onStart)
-                    .buttonStyle(.hisploraPill)
-            }
-            .padding(KultaraMetrics.lg)
-        }
-    }
-
-    /// The same bar `CutsceneIntroScreen` carries — the quest's name centred, the back chevron over
-    /// it on the left. A `ZStack` rather than a three-column `HStack`, so a long title stays centred
-    /// on the screen instead of being pushed off it by the chevron's width.
-    private var header: some View {
-        ZStack {
-            Text(questTitle)
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(palette.inkCream.color)
-                .multilineTextAlignment(.center)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, KultaraMetrics.minimumTapTarget)
-                .accessibilityAddTraits(.isHeader)
-            HStack {
-                HisploraBackButton(
-                    accessibilityLabel: UIStrings.string(.storyRevealBack, language),
-                    action: onBack)
-                Spacer()
-            }
-        }
     }
 }
 

@@ -820,6 +820,29 @@ with the splash still auto-advancing and still a drawing.
   merging left the file with two copies of each. The pair that survives is
   `opensOnStoryFlow(existingRun:) = isStoryFlow(initialStage(run:))` — one rule, read two ways. A
   second copy that restates the rule is exactly how the two drift apart, so do not add one.
+- **The cutscene's two pages are one view, and that is what makes the frame move rather than
+  cross-fade.** `98:1588` and `187:866` draw the same gilded portrait ~100 points apart and at
+  slightly different widths. As two screens swapped by `model.stage` the hand-over was the run
+  flow's own cross-fade dissolving one picture of that object into another, which reads as a cut
+  rather than as one thing moving — the most visible seam on the story flow.
+  `CutsceneIntroScreen`/`CutscenePortraitScreen` are now `CutsceneSequenceScreen(phase:)`, and
+  `QuestRunView` routes `.cutsceneIntro` **and** `.cutscenePortrait` to one `case`, so the view
+  keeps its identity and SwiftUI animates the layout. Four things about it:
+  - **The reveal stays mounted on `.portrait`.** That is what makes the frame one object across the
+    change rather than two. It costs nothing there — the cover is either rubbed off or was never
+    drawn — but it must not keep the gesture, or a drag over the picture is swallowed instead of
+    scrolling the page (`allowsHitTesting(isLegend)`).
+  - **Stepping back re-covers the picture, and it has to.** Two screens meant backing out of
+    `187:866` threw the intro away and built a fresh one. One view keeps its state, so without
+    `revealGeneration` the walker returns to a page whose gesture can never complete again and
+    which therefore has no way forward at all.
+  - **The spring is the screen's own, not `QuestRunView`'s.** The stage animation there is the
+    cross-fade curve every *other* stage change runs on; this one is not a cross-fade. Under Reduce
+    Motion the frame must not travel, so it falls back to a short fade.
+  - **The words are staggered, not dissolved.** Outgoing text leaves in 0.16 s, the incoming set
+    arrives after 0.16 s and rises 12 points, so the page settles and *then* reads.
+  Seen on iPhone 17 / iOS 26.5, both directions — `docs/screenshots/m16-cutscene-legend.png`,
+  `m16-cutscene-portrait.png`.
 - **A map with a beating dot stands between the cutscene and the story, and it leaves on its own.**
   `187:1103` is back as `approachTransition` — `cutscenePortrait` → `approachTransition` →
   `storyReveal`, on the walk's first checkpoint only, since it is the cutscene that it lands. It is

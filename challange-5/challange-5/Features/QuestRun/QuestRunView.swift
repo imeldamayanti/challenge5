@@ -166,8 +166,12 @@ struct QuestRunView: View {
             // print "Location Checking…." for a beat on an arrival that already succeeded.
             // `locationCheckingScreen` has no such dependency, so it is the correct hold here too.
             if isLocationVerifiedRevealed { locationVerified } else { locationCheckingScreen }
-        case .cutsceneIntro: cutsceneIntro
-        case .cutscenePortrait: cutscenePortrait
+        // One branch for both, deliberately: `CutsceneSequenceScreen` draws the same framed
+        // portrait on each of them, and routing them separately would make the hand-over a
+        // cross-fade between two pictures of one object ~100 points apart. Sharing the branch keeps
+        // the view's identity, so the frame *moves* instead. See the note at the head of
+        // `CutsceneScreens.swift`.
+        case .cutsceneIntro, .cutscenePortrait: cutsceneSequence
         case .approachTransition: approachTransition
         case .storyReveal: storyReveal
         case .placeNotice: placeNotice
@@ -236,29 +240,21 @@ struct QuestRunView: View {
         }
     }
 
-    private var cutsceneIntro: some View {
-        CutsceneIntroScreen(
+    private var cutsceneSequence: some View {
+        CutsceneSequenceScreen(
             language: language,
+            phase: model.stage == .cutsceneIntro ? .legend : .portrait,
             questTitle: model.questTitle,
-            portraitURL: model.cutsceneImageURL,
-            portraitLabel: model.questTitle,
-            onAdvance: { model.advanceFromCutsceneIntro() },
-            onBack: { model.retreatFromStoryStage() })
-    }
-
-    private var cutscenePortrait: some View {
-        CutscenePortraitScreen(
-            language: language,
             portraitURL: model.cutsceneImageURL,
             portraitLabel: model.questTitle,
             // The quest's name goes in the bar, as `447:1870` draws it; the name under the picture
             // is the picture's *subject*. The frame's subject is a person the content tree does not
             // hold, so the place being walked to stands in — it is what the hero image shows. The
             // two must not both be the quest's title: `187:866` would then print it twice.
-            questTitle: model.questTitle,
-            title: model.currentPlaceName,
-            subtitle: nil,
+            subjectName: model.currentPlaceName,
+            subjectSubtitle: nil,
             hook: model.hookText,
+            onAdvance: { model.advanceFromCutsceneIntro() },
             onStart: { model.advanceFromCutscenePortrait() },
             onBack: { model.retreatFromStoryStage() })
     }
