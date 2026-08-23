@@ -85,11 +85,25 @@
       "kind": "documented",
       "citation": "Dinas Pariwisata Kota Denpasar — \"Pasar Kumbasari\"",
       "url": "https://denpasartourism.com/en/article/pasar-kumbasari"
+    },
+    {
+      "kind": "documented",
+      "citation": "Wikipedia EN — \"Badung\" (sumber tersier; Puputan Badung 1906 dan sungai di sekitarnya)",
+      "url": "https://en.wikipedia.org/wiki/Badung"
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Ilustrasi latar halaman Story untuk Pasar Kumbasari. Gambar ini ilustrasi hasil generasi, bukan survei lapangan.",
+      "url": null
     }
   ],
   "consentRecordId": "badung-pasar-kumbasari",
   "mapPoint": {
     "x": 0.6078,
     "y": 0.626
+  },
+  "storyArtwork": {
+    "asset": "places/badung-pasar-kumbasari/story.png",
+    "sourceRef": 2
   }
 }

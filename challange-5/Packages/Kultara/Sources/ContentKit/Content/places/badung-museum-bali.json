@@ -88,11 +88,25 @@
       "kind": "documented",
       "citation": "Dinas Kebudayaan Provinsi Bali — \"UPTD. Museum Bali\"",
       "url": "https://disbud.baliprov.go.id/museum-bali/"
+    },
+    {
+      "kind": "documented",
+      "citation": "Wikipedia EN — \"Bali Museum\" (sumber tersier; dibangun setelah 1906 di bekas puri, dibuka 1932)",
+      "url": "https://en.wikipedia.org/wiki/Bali_Museum"
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Ilustrasi latar halaman Story untuk Museum Bali. Gambar ini ilustrasi hasil generasi, bukan survei lapangan.",
+      "url": null
     }
   ],
   "consentRecordId": "badung-museum-bali",
   "mapPoint": {
     "x": 0.612,
     "y": 0.6279
+  },
+  "storyArtwork": {
+    "asset": "places/badung-museum-bali/story.png",
+    "sourceRef": 3
   }
 }

@@ -908,6 +908,30 @@ final class QuestRunViewModel {
         return (try? repository.assetURL(asset)) ?? nil
     }
 
+    /// The drawing behind the current checkpoint's Story Reveal page — the Place's own
+    /// `storyArtwork` when it ships one, `nil` where it does not (the screen falls back to its
+    /// packaged art, and the first checkpoint's opening is the cutscene's). Content with a citation
+    /// behind it (`FR-CP-05`), resolved through the same seam as every other asset.
+    var storyRevealArtworkURL: URL? {
+        guard let artwork = place(for: currentCheckpoint)?.storyArtwork else { return nil }
+        return (try? repository.assetURL(artwork.asset)) ?? nil
+    }
+
+    /// The story reveal's top-bar title — the quest's name on the final checkpoint only, as the
+    /// four frames draw it: `964:3246` carries "The Last Traces of Badung"; the other three draw
+    /// the bar empty.
+    var storyRevealTitle: String {
+        let isFinal = currentCheckpoint?.orderIndex == orderedCheckpoints.last?.orderIndex
+        return isFinal ? questTitle : ""
+    }
+
+    /// Phrases the frames ring with the hand-drawn mark, from the per-place table in the app
+    /// target. Empty on any Place the table does not name.
+    var storyRevealMarkedPhrases: [String] {
+        guard let place = place(for: currentCheckpoint) else { return [] }
+        return StoryMarkedPhrases.phrases(for: place.id, language: language)
+    }
+
     var currentPlaceName: String { placeName(for: currentCheckpoint) }
 
     /// `FR-MAP-04` — where "Navigate There" on `223:2004` goes.

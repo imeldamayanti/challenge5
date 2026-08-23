@@ -270,14 +270,18 @@ struct QuestRunView: View {
         StoryRevealScreen(
             language: language,
             text: model.storyRevealText,
-            // `447:1878` centres the quest's own title over the picture, and `293:1652` ends its
-            // lead on the place being walked to. Both come from content (`AD-4`, `FR-RUN-06`).
-            title: model.questTitle,
-            placeName: model.currentPlaceName,
-            // The content tree ships no per-place illustration, so this stays nil — the screen
-            // falls back to its own packaged art (`StoryIllustrationMetrics`). See the note atop
-            // `StoryRevealScreen`.
-            illustrationURL: nil,
+            // The quest's name in the bar on the final checkpoint only — `964:3246` draws it, the
+            // other three frames leave the bar to the back arrow (`AD-4`, `FR-RUN-06`).
+            title: model.storyRevealTitle,
+            // No lead any more: the four frames open straight onto the passage. The lead's words
+            // and the marker round a place name were the old frame's; the parameter stays for the
+            // surfaces that still draw one.
+            placeName: nil,
+            // The Place's own drawing when it ships one (`Place.storyArtwork`, `964:3212` and its
+            // three siblings); nil falls back to the packaged art (`StoryIllustrationMetrics`).
+            illustrationURL: model.storyRevealArtworkURL,
+            // The phrases the frames ring with the hand-drawn mark, per place and language.
+            markedPhrases: model.storyRevealMarkedPhrases,
             onFinish: { model.advanceFromStoryReveal() },
             onBack: { model.retreatFromStoryStage() })
     }

@@ -147,8 +147,8 @@
       "loreSegment": [
         {
           "text": {
-            "id": "Wajah kedua adalah kepercayaan. Pura Maospahit berada di lingkungan Jl. Sutomo, Pemecutan Kaja, dibangun dari bata merah dengan langgam arsitektur Majapahit.",
-            "en": "The second face is faith. Pura Maospahit sits in the Jl. Sutomo neighbourhood of Pemecutan Kaja, built of red brick in a Majapahit architectural idiom."
+            "id": "Gerbang belah Pura Maospahit berdiri sebagai jejak hubungan kuno Bali dengan Jawa.",
+            "en": "The split gateway of Pura Maospahit stands as a trace of Bali's ancient connection with Java."
           },
           "accuracy": "documented",
           "sourceRefs": [
@@ -157,18 +157,8 @@
         },
         {
           "text": {
-            "id": "Tata ruangnya mengikuti konsep Panca Mandala — halaman-halaman yang menahan orang di ambang tertentu, bukan sekadar membaginya.",
-            "en": "Its layout follows the Panca Mandala concept — courtyards that hold people at particular thresholds rather than merely dividing the ground."
-          },
-          "accuracy": "documented",
-          "sourceRefs": [
-            0
-          ]
-        },
-        {
-          "text": {
-            "id": "Sumber tersier menyebut angka 1278 Masehi untuk pendiriannya dan sekitar 1553 untuk pemugarannya. Angka itu belum dicek terhadap sumber primer, dan sebaiknya dibaca sebagai klaim yang belum selesai.",
-            "en": "A tertiary source gives 1278 CE for its founding and around 1553 for its restoration. Those figures have not been checked against a primary source, and are best read as an unfinished claim."
+            "id": "Pura ini dipercaya mencerminkan pengaruh Majapahit dan dikaitkan dengan Kebo Iwa, patih Bali legendaris — konon begitu tangguhnya hingga Gajah Mada sendiri enggan menghadapinya secara langsung.",
+            "en": "The temple is believed to reflect Majapahit influence and is associated with Kebo Iwa, a legendary Balinese patih said to have been so formidable that even Gajah Mada himself was reluctant to face him directly."
           },
           "accuracy": "documented",
           "sourceRefs": [
@@ -210,8 +200,8 @@
       "loreSegment": [
         {
           "text": {
-            "id": "Wajah ketiga adalah penghidupan. Pasar Kumbasari di Jl. Gajah Mada berdiri pada 1977, mula-mula bernama Pasar Peken atau Pasar Priuk, di lahan sekitar 800 meter persegi.",
-            "en": "The third face is livelihood. Pasar Kumbasari on Jl. Gajah Mada was established in 1977, first called Pasar Peken or Pasar Priuk, on a site of about 800 square metres."
+            "id": "Ikuti aroma rempah dan suara tawar-menawar — kamu telah tiba di Pasar Badung.",
+            "en": "Follow the scent of spices and the sound of bargaining—you've arrived at Pasar Badung."
           },
           "accuracy": "documented",
           "sourceRefs": [
@@ -220,8 +210,8 @@
         },
         {
           "text": {
-            "id": "Bangunannya empat lantai dan urutannya berarti: lantai dasar untuk kebutuhan pokok, lantai dua sampai empat untuk seni dan kerajinan. Yang dipakai tiap hari ada di bawah; yang dibawa pulang orang jauh ada di atas.",
-            "en": "The building has four floors and the order means something: the ground floor for everyday necessities, floors two to four for art and crafts. What is used daily sits below; what visitors carry home sits above."
+            "id": "Jauh sebelum pasar modern ini berdiri, tempat ini sudah menjadi titik orang berkumpul untuk berdagang, bertemu, dan bertukar cerita.",
+            "en": "Long before this modern market stood here, this was already a place where people gathered to trade, meet, and exchange stories."
           },
           "accuracy": "documented",
           "sourceRefs": [
@@ -230,12 +220,12 @@
         },
         {
           "text": {
-            "id": "Harga di sini ditawar, bukan dibaca. Pengunjung juga diimbau membawa tas belanja sendiri, bagian dari kampanye menghentikan kantong plastik.",
-            "en": "Prices here are bargained, not read. Shoppers are also asked to bring their own bag, part of a campaign against plastic ones."
+            "id": "Di bawahnya mengalir Tukad Badung, sungai yang pernah menjadi saksi pasukan Belanda bergerak menuju Puri Pemecutan pada 1906.",
+            "en": "Beneath it flows the Tukad Badung, a river that once witnessed Dutch forces advancing toward Puri Pemecutan in 1906."
           },
           "accuracy": "documented",
           "sourceRefs": [
-            0
+            1
           ]
         }
       ],
@@ -273,8 +263,8 @@
       "loreSegment": [
         {
           "text": {
-            "id": "Ini poros jalannya. Patung Catur Muka berdiri di catus patha, perempatan yang dihitung sebagai titik nol Kota Denpasar; kompleks Jaya Sabha berada di timur lautnya.",
-            "en": "This is the walk's pivot. The Catur Muka statue stands at the catus patha, the crossroads counted as Denpasar's zero point; the Jaya Sabha complex lies to its north-east."
+            "id": "Di ujung Jalan Gajah Mada, empat wajah memandang ke empat penjuru: Patung Catur Muka.",
+            "en": "At the end of Jalan Gajah Mada, four faces look toward the four directions: the Catur Muka statue."
           },
           "accuracy": "documented",
           "sourceRefs": [
@@ -283,22 +273,22 @@
         },
         {
           "text": {
-            "id": "Catur Muka berarti empat wajah, dan patung ini menghadap keempat lengan perempatan sekaligus. Ikonografinya belum dicek terhadap sumber yang dapat dikutip, jadi yang dipakai di sini hanya apa yang terlihat.",
-            "en": "Catur Muka means four faces, and the statue looks along all four arms of the junction at once. Its iconography has not been checked against a citable source, so only what is visible is used here."
+            "id": "Di sinilah Raja I Gusti Ngurah Made Agung dan pengikutnya memilih melawan sampai akhir daripada menyerah.",
+            "en": "Here, King I Gusti Ngurah Made Agung and his followers chose to fight to the very end rather than surrender."
           },
           "accuracy": "documented",
           "sourceRefs": [
-            1
+            2
           ]
         },
         {
           "text": {
-            "id": "Puri, pura, dan pasar yang sudah kamu lewati semuanya ada di belakang punggungmu sekarang. Yang tersisa satu arah lagi.",
-            "en": "The puri, the temple, and the market you have already passed are all behind your back now. One direction is left."
+            "id": "Kini medan pertempuran itu menjadi lapangan kota, tetapi kisahnya tetap ada.",
+            "en": "Today, the battlefield is a city park, but its story remains."
           },
           "accuracy": "documented",
           "sourceRefs": [
-            0
+            2
           ]
         }
       ],
@@ -328,8 +318,8 @@
       "loreSegment": [
         {
           "text": {
-            "id": "Wajah terakhir adalah ingatan. Museum Bali berada di Jl. Mayor Wisnu, di timur Lapangan Puputan Badung dan di selatan Pura Jagatnatha.",
-            "en": "The last face is memory. Museum Bali stands on Jl. Mayor Wisnu, east of Lapangan Puputan Badung and south of Pura Jagatnatha."
+            "id": "Di sisi timur lapangan yang sama berdiri Museum Bali,",
+            "en": "On the eastern side of the same field stands Museum Bali,"
           },
           "accuracy": "documented",
           "sourceRefs": [
@@ -338,22 +328,12 @@
         },
         {
           "text": {
-            "id": "Museum ini adalah UPTD di bawah Dinas Kebudayaan Provinsi Bali. Benda-benda yang disimpan di sini datang dari tempat-tempat seperti empat titik yang baru kamu lewati.",
-            "en": "The museum is a UPTD under the Bali Provincial Culture Office. The objects kept here came from places like the four stops you have just walked."
+            "id": "Lahir dari keprihatinan seorang pejabat kolonial karena terlalu banyak pusaka Bali meninggalkan pulau ini setelah 1906. Selesai dibangun dan dibuka pada 1932, museum ini menjadi tempat menjaga ingatan, budaya, dan warisan Bali sebelum hilang oleh waktu.",
+            "en": "Born from a colonial official's concern that too many Balinese heirlooms were leaving the island after 1906. Completed and opened in 1932, the museum became a place to preserve the memory, culture, and heritage of Bali before they were lost to time."
           },
           "accuracy": "documented",
           "sourceRefs": [
-            1
-          ]
-        },
-        {
-          "text": {
-            "id": "Hari Jumat museum tutup pukul 12.30 WITA, dan hari Sabtu tutup sepenuhnya. Jam itulah yang menentukan batas paling lambat memulai jalan ini.",
-            "en": "On Fridays the museum closes at 12:30 WITA, and on Saturdays it does not open at all. That hour is what sets the latest possible start for this walk."
-          },
-          "accuracy": "documented",
-          "sourceRefs": [
-            0
+            2
           ]
         }
       ],
