@@ -119,7 +119,11 @@ struct QuestRunView: View {
             .sheet(isPresented: Binding(get: { model.isPresentingQuestAvailability },
                                         set: { if !$0 { model.advanceFromQuestAvailability() } })) {
                 questAvailability
-                    .presentationDetents([.medium, .large])
+                    // `.large`, not `.medium`: at medium the fixed-height column cannot hold the
+                    // frame's two-line headline beside the tilted scroll, and SwiftUI answers the
+                    // squeeze by truncating the place name mid-word — worse than any detent
+                    // argument. `921:3869` draws the sheet with air around all three parts.
+                    .presentationDetents([.large])
                     .presentationDragIndicator(.visible)
             }
             .task(id: model.stage) {

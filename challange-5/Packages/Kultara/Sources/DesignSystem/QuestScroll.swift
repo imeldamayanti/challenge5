@@ -33,12 +33,14 @@ public enum HisploraScrollArt {
     /// asset is one file and the geometry is the caller's.
     public static let rolledScroll = PackagedImage(name: "quest-scroll", aspectRatio: 511.0 / 488.0)
 
-    /// The ribboned scroll `921:3851` ("Quest - Card") draws on the quest-availability sheet — a
-    /// tied roll rather than `rolledScroll`'s plain one, at its own aspect ratio. The width/height
-    /// here is provisional pending the real export; `HisploraAvailabilityGlyph` sizes it by
-    /// `.scaledToFit()` regardless, so a corrected ratio is a one-line fix once the file lands.
+    /// The ribboned scroll `921:3869`'s availability sheet draws — `921:3875` ("image 7"), turned
+    /// 41.6° above the headline. **It is the same file as `rolledScroll`:** the Figma node is a
+    /// 511 × 488 placement of the very picture already shipped as `quest-scroll.png`, so no second
+    /// export exists to ship. This entry used to point at a `quest-availability-scroll` that was
+    /// never cut, and the glyph silently fell back to an SF Symbol — which is why the name here is
+    /// now the real file's. Geometry stays the caller's, as with `rolledScroll`.
     public static let availabilityScroll = PackagedImage(
-        name: "quest-availability-scroll", aspectRatio: 474.0 / 274.0)
+        name: "quest-scroll", aspectRatio: 511.0 / 488.0)
 
     /// The tilt `447:1909` gives the scroll above the map hint.
     public static let mapHintTiltDegrees: Double = 41.6
@@ -432,15 +434,22 @@ public struct HisploraScrollGlyph: View {
     }
 }
 
-/// The ribboned scroll `921:3851` draws — decoration for the quest-availability sheet, sized by
-/// width with the height following its own ratio rather than a caller-supplied square.
+/// The ribboned scroll the quest-availability sheet draws — decoration, sized by width with the
+/// height following its own ratio rather than a caller-supplied square.
+///
+/// `tiltDegrees` turns it the way `921:3869` does — 41.6° there, the same tilt `mapHintTiltDegrees`
+/// records for `447:1909`. The outer frame is the *rotated* bounding box, because the design sizes
+/// its container to the turned picture; `rotationEffect` alone would keep the unturned rectangle
+/// and let the corners escape it, which shifts every centred neighbour by half the difference.
 public struct HisploraAvailabilityGlyph: View {
     @Environment(\.hisploraPalette) private var palette
 
     private let width: CGFloat
+    private let tiltDegrees: Double
 
-    public init(width: CGFloat) {
+    public init(width: CGFloat, tiltDegrees: Double = 0) {
         self.width = width
+        self.tiltDegrees = tiltDegrees
     }
 
     public var body: some View {
@@ -454,6 +463,17 @@ public struct HisploraAvailabilityGlyph: View {
             }
         }
         .frame(width: width, height: width / HisploraScrollArt.availabilityScroll.aspectRatio)
+        .rotationEffect(.degrees(tiltDegrees))
+        .frame(width: rotatedBounds.width, height: rotatedBounds.height)
         .accessibilityHidden(true)
+    }
+
+    /// The turned picture's axis-aligned bounds — what a centred column has to reserve.
+    private var rotatedBounds: CGSize {
+        let height = width / HisploraScrollArt.availabilityScroll.aspectRatio
+        let radians = tiltDegrees * Double.pi / 180
+        return CGSize(
+            width: abs(width * cos(radians)) + abs(height * sin(radians)),
+            height: abs(width * sin(radians)) + abs(height * cos(radians)))
     }
 }

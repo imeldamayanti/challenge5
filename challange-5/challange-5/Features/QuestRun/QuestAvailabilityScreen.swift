@@ -22,22 +22,36 @@ struct QuestAvailabilityScreen: View {
     let title: String
     let onContinue: () -> Void
 
+    /// `921:3869` hangs its headline 56 points up into the tilted scroll's bounding box — the
+    /// box's lower corners are empty paper-shadow space, and the roll end is what the words sit
+    /// under. Without this pull-up a centred column reads a full corner of air below the picture.
+    private static let titleOverlap: CGFloat = 56
+
     var body: some View {
         VStack(spacing: KultaraMetrics.xl) {
             Spacer(minLength: KultaraMetrics.xxl)
 
-            HisploraAvailabilityGlyph(width: 160)
+            HisploraAvailabilityGlyph(
+                width: 194,
+                tiltDegrees: HisploraScrollArt.mapHintTiltDegrees)
+                .padding(.bottom, -Self.titleOverlap)
 
-            VStack(spacing: KultaraMetrics.sm) {
+            VStack(spacing: KultaraMetrics.md) {
                 Text(title)
-                    .font(.system(size: 22, weight: .semibold))
+                    // New York Semibold — `921:3877`'s headline face, which is the role
+                    // `.storyTaskTitle` already decides (display serif, semibold, `.title2`).
+                    .kultaraFont(.storyTaskTitle)
+                    .tracking(-0.5)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(palette.inkDark.color)
 
                 Text(UIStrings.string(.questAvailabilitySubtitle, language))
-                    .font(.system(size: 15))
+                    // The frame sets SF Pro Display *Light*; the table carries no light cut, so
+                    // this is `body` regular in the same ink — `inkBody` is #444444, the frame's
+                    // own value exactly.
+                    .kultaraFont(.body)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(palette.inkMuted.color)
+                    .foregroundStyle(palette.inkBody.color)
             }
             .padding(.horizontal, KultaraMetrics.xl)
 
