@@ -70,6 +70,9 @@ struct ApproachMapView: View {
     /// whose content carries no point still draws the plain map, and must still be described as one.
     private var drawsMarker: Bool { pulsesAtMarker && approachMap.marker != nil }
 
+    /// The beating dot's diameter on this screen.
+    private static let markerDiameter: CGFloat = 20
+
     /// The dot is the difference between this map and `1:4458`'s, so it is named rather than left
     /// to colour and motion (`NFR-A11Y-05`).
     private var mapLabelKey: UIStringKey {
@@ -82,7 +85,11 @@ struct ApproachMapView: View {
     @ViewBuilder private var marker: some View {
         if drawsMarker, let point = approachMap.marker {
             GeometryReader { proxy in
-                HisploraPulsingMapMarker()
+                // Larger than the component's 14-point default: this drawing is a dense street
+                // grid printed on parchment, and the dot has to be findable in it at a glance
+                // without becoming an object the map is about. 20 points is the size it was seen
+                // to read at on device against the shipped Denpasar map.
+                HisploraPulsingMapMarker(diameter: Self.markerDiameter)
                     .position(x: proxy.size.width * point.x, y: proxy.size.height * point.y)
             }
         }
