@@ -235,13 +235,14 @@ struct AuthTests {
 
     /// Signed in, but the merge did not run. The walker still finishes the flow — the walks are on
     /// the anonymous account, not gone — and is told, because this is the one outcome worth hearing
-    /// about (`CredentialOutcome.signedInWithoutMerge`'s own doc comment).
+    /// about (`CredentialOutcome.signedInWithoutMerge`'s own doc comment). Apple handed a name here;
+    /// what happens when it did not is the next test's subject.
     @Test func signingInWithoutAMergeStillFinishesTheFlow() async {
         let store = InMemoryAppPreferencesStore()
         let credentials = SpyCredentialLinking(answer: .signedInWithoutMerge)
         let model = AuthViewModel(store: store, credentials: credentials)
 
-        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: "Ayu")
 
         #expect(model.isFinished)
         #expect(store.accountEntryCompletedAt != nil)
@@ -258,6 +259,55 @@ struct AuthTests {
 
         #expect(model.isFinished)
         #expect(store.explorerDisplayName == "Ayu")
+    }
+
+    /// Apple hands a name only on the very first authorisation; every later one returns nil. With
+    /// no name from Apple and none already stored, finishing the flow would land a walker on a card
+    /// headed by their role forever — the entry screens are shown once per install, so nothing would
+    /// ever ask again. The flow stops on the name screen instead: the same ask the guest screen
+    /// makes, reached because Apple could not answer it.
+    @Test func anAppleSignInWithNoNameAsksForOne() async {
+        let store = InMemoryAppPreferencesStore()
+        let model = AuthViewModel(
+            store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
+
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+
+        #expect(!model.isFinished)
+        #expect(model.stage == .nameAfterApple)
+        #expect(store.accountEntryCompletedAt == nil)
+        #expect(store.explorerDisplayName == nil)
+    }
+
+    /// The name screen after Apple is the guest screen's ask, and its answer is kept the same way.
+    @Test func aNameTypedAfterAppleIsKeptLikeAnyOther() async {
+        let store = InMemoryAppPreferencesStore()
+        let model = AuthViewModel(
+            store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+
+        model.guestDisplayName = "  Wayan  "
+        model.submitGuest()
+
+        #expect(model.isFinished)
+        #expect(store.explorerDisplayName == "Wayan")
+        #expect(store.accountEntryCompletedAt != nil)
+    }
+
+    /// The entry screens are not a gate (`KultaraRootView`'s own account of them), so backing out of
+    /// the name screen still enters the app — named by role rather than trapped on this screen by a
+    /// name nobody can make Apple hand over.
+    @Test func backingOutOfTheNameScreenStillEntersTheApp() async {
+        let store = InMemoryAppPreferencesStore()
+        let model = AuthViewModel(
+            store: store, credentials: SpyCredentialLinking(answer: .signedInAndMerged))
+        await model.signInWithApple(idToken: "a-token", nonce: "a-nonce", fullName: nil)
+
+        model.back()
+
+        #expect(model.isFinished)
+        #expect(store.explorerDisplayName == nil)
+        #expect(store.accountEntryCompletedAt != nil)
     }
 
     /// A failed sign-in does not finish the flow, and says so under the provider block rather than

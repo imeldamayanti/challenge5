@@ -30,10 +30,14 @@ final class AuthViewModel {
 
     /// The three frames, in the order the flow chart reaches them. `signUp` is first: the entry
     /// point named in the brief, and the screen onboarding hands over to.
+    ///
+    /// `nameAfterApple` is not a frame of its own — it renders the guest screen's ask, reached when
+    /// Sign in with Apple succeeded but Apple handed over no name to keep.
     enum Stage: String, Sendable, CaseIterable {
         case signUp
         case signIn
         case guestName
+        case nameAfterApple
     }
 
     /// Which field a message belongs under. Kept as one value rather than three optionals so a
@@ -111,10 +115,17 @@ final class AuthViewModel {
     }
 
     /// The guest screen's back chevron (`822:2235`). It returns to the screen that offered the
-    /// guest route rather than to a fixed one, so the way back is the way in.
+    /// guest route rather than to a fixed one, so the way back is the way in. On the name screen
+    /// reached after Apple there is no screen before it — Apple has already signed the walker in —
+    /// so backing out finishes the entry without a name, which is what the entry screens being
+    /// *not a gate* means (`KultaraRootView`'s account of them): named by role, never trapped here.
     func back() {
         problem = nil
-        stage = .signUp
+        if stage == .nameAfterApple {
+            finish(displayName: nil)
+        } else {
+            stage = .signUp
+        }
     }
 
     /// Anything the walker types clears the standing message.
@@ -165,8 +176,16 @@ final class AuthViewModel {
         case .signedInAndMerged, .signedInWithoutMerge:
             // Apple returns a name only on the very first authorisation a walker ever grants this
             // app; every later sign-in gets nil, which `finish` already reads as "leave whatever
-            // is stored alone" rather than as a name to erase.
-            finish(displayName: fullName)
+            // is stored alone" rather than as a name to erase. With nothing stored either, the
+            // entry screens would never ask again — they show once per install — so the flow stops
+            // on the guest screen's ask instead of landing a walker the card names by role forever.
+            if let fullName {
+                finish(displayName: fullName)
+            } else if store.explorerDisplayName != nil {
+                finish(displayName: nil)
+            } else {
+                stage = .nameAfterApple
+            }
         case .failed:
             providerMessage = .credentialFailedMessage
         }
