@@ -3,9 +3,9 @@ import DesignSystem
 import SwiftUI
 import UIStringsKit
 
-/// `921:3851` ("Quest - Card") — the sheet reached straight off a checkpoint's first explanation
-/// (the place notice at a sacred Place, the story reveal everywhere else), naming how many quests
-/// stand at this place before the sealed scroll opens the walk itself.
+/// `921:3851`/`921:3462` ("Quest - Card") — the sheet reached straight off a checkpoint's first
+/// explanation (the place notice at a sacred Place, the story reveal everywhere else), naming how
+/// many quests stand at this place before the sealed scroll opens the walk itself.
 ///
 /// Presented as a `.sheet()` over whichever screen it was reached from — see
 /// `QuestRunViewModel.isPresentingQuestAvailability` for why this is not its own `Stage` case: the
@@ -16,34 +16,33 @@ import UIStringsKit
 /// task count (`FR-TASK-06`), so it says "1 Quest" for every place the shipped content carries
 /// today rather than a number nothing backs (`AD-4`).
 ///
-/// **Two deviations from the frame, both the owner's instruction of 2026-08-23.** The sheet stands
-/// at half screen (`.medium` first detent, `921:3870`'s own 540 of 874 is nearer two thirds) and
-/// its ground is **white**, not this direction's cream — `921:3870`'s own fill is
-/// `backgrounds/primary---elevated = white`. The palette has no white token, so the view takes
-/// `Color.white` directly; the inks stay palette tokens, and both read *better* on white than on
-/// `paperSheet` (white is strictly brighter than #FDF2DE, so every measured pair only widens).
+/// **Frame-exact by the owner's instruction of 2026-08-23** ("need to follow all even the text,
+/// weight, all"): the scroll at the frame's full 194 points with its 268 × 267 rotated bounding
+/// box, the headline pulled up 56 into it, the Middle block's 12/−56/2 rhythm, the title at New
+/// York Semibold 25 with −0.5 tracking in the frame's own #151311, the subtitle at SF Pro 17
+/// Light with 1.4 leading in #444444, and both hairlines. Three things stay native or scaled:
+/// the sheet stands at `.medium` (437 of the frame's 540 — the same half-screen instruction),
+/// the button is the direction's shared pill style (54 tall where the frame draws 58), and
+/// `@ScaledMetric` backs both type sizes so Dynamic Type still moves them; a walker at the
+/// largest sizes drags to `.large`, which is why that detent stays offered.
 struct QuestAvailabilityScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
-    let language: ContentLanguage
-    let title: String
-    let onContinue: () -> Void
+    /// The frame's own 194-point scroll; its rotated bounding box is the 268 × 267 container.
+    private static let glyphWidth: CGFloat = 194
 
-    /// The scroll at the size half a screen holds. `921:3869` draws it 194 wide inside a 540-point
-    /// sheet; scaled to the `.medium` detent the same fraction of the sheet is 157.
-    private static let glyphWidth: CGFloat = 157
+    /// `921:3468` hangs the headline 56 up into the tilted scroll's bounding box — the box's
+    /// lower corners are empty paper-shadow space, and the roll end is what the words sit under.
+    private static let titleOverlap: CGFloat = 56
 
-    /// `921:3869` hangs its headline 56 points up into the tilted scroll's bounding box — the
-    /// box's lower corners are empty paper-shadow space, and the roll end is what the words sit
-    /// under. Without this pull-up a centred column reads a full corner of air below the picture.
-    /// Scaled with the glyph to the half-screen sheet (56 × 437/540).
-    private static let titleOverlap: CGFloat = 45
+    /// `921:3467`'s Middle block: 12 above, 2 below, the headline 56 into the glyph.
+    private static let middleTopPadding: CGFloat = 12
+    private static let middleBottomPadding: CGFloat = 2
 
-    /// `921:3869`'s own 28 (Header 16 + Middle 12) scaled to the half-height sheet (× 437/540).
-    private static let glyphTopPadding: CGFloat = 23
+    /// The frame sets the title column to 308 of the 402 screen.
+    private static let titleWidth: CGFloat = 308
 
-    /// The frame's button is 362 of a 402 screen — a 20-point side margin, kept absolute because
-    /// width does not shrink with the sheet.
+    /// The frame's button is 362 of a 402 screen — a 20-point side margin.
     private static let buttonSidePadding: CGFloat = 20
 
     /// The frame hangs its button 55 above the sheet's bottom edge; the sheet's own home-indicator
@@ -55,6 +54,17 @@ struct QuestAvailabilityScreen: View {
     /// white ground above.
     private static let separatorInk = Color(red: 0xE6 / 255, green: 0xE6 / 255, blue: 0xE6 / 255)
 
+    /// The frame's headline is New York Extra Large Semibold 25 — the serif design at a display
+    /// optical size. `@ScaledMetric` keeps it at 25 by default and lets Dynamic Type move it.
+    @ScaledMetric(relativeTo: .title) private var titleSize: CGFloat = 25
+
+    /// The frame's subtitle is SF Pro Display Light 17 with 1.4 leading.
+    @ScaledMetric(relativeTo: .body) private var subtitleSize: CGFloat = 17
+
+    let language: ContentLanguage
+    let title: String
+    let onContinue: () -> Void
+
     var body: some View {
         VStack(spacing: 0) {
             separator
@@ -62,29 +72,27 @@ struct QuestAvailabilityScreen: View {
             HisploraAvailabilityGlyph(
                 width: Self.glyphWidth,
                 tiltDegrees: HisploraScrollArt.mapHintTiltDegrees)
-                .padding(.top, Self.glyphTopPadding)
+                .padding(.top, Self.middleTopPadding)
                 .padding(.bottom, -Self.titleOverlap)
 
             VStack(spacing: KultaraMetrics.md) {
                 Text(title)
-                    // New York Semibold — `921:3877`'s headline face, which is the role
-                    // `.storyTaskTitle` already decides (display serif, semibold, `.title2`).
-                    .kultaraFont(.storyTaskTitle)
+                    .font(.system(size: titleSize, weight: .semibold, design: .serif))
                     .tracking(-0.5)
                     .multilineTextAlignment(.center)
-                    .foregroundStyle(palette.inkDark.color)
+                    .foregroundStyle(Color(red: 21 / 255, green: 19 / 255, blue: 17 / 255))
+                    .frame(width: Self.titleWidth)
 
                 Text(UIStrings.string(.questAvailabilitySubtitle, language))
-                    // The frame sets SF Pro Display *Light*; the table carries no light cut, so
-                    // this is `body` regular in the same ink — `inkBody` is #444444, the frame's
-                    // own value exactly.
-                    .kultaraFont(.body)
+                    .font(.system(size: subtitleSize, weight: .light))
+                    .lineSpacing(subtitleSize * 0.4)
                     .multilineTextAlignment(.center)
                     .foregroundStyle(palette.inkBody.color)
+                    .frame(maxWidth: .infinity)
             }
-            .padding(.horizontal, KultaraMetrics.xl)
+            .padding(.bottom, Self.middleBottomPadding)
 
-            Spacer(minLength: KultaraMetrics.lg)
+            Spacer(minLength: KultaraMetrics.sm)
 
             separator
 
