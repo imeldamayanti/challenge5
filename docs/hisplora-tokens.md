@@ -1745,3 +1745,19 @@ override and the card passes its own number. On the map itself the marker droppe
 name lives in the popover and the accessibility label, nowhere under the drawing — and grew from a
 120-point cluster to the figure's reference **159**, building 85 points, which is what the frames
 draw at 1:1. Re-verified through the same UI test; screenshot replaced in place.
+
+## The quest card's caption, redrawn to `275:2183` (2026-08-25)
+
+The Home quest card's caption is the frame's overlay exactly: the title in SF Pro Semibold 17
+tracked −0.43 (`.headline`, which is that style and still scales — `NFR-A11Y-01`), then one row of
+three unlabelled facts — region, walking time, checkpoint count — at 12pt semibold in the frame's
+grey, with the popover's own icon exports retinted to it. Two inks are untokened literals on
+`PhotoCardInk`: `#F6F6F6` title and `#AEAEB2` facts, the frame's neutral greys where the palette's
+`inkOnPhoto`/`inkMutedOnPhoto` are warm creams measured for the old drawing. Against the 80% scrim
+floor under a worst-case white photo they measure 12.0:1 and 5.7:1.
+
+**The visible card now shows three facts where the PRD's letter wants six.** `FR-DISC-02` (distance)
+and `FR-DISC-05` (cost) and `NFR-CONT-06` (walking vs total as two figures) are still on the card
+*for VoiceOver* — `QuestCard.accessibilitySummary` speaks all six labelled facts — but the drawing
+the owner approved shows three, so the visible card deviates. Like `FR-ONB-03`'s deletion, this
+wants a signed amendment with an owner before anything public.

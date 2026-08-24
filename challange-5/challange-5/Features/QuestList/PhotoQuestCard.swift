@@ -84,8 +84,12 @@ struct PhotoQuestCard<Facts: View>: View {
     private var caption: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.photoCardCaptionSpacing) {
             Text(title)
-                .kultaraFont(.questTitle)
-                .foregroundStyle(palette.inkOnPhoto.color)
+                // `275:2183` sets the title in SF Pro Semibold 17, tracked −0.43 — `.headline` is
+                // that style at its default size and still scales (`NFR-A11Y-01`), which a fixed
+                // 17 would not.
+                .font(.headline)
+                .tracking(-0.43)
+                .foregroundStyle(PhotoCardInk.titleInk.color)
                 .fixedSize(horizontal: false, vertical: true)
 
             facts
@@ -95,4 +99,17 @@ struct PhotoQuestCard<Facts: View>: View {
         .padding(.horizontal, KultaraMetrics.photoCardCaptionInset)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+
+    /// `275:2183`'s two inks, untokened: `#F6F6F6` for the title and `#AEAEB2` for the facts row.
+    /// The palette's `inkOnPhoto`/`inkMutedOnPhoto` are warm creams measured against the old
+    /// drawing; the frame's are neutral greys. The scrim guarantee was already recorded as lost on
+    /// this card (see the type doc), so these ship as the frame's own values with the numbers
+    /// written here — against the 80% scrim floor under a worst-case white photo, `#F6F6F6` is
+    /// 12.0:1 and `#AEAEB2` is 5.7:1.
+}
+
+/// File-scope because a generic type (`PhotoQuestCard<Facts>`) may not hold stored statics.
+enum PhotoCardInk {
+    static let titleInk = SRGBColor(hex: "#F6F6F6")
+    static let factInk = SRGBColor(hex: "#AEAEB2")
 }
