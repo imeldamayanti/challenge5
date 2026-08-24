@@ -18,7 +18,7 @@ enum StoryMarkedPhrases {
         switch (placeID, language) {
         case ("badung-pura-maospahit", _):
             ["Kebo Iwa"]
-        case ("badung-pasar-kumbasari", _):
+        case ("badung-pasar-badung", _):
             ["Pasar Badung"]
         case ("badung-catur-muka", .en):
             ["Catur Muka statue"]

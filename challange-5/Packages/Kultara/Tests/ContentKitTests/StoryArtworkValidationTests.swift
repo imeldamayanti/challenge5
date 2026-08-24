@@ -108,7 +108,7 @@ struct ShippedStoryArtworkTests {
 
     private static let withArtwork = [
         "badung-pura-maospahit",
-        "badung-pasar-kumbasari",
+        "badung-pasar-badung",
         "badung-catur-muka",
         "badung-museum-bali",
     ]

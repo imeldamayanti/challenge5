@@ -26,7 +26,7 @@ struct StampArtworkResolver {
     /// empty window rather than a wrong picture. That trade is worth revisiting the moment content
     /// stops being one quest.
     static let slugsByPlaceID: [String: String] = [
-        "badung-pasar-kumbasari": "badung",
+        "badung-pasar-badung": "badung",
         "badung-museum-bali": "balimuseum",
         "badung-catur-muka": "caturmuka",
         "badung-pura-maospahit": "maospahit",

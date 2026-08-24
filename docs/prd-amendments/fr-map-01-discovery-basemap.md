@@ -44,7 +44,7 @@ over-reaching gets scoped:
 ## The argument for it
 
 **The stated reason for the ban is about walking, not about choosing.** The requirement gives its
-own ground: no public offline tile cache. That matters when a walker is inside Pasar Kumbasari with
+own ground: no public offline tile cache. That matters when a walker is inside Pasar Badung with
 no signal and needs to see where the next checkpoint is. It does not matter in the same way when
 somebody at home is deciding which walk to do — and if it did, the same logic would ban every
 network-dependent thing the app might ever do.

@@ -33,22 +33,6 @@ enum WireframeCatalog {
     static let yesAction = LocalizedText(id: "Ya", en: "Yes")
     static let noAction = LocalizedText(id: "Tidak", en: "No")
 
-    // MARK: Entry — splash
-
-    static let splash = WireframeSpec(
-        title: LocalizedText(id: "Splash screen", en: "Splash screen"),
-        purpose: LocalizedText(
-            id: "Layar pembuka saat aplikasi dijalankan, sebelum onboarding.",
-            en: "The opening screen at launch, before onboarding."),
-        blocks: [
-            LocalizedText(id: "Logo / wordmark aplikasi", en: "App logo / wordmark"),
-            LocalizedText(id: "Tagline satu baris", en: "One-line tagline"),
-            LocalizedText(id: "Indikator pemuatan konten", en: "Content loading indicator"),
-        ],
-        flowNote: LocalizedText(
-            id: "Splash → Onboarding → Login/Register → Home. Nama aplikasi belum diputuskan, jadi wordmark-nya masih kosong.",
-            en: "Splash → Onboarding → Login/Register → Home. The app has no name yet, so the wordmark is deliberately empty."))
-
     static let register = WireframeSpec(
         title: LocalizedText(id: "Register", en: "Register"),
         purpose: LocalizedText(

@@ -136,10 +136,10 @@ struct HisploraMapTests {
         model.startLiveTracking()
         #expect(provider.isStarted == true)
 
-        let pasarKumbasari = Coordinate(lat: -8.6540, lon: 115.2115)
-        provider.sendFix(pasarKumbasari)
+        let pasarBadung = Coordinate(lat: -8.6540, lon: 115.2115)
+        provider.sendFix(pasarBadung)
 
-        #expect(model.userLocation == pasarKumbasari)
+        #expect(model.userLocation == pasarBadung)
 
         let pasarTrace = model.traces.first { $0.id == "trace-03" }
         #expect(pasarTrace != nil)

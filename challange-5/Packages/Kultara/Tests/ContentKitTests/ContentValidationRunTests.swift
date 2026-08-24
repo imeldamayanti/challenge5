@@ -64,7 +64,7 @@ struct ContentValidationRunTests {
     @Test func aMissingConsentFileFailsTheRunAsV4() throws {
         let root = try corruptedCopy { directory in
             try FileManager.default.removeItem(
-                at: directory.appendingPathComponent("consent/badung-pasar-kumbasari.json"))
+                at: directory.appendingPathComponent("consent/badung-pasar-badung.json"))
         }
         let report = ContentValidationRun.run(contentRoot: root)
         #expect(report.exitCode == 1)

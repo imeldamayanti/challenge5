@@ -147,7 +147,7 @@ struct ShippedSiteMapTests {
         // None ships a plan, and none should acquire one without a citation — which V14 and V3 hold,
         // but only for a plan that is actually authored.
         let repository = try BundledContentRepository()
-        for id in ["badung-pura-maospahit", "badung-pasar-kumbasari",
+        for id in ["badung-pura-maospahit", "badung-pasar-badung",
                    "badung-catur-muka", "badung-museum-bali"] {
             let place = try #require(try repository.place(id: id))
             #expect(place.siteMap == nil, "\(id) now ships a plan; check its citation")

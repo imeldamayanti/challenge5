@@ -129,6 +129,66 @@ struct RunEngineTests {
         #expect(run.checkpointResults.allSatisfy { $0.taskResults.isEmpty })
     }
 
+    /// Reproduces the stuck Run found on a device that had restored its walks from the backend: a
+    /// `checkpointResults` entry for every checkpoint, including the last, but `state` still
+    /// `.active` and `currentCheckpointIndex` short of it — the shape a restored `run` row takes
+    /// when it synced ahead of its own scalar update (`c2` phase 2: no revision or conflict
+    /// resolution). Nothing before this method ever re-derived `state` from `checkpointResults`, so
+    /// a Run in this shape stayed "Resume" on the home screen forever.
+    @Test func aRunWithEveryCheckpointReachedButStateLeftBehindIsRepairedRatherThanLeftStuck() throws {
+        let (engine, store) = engine()
+        var run = try started(engine)
+        run = try engine.advanceToNextCheckpoint(runID: run.id)
+        run = try engine.recordArrival(
+            runID: run.id, checkpointID: "cp1", method: .gps, accuracyM: 8)
+        run = try engine.advanceToNextCheckpoint(runID: run.id)
+        run = try engine.recordArrival(
+            runID: run.id, checkpointID: "cp2", method: .gps, accuracyM: 8)
+        #expect(run.state == .completed)
+
+        // Simulate the divergence directly: every checkpoint's result already landed, but the
+        // scalar fields that were meant to follow it did not.
+        run.state = .active
+        run.currentCheckpointIndex = 1
+        run.completedAt = nil
+        run.awards.removeAll { $0.type == .badge }
+        try store.save(run)
+
+        let repaired = try engine.completeIfFullyReached(runID: run.id)
+        #expect(repaired.state == .completed)
+        #expect(repaired.completedAt != nil)
+        #expect(repaired.currentCheckpointIndex == 2)
+        #expect(repaired.awards.filter { $0.type == .badge }.count == 1)
+        #expect(repaired.checkpointResults.count == 3)
+
+        // Persisted, not just returned — a fresh read sees the same repair.
+        let reread = try #require(try store.run(id: run.id))
+        #expect(reread.state == .completed)
+    }
+
+    @Test func completingAFullyReachedRunIsIdempotent() throws {
+        let (engine, _) = engine()
+        var run = try started(engine)
+        run = try engine.advanceToNextCheckpoint(runID: run.id)
+        run = try engine.recordArrival(
+            runID: run.id, checkpointID: "cp1", method: .gps, accuracyM: 8)
+        run = try engine.advanceToNextCheckpoint(runID: run.id)
+        run = try engine.recordArrival(
+            runID: run.id, checkpointID: "cp2", method: .gps, accuracyM: 8)
+
+        let untouched = try engine.completeIfFullyReached(runID: run.id)
+        #expect(untouched == run)
+    }
+
+    @Test func completingARunThatHasNotReachedEveryCheckpointChangesNothing() throws {
+        let (engine, _) = engine()
+        let run = try started(engine)
+
+        let untouched = try engine.completeIfFullyReached(runID: run.id)
+        #expect(untouched.state == .active)
+        #expect(untouched == run)
+    }
+
     @Test func theClosingReflectionStillReachesACompletedRun() throws {
         // FR-TASK-07: the final checkpoint's reflection flows into the summary — and the walk is
         // already complete by the time it is written, because arrival completed it.

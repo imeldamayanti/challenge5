@@ -895,11 +895,15 @@ final class QuestRunViewModel {
         }
     }
 
-    /// Every `LoreBlock` at this checkpoint, joined into the one passage the story reveal shows —
-    /// the same join `hookText` uses, so a multi-block checkpoint reads as paragraphs rather than a
-    /// pager (`46:120` restyle).
+    /// Every `LoreBlock` at this checkpoint, joined into the one passage the story reveal shows, so
+    /// a multi-block checkpoint reads as paragraphs rather than a pager (`46:120` restyle).
+    ///
+    /// **Three newlines, not two.** `HisploraMarkedPassage` lays each blank line out as its own
+    /// zero-height row (`WordWrapLayout`), so a double newline only adds one row's `lineSpacing` —
+    /// barely more than the gap between two ordinary wrapped lines. A third newline adds a second
+    /// empty row, which is what actually reads as a paragraph break rather than a line wrap.
     var storyRevealText: String {
-        (checkpoint?.claims.map(\.block.text) ?? []).joined(separator: "\n\n")
+        (checkpoint?.claims.map(\.block.text) ?? []).joined(separator: "\n\n\n")
     }
 
     /// The quest's hook, joined into one passage for the typewriter. Content, not a literal.
@@ -922,6 +926,22 @@ final class QuestRunViewModel {
     var cutsceneImageURL: URL? {
         guard let asset = quest.heroImageAsset else { return nil }
         return (try? repository.assetURL(asset)) ?? nil
+    }
+
+    /// `187:866`'s sitter, when the quest ships one (`CutsceneSubject`). `nil` for every quest that
+    /// does not — `cutsceneSequence` then falls back to `cutsceneImageURL` and `currentPlaceName`,
+    /// which is what the frame drew before any quest carried a named subject.
+    var cutsceneSubjectPortraitURL: URL? {
+        guard let asset = quest.cutsceneSubject?.portraitAsset else { return nil }
+        return (try? repository.assetURL(asset)) ?? nil
+    }
+
+    var cutsceneSubjectName: String? {
+        quest.cutsceneSubject?.name.value(for: language)
+    }
+
+    var cutsceneSubjectSubtitle: String? {
+        quest.cutsceneSubject?.subtitle?.value(for: language)
     }
 
     /// The drawing behind the current checkpoint's Story Reveal page — the Place's own
@@ -1007,7 +1027,17 @@ final class QuestRunViewModel {
         }
     }
 
+    /// The final checkpoint's "End the journey" exit (`197:148`'s footer, `isFinal` case).
+    ///
+    /// Arrival at the last checkpoint is meant to complete the walk on its own (`FR-DONE-01`,
+    /// `RunEngine.applyArrival`), but a Run reaching this screen with `state` still `.active` — a
+    /// restore can pull one that way — must not stay resumable forever just because this one
+    /// arrival never applied. Reconciling here, at the one control that means "I am done", closes
+    /// that gap regardless of how it opened.
     func openSummary() {
+        if let run, run.state == .active {
+            self.run = (try? engine.completeIfFullyReached(runID: run.id)) ?? run
+        }
         stage = .finished
     }
 

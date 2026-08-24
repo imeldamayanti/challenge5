@@ -62,8 +62,8 @@
     ]
   },
   "dressCode": {
-    "id": "Kenakan kamen dan selendang, dan tutup bahu. Aturan busana khusus dari pengelola belum dikonfirmasi; pakai standar yang berlaku umum di puri dan pura.",
-    "en": "Wear a kamen and a sash, and cover your shoulders. The management's own dress rules have not been confirmed; follow the standard that applies at any puri or pura."
+    "id": "Kenakan busana yang sopan dan tertutup — kamen dan selendang, dengan bahu tertutup. Area luar terbuka untuk dijelajahi, tetapi mohon tidak memasuki ruang pribadi atau yang sedang ditempati, dan pengunjung yang sedang menstruasi dimohon untuk tidak memasuki area pura. Aturan busana khusus dari pengelola belum dikonfirmasi; pakai standar yang berlaku umum di puri dan pura.",
+    "en": "Wear respectful, modest clothing — a kamen and a sash, with shoulders covered. Outdoor areas are open to explore, but please do not enter private or occupied spaces, and visitors who are menstruating are kindly asked not to enter the temple areas. The management's own dress rules have not been confirmed; follow the standard that applies at any puri or pura."
   },
   "photoPolicy": {
     "level": "restricted",
@@ -88,8 +88,8 @@
   "loreStandalone": [
     {
       "text": {
-        "id": "Puri Agung Pemecutan berdiri di sisi barat inti kota lama Denpasar. Riwayatnya belum dituliskan di sini karena sumber yang dapat dibuka dan dikutip belum tersedia.",
-        "en": "Puri Agung Pemecutan stands on the western side of the old core of Denpasar. Its history is not written here, because no openable, citable source is available yet."
+        "id": "Puri Agung Pemecutan adalah situs warisan kerajaan yang masih hidup, tempat sejarah dan tradisi Puri Pemecutan terus berlanjut hingga kini.",
+        "en": "Puri Agung Pemecutan is a living royal heritage site, where the history and traditions of Puri Pemecutan continue to live on today."
       },
       "accuracy": "documented",
       "sourceRefs": [
@@ -116,6 +116,16 @@
     {
       "kind": "documented",
       "citation": "BELUM DIVERIFIKASI — Peta jalan sekitar Puri Agung Pemecutan. Gambar ini ilustrasi, bukan survei: nama jalan, arah dan jarak di dalamnya belum dicocokkan di lapangan maupun dengan sumber peta mana pun.",
+      "url": null
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — I Gusti Ngurah Made Agung sebagai Raja Badung yang terakhir (gugur dalam Puputan Badung, 1906) adalah identitas historis yang dikenal luas, tetapi belum dicocokkan di sini dengan sumber pustaka yang dapat dibuka. Potret yang menyertainya adalah gambar hasil generasi AI, bukan lukisan atau foto sejarah — tidak ada catatan izin/consent untuk menampilkan rupa tokoh ini.",
+      "url": null
+    },
+    {
+      "kind": "oral",
+      "citation": "BELUM DIVERIFIKASI — Kisah tutur tentang Kyai Gede Raka mendirikan Puri Agung Pemecutan sekitar 350 tahun lalu, membawa restu Bhatari Danu. Belum dicocokkan dengan babad puri atau sumber pustaka yang dapat dibuka.",
       "url": null
     }
   ],

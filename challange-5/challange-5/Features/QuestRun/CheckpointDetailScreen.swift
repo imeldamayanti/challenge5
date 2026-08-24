@@ -107,7 +107,7 @@ struct CheckpointDetailScreen: View {
                 .foregroundStyle(palette.inkOnButton.color.opacity(0.7))
                 .multilineTextAlignment(.center)
             if isFinal {
-                Button(UIStrings.string(.summaryOpenAction, language), action: onContinue)
+                Button(UIStrings.string(.checkpointDetailFinishAction, language), action: onContinue)
                     .buttonStyle(.hisploraLightPill)
             } else {
                 // `197:148`'s own mock names "Pura Pemecutan" — a place absent from the content

@@ -538,10 +538,10 @@ enum HisploraDenpasarDistrict {
                 Coordinate(lat: -8.6572, lon: 115.2188)
             ]
         ),
-        // Pasar Kumbasari & Pasar Badung riverside market area
+        // Pasar Badung riverside market area
         HisploraPolygonArea(
-            id: "pasar-kumbasari-complex",
-            name: "Pasar Kumbasari & Badung",
+            id: "pasar-badung-complex",
+            name: "Pasar Badung",
             kind: .marketComplex,
             coordinates: [
                 Coordinate(lat: -8.6535, lon: 115.2105),
@@ -694,10 +694,10 @@ enum HisploraDenpasarDistrict {
             historyNote: "The residential and ceremonial heart of the Pemecutan dynasty."
         ),
 
-        // 2. Pasar Kumbasari & Pasar Badung Arcades
+        // 2. Pasar Badung Arcades
         GeoLibreBuilding(
-            id: "bldg-pasar-kumbasari",
-            name: "Pasar Seni Kumbasari",
+            id: "bldg-pasar-badung",
+            name: "Pasar Seni Badung",
             class: .marketHall,
             coordinates: [
                 Coordinate(lat: -8.6538, lon: 115.2106),

@@ -8,12 +8,12 @@
 
 An additional standalone Place, SideQuest (`sq-sovereign-bali-hotel`) and slot in the
 `sidequest-test` collection created purely for local proximity-notification testing, additive
-only — nothing in `places/badung-pasar-kumbasari.json`, `sidequests/sq-badung-pasar-kumbasari.json`,
+only — nothing in `places/badung-pasar-badung.json`, `sidequests/sq-badung-pasar-badung.json`,
 or the `badung-jejak` collection was touched to make this.
 
 Sovereign Bali Hotel is a real, walkable location used as a stand-in coordinate. The sidequest
-layered on top of it (`sq-sovereign-bali-hotel`) still tells the Pasar Kumbasari story — the same
-"Alas Kaki yang Tepat" lore and quiz challenge as `sq-badung-pasar-kumbasari` — so a tester can
+layered on top of it (`sq-sovereign-bali-hotel`) still tells the Pasar Badung story — the same
+"Alas Kaki yang Tepat" lore and quiz challenge as `sq-badung-pasar-badung` — so a tester can
 trigger the flow near wherever they actually are, without traveling to Bali.
 
 ## What must happen before anything public

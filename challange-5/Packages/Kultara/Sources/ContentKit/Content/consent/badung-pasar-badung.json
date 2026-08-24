@@ -1,5 +1,5 @@
 {
-  "placeId": "badung-pasar-kumbasari",
+  "placeId": "badung-pasar-badung",
   "grantingBody": "Tim [NAMA TIM] — prototipe akademik, bukan izin dari pengelola",
   "grantedByName": "[NAMA ANGGOTA 1]",
   "grantedByRole": "[PERAN ANGGOTA 1]",
@@ -9,7 +9,7 @@
     "inclusion",
     "naming"
   ],
-  "documentRef": "docs/consent/badung-pasar-kumbasari-prototype-note.md",
+  "documentRef": "docs/consent/badung-pasar-badung-prototype-note.md",
   "status": "granted",
   "regionOwner": "[NAMA ANGGOTA 2]"
 }

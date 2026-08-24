@@ -226,10 +226,14 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     case checkpointDetailOrGoTo
     /// `197:148` — `%@` is the next checkpoint's place name. The frame's own copy ("Next Place:
     /// Pura Pemecutan") names a place absent from the content tree (`AD-4`), so this reads the next
-    /// checkpoint's real name instead. Unused at the final checkpoint, which reuses
-    /// `runCompletedHeading`/`summaryOpenAction` instead — there is no next place to name, and the
-    /// walk is already `.completed` by the time this screen can show (`FR-DONE-01`).
+    /// checkpoint's real name instead. Unused at the final checkpoint, which reads
+    /// `runCompletedHeading`/`checkpointDetailFinishAction` instead — there is no next place to
+    /// name, and the walk is already `.completed` by the time this screen can show (`FR-DONE-01`).
     case checkpointDetailNextPlace
+    /// The final checkpoint's own exit — distinct from `summaryOpenAction`, which reopens a
+    /// **finished** walk's summary from the Home/Journal list. This is the action that finishes one:
+    /// tapping it is what the walker experiences as ending the journey, not merely reading about it.
+    case checkpointDetailFinishAction
     /// `452:3142` — what the stamp over the progress bar is.
     case checkpointDetailStampLabel
     /// `452:3138` — the segmented bar, read out. `%1$d` resolved of `%2$d`.

@@ -93,13 +93,13 @@ architecture description, each with an openable citation.
 
 ---
 
-## 4. Stop 3 — Pasar Kumbasari (`badung-pasar-kumbasari`)
+## 4. Stop 3 — Pasar Badung (`badung-pasar-badung`)
 
 Ships with `arrivalRadiusM: 100`, coordinate `-8.6540, 115.2115`.
 
 | # | Field | Ships as | Capture | Write back to |
 |---|---|---|---|---|
-| 4.1 | `coordinate` | **unverified seed** | Lat/lon at the entrance a walker uses | `places/badung-pasar-kumbasari.json` → `coordinate` |
+| 4.1 | `coordinate` | **unverified seed** | Lat/lon at the entrance a walker uses | `places/badung-pasar-badung.json` → `coordinate` |
 | 4.2 | **Accuracy behaviour inside the market** | not a content field | Observe what `horizontalAccuracy` actually does under the roof, and whether the manual override is reachable and usable there | Nothing. Record in the plan's execution notes |
 | 4.3 | `visitingHours.weekly` | 7 × `08:00–18:00` — **unverified** | Posted trading hours; note that the night market differs | same → `visitingHours` |
 | 4.4 | `photoPolicy` | `restricted` — **unverified** | Whether traders object; the market's own rule if it has one | same → `photoPolicy` |

@@ -83,14 +83,14 @@ struct HisploraQuestLocation: Identifiable, Sendable, Equatable {
         HisploraQuestLocation(
             id: "trace-03",
             traceNumber: 3,
-            title: "PASAR KUMBASARI",
+            title: "PASAR BADUNG",
             subtitle: "The River Marketplace",
             summary: "Lining the eastern bank of Tukad Badung, this multi-tiered traditional market has been the trading heart of Badung for generations.",
             coordinate: Coordinate(lat: -8.6540, lon: 115.2115),
             arrivalRadiusM: 80,
             state: .uncompleted,
             distanceM: 650,
-            placeId: "badung-pasar-kumbasari"
+            placeId: "badung-pasar-badung"
         ),
         HisploraQuestLocation(
             id: "trace-04",

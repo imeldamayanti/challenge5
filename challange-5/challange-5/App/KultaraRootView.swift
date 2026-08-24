@@ -12,9 +12,9 @@ struct KultaraRootView: View {
 
     @State private var language: ContentLanguage
     @State private var showsOnboarding: Bool
-    /// The splash the app-flow chart opens with, which is still a wireframe. Held in `@State`
-    /// rather than persisted for exactly that reason: it is a drawing, and a persisted flag would
-    /// mean the team has to clear app data to see it again. One tap gets past it.
+    /// The splash the app-flow chart opens with (Figma `207:293`). Held in `@State` rather than
+    /// persisted: a persisted flag would mean the team has to clear app data to see it again. One
+    /// tap gets past it.
     @State private var showsSplash = true
     /// Whether the entry screens still have something to ask (Figma `791:5145`, `791:5109`,
     /// `822:2235`).
@@ -129,9 +129,8 @@ struct KultaraRootView: View {
     var body: some View {
         KultaraThemeProvider {
             // Splash → Onboarding → Sign up / Sign in / Guest → Home, as the flow chart opens.
-            // The splash is still a wireframe; onboarding and the three entry screens are built.
             if showsSplash {
-                SplashWireframeView(language: language, onFinish: { showsSplash = false })
+                SplashScreen(onFinish: { showsSplash = false })
             } else if showsOnboarding {
                 OnboardingView(
                     store: environment.preferences,
@@ -238,6 +237,31 @@ struct KultaraRootView: View {
             environment.governance.suppressedPlaceIDs
         environment.proximityMonitor.refreshRegions()
         abandonSuppressedRuns()
+        reconcileFullyReachedRuns()
+    }
+
+    /// A Run every checkpoint has been reached in, but whose `state` never followed — reachable
+    /// when a restore pulls a `run` row from the server that synced ahead of its own scalar update
+    /// (`c2` phase 2's known gap: no revision or conflict resolution, one writer assumed). Without
+    /// this, such a walk sits under "In Progress" and offers "Resume" forever, because nothing else
+    /// ever re-derives `state` from `checkpointResults` (`RunJournalSummary` trusts `state` alone).
+    ///
+    /// Skips a Run currently open in a run screen: that screen's own `QuestRunViewModel` holds its
+    /// own in-memory copy and reconciles itself at the one control that means "I am done"
+    /// (`openSummary()`), so writing underneath it here would just be a second, racing writer.
+    private func reconcileFullyReachedRuns() {
+        guard let runs = try? environment.runStore.runs() else { return }
+        let engine = environment.runEngine
+        var changed = false
+        for run in runs
+        where run.state == .active
+            && run.checkpointResults.count >= run.checkpointCount
+            && runDestination?.existingRunID != run.id
+            && profileRunDestination?.existingRunID != run.id {
+            guard (try? engine.completeIfFullyReached(runID: run.id)) != nil else { continue }
+            changed = true
+        }
+        if changed { journalRevision += 1 }
     }
 
     /// A walk whose ground has been withdrawn under it ends as `placeSuppressed` rather than

@@ -308,7 +308,7 @@ final class DiscoveryFlowUITests: XCTestCase {
         // with a CONTAINS predicate rather than by exact identifier: XCUITest caps a string
         // identifier at 128 characters, and lore blocks are longer than that.
         let forbidden = [
-            "The first face is power.",
+            "Kyai Gede Raka",
             "The second face is faith.",
             "Look for red brick walls and a red brick gateway",
             "The market building is four storeys tall.",
