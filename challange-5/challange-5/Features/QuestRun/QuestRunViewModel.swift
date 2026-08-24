@@ -21,6 +21,15 @@ final class QuestRunViewModel {
         /// passing: `record` recorded the arrival and moved straight to the cutscene, so the state
         /// was reachable for a frame and no walker saw it.
         case locationVerified
+        /// `5:1608` — the walking map, live, with the arrival card over it. Every arrival
+        /// *after* the walk's first checkpoint lands here instead of on `1:4458`: by then the
+        /// walker has already been told once what a confirmed fix looks like, and a second full
+        /// screen saying it again stands between them and the story they walked for.
+        ///
+        /// The arrival is recorded before this draws, exactly as `locationVerified`'s is
+        /// (`FR-RUN-01`), so the card is an announcement rather than a gate — its one control
+        /// hands over to `stageAfterArrivalConfirmed`.
+        case arrivalNotice
         /// The Hisplora cutscene — the quest's hook and a framed image, shown once at the first
         /// arrival of a walk. A presentation of `hookLore`, not a new content type: see
         /// `CutsceneScreens.swift`.
@@ -248,7 +257,8 @@ final class QuestRunViewModel {
     /// host that has to know the answer *before* this model exists (see `opensOnStoryFlow`).
     static func isStoryFlow(_ stage: Stage) -> Bool {
         switch stage {
-        case .storyPreview, .awaitingArrival, .locationVerified, .cutsceneIntro, .cutscenePortrait,
+        case .storyPreview, .awaitingArrival, .locationVerified, .arrivalNotice,
+             .cutsceneIntro, .cutscenePortrait,
              .approachTransition, .storyReveal, .placeNotice, .checkpointDetail, .taskDetail,
              .questExplanation, .stampAward, .transition, .atCheckpoint,
              // `.finished` now opens straight on `WriteJournalScreen` — Hisplora, with its own
@@ -546,8 +556,10 @@ final class QuestRunViewModel {
         } else {
             stageAfterArrivalConfirmed = .storyReveal
         }
-        // `1:4458` — arrival is confirmed on its own screen before any of that.
-        stage = .locationVerified
+        // `1:4458` on the walk's first checkpoint; `5:1608`'s map with the arrival card over it
+        // at every one after it. The confirmation screen is an explanation of what just happened,
+        // and it is worth a screen once per walk rather than once per arrival.
+        stage = usesNavigationMap ? .arrivalNotice : .locationVerified
 
         if let run, let checkpoint {
             self.run = (try? engine.markLoreOpened(
@@ -560,6 +572,10 @@ final class QuestRunViewModel {
     /// `1:4458`'s Continue — into the cutscene on the walk's first arrival, into the story reveal
     /// at every other checkpoint.
     func advanceFromLocationVerified() { stage = stageAfterArrivalConfirmed }
+
+    /// `5:1608`'s arrival card. The same hand-over `1:4458`'s Continue makes — one stored answer,
+    /// two ways to reach it, so the two screens cannot disagree about where an arrival leads.
+    func advanceFromArrivalNotice() { stage = stageAfterArrivalConfirmed }
 
     func advanceFromCutsceneIntro() { stage = .cutscenePortrait }
 
@@ -951,6 +967,15 @@ final class QuestRunViewModel {
     /// arrival rule's own and lives on `ArrivalSampling`, so the sidequest gate draws the same
     /// three states from the same decision.
     var locationState: LocationState { sampling.locationState }
+
+    /// Whether this checkpoint is walked to on `5:1608`'s live map rather than on `223:2004`'s
+    /// "Not Quite There" screen — and, on arrival, announced by a card over that map rather than by
+    /// `1:4458`.
+    ///
+    /// The walk's *first* checkpoint keeps both original screens: it is where a walker is told what
+    /// the app is doing with their position at all, and that explanation has to happen somewhere.
+    /// Every checkpoint after it has had that explanation already, so what it needs is the map.
+    var usesNavigationMap: Bool { currentIndex > 0 }
 
     // MARK: Progression — FR-CP-01
 

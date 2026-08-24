@@ -149,16 +149,24 @@ struct QuestRunView: View {
         switch model.stage {
         case .storyPreview: storyPreview
         case .awaitingArrival:
+            // `5:1608` from the second checkpoint on: the walk between two places is a map, and by
+            // then the walker has already been shown once what the app does with their position.
+            // The first checkpoint keeps `178:675` and `223:2004` — see `usesNavigationMap`.
+            if model.usesNavigationMap {
+                navigationMap(showsArrivalCard: false)
             // No timer here, deliberately: `arrivalScreen` only draws settled results
             // (`.notThere`/`.denied`), never `.checking` itself, so the light checking screen has
             // to stay up for exactly as long as the sampler is genuinely still checking — a fixed
             // hold would either flash a screen shorter than the real wait or, worse, expire before
             // a fix has landed and print "Location Checking…." over the brown map screen.
-            if model.locationState == .checking {
+            } else if model.locationState == .checking {
                 locationCheckingScreen
             } else {
                 arrivalScreen
             }
+        // The same map, with the arrival card over it. One view across the change rather than two
+        // screens cross-fading, so the map does not blink when the walker arrives on it.
+        case .arrivalNotice: navigationMap(showsArrivalCard: true)
         case .locationVerified:
             // Never `arrivalScreen` as the fallback here: `arriveAtCurrentCheckpoint()` calls
             // `sampling.finish()`, which resets `status` to `.idle` — so `model.locationState`
@@ -238,6 +246,25 @@ struct QuestRunView: View {
         } else {
             routeMap
         }
+    }
+
+    /// `5:1608` — the live walking map, and the arrival card over it (`showsArrivalCard`).
+    ///
+    /// One function for both stages on purpose: `.awaitingArrival` and `.arrivalNotice` draw the
+    /// same map, and routing them to two views would make arriving a cross-fade between two
+    /// pictures of the same street.
+    private func navigationMap(showsArrivalCard: Bool) -> some View {
+        QuestNavigationMapScreen(
+            language: language,
+            questTitle: model.questTitle,
+            placeName: model.currentPlaceName,
+            route: model.routeMap,
+            totalCheckpoints: model.totalCheckpoints,
+            externalMapsURL: model.externalMapsURL,
+            showsArrivalCard: showsArrivalCard,
+            onBack: { dismiss() },
+            onOpenExternalMaps: { openURL($0) },
+            onContinueFromArrival: { model.advanceFromArrivalNotice() })
     }
 
     private var cutsceneSequence: some View {

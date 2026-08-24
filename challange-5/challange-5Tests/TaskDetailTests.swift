@@ -45,6 +45,7 @@ struct TaskDetailTests {
             if model.isPresentingQuestAvailability { model.advanceFromQuestAvailability(); continue }
             switch model.stage {
             case .locationVerified: model.advanceFromLocationVerified()
+            case .arrivalNotice: model.advanceFromArrivalNotice()
             case .cutsceneIntro: model.advanceFromCutsceneIntro()
             case .cutscenePortrait: model.advanceFromCutscenePortrait()
             case .approachTransition: model.advanceFromApproachTransition()
@@ -84,6 +85,7 @@ struct TaskDetailTests {
         for _ in 0..<10 where model.stage != .placeNotice {
             switch model.stage {
             case .locationVerified: model.advanceFromLocationVerified()
+            case .arrivalNotice: model.advanceFromArrivalNotice()
             case .cutsceneIntro: model.advanceFromCutsceneIntro()
             case .cutscenePortrait: model.advanceFromCutscenePortrait()
             case .approachTransition: model.advanceFromApproachTransition()
@@ -300,6 +302,7 @@ struct TaskDetailTests {
             }
             switch harness.model.stage {
             case .locationVerified: harness.model.advanceFromLocationVerified()
+            case .arrivalNotice: harness.model.advanceFromArrivalNotice()
             case .storyReveal: harness.model.advanceFromStoryReveal()
             case .transition: harness.model.advanceFromTransition()
             case .placeNotice: harness.model.advanceFromPlaceNotice()
