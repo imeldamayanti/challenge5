@@ -26,6 +26,10 @@ struct JournalLetterView: View {
     /// Mints the summary's recap card (`c2` phase 5). The History page has no card of its own — it
     /// is an editorial narrative, not a summary, and keeps its own plain-text share.
     private let shareCards: any ShareCardMinting
+    /// The Trip Summary's clock glyph. `.history` has no completion carousel to replay — the walk
+    /// that finished a checkpoint is the same fact either page shows, and the carousel is a
+    /// celebration of the *walk*, not a second reading of its lore — so only `.summary` is wired.
+    private let onShowCompletion: () -> Void
     private let onClose: () -> Void
 
     init(model: RunSummaryViewModel,
@@ -33,12 +37,14 @@ struct JournalLetterView: View {
          section: JournalPaperPresentation.Kind = .summary,
          photoStore: any PhotoStore,
          shareCards: any ShareCardMinting = NoShareCardMinting(),
+         onShowCompletion: @escaping () -> Void,
          onClose: @escaping () -> Void) {
         self.model = model
         self.letter = letter
         self.section = section
         self.photoStore = photoStore
         self.shareCards = shareCards
+        self.onShowCompletion = onShowCompletion
         self.onClose = onClose
     }
 
@@ -46,7 +52,8 @@ struct JournalLetterView: View {
         switch section {
         case .summary:
             TripSummaryScreen(model: model, letter: letter,
-                              photoStore: photoStore, shareCards: shareCards, onClose: onClose)
+                              photoStore: photoStore, shareCards: shareCards,
+                              onShowCompletion: onShowCompletion, onClose: onClose)
         case .history:
             TripHistoryScreen(model: model, letter: letter, onClose: onClose)
         }

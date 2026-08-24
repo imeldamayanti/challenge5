@@ -45,6 +45,10 @@ struct TripPageBar: View {
 
     let title: String
     let backLabel: String
+    /// Reopens the "You Made History Come Alive!" completion carousel for this walk — `nil` on
+    /// every bar but the Trip Summary's, which is the only page with a walk-level recap to replay.
+    var onShowRecap: (() -> Void)? = nil
+    var recapLabel: String = ""
     var shareState: TripShareState = .hidden
     var shareLabel: String = ""
     var preparingLabel: String = ""
@@ -70,6 +74,17 @@ struct TripPageBar: View {
                 .buttonStyle(.plain)
                 .accessibilityLabel(backLabel)
                 Spacer(minLength: 0)
+                if let onShowRecap {
+                    Button(action: onShowRecap) {
+                        Image(systemName: "clock")
+                            .font(.system(size: 19, weight: .regular))
+                            .foregroundStyle(palette.inkDark.color)
+                            .frame(width: KultaraMetrics.minimumTapTarget,
+                                   height: KultaraMetrics.minimumTapTarget)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(recapLabel)
+                }
                 shareControl
             }
         }

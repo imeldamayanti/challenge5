@@ -22,13 +22,29 @@ struct TripRecapCarouselScreen: View {
     let photoStore: any PhotoStore
     let onFinish: () -> Void
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+
     @State private var page = 0
+    /// The current page's own segment, counting 0 → 1 across `pageDuration` — what makes the bar
+    /// read as a countdown rather than a flat step indicator. Reset and restarted by `.task(id:)`
+    /// on every page change, whether that change came from the timer, a tap, or a manual swipe.
+    @State private var segmentFill: CGFloat = 0
     /// Opens the share-story picker (`921:2543`'s header). The card images are rendered *there*,
     /// when this turns true — never here, where a swipe through the carousel would pay for two
     /// 1080 px renders nobody asked for yet.
     @State private var showsShareStory = false
+    /// Drives the headline page's entrance — the artwork and the words settle in from below with a
+    /// fade, one after the other, rather than the carousel simply appearing (`921:2707`). One flag
+    /// rather than two: the stagger is each element's own `.animation(...).delay(...)`, the same way
+    /// `CutsceneSequenceScreen.wordsSwap` staggers a single transition rather than juggling states.
+    @State private var headlineContentIsIn = false
 
     private static let totalPages = 5
+    /// How long each page holds before the bar hands the walker to the next one — five seconds, per
+    /// the design's own "Strava-style" pacing note. The last page is the walker's to leave on their
+    /// own: it carries the two closing actions, so nothing counts down there.
+    private static let pageDuration: Double = 5
 
     var body: some View {
         HisploraCompletionStage {
@@ -41,6 +57,10 @@ struct TripRecapCarouselScreen: View {
                     postcardPage.tag(4)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
+                // A tap anywhere on the page steps it forward, same as the bar finishing on its
+                // own — the two ways off a page Instagram- and WhatsApp-style stories both offer.
+                .contentShape(Rectangle())
+                .onTapGesture(perform: advanceOnTap)
 
                 topBar
             }
@@ -48,14 +68,18 @@ struct TripRecapCarouselScreen: View {
         .sheet(isPresented: $showsShareStory) { shareStorySheet }
         .navigationBarBackButtonHidden()
         .statusBarHidden(false)
+        // `.task(id:)` cancels and restarts itself on every `page` change, so there is one place
+        // that owns the countdown rather than a manually-cancelled `Task` living beside it.
+        .task(id: page) { await runPageTimer() }
     }
 
     // MARK: - Chrome shared by every page
 
     private var topBar: some View {
         HisploraCompletionProgress(
-            completed: page + 1,
+            currentPage: page,
             total: Self.totalPages,
+            currentFill: segmentFill,
             accessibilityLabel: String(
                 format: UIStrings.string(.onboardingProgress, language),
                 page + 1, Self.totalPages))
@@ -63,6 +87,30 @@ struct TripRecapCarouselScreen: View {
             // The frames draw the segments 47 points below the safe-area top (y 106 on their
             // 874-point canvas, under a 59-point status bar) — not hugging it.
             .padding(.top, 47)
+    }
+
+    /// Steps the current page forward by one, whether the five seconds ran out or a tap did it —
+    /// the postcard page is the one place this is a no-op, since it is the walker's to leave.
+    private func advanceOnTap() {
+        guard page < Self.totalPages - 1 else { return }
+        withAnimation(.easeInOut(duration: 0.3)) { page += 1 }
+    }
+
+    /// The bar's own countdown. Skipped under VoiceOver, the same way `ApproachTransitionScreen`
+    /// leaves its clock off for that reader — a page that reads itself out and advances out from
+    /// under a screen reader mid-read has no right duration, and a tap or a swipe still moves it on.
+    private func runPageTimer() async {
+        guard !voiceOverEnabled, page < Self.totalPages - 1 else {
+            segmentFill = 1
+            return
+        }
+        segmentFill = 0
+        withAnimation(reduceMotion ? nil : .linear(duration: Self.pageDuration)) {
+            segmentFill = 1
+        }
+        try? await Task.sleep(for: .seconds(Self.pageDuration))
+        guard !Task.isCancelled else { return }
+        withAnimation(.easeInOut(duration: 0.3)) { page += 1 }
     }
 
     private var pageHeadlineColor: Color { SRGBColor(hex: "#FDF2DE").color }
@@ -79,44 +127,67 @@ struct TripRecapCarouselScreen: View {
     // MARK: - Completion 1 (`205:121`) — the headline
 
     private var headlinePage: some View {
-        // The frame's verticals: emblem centred at y≈299 of 874, the text block starting at 447 —
-        // 48 below the artwork — and everything after left to the bottom spacer.
-        VStack(spacing: 16) {
-            Spacer(minLength: 140)
+        // The frame's verticals: emblem centred at y≈299 of 874, the text block starting at
+        // 447 — 48 below the artwork. Fixed offsets, not the three competing flexible `Spacer`s
+        // this drew before: each `minLength` is only a floor, so on a screen taller than the
+        // content SwiftUI split the leftover room between all three roughly evenly — inflating
+        // the drawn 48-point gap into whatever was left after the trailing `Spacer` took its
+        // own share, which is the oversized gap between the medallion and the headline this
+        // was reported against. Anchoring the block to the top with fixed padding and leaving
+        // only the trailing `Spacer` flexible keeps 48 points 48 points on every device.
+        VStack(spacing: 0) {
+            artwork
+                .padding(.top, 140)
+                .opacity(headlineContentIsIn ? 1 : 0)
+                .offset(y: headlineContentIsIn ? 0 : 24)
+                .animation(
+                    reduceMotion ? nil : .easeOut(duration: 0.45), value: headlineContentIsIn)
 
-            // `921:2689`'s `Ellipse 531` — a blurred warm disc standing behind the artwork, the
-            // halo the frame draws under its emblem (a 485-point circle behind a 200-point one).
-            // Subtle on this gradient by design. The frame zooms its emblem to cover its box
-            // (`921:2707`'s image is scaled past it); `.fit` would render the shipped asset's
-            // 530×471 at 200×178 and the medallion reads a size too small.
-            HisploraTripArtworkImage(HisploraTripArtwork.emblem, contentMode: .fill)
-                .frame(width: 200, height: 200)
-                .clipped()
-                .background {
-                    Circle()
-                        .fill(SRGBColor(hex: "#6E3B26").color)
-                        .blur(radius: 61.5)
-                        .padding(-142.5)
-                }
-                .accessibilityHidden(true)
+            // `921:2707`'s own entrance: the words rise and fade in a beat after the artwork
+            // does, rather than the whole page appearing at once — the same staggered-settle
+            // `CutsceneSequenceScreen.wordsSwap` uses, one trigger driving two delays.
+            VStack(spacing: 16) {
+                // The frame breaks the headline after "History"; forced here rather than in the
+                // string table, the same way the memories page breaks after "From".
+                pageHeadline(
+                    UIStrings.string(.tripRecapHeadlineTitle, language)
+                        .replacingOccurrences(of: " History ", with: " History\n"))
 
-            Spacer(minLength: 32)
+                Text(UIStrings.string(.tripRecapHeadlineBody, language))
+                    .font(.system(size: 17))
+                    .tracking(-0.34)
+                    .foregroundStyle(SRGBColor(hex: "#DED7C2").color.opacity(0.62))
+                    .multilineTextAlignment(.center)
+            }
+            .padding(.top, 48)
+            .opacity(headlineContentIsIn ? 1 : 0)
+            .offset(y: headlineContentIsIn ? 0 : 24)
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.45).delay(0.18),
+                value: headlineContentIsIn)
 
-            // The frame breaks the headline after "History"; forced here rather than in the
-            // string table, the same way the memories page breaks after "From".
-            pageHeadline(
-                UIStrings.string(.tripRecapHeadlineTitle, language)
-                    .replacingOccurrences(of: " History ", with: " History\n"))
-
-            Text(UIStrings.string(.tripRecapHeadlineBody, language))
-                .font(.system(size: 17))
-                .tracking(-0.34)
-                .foregroundStyle(SRGBColor(hex: "#DED7C2").color.opacity(0.62))
-                .multilineTextAlignment(.center)
-
-            Spacer()
+            Spacer(minLength: 0)
         }
         .padding(.horizontal, 50)
+        .onAppear { headlineContentIsIn = true }
+    }
+
+    /// `921:2689`'s `Ellipse 531` — a blurred warm disc standing behind the artwork, the halo the
+    /// frame draws under its emblem (a 485-point circle behind a 200-point one). Subtle on this
+    /// gradient by design. The frame zooms its emblem to cover its box (`921:2707`'s image is
+    /// scaled past it); `.fit` would render the shipped asset's 530×471 at 200×178 and the
+    /// medallion reads a size too small.
+    private var artwork: some View {
+        HisploraTripArtworkImage(HisploraTripArtwork.emblem, contentMode: .fill)
+            .frame(width: 200, height: 200)
+            .clipped()
+            .background {
+                Circle()
+                    .fill(SRGBColor(hex: "#6E3B26").color)
+                    .blur(radius: 61.5)
+                    .padding(-142.5)
+            }
+            .accessibilityHidden(true)
     }
 
     // MARK: - Completion 2 (`205:151`) — the stat grid
@@ -197,21 +268,60 @@ struct TripRecapCarouselScreen: View {
         (dx: 30.5, dy: 200.8, rotation: -5.04),
     ]
 
+    /// How many stamps have been revealed so far, counted in placement order — driving a
+    /// postage-stamp-being-stuck-down entrance for each one rather than the whole collage
+    /// appearing at once. Never reset once past zero, so a mid-sequence swipe away and back does
+    /// not repeat the reveal from the start.
+    @State private var revealedStampCount = 0
+
+    private static let stampRevealDelay: Double = 0.35
+    private static let stampRevealAnimation = Animation.spring(response: 0.45, dampingFraction: 0.72)
+    /// How far above its resting spot each stamp starts, before settling down into place.
+    private static let stampRevealStartOffsetY: CGFloat = -15
+    private static let stampRevealStartScale: CGFloat = 0.85
+
     private var stampCollage: some View {
         ZStack {
             ForEach(Array(stamps.prefix(5).enumerated()), id: \.element.id) { index, stamp in
                 let placement = Self.placements[index]
+                let isRevealed = index < revealedStampCount
                 HisploraStampCard(
                     title: stamp.placeName,
                     subtitle: stamp.region,
                     teethAcross: 9, teethDown: 13, biteSpan: 0.67,
                     artworkName: stamp.artworkName)
                     .frame(width: 114)
+                    .scaleEffect(isRevealed ? 1 : Self.stampRevealStartScale)
+                    .opacity(isRevealed ? 1 : 0)
                     .rotationEffect(.degrees(placement.rotation))
-                    .offset(x: placement.dx, y: placement.dy)
+                    .offset(
+                        x: placement.dx,
+                        y: placement.dy + (isRevealed ? 0 : Self.stampRevealStartOffsetY))
             }
         }
         .frame(height: 330)
+        .task { await revealStamps() }
+    }
+
+    /// Reveals the stamps one at a time, `stampRevealDelay` apart, each animating in with
+    /// `stampRevealAnimation`. Skipped under Reduce Motion, the same way every other entrance on
+    /// this carousel yields to it.
+    @Sendable
+    private func revealStamps() async {
+        guard revealedStampCount == 0, !stamps.isEmpty else { return }
+        guard !reduceMotion else {
+            revealedStampCount = stamps.count
+            return
+        }
+        for index in 0..<min(stamps.count, 5) {
+            if index > 0 {
+                try? await Task.sleep(for: .seconds(Self.stampRevealDelay))
+            }
+            guard !Task.isCancelled else { return }
+            withAnimation(Self.stampRevealAnimation) {
+                revealedStampCount = index + 1
+            }
+        }
     }
 
     // MARK: - Completion 4 (`921:2823`) — the memory grid
