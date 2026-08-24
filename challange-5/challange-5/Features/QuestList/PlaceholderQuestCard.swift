@@ -23,27 +23,17 @@ struct PlaceholderQuestCard: View {
     var body: some View {
         PhotoQuestCard(title: entry.title.value(for: language),
                        hero: Image(entry.imageName)) {
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: KultaraMetrics.md) { region; walking; checkpoints }
-                VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
-                    region; walking; checkpoints
-                }
+            // The same three-fact row the real card draws (`275:2183`), so Home's cards read as
+            // one design; the placeholder's facts are the frame's own three and no more.
+            HStack(spacing: 10) {
+                PhotoCardInlineFact(icon: "quest-popover-pin", iconWidth: 10,
+                                    text: entry.region.value(for: language))
+                PhotoCardInlineFact(icon: "quest-popover-clock", iconWidth: 10.73,
+                                    text: formatter.duration(minutes: entry.walkingTimeMin))
+                PhotoCardInlineFact(icon: "quest-popover-pencil", iconWidth: 11.59,
+                                    text: formatter.checkpointCount(entry.checkpointCount))
             }
         }
         .accessibilityHint(UIStrings.string(.homePlaceholderCardHint, language))
-    }
-
-    private var region: some View {
-        PhotoCardFact(symbolName: "mappin", label: UIStrings.string(.labelRegion, language),
-                      value: entry.region.value(for: language))
-    }
-    private var walking: some View {
-        PhotoCardFact(symbolName: "clock", label: UIStrings.string(.labelWalkingTime, language),
-                      value: formatter.duration(minutes: entry.walkingTimeMin))
-    }
-    private var checkpoints: some View {
-        PhotoCardFact(symbolName: "flag",
-                      label: UIStrings.string(.previewCheckpointsHeading, language),
-                      value: formatter.checkpointCount(entry.checkpointCount))
     }
 }
