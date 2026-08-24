@@ -84,10 +84,11 @@ struct PhotoQuestCard<Facts: View>: View {
     private var caption: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.photoCardCaptionSpacing) {
             Text(title)
-                // `275:2183` sets the title in SF Pro Semibold 17, tracked −0.43 — `.headline` is
-                // that style at its default size and still scales (`NFR-A11Y-01`), which a fixed
-                // 17 would not.
-                .font(.headline)
+                // `275:2183`'s Headline/Regular: SF Pro Semibold at 17, tracked −0.43. Fixed at
+                // the frame's size at the owner's explicit instruction, so the caption is the
+                // drawing rather than a role that scales away from it (`NFR-A11Y-01` bends here
+                // on purpose; the card's own height still grows via `captionHeight`'s minimum).
+                .font(.system(size: 17, weight: .semibold))
                 .tracking(-0.43)
                 .foregroundStyle(PhotoCardInk.titleInk.color)
                 .fixedSize(horizontal: false, vertical: true)
@@ -112,4 +113,33 @@ struct PhotoQuestCard<Facts: View>: View {
 enum PhotoCardInk {
     static let titleInk = SRGBColor(hex: "#F6F6F6")
     static let factInk = SRGBColor(hex: "#AEAEB2")
+}
+
+/// `275:2183`'s fact: the frame's icon glyph and the value, no label — the one fact shape both
+/// the real quest card and the placeholder cards draw, so their captions read as one design.
+///
+/// The type is SF Pro Semibold 12 (`275:2183`'s Caption1/Emphasized), fixed at the frame's size
+/// for the same reason the title is. The icon is one of the popover's exports, tinted the fact
+/// grey via template rendering.
+struct PhotoCardInlineFact: View {
+    let icon: String
+    let iconWidth: CGFloat
+    let text: String
+
+    var body: some View {
+        HStack(spacing: 5) {
+            if let image = MapLandmarkImages.image(named: icon) {
+                image
+                    .resizable()
+                    .renderingMode(.template)
+                    .frame(width: iconWidth, height: 12)
+                    .foregroundStyle(PhotoCardInk.factInk.color)
+            } else {
+                Color.clear.frame(width: iconWidth, height: 12)
+            }
+            Text(text)
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(PhotoCardInk.factInk.color)
+        }
+    }
 }

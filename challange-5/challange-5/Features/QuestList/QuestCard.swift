@@ -46,24 +46,10 @@ struct QuestCard: View {
         .accessibilityValue(isOngoing ? UIStrings.string(.questCardOngoing, language) : "")
     }
 
-    /// `275:2183`'s fact: the frame's own icon glyph (the popover's exports, retinted here) and the
-    /// value, no label. The icons are the frame's grey, not an ink token — see the palette note in
-    /// `docs/hisplora-tokens.md`.
+    /// `275:2183`'s fact, shared with the placeholder cards (`PhotoCardInlineFact`) so every card
+    /// on Home reads as one design.
     private func fact(icon: String, iconWidth: CGFloat, text: String) -> some View {
-        HStack(spacing: 5) {
-            if let image = MapLandmarkImages.image(named: icon) {
-                image
-                    .resizable()
-                    .renderingMode(.template)
-                    .frame(width: iconWidth, height: 12)
-                    .foregroundStyle(PhotoCardInk.factInk.color)
-            } else {
-                Color.clear.frame(width: iconWidth, height: 12)
-            }
-            Text(text)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(PhotoCardInk.factInk.color)
-        }
+        PhotoCardInlineFact(icon: icon, iconWidth: iconWidth, text: text)
     }
 
     /// Everything the card no longer *prints*, spoken instead. The six labelled facts the previous
