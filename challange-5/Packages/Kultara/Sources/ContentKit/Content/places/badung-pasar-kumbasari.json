@@ -25,13 +25,41 @@
       "en": "Opening hours have not been verified with the market authority. The values below are a conservative estimate for the art and craft floors, not for the ground floor, which opens far earlier. Check before setting out."
     },
     "weekly": [
-      { "weekday": 1, "open": "08:00", "close": "18:00" },
-      { "weekday": 2, "open": "08:00", "close": "18:00" },
-      { "weekday": 3, "open": "08:00", "close": "18:00" },
-      { "weekday": 4, "open": "08:00", "close": "18:00" },
-      { "weekday": 5, "open": "08:00", "close": "18:00" },
-      { "weekday": 6, "open": "08:00", "close": "18:00" },
-      { "weekday": 7, "open": "08:00", "close": "18:00" }
+      {
+        "weekday": 1,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 2,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 3,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 4,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 5,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 6,
+        "open": "08:00",
+        "close": "18:00"
+      },
+      {
+        "weekday": 7,
+        "open": "08:00",
+        "close": "18:00"
+      }
     ]
   },
   "dressCode": {
@@ -94,6 +122,11 @@
     {
       "kind": "documented",
       "citation": "BELUM DIVERIFIKASI — Ilustrasi latar halaman Story untuk Pasar Kumbasari. Gambar ini ilustrasi hasil generasi, bukan survei lapangan.",
+      "url": null
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Narasi audio untuk titik ini dibacakan oleh suara sintetis (text-to-speech), bukan oleh narator manusia dan bukan rekaman lapangan. Isinya adalah pembacaan loreSegment checkpoint ini; klaim di dalamnya bersumber pada entri sources lain di berkas ini. Pelafalan nama tempat dan istilah Bali belum diperiksa oleh penutur lokal.",
       "url": null
     }
   ],

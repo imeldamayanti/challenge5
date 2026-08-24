@@ -16,6 +16,12 @@ public enum ContentLanguage: String, Codable, Sendable, CaseIterable {
     }
 }
 
+/// So a `[ContentLanguage: T]` encodes as `{"id": …, "en": …}` rather than as the flat
+/// `["id", …, "en", …]` array `Dictionary`'s default `Codable` would write for a non-`String` key.
+/// The stdlib supplies the implementation for a `String`-backed `RawRepresentable`; declaring the
+/// conformance is what turns it on (SE-0320). `Checkpoint.narration` is the reason it is here.
+extension ContentLanguage: CodingKeyRepresentable {}
+
 public enum LocalizedTextError: Error, Equatable, Sendable {
     /// A translation was present as a key but carried no readable text.
     case emptyTranslation(language: ContentLanguage)

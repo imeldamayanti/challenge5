@@ -1196,6 +1196,60 @@ with the splash still auto-advancing and still a drawing.
     date read by `AccountEntryGate`, so a walker is asked once; `removeAll` clears it with the name
     (`FR-SET-02`), which is the only way back to these screens short of a reinstall. The **splash
     is still a wireframe** and still `@State`, for the reason it always was.
+- **The story flow is narrated, in English only, and nothing plays unasked.** As of
+  `contentBundleVersion` **2026.09.13** each of the five checkpoints carries an English reading of
+  its own `loreSegment` — `Checkpoint.narration`, `assets/quests/badung-empat-wajah/narration/cp{1…5}-en.mp3`,
+  1.9 MB for the set — and `StoryRevealScreen` draws a play/pause circle with a progress ring in the
+  footer's empty corner opposite Next. Seven things about it:
+  - **The field is on `Checkpoint`, not on `Place`.** The recording reads *this quest's* passage at
+    that stop, not a fact about the site; two quests visiting one place would narrate different
+    words. Same division `loreSegment` already draws against `Place.loreStandalone`, and the reason
+    `narration.sourceRef` indexes the owning **Place's** `sources` — so does every
+    `LoreBlock.sourceRefs` in a `loreSegment`.
+  - **It is keyed by language with no fallback, and the gap is guarded rather than assumed.** Only
+    the English readings exist; an Indonesian walker gets the passage on the page and no control at
+    all. Playing an English narrator over Indonesian prose is the exact failure `LocalizedText`'s
+    missing fallback exists to prevent (`NFR-I18N-03`), arriving through a different door.
+    `BundledNarrationTests.noCheckpointShipsAnIndonesianReading` is the inverted guard; recording the
+    Indonesian set is what turns it red.
+  - **The voice is synthesised and each Place says so.** A fifth (or fourth) `sources` entry per
+    place begins `BELUM DIVERIFIKASI` and names the text-to-speech, the same habit every generated
+    illustration here follows. The Story Reveal does not print it — that screen's `FR-CP-05`
+    deviation covers the whole page — so content review is where it is read.
+    `theShippedNarrationCitesTheSyntheticVoiceOnEachPlace` keeps audio and citation from parting.
+  - **The reading starts when the passage starts, and that is why there are two audio-session
+    categories.** `StoryRevealScreen` calls `NarrationPlayer.autoplay()` when `reveal` first reaches
+    `.passage` — keyed on the reveal rather than on `onAppear`, so the voice tracks the words on the
+    one surface that types a lead sentence first. That makes the reading unrequested, so it is
+    started under **`.ambient`**, which the ring/silent switch silences: two of the five places are
+    `isSacred`, and a walker who muted their phone at a temple gate has already said what they want.
+    A reading the walker *taps* runs under **`.playback`** with `.duckOthers`, which ignores the
+    switch, because a play button that honours it reads as broken. The category is set per call, so
+    an autoplayed reading the walker pauses and restarts changes hands correctly.
+    **Under VoiceOver nothing starts by itself** — a narrator over a screen reader is two voices at
+    once — and the control is still there to be tapped.
+    `autoplay()` is one shot per recording (a walker who pauses has said something) and tolerates
+    arriving before `load(_:)`, which it can: SwiftUI does not order a body's `onAppear` against a
+    child's `task`, and dropping the intent there would make the narration work on most launches
+    rather than all of them. Seen autoplaying at Museum Bali on iPhone 17 Pro / iOS 26.5 —
+    `docs/screenshots/m17-story-narration-autoplay.png`.
+  - **`Checkpoint.narration` wears a `LocalizedText`'s shape without being one**, and V1 names the
+    exception rather than being loosened: `{"en": {"asset": …}}` is keys drawn from `id`/`en`
+    carrying non-strings, which is precisely the defect V1 catches everywhere else.
+    `ContentValidator.languageKeyedNonTranslationFields` is the one-element set, and
+    `NarrationValidationTests` proves the rule still bites on any other field. `ContentLanguage` is
+    `CodingKeyRepresentable` for the same field, or the dictionary would encode as a flat array.
+  - **An unknown language key fails the decode; the validator never sees it.** Content shipping
+    `"jv"` has claimed a language this build cannot render, and swallowing the key would hide it
+    behind a screen that quietly draws no control. What the validator does check is V14 (the file is
+    there), V3 (the citation resolves) and a recording in a language outside `Quest.languages` —
+    a file no state of the app could ever play.
+  - **`NarrationPlayer` is a tenth file under `Services/` and nothing above it knows it exists.**
+    `AVAudioPlayer` over a bundled file URL, never `AVPlayer` over something streamable (`AD-3`); a
+    file that will not decode lands on `.unavailable`, which draws no control and interrupts
+    nothing. The screen owns it as `@State`, so leaving the page stops the reading without anything
+    having to remember to. Seen on iPhone 17 Pro / iOS 26.5 —
+    `docs/screenshots/m17-story-narration-playing.png`.
 - **Consent for those five places is a self-grant, not a grant.** D1-b: every `consent/badung-*.json`
   names the project team as `grantingBody`, scoped to inclusion and naming, for a non-public academic
   prototype. None of the five sites has been approached. The signatory fields are still literal

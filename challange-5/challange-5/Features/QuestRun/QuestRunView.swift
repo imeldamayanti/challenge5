@@ -288,6 +288,9 @@ struct QuestRunView: View {
             illustrationURL: model.storyRevealArtworkURL,
             // The phrases the frames ring with the hand-drawn mark, per place and language.
             markedPhrases: model.storyRevealMarkedPhrases,
+            // The spoken reading of this checkpoint's passage, when content ships one in the run's
+            // language (`Checkpoint.narration`). Nothing plays unasked — see `NarrationPlayer`.
+            narrationURL: model.storyRevealNarrationURL,
             onFinish: { model.advanceFromStoryReveal() },
             onBack: { model.retreatFromStoryStage() })
     }

@@ -137,7 +137,13 @@
           }
         }
       ],
-      "stampId": "stamp-badung-empat-wajah-1"
+      "stampId": "stamp-badung-empat-wajah-1",
+      "narration": {
+        "en": {
+          "asset": "quests/badung-empat-wajah/narration/cp1-en.mp3",
+          "sourceRef": 4
+        }
+      }
     },
     {
       "id": "badung-empat-wajah-cp2",
@@ -190,7 +196,13 @@
           }
         }
       ],
-      "stampId": "stamp-badung-empat-wajah-2"
+      "stampId": "stamp-badung-empat-wajah-2",
+      "narration": {
+        "en": {
+          "asset": "quests/badung-empat-wajah/narration/cp2-en.mp3",
+          "sourceRef": 3
+        }
+      }
     },
     {
       "id": "badung-empat-wajah-cp3",
@@ -253,7 +265,13 @@
           }
         }
       ],
-      "stampId": "stamp-badung-empat-wajah-3"
+      "stampId": "stamp-badung-empat-wajah-3",
+      "narration": {
+        "en": {
+          "asset": "quests/badung-empat-wajah/narration/cp3-en.mp3",
+          "sourceRef": 3
+        }
+      }
     },
     {
       "id": "badung-empat-wajah-cp4",
@@ -308,7 +326,13 @@
         }
       ],
       "bonusPrompts": [],
-      "stampId": "stamp-badung-empat-wajah-4"
+      "stampId": "stamp-badung-empat-wajah-4",
+      "narration": {
+        "en": {
+          "asset": "quests/badung-empat-wajah/narration/cp4-en.mp3",
+          "sourceRef": 4
+        }
+      }
     },
     {
       "id": "badung-empat-wajah-cp5",
@@ -358,7 +382,13 @@
           }
         }
       ],
-      "stampId": "stamp-badung-empat-wajah-5"
+      "stampId": "stamp-badung-empat-wajah-5",
+      "narration": {
+        "en": {
+          "asset": "quests/badung-empat-wajah/narration/cp5-en.mp3",
+          "sourceRef": 4
+        }
+      }
     }
   ],
   "heroImageAsset": "quests/badung-empat-wajah/hero.png"

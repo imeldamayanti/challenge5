@@ -25,13 +25,41 @@
       "en": "The statue stands in the middle of a public junction and can be seen at any hour; the hours below are recorded as all-day. The safe time to stop and read is daylight, not the middle of the night."
     },
     "weekly": [
-      { "weekday": 1, "open": "00:00", "close": "23:59" },
-      { "weekday": 2, "open": "00:00", "close": "23:59" },
-      { "weekday": 3, "open": "00:00", "close": "23:59" },
-      { "weekday": 4, "open": "00:00", "close": "23:59" },
-      { "weekday": 5, "open": "00:00", "close": "23:59" },
-      { "weekday": 6, "open": "00:00", "close": "23:59" },
-      { "weekday": 7, "open": "00:00", "close": "23:59" }
+      {
+        "weekday": 1,
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "weekday": 2,
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "weekday": 3,
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "weekday": 4,
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "weekday": 5,
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "weekday": 6,
+        "open": "00:00",
+        "close": "23:59"
+      },
+      {
+        "weekday": 7,
+        "open": "00:00",
+        "close": "23:59"
+      }
     ]
   },
   "dressCode": {
@@ -99,6 +127,11 @@
     {
       "kind": "documented",
       "citation": "BELUM DIVERIFIKASI — Ilustrasi latar halaman Story untuk Patung Catur Muka. Gambar ini ilustrasi hasil generasi, bukan survei lapangan.",
+      "url": null
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Narasi audio untuk titik ini dibacakan oleh suara sintetis (text-to-speech), bukan oleh narator manusia dan bukan rekaman lapangan. Isinya adalah pembacaan loreSegment checkpoint ini; klaim di dalamnya bersumber pada entri sources lain di berkas ini. Pelafalan nama tempat dan istilah Bali belum diperiksa oleh penutur lokal.",
       "url": null
     }
   ],

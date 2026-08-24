@@ -24,13 +24,41 @@
       "en": "Visiting hours have not been confirmed with the temple's custodians. This is an active temple: it closes to visitors during odalan and other ceremonies. The odalan falls on Purnama Jyestha and Purnama Kalima."
     },
     "weekly": [
-      { "weekday": 1, "open": "08:00", "close": "17:00" },
-      { "weekday": 2, "open": "08:00", "close": "17:00" },
-      { "weekday": 3, "open": "08:00", "close": "17:00" },
-      { "weekday": 4, "open": "08:00", "close": "17:00" },
-      { "weekday": 5, "open": "08:00", "close": "17:00" },
-      { "weekday": 6, "open": "08:00", "close": "17:00" },
-      { "weekday": 7, "open": "08:00", "close": "17:00" }
+      {
+        "weekday": 1,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 2,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 3,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 4,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 5,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 6,
+        "open": "08:00",
+        "close": "17:00"
+      },
+      {
+        "weekday": 7,
+        "open": "08:00",
+        "close": "17:00"
+      }
     ]
   },
   "dressCode": {
@@ -93,6 +121,11 @@
     {
       "kind": "documented",
       "citation": "BELUM DIVERIFIKASI — Ilustrasi latar halaman Story untuk Pura Maospahit. Gambar ini ilustrasi hasil generasi, bukan survei lapangan.",
+      "url": null
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Narasi audio untuk titik ini dibacakan oleh suara sintetis (text-to-speech), bukan oleh narator manusia dan bukan rekaman lapangan. Isinya adalah pembacaan loreSegment checkpoint ini; klaim di dalamnya bersumber pada entri sources lain di berkas ini. Pelafalan nama tempat dan istilah Bali belum diperiksa oleh penutur lokal.",
       "url": null
     }
   ],

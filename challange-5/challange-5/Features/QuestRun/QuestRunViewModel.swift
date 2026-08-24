@@ -917,6 +917,19 @@ final class QuestRunViewModel {
         return (try? repository.assetURL(artwork.asset)) ?? nil
     }
 
+    /// The spoken reading of the current checkpoint's passage, in the run's language
+    /// (`Checkpoint.narration`).
+    ///
+    /// `nil` where content ships no recording for *this* language, and that is the whole of the
+    /// language rule: there is no fallback to another language's file, for the same reason
+    /// `LocalizedText` has none (`NFR-I18N-03`). An Indonesian walker at a checkpoint recorded only
+    /// in English gets the passage on the page and no control, which is a missing recording rather
+    /// than an English narrator over Indonesian prose.
+    var storyRevealNarrationURL: URL? {
+        guard let narration = currentCheckpoint?.narration[language] else { return nil }
+        return (try? repository.assetURL(narration.asset)) ?? nil
+    }
+
     /// The story reveal's top-bar title — the quest's name on the final checkpoint only, as the
     /// four frames draw it: `964:3246` carries "The Last Traces of Badung"; the other three draw
     /// the bar empty.

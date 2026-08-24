@@ -39,6 +39,7 @@ struct StoryRevealScreen: View {
     @Environment(\.hisploraPalette) private var palette
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.accessibilityVoiceOverEnabled) private var voiceOverEnabled
+    @Environment(\.scenePhase) private var scenePhase
 
     let language: ContentLanguage
     /// Every lore block at this checkpoint, already joined into one passage and resolved to the
@@ -72,6 +73,12 @@ struct StoryRevealScreen: View {
     /// against the joined passage at this run's language. Empty draws no marks; a phrase the text
     /// does not contain is ignored rather than an error.
     var markedPhrases: [String] = []
+    /// The spoken reading of this passage (`Checkpoint.narration`), when content ships one in the
+    /// run's language. `nil` draws no control at all rather than a disabled one: a checkpoint with
+    /// no recording is the normal case, and a permanently dead button is a promise the page cannot
+    /// keep. Every surface that reuses this screen — the sidequest letter among them — passes
+    /// nothing and is unchanged.
+    var narrationURL: URL? = nil
     let onFinish: () -> Void
     let onBack: () -> Void
 
@@ -93,6 +100,10 @@ struct StoryRevealScreen: View {
     }
 
     @State private var reveal: Reveal = .lead
+    /// Owned by the screen rather than by the run's view model, so the reading stops when this page
+    /// goes away without anything having to remember to stop it. The narration belongs to the page
+    /// the words are on, and there is exactly one of those at a time.
+    @State private var narration = NarrationPlayer()
 
     /// Reduce Motion and VoiceOver skip the sequence outright rather than running it faster: a
     /// screen reader must be handed the whole page, and a reader who has asked for less motion has
@@ -114,6 +125,35 @@ struct StoryRevealScreen: View {
             } else {
                 packagedStrip
             }
+        }
+        // `onChange` as well as the initial load: `QuestRunView` routes every checkpoint's story to
+        // this one view, so arriving at the next stop changes the URL without the screen ever being
+        // rebuilt. `load` is a no-op on an unchanged URL, which is what keeps a reading running
+        // across a reveal step.
+        .onAppear { narration.load(narrationURL) }
+        .onChange(of: narrationURL) { _, url in narration.load(url) }
+        // The reading starts when the passage does, so the words and the voice arrive together
+        // rather than the walker having to ask for the second.
+        //
+        // Keyed on `reveal` rather than on `onAppear`, because on the one surface that draws a lead
+        // sentence the passage begins typing well after the page appears — and the promise is that
+        // the voice tracks the words, not the screen. `NarrationPlayer.autoplay()` is idempotent and
+        // tolerates arriving before the load, which it can: SwiftUI does not order a body's
+        // `onAppear` against a child's `task`.
+        //
+        // **Not under VoiceOver.** A narrator starting on top of a screen reader is two voices at
+        // once, and the reader who most needs the passage read out is the one who would lose it.
+        // The control is still there to be tapped.
+        .onChange(of: reveal) { _, step in
+            guard step >= .passage, !voiceOverEnabled else { return }
+            narration.autoplay()
+        }
+        .onDisappear { narration.stop() }
+        // Leaving the app stops the reading rather than continuing it: nothing here declares
+        // background audio, and a narrator that outlives the screen is a voice with no page behind
+        // it.
+        .onChange(of: scenePhase) { _, phase in
+            if phase != .active { narration.stop() }
         }
     }
 
@@ -380,6 +420,18 @@ struct StoryRevealScreen: View {
 
     private var footer: some View {
         HStack {
+            // The narration control takes the corner the frames leave empty, opposite Next — the
+            // two things a reader can do with a finished page, one at each end of the same line.
+            // It is absent, not disabled, where content ships no recording.
+            if narration.state != .unavailable {
+                HisploraNarrationButton(
+                    isPlaying: narration.state == .playing,
+                    progress: narration.progress,
+                    accessibilityLabel: UIStrings.string(
+                        narration.state == .playing ? .storyNarrationPause : .storyNarrationPlay,
+                        language),
+                    action: { narration.toggle() })
+            }
             // `293:1643` carries only the next control — no skip. `storyRevealSkip` stays in the
             // string table rather than being deleted along with its one call site: it names a real
             // affordance (finish the page early) that the frame simply does not draw, not a piece
@@ -389,7 +441,10 @@ struct StoryRevealScreen: View {
                 accessibilityLabel: UIStrings.string(.transitionContinue, language),
                 action: onFinish)
         }
-        // 24 to the right edge and 20 to the home indicator, as `293:1657` is drawn.
+        // 24 to the right edge and 20 to the home indicator, as `293:1657` is drawn. The leading
+        // edge takes the page's own 20-point margin, so the narration control lines up with the
+        // passage above it rather than with the Next button opposite.
+        .padding(.leading, Self.margin)
         .padding(.trailing, 24)
         .padding(.bottom, Self.margin)
     }

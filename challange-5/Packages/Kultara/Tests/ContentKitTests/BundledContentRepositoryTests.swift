@@ -78,8 +78,10 @@ struct BundledContentRepositoryTests {
         // new coastline, and `IllustratedMapGeoreference`'s two rates were re-measured off it.
         // `2026.09.12` shipped the four Story Reveal drawings (`964:3212` and its siblings) as
         // `Place.storyArtwork`, with a citation each.
+        // `2026.09.13` added `Checkpoint.narration` — an English reading of each of the five
+        // checkpoints' passages, and a source entry on each Place saying the voice is synthesised.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.12")
+        #expect(try repository.contentBundleVersion() == "2026.09.13")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)

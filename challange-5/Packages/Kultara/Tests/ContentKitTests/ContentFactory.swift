@@ -65,7 +65,8 @@ enum ContentFactory {
         placeId: String = "place-a",
         role: CheckpointRole = .start,
         clueToNext: LocalizedText? = text("Petunjuk"),
-        tasks: [ContentTask] = [task()]
+        tasks: [ContentTask] = [task()],
+        narration: [ContentLanguage: CheckpointNarration] = [:]
     ) -> Checkpoint {
         Checkpoint(
             id: id,
@@ -76,7 +77,8 @@ enum ContentFactory {
             clueToNext: clueToNext,
             tasks: tasks,
             bonusPrompts: [],
-            stampId: "stamp-\(id)")
+            stampId: "stamp-\(id)",
+            narration: narration)
     }
 
     static func quest(
@@ -87,6 +89,7 @@ enum ContentFactory {
         totalDurationMin: Int = 105,
         estimatedCost: EstimatedCost = EstimatedCost(amount: 0, currency: "IDR", breakdown: []),
         heroImageAsset: String? = nil,
+        languages: [ContentLanguage] = [.id, .en],
         checkpoints: [Checkpoint]? = nil
     ) -> Quest {
         Quest(
@@ -110,6 +113,7 @@ enum ContentFactory {
             hardLatestStart: hardLatestStart,
             proximityRadiusM: proximityRadiusM,
             safetyNotes: text("Hati-hati"),
+            languages: languages,
             badgeId: "badge-\(id)",
             heroImageAsset: heroImageAsset,
             checkpoints: checkpoints ?? [
