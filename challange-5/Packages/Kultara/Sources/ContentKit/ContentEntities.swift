@@ -476,6 +476,37 @@ public struct ContentTask: Codable, Sendable, Equatable, Hashable, Identifiable 
     }
 }
 
+/// A spoken reading of one checkpoint's `loreSegment`, per language.
+///
+/// **Keyed by language with no fallback, deliberately.** `LocalizedText` fails a decode rather than
+/// mixing languages in one passage (`NFR-I18N-03`); the same rule has to hold when the passage is
+/// spoken, and it holds here by absence — a language the dictionary does not carry has no narration
+/// at all, and the screen draws no control. Playing an English reading over an Indonesian passage
+/// would be the exact failure `LocalizedText` exists to make impossible, arriving through a
+/// different door.
+///
+/// **It sits on `Checkpoint`, not on `Place`.** The recording reads *this quest's* passage at this
+/// stop, not a fact about the site — two quests visiting one place would narrate different words.
+/// That is the same division `loreSegment` already draws against `Place.loreStandalone`, and the
+/// reason `sourceRef` below indexes the owning **Place's** `sources`: so does every
+/// `LoreBlock.sourceRefs` in a `loreSegment`.
+public struct CheckpointNarration: Codable, Sendable, Equatable, Hashable {
+    /// Path within the content bundle's `assets/`, checked by validator rule V14.
+    public let asset: String
+    /// Index into the owning Place's `sources`, checked by validator rule V3.
+    ///
+    /// Present for the same reason `PlaceStoryArtwork` carries one: a synthesised voice is a fact
+    /// about the recording that content review has to be able to read. The Story Reveal does not
+    /// display it — that screen's `FR-CP-05` deviation covers the whole page — so this is where the
+    /// provenance lives.
+    public let sourceRef: Int
+
+    public init(asset: String, sourceRef: Int) {
+        self.asset = asset
+        self.sourceRef = sourceRef
+    }
+}
+
 public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
     public let id: String
     public let orderIndex: Int
@@ -487,6 +518,10 @@ public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
     public let tasks: [ContentTask]
     public let bonusPrompts: [BonusPrompt]
     public let stampId: String
+    /// The spoken reading of `loreSegment`, per language, where content ships one. Empty is the
+    /// normal state — most checkpoints will never be recorded, and a checkpoint without a reading
+    /// simply draws no narration control.
+    public let narration: [ContentLanguage: CheckpointNarration]
 
     public init(
         id: String,
@@ -497,7 +532,8 @@ public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
         clueToNext: LocalizedText?,
         tasks: [ContentTask] = [],
         bonusPrompts: [BonusPrompt] = [],
-        stampId: String
+        stampId: String,
+        narration: [ContentLanguage: CheckpointNarration] = [:]
     ) {
         self.id = id
         self.orderIndex = orderIndex
@@ -508,6 +544,7 @@ public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
         self.tasks = tasks
         self.bonusPrompts = bonusPrompts
         self.stampId = stampId
+        self.narration = narration
     }
 
     public init(from decoder: any Decoder) throws {
@@ -521,6 +558,11 @@ public struct Checkpoint: Codable, Sendable, Equatable, Identifiable {
         tasks = try c.decodeIfPresent([ContentTask].self, forKey: .tasks) ?? []
         bonusPrompts = try c.decodeIfPresent([BonusPrompt].self, forKey: .bonusPrompts) ?? []
         stampId = try c.decode(String.self, forKey: .stampId)
+        // An unknown language key is a decode failure rather than a silently dropped recording:
+        // content that ships `"jv"` has made a claim about a language this build cannot render, and
+        // swallowing it would hide the mistake behind a screen that simply draws no control.
+        narration = try c.decodeIfPresent(
+            [ContentLanguage: CheckpointNarration].self, forKey: .narration) ?? [:]
     }
 }
 

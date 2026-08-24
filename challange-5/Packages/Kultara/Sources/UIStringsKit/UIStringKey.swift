@@ -200,6 +200,16 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// halves rather than one string because the second half is content (`AD-4`): the lead is the
     /// app's, the place is the quest's.
     case storyRevealJourneyLead
+    /// The spoken reading of the checkpoint's passage (`Checkpoint.narration`) — the control that
+    /// starts it and the control that stops it.
+    ///
+    /// Two keys rather than one label plus a played/paused tint: the button's glyph changes and the
+    /// glyph is a picture, so what a screen reader is handed has to change with it
+    /// (`NFR-A11Y-05`). They say *narration* rather than *audio* because a walker at a checkpoint
+    /// has one thing that could be playing, and naming it is what makes the control legible without
+    /// looking at it.
+    case storyNarrationPlay
+    case storyNarrationPause
     case transitionSteppingInto
     case transitionContinue
     /// `187:1103`'s map, when the beating dot is over it. A separate label from

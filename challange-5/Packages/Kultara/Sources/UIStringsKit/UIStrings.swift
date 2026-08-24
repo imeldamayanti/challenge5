@@ -284,6 +284,10 @@ public enum UIStrings {
         .storyRevealSkip: LocalizedText(id: "Lewati cerita", en: "Skip the story"),
         .storyRevealJourneyLead: LocalizedText(
             id: "Perjalananmu dimulai di", en: "Your journey begins at"),
+        .storyNarrationPlay: LocalizedText(
+            id: "Putar narasi", en: "Play the narration"),
+        .storyNarrationPause: LocalizedText(
+            id: "Jeda narasi", en: "Pause the narration"),
         .transitionSteppingInto: LocalizedText(
             id: "Melangkah ke titik pertama %@", en: "Stepping into the first place of %@"),
         .transitionContinue: LocalizedText(id: "Lanjutkan", en: "Continue"),

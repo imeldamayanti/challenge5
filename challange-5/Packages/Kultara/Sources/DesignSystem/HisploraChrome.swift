@@ -299,6 +299,79 @@ public struct HisploraBackButton: View {
     }
 }
 
+/// The narration control on the Story Reveal pages — the same 48-point circle as
+/// `HisploraNextButton` opposite it, with a progress ring drawn round its edge.
+///
+/// **The ring is feedback, not a scrubber.** It says the reading is running and roughly how far in
+/// it is; there is no seek, because a walker standing at a gate holding a phone is not the reader
+/// who wants to drag a playhead. It is drawn in `inkCream` at a third opacity for the track and
+/// full for the sweep, both already measured against `brownMid`, so this component introduces no
+/// palette token and no new measured pair.
+///
+/// **The glyph and the label change together.** Colour and motion never carry the state on their
+/// own (`NFR-A11Y-05`): play becomes pause in the picture and the caller passes the matching label
+/// with it. The ring is `accessibilityHidden` for the same reason — a percentage read out on every
+/// tick is noise, and the label already says which of the two states the control is in.
+public struct HisploraNarrationButton: View {
+    @Environment(\.hisploraPalette) private var palette
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private let isPlaying: Bool
+    private let progress: Double
+    private let accessibilityLabel: String
+    private let action: () -> Void
+
+    /// - Parameter progress: 0…1 through the recording. Clamped here rather than trusted, so a
+    ///   player reporting a duration of zero cannot draw an arc of `NaN`.
+    public init(
+        isPlaying: Bool,
+        progress: Double,
+        accessibilityLabel: String,
+        action: @escaping () -> Void
+    ) {
+        self.isPlaying = isPlaying
+        self.progress = progress.isFinite ? min(max(progress, 0), 1) : 0
+        self.accessibilityLabel = accessibilityLabel
+        self.action = action
+    }
+
+    public var body: some View {
+        Button(action: action) {
+            Image(systemName: isPlaying ? "pause.fill" : "play.fill")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(palette.inkCream.color)
+                // The play triangle's optical centre sits left of its bounding box's, so it is
+                // nudged right to look centred in the circle. The pause bars are symmetric and
+                // need none of it.
+                .offset(x: isPlaying ? 0 : 2)
+                .frame(width: 48, height: 48)
+                .background(palette.brownMid.color, in: Circle())
+                .overlay { ring }
+                .contentShape(Circle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    /// The sweep, inset by half its own width so the stroke sits inside the circle rather than
+    /// straddling its edge, and rotated so zero is at the top.
+    private var ring: some View {
+        ZStack {
+            Circle()
+                .strokeBorder(palette.inkCream.color.opacity(0.3), lineWidth: 2)
+            Circle()
+                .inset(by: 1)
+                .trim(from: 0, to: progress)
+                .stroke(palette.inkCream.color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+        }
+        // A ring that ticks forward on its own is motion; a reader who asked for less of it gets
+        // the state from the glyph, which is where the meaning is anyway.
+        .opacity(reduceMotion ? 0 : 1)
+        .accessibilityHidden(true)
+    }
+}
+
 /// The 48-point circular next control on the Story Reveal pages (`187:1053`).
 public struct HisploraNextButton: View {
     @Environment(\.hisploraPalette) private var palette

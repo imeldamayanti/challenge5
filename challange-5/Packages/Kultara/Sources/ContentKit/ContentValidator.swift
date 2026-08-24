@@ -169,16 +169,30 @@ public enum ContentValidator {
         }
     }
 
+    /// The one field whose keys are language codes without being a `LocalizedText`.
+    ///
+    /// `Checkpoint.narration` maps a language to a *recording* — `{"en": {"asset": …}}` — so it
+    /// wears the shape this rule identifies a translation pair by, while carrying objects rather
+    /// than strings. Named here rather than handled by loosening the rule to "values that are not
+    /// strings are somebody else's problem": that loosening would also wave through a genuine
+    /// `LocalizedText` whose translation is an object, which is precisely a V1 defect.
+    ///
+    /// Its own shape is checked where the decoded model is: an unknown language key fails
+    /// `Checkpoint`'s decoder, and the asset and `sourceRef` are checked by V14 and V3.
+    private static let languageKeyedNonTranslationFields: Set<String> = ["narration"]
+
     /// A `LocalizedText` in JSON is an object whose keys are drawn only from `id` and `en` and
-    /// whose values are strings. Nothing else in the schema has that shape, so the test
-    /// identifies the type without needing to know which field it sits in — which is the point,
-    /// since a gap can appear anywhere a writer types.
+    /// whose values are strings. Nothing else in the schema has that shape — bar the one field
+    /// above — so the test identifies the type without needing to know which field it sits in,
+    /// which is the point, since a gap can appear anywhere a writer types.
     private static func checkLocalizedTextShape(
         _ dictionary: [String: Any],
         keyPath: String,
         path: String,
         findings: inout [ValidationFinding]
     ) {
+        let field = keyPath.split(separator: ".").last.map(String.init) ?? keyPath
+        guard !languageKeyedNonTranslationFields.contains(field) else { return }
         let keys = Set(dictionary.keys)
         guard !keys.isEmpty, keys.isSubset(of: ["id", "en"]) else { return }
         guard dictionary.values.allSatisfy({ $0 is String }) else {
@@ -528,6 +542,36 @@ public enum ContentValidator {
             findings.append(contentsOf: loreFindings(
                 checkpoint.loreSegment, sourceCount: place.sources.count,
                 path: path, label: "checkpoint \(checkpoint.id) loreSegment"))
+
+            // V14 and V3, over the spoken reading of that same passage — the audio the Story
+            // Reveal plays. Two checks for the same two reasons the drawings above get two: a path
+            // that resolves to nothing draws a control that plays silence, and a `sourceRef` past
+            // the Place's sources leaves a synthesised voice with no provenance recorded anywhere.
+            //
+            // The language key is not checked here because it cannot be wrong by the time this
+            // runs — `Checkpoint`'s decoder rejects a key that is not a `ContentLanguage`, so bad
+            // content fails to load rather than reaching the validator.
+            for (narrationLanguage, narration) in checkpoint.narration
+                .sorted(by: { $0.key.rawValue < $1.key.rawValue }) {
+                if !assets.exists(narration.asset) {
+                    findings.append(ValidationFinding(
+                        rule: .v14, path: path,
+                        message: "Checkpoint \(checkpoint.id) narration [\(narrationLanguage.rawValue)] asset \"\(narration.asset)\" does not exist."))
+                }
+                if narration.sourceRef < 0 || narration.sourceRef >= place.sources.count {
+                    findings.append(ValidationFinding(
+                        rule: .v3, path: path,
+                        message: "Checkpoint \(checkpoint.id) narration [\(narrationLanguage.rawValue)] cites source index \(narration.sourceRef); the Place has \(place.sources.count) source(s)."))
+                }
+                // A recording in a language the quest does not offer is content nobody can reach:
+                // the run's language comes from `Quest.languages`, so there is no state in which
+                // this file would ever be played.
+                if !quest.languages.contains(narrationLanguage) {
+                    findings.append(ValidationFinding(
+                        rule: .v3, path: path,
+                        message: "Checkpoint \(checkpoint.id) ships narration in \(narrationLanguage.rawValue), which is not among the quest's languages."))
+                }
+            }
 
             // V10 — FR-CP-02
             if isFinal, checkpoint.clueToNext != nil {

@@ -77,9 +77,9 @@ struct BundledContentRepositoryTests {
         // Penida — so `aspectRatio` went 1.3716 → 1.5, every `mapPoint` was re-authored against the
         // new coastline, and `IllustratedMapGeoreference`'s two rates were re-measured off it.
         // `2026.09.12` shipped the four Story Reveal drawings (`964:3212` and its siblings) as
-        // `Place.storyArtwork`, with a citation each, and `2026.09.13` gave Pura Maospahit a
-        // `siteMap` — the second Place to carry one, and the reason the foot of its task sheet now
-        // draws the map hint at all.
+        // `Place.storyArtwork`, with a citation each.
+        // `2026.09.13` added `Checkpoint.narration` — an English reading of each of the five
+        // checkpoints' passages, and a source entry on each Place saying the voice is synthesised.
         let repository = try repository()
         #expect(try repository.contentBundleVersion() == "2026.09.13")
     }
