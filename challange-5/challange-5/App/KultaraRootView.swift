@@ -46,6 +46,11 @@ struct KultaraRootView: View {
     /// `sideQuestCover` below — this flow arrives from outside the navigation stack the run screen
     /// was just popped off of.
     @State private var completionRecapRun: Run?
+    /// False for the flow above — finishing hands the walker on to the Journal shelf. True when the
+    /// Trip Summary's own clock glyph reopened the carousel for a walk already on that shelf, in
+    /// which case finishing it should simply close the cover and land back on the summary that
+    /// opened it, not jump anywhere a second time.
+    @State private var completionRecapIsReplay = false
     /// Bumped whenever a walk changes, so the home screen's journal is rebuilt. The store is not
     /// observable — it is a protocol with a file behind it — and a counter is a smaller thing to
     /// own than an observation layer this milestone would use in exactly one place.
@@ -555,6 +560,7 @@ struct KultaraRootView: View {
                 section: journalLetterSection,
                 photoStore: environment.photoStore,
                 shareCards: environment.shareCards,
+                onShowCompletion: { replayCompletionRecap(for: run) },
                 // Back to the papers, not out to the shelf. The two pages are reached *through*
                 // `791:5551`, so the way back from one is the choice that opened it — a reader who
                 // finished the summary and wants the history should not have to unseal the envelope
@@ -657,6 +663,16 @@ struct KultaraRootView: View {
     /// what now does the jump `openRecap` used to do directly.
     private func openRecap(for run: Run) {
         runDestination = nil
+        completionRecapIsReplay = false
+        completionRecapRun = run
+    }
+
+    /// The Trip Summary's own clock glyph — replays the carousel for a walk already on the shelf,
+    /// rather than the fresh-finish flow `openRecap` drives. `finishCompletionRecap` checks
+    /// `completionRecapIsReplay` to tell the two apart: this one dismisses back to the summary that
+    /// opened it, and never jumps to the Journal shelf a second time.
+    private func replayCompletionRecap(for run: Run) {
+        completionRecapIsReplay = true
         completionRecapRun = run
     }
 
@@ -669,8 +685,13 @@ struct KultaraRootView: View {
     /// (`StampArtworkResolver`) counts finished walks *per place*, which is a fact about every Run,
     /// not just this one, so a hand-rolled `SealedLetterPresentation` here could tier a stamp
     /// differently from the one the shelf itself would show for the same walk.
+    ///
+    /// **Skipped entirely for a replay.** The walker opened the carousel from the Journal, which
+    /// means the shelf and `journalLetter` are already exactly where this would try to send them —
+    /// dismissing the cover is the whole job.
     private func finishCompletionRecap(for run: Run) {
         completionRecapRun = nil
+        guard !completionRecapIsReplay else { return }
         let letters = SealedLettersViewModel(
             store: environment.runStore, repository: environment.repository, language: language)
         guard let letter = letters.letters.first(where: { $0.id == run.id }) else { return }

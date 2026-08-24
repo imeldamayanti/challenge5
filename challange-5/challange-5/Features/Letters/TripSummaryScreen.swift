@@ -35,6 +35,11 @@ struct TripSummaryScreen: View {
     let photoStore: any PhotoStore
     /// Mints the recap card's public link (`c2` phase 5). `NoShareCardMinting` with no backend.
     let shareCards: any ShareCardMinting
+    /// The bar's clock glyph — replays the "You Made History Come Alive!" carousel
+    /// (`TripRecapCarouselScreen`) for this same walk, rather than the fresh-finish flow that
+    /// carousel normally opens from. `KultaraRootView` owns the presentation, since assembling the
+    /// carousel's stat tile needs the run store this screen deliberately does not carry (`AD-4`).
+    let onShowCompletion: () -> Void
     let onClose: () -> Void
 
     /// The minted link, once minting finishes. `nil` means no link exists **right now** — nothing
@@ -95,6 +100,8 @@ struct TripSummaryScreen: View {
                 TripPageBar(
                     title: UIStrings.string(.journalPaperSummaryEyebrow, language),
                     backLabel: UIStrings.string(.tripPageBack, language),
+                    onShowRecap: onShowCompletion,
+                    recapLabel: UIStrings.string(.journeySavedRecapAction, language),
                     shareState: shareState,
                     shareLabel: UIStrings.string(.tripShare, language),
                     preparingLabel: UIStrings.string(.tripSharePreparing, language),

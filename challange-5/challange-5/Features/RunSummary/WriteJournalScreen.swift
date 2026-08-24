@@ -52,11 +52,15 @@ struct WriteJournalScreen: View {
                         card
                         Button(UIStrings.string(.writeJournalSaveAction, language)) { save() }
                             .buttonStyle(.hisploraPillOnPaper)
-                            .disabled(trimmedText.isEmpty)
+                            .disabled(!canSave)
                     }
                     .padding(KultaraMetrics.lg)
                     .padding(.top, KultaraMetrics.md)
                 }
+                // Tapping anywhere off the field puts the keyboard away — the field is the only
+                // text input on the screen, so there is no ambiguity about what a stray tap means.
+                .contentShape(Rectangle())
+                .onTapGesture { experienceFocused = false }
             }
         }
         .navigationBarBackButtonHidden()
@@ -75,22 +79,17 @@ struct WriteJournalScreen: View {
                     onSeeRecap: { onOpenRecap(savedRun) })
             }
         }
-        .toolbar {
-            // The keyboard's own Done — the field is the only text input on the screen, and a
-            // walker who wants their photo slots back before saving has no other way to put the
-            // keyboard away.
-            ToolbarItemGroup(placement: .keyboard) {
-                Spacer()
-                Button(UIStrings.string(.writeJournalKeyboardDone, language)) {
-                    experienceFocused = false
-                }
-            }
-        }
         .onChange(of: placePickerItem) { _, item in load(item) { placePhoto = $0 } }
         .onChange(of: selfiePickerItem) { _, item in load(item) { selfiePhoto = $0 } }
     }
 
     private var trimmedText: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    // Both `*`-marked fields — the experience text and both keepsake photos — must be filled
+    // before the walk can be saved.
+    private var canSave: Bool {
+        !trimmedText.isEmpty && placePhoto != nil && selfiePhoto != nil
+    }
 
     // MARK: - The card (`921-2256`)
 
@@ -194,24 +193,25 @@ struct WriteJournalScreen: View {
         let ring = SRGBColor(hex: "#D8D8D8").color
         return PhotosPicker(selection: selection, matching: .images) {
             VStack(spacing: 8) {
-                if let image {
-                    // `Color.clear` + overlay, not a bare `frame(height:)`: a filled image sized
-                    // by height alone takes its own aspect-derived width, which overruns the slot
-                    // and prints past the card. The clear pane holds the slot's own width; the
-                    // photo fills it and is clipped to it — the frame's filled state.
-                    Color.clear
-                        .frame(height: 64)
-                        .overlay {
+                // `Color.clear` + overlay, not a bare `frame(height:)`: a filled image sized by
+                // height alone takes its own aspect-derived width, which overruns the slot and
+                // prints past the card. The clear pane holds the slot's own width and height for
+                // both the empty and the filled state, so adding a photo never changes the slot's
+                // size.
+                Color.clear
+                    .frame(height: 64)
+                    .overlay {
+                        if let image {
                             Image(uiImage: image)
                                 .resizable()
                                 .aspectRatio(contentMode: .fill)
+                        } else {
+                            Image(systemName: "camera.fill")
+                                .font(.system(size: 22))
+                                .foregroundStyle(ink)
                         }
-                        .clipShape(RoundedRectangle(cornerRadius: 10))
-                } else {
-                    Image(systemName: "camera.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(ink)
-                }
+                    }
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
                 Text(label)
                     .font(.system(size: 15, weight: .semibold))
                     .foregroundStyle(labelInk)
@@ -239,7 +239,7 @@ struct WriteJournalScreen: View {
     }
 
     private func save() {
-        guard !trimmedText.isEmpty else { return }
+        guard canSave else { return }
         savedRun = onSave(trimmedText, placePhoto, selfiePhoto)
     }
 }

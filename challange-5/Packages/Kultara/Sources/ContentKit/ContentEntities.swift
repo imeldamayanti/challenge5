@@ -103,6 +103,35 @@ public struct LoreBlock: Codable, Sendable, Equatable, Hashable {
     }
 }
 
+/// The cutscene's named sitter — `187:866`'s `subjectName`/`subjectSubtitle`/portrait, sourced from
+/// content rather than baked into the view (`AD-4`, `FR-RUN-06`). `nil` until a quest ships one; the
+/// cutscene falls back to the current place's name and the quest's hero image, as it always did.
+///
+/// A portrait of a named historical person is a claim like any other lore, so it carries the same
+/// `accuracy`/`sourceRefs` pair rather than a free-standing name string — `sourceRefs` resolves the
+/// same way `hookLore`'s does, against the start checkpoint's Place `sources`.
+public struct CutsceneSubject: Codable, Sendable, Equatable, Hashable {
+    public let name: LocalizedText
+    public let subtitle: LocalizedText?
+    public let portraitAsset: String
+    public let accuracy: AccuracyLabel
+    public let sourceRefs: [Int]
+
+    public init(
+        name: LocalizedText,
+        subtitle: LocalizedText? = nil,
+        portraitAsset: String,
+        accuracy: AccuracyLabel,
+        sourceRefs: [Int]
+    ) {
+        self.name = name
+        self.subtitle = subtitle
+        self.portraitAsset = portraitAsset
+        self.accuracy = accuracy
+        self.sourceRefs = sourceRefs
+    }
+}
+
 // MARK: - Place
 
 public struct OpeningHours: Codable, Sendable, Equatable, Hashable {
@@ -518,6 +547,10 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
     /// The photograph the discovery card is built around. Optional: a quest with no hero still
     /// lists, it just reads as type on paper rather than type on an image.
     public let heroImageAsset: String?
+    /// The cutscene's named sitter. `nil` where content ships no such person — the common case —
+    /// and the cutscene falls back to `heroImageAsset` and the current place's name, as it always
+    /// did (`CutsceneSubject`).
+    public let cutsceneSubject: CutsceneSubject?
     public let checkpoints: [Checkpoint]
 
     public init(
@@ -538,6 +571,7 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         languages: [ContentLanguage] = [.id, .en],
         badgeId: String,
         heroImageAsset: String? = nil,
+        cutsceneSubject: CutsceneSubject? = nil,
         checkpoints: [Checkpoint]
     ) {
         self.id = id
@@ -557,6 +591,7 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         self.languages = languages
         self.badgeId = badgeId
         self.heroImageAsset = heroImageAsset
+        self.cutsceneSubject = cutsceneSubject
         self.checkpoints = checkpoints
     }
 
@@ -579,6 +614,7 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         languages = try c.decodeIfPresent([ContentLanguage].self, forKey: .languages) ?? [.id, .en]
         badgeId = try c.decode(String.self, forKey: .badgeId)
         heroImageAsset = try c.decodeIfPresent(String.self, forKey: .heroImageAsset)
+        cutsceneSubject = try c.decodeIfPresent(CutsceneSubject.self, forKey: .cutsceneSubject)
         checkpoints = try c.decode([Checkpoint].self, forKey: .checkpoints)
     }
 

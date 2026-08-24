@@ -51,9 +51,15 @@ public struct HisploraCompletionStage<Content: View>: View {
 /// different ground, so it is a second, smaller component rather than a parameter added to the
 /// first: the task bar's well and border are load-bearing on `brownStone`, and drawing them here
 /// would put a frame around something the design leaves bare.
+///
+/// **Story-style, not a flat step indicator.** Every segment before `currentPage` reads full, every
+/// segment after reads empty, and `currentPage`'s own segment fills by `currentFill` — the caller
+/// drives that from 0 to 1 over the page's on-screen duration, so the bar reads as counting down the
+/// way Instagram's or WhatsApp's does, rather than jumping between two fixed states on each swipe.
 public struct HisploraCompletionProgress: View {
-    private let completed: Int
+    private let currentPage: Int
     private let total: Int
+    private let currentFill: CGFloat
     private let accessibilityLabel: String
 
     /// `#AA9B8E` filled, `#41302A` unfilled — as drawn. Neither reader is used anywhere else in the
@@ -62,22 +68,36 @@ public struct HisploraCompletionProgress: View {
     private static let filled = SRGBColor(hex: "#AA9B8E")
     private static let unfilled = SRGBColor(hex: "#41302A")
 
-    public init(completed: Int, total: Int, accessibilityLabel: String) {
-        self.completed = completed
+    public init(currentPage: Int, total: Int, currentFill: CGFloat, accessibilityLabel: String) {
+        self.currentPage = currentPage
         self.total = total
+        self.currentFill = currentFill
         self.accessibilityLabel = accessibilityLabel
     }
 
     public var body: some View {
         HStack(spacing: 4) {
             ForEach(0..<max(total, 1), id: \.self) { index in
-                Capsule()
-                    .fill(index < completed ? Self.filled.color : Self.unfilled.color)
-                    .frame(height: 4)
+                GeometryReader { geometry in
+                    Capsule()
+                        .fill(Self.unfilled.color)
+                        .overlay(alignment: .leading) {
+                            Capsule()
+                                .fill(Self.filled.color)
+                                .frame(width: geometry.size.width * fraction(for: index))
+                        }
+                }
+                .frame(height: 4)
             }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func fraction(for index: Int) -> CGFloat {
+        if index < currentPage { return 1 }
+        if index == currentPage { return min(max(currentFill, 0), 1) }
+        return 0
     }
 }
 
