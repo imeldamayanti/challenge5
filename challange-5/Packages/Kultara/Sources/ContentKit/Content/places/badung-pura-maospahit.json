@@ -94,6 +94,11 @@
       "kind": "documented",
       "citation": "BELUM DIVERIFIKASI — Ilustrasi latar halaman Story untuk Pura Maospahit. Gambar ini ilustrasi hasil generasi, bukan survei lapangan.",
       "url": null
+    },
+    {
+      "kind": "documented",
+      "citation": "BELUM DIVERIFIKASI — Denah tapak Pura Maospahit. Gambar ini ilustrasi, bukan survei: jumlah dan letak bangunan, pembagian halaman, serta penomoran di dalamnya belum diukur di lapangan dan belum dicocokkan dengan sumber pustaka mana pun.",
+      "url": null
     }
   ],
   "consentRecordId": "badung-pura-maospahit",
@@ -104,5 +109,10 @@
   "storyArtwork": {
     "asset": "places/badung-pura-maospahit/story.png",
     "sourceRef": 2
+  },
+  "siteMap": {
+    "asset": "places/badung-pura-maospahit/site-map.png",
+    "aspectRatio": 2.283,
+    "sourceRef": 3
   }
 }

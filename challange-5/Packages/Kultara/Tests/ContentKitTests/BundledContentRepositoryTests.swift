@@ -77,9 +77,11 @@ struct BundledContentRepositoryTests {
         // Penida — so `aspectRatio` went 1.3716 → 1.5, every `mapPoint` was re-authored against the
         // new coastline, and `IllustratedMapGeoreference`'s two rates were re-measured off it.
         // `2026.09.12` shipped the four Story Reveal drawings (`964:3212` and its siblings) as
-        // `Place.storyArtwork`, with a citation each.
+        // `Place.storyArtwork`, with a citation each, and `2026.09.13` gave Pura Maospahit a
+        // `siteMap` — the second Place to carry one, and the reason the foot of its task sheet now
+        // draws the map hint at all.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.12")
+        #expect(try repository.contentBundleVersion() == "2026.09.13")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)
@@ -246,6 +248,33 @@ struct BundledContentRepositoryTests {
             let asset = try #require(quest.heroImageAsset, "\(quest.id) has no hero image")
             #expect(try repository.assetURL(asset) != nil, "\(asset) is missing from the bundle")
         }
+    }
+
+    /// **Two Places ship a plan now, and which two is what the walk can see.**
+    /// `TaskDetailScreen` draws the map hint at the foot of the sheet only where the Place carries a
+    /// `siteMap` — a hint that opens an empty screen is worse on a walk than no hint — so a Place
+    /// losing its plan silently removes a control the walker was offered. Content guard, reading the
+    /// shipped bundle deliberately: this is a fact about the content, not a requirement, and it
+    /// belongs with the family that catches an authoring mistake rather than with the fixture-backed
+    /// requirement guards.
+    @Test func thePlacesThatShipAPlanAreThePlacesWhoseSheetOffersOne() throws {
+        let repository = try repository()
+        // Walked in route order, which is the order the hint appears or does not appear in.
+        var withPlans: [String] = []
+        for quest in try repository.quests() {
+            for checkpoint in quest.checkpoints {
+                let place = try #require(try repository.place(id: checkpoint.placeId))
+                guard let plan = place.siteMap else { continue }
+                withPlans.append(place.id)
+                #expect(try repository.assetURL(plan.asset) != nil,
+                        "\(plan.asset) is missing from the bundle")
+                // V3's runtime half: the plan's citation is what `PlaceSiteMapScreen` prints under
+                // it, and an unresolvable `sourceRef` is a drawing making claims with nothing
+                // behind them (`FR-CP-05`).
+                #expect(plan.sourceRef >= 0 && plan.sourceRef < place.sources.count)
+            }
+        }
+        #expect(withPlans == ["badung-puri-agung-pemecutan", "badung-pura-maospahit"])
     }
 
     @Test func theRegionMapAndEveryPinAreInTheBundle() throws {
