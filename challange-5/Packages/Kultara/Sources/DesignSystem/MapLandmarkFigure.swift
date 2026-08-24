@@ -15,20 +15,34 @@ import SwiftUI
 /// no drawing still works: `MapLandmarkFigure` renders the fog and nothing else rather than
 /// borrowing a picture of somewhere it is not.
 public enum MapLandmarkArtwork: String, CaseIterable, Sendable {
-    /// The tiered meru — a mountain temple. The frame's default.
+    /// The tiered meru — the Pura Besakih temple complex. The frame's default.
     case temple = "map-marker-temple"
-    /// The naga gate, a candi bentar guarded by two serpents.
+    /// The candi bentar, the split gate. The drawing `1322:4256`'s popover stands on its quest.
     case naga = "map-marker-naga"
     /// A legong stage under its parasols.
     case dance = "map-marker-dance"
 
-    /// The design's own proportions, so a caller sizing by width gets the drawing's height for
-    /// free rather than guessing at it.
-    var aspectRatio: CGFloat {
+    /// The drawing's display box in the frame's own points — `82 × 55` off `298:1021`, `85 × 57.025`
+    /// off `1026:3382`, `85 × 61` off `298:1013` — so a caller sizing by width gets the drawing's
+    /// height for free rather than guessing at it. The dance box is *not* the shipped file's own
+    /// proportions (344 × 287): the frame draws that source cropped to fill, and the figure
+    /// reproduces the crop rather than the raw file.
+    var buildingSize: CGSize {
         switch self {
-        case .temple: 640.0 / 427.0
-        case .naga: 640.0 / 458.0
-        case .dance: 640.0 / 534.0
+        case .temple: CGSize(width: 82, height: 55)
+        case .naga: CGSize(width: 85, height: 57.025)
+        case .dance: CGSize(width: 85, height: 61)
+        }
+    }
+
+    /// Top-left of the building within the 159-point fog cluster, read off the same frames. The
+    /// building's feet sit inside the fog and its roof rises out of the top; each drawing stands
+    /// at its own depth.
+    var buildingOffset: CGPoint {
+        switch self {
+        case .temple: CGPoint(x: 36, y: 3)
+        case .naga: CGPoint(x: 36, y: -6)
+        case .dance: CGPoint(x: 37, y: -1)
         }
     }
 
@@ -78,8 +92,10 @@ public enum MapLandmarkImages {
 ///
 /// The layout is the frame's, read off `298:957`–`298:963` and expressed as fractions of the
 /// figure's own width so the whole thing scales as one drawing. In the frame the fog cluster is
-/// 159 × 87 points and the building 85 × 61, standing at (37, −3) from the cluster's top-left —
-/// i.e. the building's feet sit *inside* the fog and its roof rises out of the top.
+/// 159 × 87 points and each building stands at its own box and depth within it — `buildingSize`
+/// and `buildingOffset` on `MapLandmarkArtwork` carry the per-drawing numbers, read off
+/// `298:1021`, `1026:3382` and `298:1013`. The building's feet sit *inside* the fog and its roof
+/// rises out of the top.
 ///
 /// The figure carries no label. `MapPlaceLabel` is a separate view because the map alternates the
 /// label above and below the marker to keep two adjacent names out of the same strip of paper, and
@@ -97,15 +113,18 @@ public struct MapLandmarkFigure: View {
         CGPoint(x: 0, y: 5.63),
         CGPoint(x: 47.84, y: 19.70),
     ]
-    private static let buildingOrigin = CGPoint(x: 37, y: -3)
-    private static let buildingWidth: CGFloat = 85
 
     private let artwork: MapLandmarkArtwork?
     private let width: CGFloat
+    /// Overrides the drawing's own depth in the cluster. The marker frames stand the gate at
+    /// (36, −6); the popover frame `1322:4256` stands the same drawing at (38, 0), so the card
+    /// passes its own number rather than borrowing the marker's.
+    private let buildingOffsetOverride: CGPoint?
 
-    public init(artwork: MapLandmarkArtwork?, width: CGFloat = 110) {
+    public init(artwork: MapLandmarkArtwork?, width: CGFloat = 110, buildingOffset: CGPoint? = nil) {
         self.artwork = artwork
         self.width = width
+        self.buildingOffsetOverride = buildingOffset
     }
 
     /// The height the figure occupies when drawn `width` points across.
@@ -113,10 +132,13 @@ public struct MapLandmarkFigure: View {
         referenceHeight * (width / referenceWidth)
     }
 
-    /// Where the building's own centre falls down the figure, as a fraction of its height. The
-    /// building spans −3…58 of the 87-point cluster, so its middle is at 27.5. Published because a
-    /// caller placing a tap target over the drawing needs it and cannot read it off the layout.
-    public static let buildingCentreFraction: CGFloat = 27.5 / 87
+    /// Where the building's own centre falls down the figure, as a fraction of its height. Each
+    /// drawing stands at its own depth in the fog, so the answer is the drawing's. Published
+    /// because a caller placing a tap target over the drawing needs it and cannot read it off the
+    /// layout.
+    public static func buildingCentreFraction(for artwork: MapLandmarkArtwork) -> CGFloat {
+        (artwork.buildingOffset.y + artwork.buildingSize.height / 2) / referenceHeight
+    }
 
     /// The scale everything below is drawn at.
     private var k: CGFloat { width / Self.referenceWidth }
@@ -145,14 +167,19 @@ public struct MapLandmarkFigure: View {
 
     @ViewBuilder private var building: some View {
         if let artwork, let image = artwork.image {
-            let w = Self.buildingWidth * k
+            let size = artwork.buildingSize
+            let origin = buildingOffsetOverride ?? artwork.buildingOffset
             image
                 .resizable()
-                .frame(width: w, height: w / artwork.aspectRatio)
+                .scaledToFill()
+                .frame(width: size.width * k, height: size.height * k)
+                // The dance stage's box is not the file's own proportions — the frame draws that
+                // source cropped to fill, so every drawing is cropped the same way here.
+                .clipped()
                 // The frame's `2px 2px 5px rgba(0,0,0,0.25)` — the drawing casts onto the map, or
                 // it looks pasted on rather than standing on the island.
                 .shadow(color: .black.opacity(0.25), radius: 2.5 * k, x: 2 * k, y: 2 * k)
-                .offset(x: Self.buildingOrigin.x * k, y: Self.buildingOrigin.y * k)
+                .offset(x: origin.x * k, y: origin.y * k)
         }
     }
 }

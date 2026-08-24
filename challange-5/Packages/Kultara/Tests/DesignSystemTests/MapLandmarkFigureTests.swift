@@ -1,4 +1,5 @@
 import Foundation
+import ImageIO
 import Testing
 @testable import DesignSystem
 
@@ -24,16 +25,41 @@ struct MapLandmarkFigureTests {
         #expect(Set(names).count == 3)
     }
 
-    /// The published proportions have to match the files, or a figure sized by width prints the
-    /// drawing squashed. Checked against the shipped pixels rather than against the constants.
+    /// The published proportions have to stay sane, and the dance stage must keep its own box —
+    /// the one drawing the frame crops away from its file's proportions. Collapsing all three to a
+    /// single box is the mistake this guards.
     @Test func eachDrawingDeclaresItsOwnProportions() {
         for artwork in MapLandmarkArtwork.allCases {
-            #expect(artwork.aspectRatio > 1, "\(artwork.resourceName) is drawn landscape")
-            #expect(artwork.aspectRatio < 2, "\(artwork.resourceName)")
+            let ratio = artwork.buildingSize.width / artwork.buildingSize.height
+            #expect(ratio > 1, "\(artwork.resourceName) is drawn landscape")
+            #expect(ratio < 2, "\(artwork.resourceName)")
         }
-        // Distinct, because the three drawings are three different shapes and collapsing them to
-        // one ratio is the mistake this guards.
-        #expect(Set(MapLandmarkArtwork.allCases.map(\.aspectRatio)).count == 3)
+        // Temple and gate are near-twins in the frame (82×55 and 85×57.025); the dance stage's
+        // box is a different shape from both, and collapsing it to theirs is the mistake to catch.
+        let temple = MapLandmarkArtwork.temple.buildingSize.width / MapLandmarkArtwork.temple.buildingSize.height
+        let naga = MapLandmarkArtwork.naga.buildingSize.width / MapLandmarkArtwork.naga.buildingSize.height
+        let dance = MapLandmarkArtwork.dance.buildingSize.width / MapLandmarkArtwork.dance.buildingSize.height
+        #expect(abs(temple - naga) < 0.001)
+        #expect(abs(dance - temple) > 0.05)
+        #expect(MapLandmarkArtwork.dance.buildingSize.height == 61)
+    }
+
+    /// The building boxes are the frames' own display sizes, so they are recorded constants rather
+    /// than derived from the files — but a file whose proportions drift far from its box means the
+    /// wrong PNG shipped or the frame was re-measured without this table following.
+    @Test func eachBoxIsInTheVicinityOfItsFile() throws {
+        for artwork in MapLandmarkArtwork.allCases {
+            let url = try #require(MapLandmarkImages.url(named: artwork.resourceName))
+            let source = CGImageSourceCreateWithURL(url as CFURL, nil)
+            let properties = try #require(CGImageSourceCopyPropertiesAtIndex(source!, 0, nil) as? [CFString: Any])
+            let pixelWidth = try #require(properties[kCGImagePropertyPixelWidth] as? CGFloat)
+            let pixelHeight = try #require(properties[kCGImagePropertyPixelHeight] as? CGFloat)
+            let pixelRatio = pixelWidth / pixelHeight
+            let boxRatio = artwork.buildingSize.width / artwork.buildingSize.height
+            // The dance stage's box deliberately crops its file, so the tolerance is loose —
+            // tight enough to catch the wrong drawing, loose enough to hold the crop.
+            #expect(abs(pixelRatio - boxRatio) < 0.25, "\(artwork.resourceName)")
+        }
     }
 
     /// The frame's cluster is 159 × 87, so a figure drawn 120 across is 65.7 tall. A caller placing
@@ -48,7 +74,10 @@ struct MapLandmarkFigureTests {
     /// out of the top — so the centre a target is hung on is above the figure's own middle. A
     /// value at or below 0.5 would put the 44-point square on fog.
     @Test func theBuildingSitsAboveTheFiguresMiddle() {
-        #expect(MapLandmarkFigure.buildingCentreFraction < 0.5)
-        #expect(MapLandmarkFigure.buildingCentreFraction > 0.25)
+        for artwork in MapLandmarkArtwork.allCases {
+            let fraction = MapLandmarkFigure.buildingCentreFraction(for: artwork)
+            #expect(fraction < 0.5, "\(artwork.resourceName)")
+            #expect(fraction > 0.25, "\(artwork.resourceName)")
+        }
     }
 }

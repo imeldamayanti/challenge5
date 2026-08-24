@@ -423,26 +423,27 @@ struct RegionMapView: View {
     /// began on a pin navigated on lift. Selection needs the touch to have stayed put
     /// (`MapMarkerGesture.isTap`).
     private func pinSymbol(_ pin: RegionMapPin) -> some View {
-        MapLandmarkFigure(artwork: MapLandmarkCatalog.artwork(forQuestID: pin.questID),
-                          width: Self.figureWidth)
+        let artwork = MapLandmarkCatalog.artwork(forQuestID: pin.questID)
+        return MapLandmarkFigure(artwork: artwork, width: Self.figureWidth)
             // The pressable area is a 44-point square over the building, not the figure's own
             // bounds. The figure is 120 points wide and most of that width is fog at low alpha, so
             // a target the size of the drawing would be mostly transparent map — wide enough that
             // two adjacent markers' rectangles overlap and a touch on open sea navigates. That is
             // the same failure the old label-sized target had, and `NFR-A11Y-06` is satisfied by
             // the square regardless.
-            .overlay { touchTarget(pin) }
+            .overlay { touchTarget(pin, artwork: artwork) }
     }
 
-    /// The building sits in the upper third of the figure — 27.5 points down an 87-point cluster —
-    /// so the square is raised off centre to land on the drawing rather than on the fog beneath it.
-    private func touchTarget(_ pin: RegionMapPin) -> some View {
+    /// The building sits in the upper third of the figure — its centre is a per-drawing depth down
+    /// the 87-point cluster — so the square is raised off centre to land on the drawing rather than
+    /// on the fog beneath it.
+    private func touchTarget(_ pin: RegionMapPin, artwork: MapLandmarkArtwork) -> some View {
         let height = MapLandmarkFigure.height(forWidth: Self.figureWidth)
         return Color.clear
             .frame(width: KultaraMetrics.minimumTapTarget,
                    height: KultaraMetrics.minimumTapTarget)
             .contentShape(Rectangle())
-            .offset(y: MapLandmarkFigure.buildingCentreFraction * height - height / 2)
+            .offset(y: MapLandmarkFigure.buildingCentreFraction(for: artwork) * height - height / 2)
             .gesture(
                 DragGesture(minimumDistance: 0)
                     .onEnded { value in

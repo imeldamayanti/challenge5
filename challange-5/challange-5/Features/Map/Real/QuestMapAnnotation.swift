@@ -29,8 +29,7 @@ final class QuestMapAnnotation: NSObject, MKAnnotation {
     }
 }
 
-/// The marker `276:2520` draws: `275:2309`'s own fog-and-building figure with the quest's name
-/// under it, standing on a real map.
+/// The marker the map frames draw: the fog-and-building figure standing on a real map, no caption.
 ///
 /// The view's **bounds are the 44-point square over the building, not the figure**, and the drawing
 /// is allowed to spill outside them. That is the same rule `RegionMapView` follows and for the same
@@ -43,8 +42,7 @@ final class QuestMapAnnotationView: MKAnnotationView {
 
     static let reuseIdentifier = "QuestMapAnnotationView"
 
-    private static let figureWidth: CGFloat = 120
-    private static let labelWidth: CGFloat = 150
+    private static let figureWidth: CGFloat = 159
     private static let target: CGFloat = 44
 
     private var host: UIHostingController<QuestMapMarker>?
@@ -75,21 +73,21 @@ final class QuestMapAnnotationView: MKAnnotationView {
         host?.view.removeFromSuperview()
 
         let marker = QuestMapMarker(
-            title: annotation.questTitle,
             artwork: annotation.artwork,
             figureWidth: Self.figureWidth,
-            labelWidth: Self.labelWidth,
             palette: palette)
         let controller = UIHostingController(rootView: marker)
         controller.view.backgroundColor = .clear
         controller.view.isUserInteractionEnabled = false
 
-        let size = controller.sizeThatFits(in: CGSize(width: Self.labelWidth,
+        let size = controller.sizeThatFits(in: CGSize(width: Self.figureWidth,
                                                       height: .greatestFiniteMagnitude))
-        // The building sits 27.5 points down an 87-point cluster, so the figure is pushed down
-        // until *the building's* centre — not the drawing's — lands on the annotation's coordinate.
+        // The building sits a per-drawing depth down an 87-point cluster, so the figure is pushed
+        // down until *the building's* centre — not the drawing's — lands on the annotation's
+        // coordinate.
         let figureHeight = MapLandmarkFigure.height(forWidth: Self.figureWidth)
-        let buildingOffset = figureHeight / 2 - MapLandmarkFigure.buildingCentreFraction * figureHeight
+        let buildingOffset = figureHeight / 2
+            - MapLandmarkFigure.buildingCentreFraction(for: annotation.artwork) * figureHeight
 
         controller.view.frame = CGRect(
             x: (Self.target - size.width) / 2,
@@ -104,26 +102,19 @@ final class QuestMapAnnotationView: MKAnnotationView {
     }
 }
 
-/// The marker's contents, as `275:2309` composes them: the fog-and-building figure with the quest's
-/// name tucked under it.
+/// The marker's contents, as the map frames draw them: the fog-and-building figure alone. The
+/// quest's name lives in the marker's accessibility label and in the popover, not under the
+/// drawing — the frames put no caption on a marker.
 struct QuestMapMarker: View {
 
-    let title: String
     let artwork: MapLandmarkArtwork
     let figureWidth: CGFloat
-    let labelWidth: CGFloat
     let palette: KultaraPalette
 
     var body: some View {
-        VStack(spacing: 0) {
-            MapLandmarkFigure(artwork: artwork, width: figureWidth)
-            MapPlaceLabel(title, width: labelWidth)
-                // The frame tucks the name against the fog rather than spacing it off the marker —
-                // the name reads as written on the map, not as a caption under a pin.
-                .padding(.top, -KultaraMetrics.xs)
-        }
-        .environment(\.kultaraPalette, palette)
-        .accessibilityHidden(true)
+        MapLandmarkFigure(artwork: artwork, width: figureWidth)
+            .environment(\.kultaraPalette, palette)
+            .accessibilityHidden(true)
     }
 }
 
