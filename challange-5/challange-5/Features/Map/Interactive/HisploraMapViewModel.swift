@@ -39,7 +39,7 @@ final class HisploraMapViewModel {
         if let walkingRoute {
             self.walkingRoute = walkingRoute
         } else {
-            // Default walking route from Puri Pemecutan to Pura Maospahit and Kumbasari
+            // Default walking route from Puri Pemecutan to Pura Maospahit and Pasar Badung
             self.walkingRoute = [
                 Coordinate(lat: -8.6595, lon: 115.2077),
                 Coordinate(lat: -8.6580, lon: 115.2075),

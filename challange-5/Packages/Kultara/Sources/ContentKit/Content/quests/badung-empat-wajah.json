@@ -57,8 +57,8 @@
     "breakdown": []
   },
   "terrainSummary": {
-    "id": "Trotoar kota sepanjang Jl. Sutomo dan Jl. Gajah Mada, satu lantai pasar yang sering basah, dan satu perempatan besar yang harus diseberangi. Pasar Kumbasari berlantai empat dan lantai atasnya hanya dicapai lewat tangga. Halaman pura dan gedung museum umumnya berdiri di atas undakan. Jumlah anak tangga di empat dari lima titik belum disurvei.",
-    "en": "City pavement along Jl. Sutomo and Jl. Gajah Mada, one frequently wet market floor, and one large junction to cross. Pasar Kumbasari has four storeys and its upper floors are reached only by stairs. Temple courtyards and museum pavilions generally stand on steps. Step counts at four of the five stops have not been surveyed."
+    "id": "Trotoar kota sepanjang Jl. Sutomo dan Jl. Gajah Mada, satu lantai pasar yang sering basah, dan satu perempatan besar yang harus diseberangi. Pasar Badung berlantai empat dan lantai atasnya hanya dicapai lewat tangga. Halaman pura dan gedung museum umumnya berdiri di atas undakan. Jumlah anak tangga di empat dari lima titik belum disurvei.",
+    "en": "City pavement along Jl. Sutomo and Jl. Gajah Mada, one frequently wet market floor, and one large junction to cross. Pasar Badung has four storeys and its upper floors are reached only by stairs. Temple courtyards and museum pavilions generally stand on steps. Step counts at four of the five stops have not been surveyed."
   },
   "recommendedStartWindow": {
     "from": "08:00",
@@ -84,32 +84,12 @@
       "loreSegment": [
         {
           "text": {
-            "id": "Wajah pertama adalah kuasa. Puri Agung Pemecutan berdiri di sisi barat inti kota lama, dan jalan ini mulai di depan gerbangnya.",
-            "en": "The first face is power. Puri Agung Pemecutan stands on the western side of the old core, and this walk starts in front of its gate."
+            "id": "Hampir 350 tahun lalu, di tempat inilah kisah Pemecutan bermula. Ketika Kyai Gede Raka kembali dari bertapa di Gunung Batur, membawa restu Bhatari Danu untuk mendirikan kerajaan baru.",
+            "en": "Nearly 350 years ago, this was where the story of Pemecutan began. When Kyai Gede Raka returned from his meditation on Mount Batur, carrying the blessing of Bhatari Danu to establish a new kingdom."
           },
-          "accuracy": "documented",
+          "accuracy": "oral",
           "sourceRefs": [
-            0
-          ]
-        },
-        {
-          "text": {
-            "id": "Riwayat puri ini sengaja tidak diceritakan di sini. Sumber yang dapat dibuka dan dikutip belum tersedia, dan aturan konten aplikasi ini melarang kalimat tanpa sumber.",
-            "en": "The puri's history is deliberately not told here. No openable, citable source is available yet, and this app's content rules forbid a sentence without a source."
-          },
-          "accuracy": "documented",
-          "sourceRefs": [
-            0
-          ]
-        },
-        {
-          "text": {
-            "id": "Yang bisa dipakai sekarang adalah bentuk kotanya: inti kota lama tersusun mengelilingi sebuah perempatan, dan puri menempati salah satu sisinya.",
-            "en": "What can be used now is the shape of the city: the old core is arranged around a crossroads, and the puri occupies one of its sides."
-          },
-          "accuracy": "documented",
-          "sourceRefs": [
-            1
+            5
           ]
         }
       ],
@@ -195,7 +175,7 @@
     {
       "id": "badung-empat-wajah-cp3",
       "orderIndex": 2,
-      "placeId": "badung-pasar-kumbasari",
+      "placeId": "badung-pasar-badung",
       "role": "middle",
       "loreSegment": [
         {

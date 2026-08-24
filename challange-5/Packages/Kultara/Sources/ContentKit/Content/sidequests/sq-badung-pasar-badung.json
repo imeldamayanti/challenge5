@@ -1,13 +1,13 @@
 {
-  "id": "sq-badung-pasar-kumbasari",
-  "placeId": "badung-pasar-kumbasari",
+  "id": "sq-badung-pasar-badung",
+  "placeId": "badung-pasar-badung",
   "title": {
     "id": "Alas Kaki yang Tepat",
     "en": "The Right Shoes"
   },
   "synopsis": {
-    "id": "Lantai Pasar Kumbasari sering basah, dan lantai atas hanya bisa dicapai lewat tangga. Sepatumu penting di sini.",
-    "en": "Pasar Kumbasari's floor is often wet, and the upper floors are reached only by stairs. What you wear on your feet matters here."
+    "id": "Lantai Pasar Badung sering basah, dan lantai atas hanya bisa dicapai lewat tangga. Sepatumu penting di sini.",
+    "en": "Pasar Badung's floor is often wet, and the upper floors are reached only by stairs. What you wear on your feet matters here."
   },
   "lore": [
     {
@@ -30,8 +30,8 @@
   "challenge": {
     "type": "quiz",
     "question": {
-      "id": "Apa yang sebaiknya kamu pakai untuk berkeliling Pasar Kumbasari dengan nyaman?",
-      "en": "What should you wear to get around Pasar Kumbasari comfortably?"
+      "id": "Apa yang sebaiknya kamu pakai untuk berkeliling Pasar Badung dengan nyaman?",
+      "en": "What should you wear to get around Pasar Badung comfortably?"
     },
     "options": [
       {

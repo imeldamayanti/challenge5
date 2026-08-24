@@ -134,7 +134,7 @@ struct BundledContentRepositoryTests {
             suppressingSideQuestIDs: ["sq-does-not-exist"],
             suppressingPlaceIDs: ["badung-catur-muka"])
         #expect(suppressed.map(\.id).sorted() == [
-            "sq-badung-museum-bali", "sq-badung-pasar-kumbasari",
+            "sq-badung-museum-bali", "sq-badung-pasar-badung",
             "sq-badung-pura-maospahit", "sq-badung-puri-agung-pemecutan",
         ])
     }

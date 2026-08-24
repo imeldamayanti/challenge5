@@ -15,8 +15,8 @@
   },
   "arrivalRadiusM": 100,
   "address": {
-    "id": "Sovereign Bali Hotel, Denpasar. Titik uji tambahan buat nyoba alur sidequest \"Alas Kaki yang Tepat\" (Pasar Kumbasari) tanpa harus ke lokasi aslinya — cerita/lore di sidequest ini tetap tentang Pasar Kumbasari, cuma koordinatnya dipindah ke sini buat testing.",
-    "en": "Sovereign Bali Hotel, Denpasar. An additional temporary test point for trying the \"The Right Shoes\" (Pasar Kumbasari) sidequest without traveling to the real site — the sidequest's story stays about Pasar Kumbasari, only the coordinate is moved here for testing."
+    "id": "Sovereign Bali Hotel, Denpasar. Titik uji tambahan buat nyoba alur sidequest \"Alas Kaki yang Tepat\" (Pasar Badung) tanpa harus ke lokasi aslinya — cerita/lore di sidequest ini tetap tentang Pasar Badung, cuma koordinatnya dipindah ke sini buat testing.",
+    "en": "Sovereign Bali Hotel, Denpasar. An additional temporary test point for trying the \"The Right Shoes\" (Pasar Badung) sidequest without traveling to the real site — the sidequest's story stays about Pasar Badung, only the coordinate is moved here for testing."
   },
   "visitingHours": {
     "notes": {
@@ -60,8 +60,8 @@
   "loreStandalone": [
     {
       "text": {
-        "id": "Titik ini dipakai sebagai lokasi uji tambahan untuk sidequest Pasar Kumbasari, bukan tempat aslinya itu sendiri.",
-        "en": "This point is used as an additional test location for the Pasar Kumbasari sidequest, not the real site itself."
+        "id": "Titik ini dipakai sebagai lokasi uji tambahan untuk sidequest Pasar Badung, bukan tempat aslinya itu sendiri.",
+        "en": "This point is used as an additional test location for the Pasar Badung sidequest, not the real site itself."
       },
       "accuracy": "documented",
       "sourceRefs": [0]

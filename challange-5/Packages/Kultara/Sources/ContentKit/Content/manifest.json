@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentBundleVersion": "2026.09.14",
+  "contentBundleVersion": "2026.09.17",
   "languages": [
     "id",
     "en"
@@ -8,7 +8,7 @@
   "places": [
     "badung-puri-agung-pemecutan",
     "badung-pura-maospahit",
-    "badung-pasar-kumbasari",
+    "badung-pasar-badung",
     "badung-catur-muka",
     "badung-museum-bali",
     "park23",
@@ -25,7 +25,7 @@
     "sq-badung-catur-muka",
     "sq-badung-puri-agung-pemecutan",
     "sq-badung-pura-maospahit",
-    "sq-badung-pasar-kumbasari",
+    "sq-badung-pasar-badung",
     "sq-badung-museum-bali",
     "sq-park23",
     "sq-citra-minang",

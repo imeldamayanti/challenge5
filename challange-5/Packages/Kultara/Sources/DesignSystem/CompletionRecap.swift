@@ -78,16 +78,21 @@ public struct HisploraCompletionProgress: View {
     public var body: some View {
         HStack(spacing: 4) {
             ForEach(0..<max(total, 1), id: \.self) { index in
-                GeometryReader { geometry in
-                    Capsule()
-                        .fill(Self.unfilled.color)
-                        .overlay(alignment: .leading) {
-                            Capsule()
-                                .fill(Self.filled.color)
-                                .frame(width: geometry.size.width * fraction(for: index))
-                        }
-                }
-                .frame(height: 4)
+                // No `GeometryReader`: reading the slot's own width back to compute a pixel
+                // `.frame(width:)` measured wrong inside this `HStack` — every segment rendered at
+                // roughly the same partial width regardless of `fraction`, which is what made all
+                // five look like they were counting down together instead of just the current one.
+                // `scaleEffect` needs no measurement: the filled capsule is proposed the *same* size
+                // as the unfilled one behind it (that is what a plain `.overlay` does), and scaling
+                // it from its leading edge draws exactly the same growing-fill picture.
+                Capsule()
+                    .fill(Self.unfilled.color)
+                    .overlay(alignment: .leading) {
+                        Capsule()
+                            .fill(Self.filled.color)
+                            .scaleEffect(x: fraction(for: index), y: 1, anchor: .leading)
+                    }
+                    .frame(height: 4)
             }
         }
         .accessibilityElement(children: .ignore)

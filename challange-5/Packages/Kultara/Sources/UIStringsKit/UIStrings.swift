@@ -417,6 +417,8 @@ public enum UIStrings {
 
         // MARK: Completion and summary
         .runCompletedHeading: LocalizedText(id: "Rute selesai", en: "Route complete"),
+        .checkpointDetailFinishAction: LocalizedText(
+            id: "Selesaikan perjalanan", en: "End the journey"),
         .runCompletedBody: LocalizedText(
             id: "Kamu sampai di titik terakhir. Ringkasannya tersimpan di perangkat ini dan bisa dibuka kapan saja, tanpa jaringan.",
             en: "You reached the final checkpoint. The summary is saved on this device and opens any time, with no network."),

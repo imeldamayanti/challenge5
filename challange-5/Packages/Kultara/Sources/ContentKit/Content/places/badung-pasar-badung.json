@@ -1,8 +1,8 @@
 {
-  "id": "badung-pasar-kumbasari",
+  "id": "badung-pasar-badung",
   "nameOfficial": {
-    "id": "Pasar Kumbasari",
-    "en": "Pasar Kumbasari"
+    "id": "Pasar Badung",
+    "en": "Pasar Badung"
   },
   "nameVariants": [
     "Pasar Peken",
@@ -61,8 +61,8 @@
   "loreStandalone": [
     {
       "text": {
-        "id": "Pasar Kumbasari di Jl. Gajah Mada menempati bangunan empat lantai: lantai dasar untuk kebutuhan pokok, lantai dua sampai empat untuk seni dan kerajinan.",
-        "en": "Pasar Kumbasari on Jl. Gajah Mada occupies a four-storey building: the ground floor for everyday goods, floors two to four for art and crafts."
+        "id": "Pasar Badung di Jl. Gajah Mada menempati bangunan empat lantai: lantai dasar untuk kebutuhan pokok, lantai dua sampai empat untuk seni dan kerajinan.",
+        "en": "Pasar Badung on Jl. Gajah Mada occupies a four-storey building: the ground floor for everyday goods, floors two to four for art and crafts."
       },
       "accuracy": "documented",
       "sourceRefs": [
@@ -93,17 +93,17 @@
     },
     {
       "kind": "documented",
-      "citation": "BELUM DIVERIFIKASI — Ilustrasi latar halaman Story untuk Pasar Kumbasari. Gambar ini ilustrasi hasil generasi, bukan survei lapangan.",
+      "citation": "BELUM DIVERIFIKASI — Ilustrasi latar halaman Story untuk Pasar Badung. Gambar ini ilustrasi hasil generasi, bukan survei lapangan.",
       "url": null
     }
   ],
-  "consentRecordId": "badung-pasar-kumbasari",
+  "consentRecordId": "badung-pasar-badung",
   "mapPoint": {
     "x": 0.6078,
     "y": 0.626
   },
   "storyArtwork": {
-    "asset": "places/badung-pasar-kumbasari/story.png",
+    "asset": "places/badung-pasar-badung/story.png",
     "sourceRef": 2
   }
 }

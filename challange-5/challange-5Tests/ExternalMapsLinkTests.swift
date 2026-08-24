@@ -34,7 +34,7 @@ struct ExternalMapsLinkTests {
         // as a `Double` under the C locale — a decimal comma would split into three parts, or into
         // two that do not parse.
         let url = try #require(
-            ExternalMapsLink.appleMapsWalkingURL(to: pemecutan, name: "Pasar Kumbasari"))
+            ExternalMapsLink.appleMapsWalkingURL(to: pemecutan, name: "Pasar Badung"))
         let components = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false))
         let daddr = try #require(components.queryItems?.first { $0.name == "daddr" }?.value)
         let halves = daddr.split(separator: ",")

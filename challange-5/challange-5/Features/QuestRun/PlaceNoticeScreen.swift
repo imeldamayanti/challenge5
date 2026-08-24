@@ -22,9 +22,14 @@ import UIStringsKit
 /// **The portrait is the frame's own.** `320:2487` exports byte for byte as the gilded oval already
 /// packaged with the design system, so this screen is `KultaraPortraitFrame` via
 /// `HisploraFramedImage` — the same ornament every other story-flow screen frames a picture in.
-/// What goes *inside* it stays a parameter: `320:2486` is a generated likeness of a named
-/// historical person, which is a claim `FR-CP-05` wants a source and a consent record for, and the
-/// content tree ships neither. The frame carries the quest's own hero image instead.
+/// What goes *inside* it stays a parameter, resolved the same way `CutsceneSequenceScreen`'s is:
+/// the quest's `CutsceneSubject` portrait when it ships one, the quest's own hero image otherwise.
+/// `320:2486` is a generated likeness of a named historical person — a claim `FR-CP-05` wants a
+/// source and a consent record for — and for `badung-empat-wajah` that is exactly what
+/// `CutsceneSubject` already is: the same AI-generated, not-yet-consented portrait the cutscene
+/// shows, tracked beside the `docs/consent-log.md` blockers rather than dressed up as settled. This
+/// screen no longer avoids it — it shows the same sitter the walker already met, rather than a
+/// second, unrelated hero image — but it is still the one unresolved picture, not a new one.
 ///
 /// **What is not written.** `293:1613`'s description and its three rules are the frame's own sample
 /// copy about a place the content tree does have — but with different words, and one of the three
@@ -46,6 +51,10 @@ struct PlaceNoticeScreen: View {
     let dressCodeText: String
     let photoPolicyText: String
     let portraitURL: URL?
+    /// The frame's accessibility label. Defaults to `placeName`; a quest that names the portrait's
+    /// sitter (`CutsceneSubject`) passes that name instead, so VoiceOver does not announce a
+    /// person's picture as if it were a photograph of the place.
+    var portraitLabel: String? = nil
     let onAcknowledge: () -> Void
     let onBack: () -> Void
 
@@ -171,7 +180,7 @@ struct PlaceNoticeScreen: View {
             .scrollIndicators(.hidden)
         }
         .overlay(alignment: .top) {
-            HisploraFramedImage(url: portraitURL, label: placeName)
+            HisploraFramedImage(url: portraitURL, label: portraitLabel ?? placeName)
                 .frame(width: Self.portraitWidth)
                 .offset(y: Self.portraitTopOffset)
         }

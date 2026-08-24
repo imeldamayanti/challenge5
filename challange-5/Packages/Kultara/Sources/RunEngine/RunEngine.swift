@@ -355,6 +355,41 @@ public struct RunEngine {
         }
     }
 
+    /// Repairs a Run whose `state` fell behind its own `checkpointResults` — reachable when a
+    /// restore pulls a `run` row from the server that was synced before its final arrival's own
+    /// scalar update landed (`c2` phase 2: no revision or conflict resolution, one writer assumed).
+    /// A walker who reaches the last checkpoint's screen has, from their own account, finished the
+    /// walk; `FR-DONE-01` says the same the moment arrival is recorded. This is the same effect
+    /// `applyArrival` applies at that arrival, called again here so a Run that skipped it — for
+    /// whatever reason — still ends up completed rather than resumable forever.
+    ///
+    /// Idempotent: a Run already `.completed` or short of a full set of results is untouched.
+    @discardableResult
+    public func completeIfFullyReached(runID: UUID) throws -> Run {
+        guard var run = try store.run(id: runID) else { throw RunEngineError.runNotFound(runID) }
+        guard run.state == .active,
+              run.checkpointCount > 0,
+              run.checkpointResults.count >= run.checkpointCount
+        else { return run }
+
+        let quest = try questOrThrow(run.questID)
+        let timestamp = run.orderedCheckpointResults.last?.arrivedAt ?? now()
+        run.state = .completed
+        run.completedAt = timestamp
+        run.currentCheckpointIndex = quest.orderedCheckpoints.last?.orderIndex
+            ?? run.currentCheckpointIndex
+        if !run.awards.contains(where: { $0.type == .badge }) {
+            run.awards.append(Award(
+                type: .badge,
+                sourceID: quest.badgeId,
+                snapshotName: run.snapshotQuestTitle,
+                awardedAt: timestamp))
+        }
+        run.updatedAt = timestamp
+        try store.save(run)
+        return run
+    }
+
     // MARK: - Helpers
 
     private func activeRunOrThrow(_ id: UUID) throws -> Run {

@@ -210,7 +210,7 @@ struct QuestRunView: View {
             hook: model.hookText,
             distanceText: model.routeDistanceText,
             durationText: model.routeDurationText,
-            portraitURL: model.cutsceneImageURL,
+            portraitURL: model.cutsceneSubjectPortraitURL ?? model.cutsceneImageURL,
             onReady: { model.advanceFromStoryPreview() },
             // Leaves the screen; it does not advance the walk. It was wired to
             // `advanceFromStoryPreview()`, which made the chevron a second Ready to Explore — the
@@ -329,7 +329,8 @@ struct QuestRunView: View {
                 isSacred: checkpoint.isSacred,
                 dressCodeText: checkpoint.dressCodeText,
                 photoPolicyText: checkpoint.photoPolicyText,
-                portraitURL: model.cutsceneImageURL,
+                portraitURL: model.cutsceneSubjectPortraitURL ?? model.cutsceneImageURL,
+                portraitLabel: model.cutsceneSubjectName,
                 onAcknowledge: { model.advanceFromPlaceNotice() },
                 onBack: { model.retreatFromStoryStage() })
         } else {
@@ -382,7 +383,7 @@ struct QuestRunView: View {
                 draft: Binding(
                     get: { model.taskDrafts[task.id] ?? "" },
                     set: { model.taskDrafts[task.id] = $0 }),
-                portraitURL: model.cutsceneImageURL,
+                portraitURL: model.cutsceneSubjectPortraitURL ?? model.cutsceneImageURL,
                 photoDraft: model.photoDraft(for: task).map { Image(uiImage: $0) },
                 isCameraAvailable: model.isCameraAvailable,
                 hasSiteMap: checkpoint.siteMap != nil,
@@ -435,11 +436,11 @@ struct QuestRunView: View {
             language: language,
             claims: model.explanationClaims,
             // The frame's sitter is a generated likeness of a named historical person, which the
-            // content tree carries neither a source nor a consent record for (`FR-CP-05`). The
-            // quest's own hero image stands in, the same substitution every other framed picture on
-            // this flow makes.
-            portraitURL: model.cutsceneImageURL,
-            portraitLabel: model.currentPlaceName,
+            // content tree carries neither a source nor a consent record for (`FR-CP-05`) — the
+            // same `CutsceneSubject` picture the cutscene already showed, when the quest ships one;
+            // the quest's own hero image otherwise.
+            portraitURL: model.cutsceneSubjectPortraitURL ?? model.cutsceneImageURL,
+            portraitLabel: model.cutsceneSubjectName ?? model.currentPlaceName,
             onContinue: { model.advanceFromQuestExplanation() },
             onBack: { model.retreatFromStoryStage() })
     }

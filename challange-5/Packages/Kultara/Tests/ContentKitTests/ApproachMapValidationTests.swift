@@ -215,7 +215,7 @@ struct ShippedApproachMapTests {
         // The Location Verified screen falls back to the run's projected route at these four. A
         // drawing acquired without a citation would put an unsourced street map on that screen.
         let repository = try BundledContentRepository()
-        for id in ["badung-pura-maospahit", "badung-pasar-kumbasari",
+        for id in ["badung-pura-maospahit", "badung-pasar-badung",
                    "badung-catur-muka", "badung-museum-bali"] {
             let place = try #require(try repository.place(id: id))
             #expect(place.approachMap == nil, "\(id) now ships an approach map; check its citation")

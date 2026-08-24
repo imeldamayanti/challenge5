@@ -1,17 +1,17 @@
-# Prototype inclusion note — Pasar Kumbasari
+# Prototype inclusion note — Pasar Badung
 
-**Place id:** `badung-pasar-kumbasari`
-**Consent record:** `challange-5/Packages/Kultara/Sources/ContentKit/Content/consent/badung-pasar-kumbasari.json`
+**Place id:** `badung-pasar-badung`
+**Consent record:** `challange-5/Packages/Kultara/Sources/ContentKit/Content/consent/badung-pasar-badung.json`
 **Model:** D1-b — self-grant for an academic prototype (plan `c1-badung-single-quest-content.plan.md`, §E0)
 
 ## What this document is
 
-This is **not** a permission granted by the management, custodians, or owners of Pasar Kumbasari.
+This is **not** a permission granted by the management, custodians, or owners of Pasar Badung.
 No approach has been made to them, and no reply has been received.
 
 It is a written statement by the project team that:
 
-1. Pasar Kumbasari is named and included in a non-public academic prototype build of this app.
+1. Pasar Badung is named and included in a non-public academic prototype build of this app.
 2. The scope of that inclusion is limited to **inclusion** and **naming** — the place appears in a
    walking route and is referred to by its real name. (`badung-catur-muka` additionally carries
    **photography**, because the quest offers a photo task at a public street monument there.)

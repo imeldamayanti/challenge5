@@ -14,7 +14,7 @@ site. See `.claude/plans/Content/c1-badung-single-quest-content.plan.md` §E0 fo
 |---|---|---|---|---|---|---|---|---|
 | `badung-puri-agung-pemecutan` | Puri Agung Pemecutan | **No** | — | — | — | D1-b self-grant | inclusion, naming | 2028-12-31 |
 | `badung-pura-maospahit` | Pura Maospahit (Grenceng) | **No** | — | — | — | D1-b self-grant | inclusion, naming | 2028-12-31 |
-| `badung-pasar-kumbasari` | Pasar Kumbasari | **No** | — | — | — | D1-b self-grant | inclusion, naming | 2028-12-31 |
+| `badung-pasar-badung` | Pasar Badung | **No** | — | — | — | D1-b self-grant | inclusion, naming | 2028-12-31 |
 | `badung-catur-muka` | Catur Muka | **No** | — | — | — | D1-b self-grant | inclusion, naming, photography | 2028-12-31 |
 | `badung-museum-bali` | Museum Bali | **No** | — | — | — | D1-b self-grant | inclusion, naming | 2028-12-31 |
 
@@ -24,7 +24,7 @@ site. See `.claude/plans/Content/c1-badung-single-quest-content.plan.md` §E0 fo
    `[NAMA TIM]`, `[NAMA ANGGOTA 1]`, `[PERAN ANGGOTA 1]` and `[NAMA ANGGOTA 2]`. Fill them before
    the build leaves the team.
 2. **Five real approaches are outstanding.** Puri Agung Pemecutan and Pura Maospahit are working
-   sites with custodians; Pasar Kumbasari sits under a market authority (Perusahaan Daerah Pasar
+   sites with custodians; Pasar Badung sits under a market authority (Perusahaan Daerah Pasar
    Kota Denpasar); Museum Bali is a UPTD of Dinas Kebudayaan Provinsi Bali; Catur Muka is a public
    monument at a public junction, where the question is the city rather than a private owner.
 3. **When a reply arrives**, store the scan or photograph in `docs/consent/`, fill this table's row,

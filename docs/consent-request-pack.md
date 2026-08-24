@@ -96,7 +96,7 @@ addresses are invented here.
   `clueToNext` is rewritten. A four-stop quest is valid content; the four-faces reading the quest is
   *about* survives, since it is a reading of the city rather than a count of stops.
 
-### 3.3 Pasar Kumbasari — `badung-pasar-kumbasari`
+### 3.3 Pasar Badung — `badung-pasar-badung`
 
 - **Role on the route:** checkpoint 3.
 - **Who to approach:** the market authority. `docs/consent-log.md` §2 names it:
@@ -108,7 +108,7 @@ addresses are invented here.
   condition will legitimately fail inside it (plan §11, item 3). That is a walker-experience problem
   the manual override already answers (`FR-START-10`) — it is not a consent question, but the market
   authority is the party who would notice people standing in the aisles tapping at phones.
-- **If they decline:** checkpoint 3 is removed, same consequences as §3.2. Kumbasari is also the
+- **If they decline:** checkpoint 3 is removed, same consequences as §3.2. Pasar Badung is also the
   only site whose accessibility data is verified (four storeys, stairs only), so the route loses its
   one confirmed `NFR-A11Y-07` disclosure.
 
