@@ -52,6 +52,19 @@ import Testing
         #expect(sequence.total > .seconds(1.2))
     }
 
+    /// **What the walker waits is the sum of the *holds*, not of the durations**, and that is the
+    /// number this screen was failing on: the runner slept each hold twice, so a door the beats said
+    /// was 1.6 s long took 3.3 s, most of the surplus spent on a blank open parchment. The felt wait
+    /// is asserted here because nothing else can assert it — the doubling lived in the screen, and a
+    /// unit test cannot watch a `Task` sleep — but a ceiling on the holds is what keeps the next
+    /// re-timing honest about the only duration anybody experiences.
+    @Test func theWaitTheWalkerActuallyFeelsStaysUnderASecondAndAHalf() {
+        let sequence = HisploraScrollUnsealSequence(rendersImmediately: false)
+        let felt = HisploraScrollUnsealStage.allCases.reduce(Duration.zero) { $0 + sequence.hold(of: $1) }
+        #expect(felt < .seconds(1.5))
+        #expect(felt > .seconds(0.8), "shorter than this and the unrolling is a cut, not paper")
+    }
+
     /// The unrolling is the beat the walker is actually watching, so it is the longest of the four.
     @Test func theUnrollingIsTheLongestBeat() {
         let sequence = HisploraScrollUnsealSequence(rendersImmediately: false)
@@ -144,6 +157,20 @@ import Testing
         #expect(HisploraScrollIdleShake.cycleSeconds >= 2.5)
         #expect(HisploraScrollIdleShake.captionFloor > 0.5,
                 "a caption that fades further than this reads as broken, not as breathing")
+    }
+
+    /// The tip the tap catches is animated out rather than dropped. Without this the roll snapped
+    /// level on the frame the finger landed, which is a jolt in front of the opening however smooth
+    /// the opening is.
+    @Test func theShakeSettlesRatherThanStopping() {
+        // The settle is its own curve, not one of the beats' — a tip's easeInOut lasts a tenth of a
+        // second, which is a snap by another name when it has a whole tilt to undo.
+        for beat in HisploraScrollIdleShake.Beat.allCases {
+            #expect(HisploraScrollIdleShake.settle != HisploraScrollIdleShake.animation(of: beat))
+        }
+        // The rest is where the weight is, so it does not share the tips' curve either.
+        #expect(HisploraScrollIdleShake.animation(of: .rest)
+            != HisploraScrollIdleShake.animation(of: .tipBack))
     }
 
     /// The tilt is the frame's, not a second copy of it that can drift. It is also constant — see

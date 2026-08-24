@@ -61,23 +61,29 @@ public struct HisploraScrollUnsealSequence: Sendable, Equatable {
         self.rendersImmediately = rendersImmediately
     }
 
-    /// **The reference render's shape at about half its length.** It runs a shade over four seconds,
-    /// which is a title sequence; this is the seam between the story and the walk, and the walker
-    /// crosses it at every checkpoint of every quest. The beats keep their proportions to each other
-    /// — the turn is quick, the unrolling is the long one, the hold is the shortest — so it is the
-    /// same movement, not a faster different one. `total` is what a test should assert against.
+    /// **The reference render's shape at well under half its length.** It runs a shade over four
+    /// seconds, which is a title sequence; this is the seam between the story and the walk, and the
+    /// walker crosses it at every checkpoint of every quest. The beats keep their proportions to each
+    /// other — the turn is quick, the unrolling is the long one, the hold is the shortest — so it is
+    /// the same movement, not a faster different one. `total` is what a test should assert against.
+    ///
+    /// **These are shorter than they were, because the screen was measurably slower than these
+    /// numbers said.** The runner slept `hold(of:)` twice per beat — a merge left two identical
+    /// `Task.sleep` calls in `StoryTransitionScreen.unseal` — so the walker waited about 3.3 s at a
+    /// checkpoint, most of it looking at a blank open parchment. That doubling is gone, and the beats
+    /// are trimmed with it: the wait the walker actually feels is the sum of the holds, and the open
+    /// sheet has nothing on it, so the last two beats are where the trimming falls hardest.
     public func duration(of stage: HisploraScrollUnsealStage) -> Duration {
         guard !rendersImmediately else { return .zero }
         switch stage {
         case .sealed: return .zero
-        case .widening: return .milliseconds(520)
-        case .unbinding: return .milliseconds(300)
-        case .unrolling: return .milliseconds(950)
-        case .widening: return .milliseconds(520)
-        case .unbinding: return .milliseconds(300)
-        case .unrolling: return .milliseconds(950)
-        // Long enough to read as the sheet settling, short enough that nobody waits on it.
-        case .open: return .milliseconds(240)
+        case .widening: return .milliseconds(420)
+        case .unbinding: return .milliseconds(260)
+        case .unrolling: return .milliseconds(780)
+        // Long enough to read as the sheet settling, short enough that nobody waits on it. The page
+        // it hands over to draws the same parchment, so this beat holds a blank sheet — every
+        // millisecond of it is a millisecond of nothing.
+        case .open: return .milliseconds(140)
         }
     }
 
@@ -94,9 +100,9 @@ public struct HisploraScrollUnsealSequence: Sendable, Equatable {
         guard !rendersImmediately else { return .zero }
         switch stage {
         case .sealed: return .zero
-        case .widening: return .milliseconds(430)
-        case .unbinding: return .milliseconds(215)
-        case .unrolling: return .milliseconds(780)
+        case .widening: return .milliseconds(320)
+        case .unbinding: return .milliseconds(190)
+        case .unrolling: return .milliseconds(600)
         case .open: return duration(of: .open)
         }
     }
@@ -119,7 +125,6 @@ public struct HisploraScrollUnsealSequence: Sendable, Equatable {
         // the object changing size at the moment it changes identity.
         case .unbinding: return .easeInOut(duration: seconds)
         // Paper coming off a rod does not accelerate. It starts, it runs, it eases into rest.
-        case .unrolling: return .timingCurve(0.32, 0, 0.12, 1, duration: seconds)
         case .unrolling: return .timingCurve(0.32, 0, 0.12, 1, duration: seconds)
         }
     }
@@ -340,6 +345,25 @@ public enum HisploraScrollIdleShake {
         Beat.allCases.filter { $0 != .rest }.reduce(0) { $0 + $1.seconds }
     }
 
+    /// The curve one tip travels on. The tips are quick and even; coming back to rest is where the
+    /// weight is, so that beat alone gets a spring.
+    public static func animation(of beat: Beat) -> Animation {
+        beat == .rest
+            ? .spring(duration: beat.seconds * 0.35, bounce: 0.2)
+            : .easeInOut(duration: beat.seconds)
+    }
+
+    /// How the roll comes back to rest when the walker taps it mid-tip.
+    ///
+    /// **The shake used to stop rather than settle**, which is most of what read as the tap being
+    /// stiff: `PhaseAnimator` was unmounted the instant `isActive` went false, so whatever tilt and
+    /// lift the current beat had reached snapped to zero on the same frame the opening started. A
+    /// picture that jumps and *then* begins moving smoothly reads as a jolt, however good the
+    /// movement after it is. The shake now runs on plain state, so switching it off is an animation
+    /// like any other — short enough to be under the opening's first beat, soft enough to hand the
+    /// roll's own weight into it.
+    public static let settle: Animation = .spring(duration: 0.26, bounce: 0.12)
+
     /// How faint the caption goes at the bottom of its own breath. It shares the roll's clock so the
     /// two read as one object asking rather than as two things animating near each other.
     public static let captionFloor: Double = 0.62
@@ -353,25 +377,46 @@ private struct HisploraIdleShakeModifier: ViewModifier {
 
     private var running: Bool { isActive && !reduceMotion }
 
+    /// The tilt and lift the roll is at right now — one pair of values whether the shake is running,
+    /// settling or off, which is the whole point of driving it by hand.
+    ///
+    /// **`PhaseAnimator` was what this used to be, and it could not settle.** It applied its phase
+    /// inside its own builder, so the view it produced simply stopped existing when `isActive` went
+    /// false and the roll snapped back to level on that frame — under the walker's thumb, on the
+    /// frame the opening began. A chain of `repeatForever` animations is the other obvious shape and
+    /// is the one `PhaseAnimator` was chosen over: the beats have different lengths, so a repeating
+    /// animation per property loops each on its own clock and the tilt and the lift drift apart
+    /// within a few cycles. One task walking the beats in order keeps them on one clock *and* leaves
+    /// the values somewhere an ordinary animation can take over from.
+    @State private var tiltDegrees: Double = 0
+    @State private var lift: CGFloat = 0
+
     func body(content: Content) -> some View {
-        if running {
-            // `PhaseAnimator` rather than a chain of `repeatForever` animations on separate
-            // properties: the beats have different lengths, and a repeating animation per property
-            // makes each one loop on its own clock — the tilt and the lift drift apart within a
-            // few cycles and the shake stops looking like one movement.
-            PhaseAnimator(HisploraScrollIdleShake.Beat.allCases) { beat in
-                content
-                    .rotationEffect(.degrees(beat.tiltDegrees))
-                    .offset(y: beat.lift)
-            } animation: { beat in
-                // The tips are linear-ish and quick; coming back to rest is where the weight is.
-                beat == .rest
-                    ? .spring(duration: beat.seconds * 0.35, bounce: 0.2)
-                    : .easeInOut(duration: beat.seconds)
+        content
+            .rotationEffect(.degrees(tiltDegrees))
+            .offset(y: lift)
+            .task(id: running) { @MainActor in
+                guard running else {
+                    // Not a reset — the roll travels back to level from wherever the tap caught it
+                    // (`HisploraScrollIdleShake.settle`).
+                    withAnimation(HisploraScrollIdleShake.settle) {
+                        tiltDegrees = 0
+                        lift = 0
+                    }
+                    return
+                }
+                while !Task.isCancelled {
+                    for beat in HisploraScrollIdleShake.Beat.allCases {
+                        withAnimation(HisploraScrollIdleShake.animation(of: beat)) {
+                            tiltDegrees = beat.tiltDegrees
+                            lift = beat.lift
+                        }
+                        // A cancelled sleep throws, which leaves the loop with the values mid-tip —
+                        // exactly what the `guard` above then animates out of.
+                        do { try await Task.sleep(for: .seconds(beat.seconds)) } catch { return }
+                    }
+                }
             }
-        } else {
-            content
-        }
     }
 }
 

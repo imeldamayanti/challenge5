@@ -430,6 +430,8 @@ struct StoryTransitionScreen: View {
     let onContinue: () -> Void
 
     @State private var stage: HisploraScrollUnsealStage = .sealed
+    /// Whether the walker's finger is down on the screen right now — see `pressScale`.
+    @State private var isPressed = false
 
     private var sequence: HisploraScrollUnsealSequence {
         HisploraScrollUnsealSequence(rendersImmediately: reduceMotion || voiceOverEnabled)
@@ -454,12 +456,12 @@ struct StoryTransitionScreen: View {
                                 // so the words and the picture read as one object asking for the
                                 // tap rather than as two things animating near each other.
                                 .hisploraIdlePulse(isActive: stage == .sealed)
-                                // Breathing on the roll's own clock while nothing has been tapped,
-                                // so the words and the picture read as one object inviting the tap
-                                // rather than as two things animating near each other.
-                                .hisploraIdlePulse(isActive: stage == .sealed)
                                 // The words are an instruction for a tap that has already happened.
+                                // Faded out rather than switched off: an unanimated `opacity` cuts
+                                // the caption on the frame of the tap, which is a second jolt beside
+                                // the roll's own — and the roll now settles rather than snapping.
                                 .opacity(stage == .sealed ? 1 : 0)
+                                .animation(.easeOut(duration: 0.22), value: stage == .sealed)
                                 // 788 of 874, which is 52 above the home indicator's own room.
                                 .padding(.bottom, 52)
                         }
@@ -475,7 +477,7 @@ struct StoryTransitionScreen: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(ScrollPressStyle(isPressed: $isPressed))
             // One tap opens one scroll. A second one mid-sequence would start a second run of it and
             // hand over twice.
             //
@@ -488,6 +490,15 @@ struct StoryTransitionScreen: View {
                 "\(UIStrings.string(.transitionTapToReveal, language)) · \(placeName)")
         }
     }
+
+    /// How far the roll gives under the finger before it opens.
+    ///
+    /// **The tap had no answer until the first beat began**, which is a fifth of a second of nothing
+    /// on a screen whose only control is a picture — the walker presses, the picture holds still, and
+    /// then the opening starts. A press this small is not decoration: it is the acknowledgement, and
+    /// it is what the settle after it is easing out of. It rides only while the roll is still tied;
+    /// once the opening is running the sequence owns the object's size.
+    private var pressScale: CGFloat { isPressed && stage == .sealed ? 0.955 : 1 }
 
     /// Runs the beats, then hands over.
     ///
@@ -504,10 +515,10 @@ struct StoryTransitionScreen: View {
                 // `hold`, not `duration`: each beat starts while the one before it is still easing
                 // out, so the opening never comes to a full stop between them
                 // (`HisploraScrollUnsealSequence.hold(of:)`).
-                try? await Task.sleep(for: sequence.hold(of: current))
-                // `hold`, not `duration`: each beat starts while the one before it is still easing
-                // out, so the opening never comes to a full stop between them
-                // (`HisploraScrollUnsealSequence.hold(of:)`).
+                //
+                // **Once per beat.** A merge left two identical sleeps here, which doubled every
+                // wait in the sequence and left the walker looking at a blank open parchment for
+                // about a second and a half of it.
                 try? await Task.sleep(for: sequence.hold(of: current))
                 beat = current.next
             }
@@ -541,6 +552,8 @@ struct StoryTransitionScreen: View {
                 // lands — a loop left running under `widening` would be a second animation writing
                 // the same rotation and offset.
                 .hisploraIdleShake(isActive: stage == .sealed)
+                .scaleEffect(pressScale, anchor: .center)
+                .animation(.spring(duration: 0.24, bounce: 0.18), value: pressScale)
                 .offset(y: stage == .sealed ? restingOffset : 0)
                 .opacity(stage.showsSealedRoll ? 1 : 0)
             HisploraParchmentUnroll(openFraction: stage.openFraction)
@@ -571,14 +584,6 @@ struct StoryTransitionScreen: View {
                 // already knows the stage's width, so the interpolated value is an ordinary
                 // animatable frame here.
                 .frame(width: width)
-                //
-                // **A plain `.frame`, not `containerRelativeFrame`.** The container-relative form
-                // re-runs its closure against the container on each layout pass and SwiftUI
-                // interpolates the *result*, which on device stepped rather than travelled — the
-                // roll jumped to a couple of intermediate widths instead of growing. The caller
-                // already knows the stage's width, so the interpolated value is an ordinary
-                // animatable frame here.
-                .frame(width: width)
                 // Constant, not animated: the asset is drawn on a diagonal and this is what stands
                 // it level (`HisploraScrollUnsealSequence.sealedTiltDegrees`). Turning it to zero
                 // during the opening tips the level roll over onto that diagonal.
@@ -589,5 +594,21 @@ struct StoryTransitionScreen: View {
             // frame and the typewriter follow. The words below are still a control.
             Color.clear.frame(height: 0)
         }
+    }
+}
+
+/// A plain button that also reports whether it is being pressed.
+///
+/// `.buttonStyle(.plain)` draws nothing and says nothing, so the transition screen had no way to know
+/// the walker's finger was down — and the one thing on that screen is a picture that has to answer a
+/// touch. The style keeps `.plain`'s "draw the label and nothing else" and adds the one bit of state
+/// the screen needs, rather than scaling the label here: the label is the whole screen, and it is the
+/// roll inside it that gives (`StoryTransitionScreen.pressScale`).
+private struct ScrollPressStyle: ButtonStyle {
+    @Binding var isPressed: Bool
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .onChange(of: configuration.isPressed) { _, pressed in isPressed = pressed }
     }
 }
