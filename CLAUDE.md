@@ -843,6 +843,40 @@ with the splash still auto-advancing and still a drawing.
     arrives after 0.16 s and rises 12 points, so the page settles and *then* reads.
   Seen on iPhone 17 / iOS 26.5, both directions — `docs/screenshots/m16-cutscene-legend.png`,
   `m16-cutscene-portrait.png`.
+- **After the first checkpoint a walk stands on a live map, and arrival is a card over it rather
+  than a screen.** `5:1608` is `Features/QuestRun/QuestNavigationMapScreen.swift`, and the new
+  `.arrivalNotice` stage is that same map with `CheckpointArrivedPopup` over it;
+  `advanceFromArrivalNotice()` hands over to the stored `stageAfterArrivalConfirmed`, which at every
+  checkpoint after the first is `.storyReveal`. So checkpoints 2–5 go **map → card → story**, with
+  no `223:2004` ("Not Quite There") and no `1:4458` ("Location Verified") in between. Five things
+  about it:
+  - **The first checkpoint keeps both original screens.** `QuestRunViewModel.usesNavigationMap` is
+    `currentIndex > 0` and nothing else. Those two screens explain what the app does with a walker's
+    position, and an explanation is worth a screen the first time it is needed rather than four
+    times. Widening the rule loses the explanation; narrowing it back restores three screens nobody
+    asked for. `QuestRunTests` pins both directions.
+  - **One view across the arrival, not two screens cross-fading.** `.awaitingArrival` and
+    `.arrivalNotice` both route to `QuestRunView.navigationMap(showsArrivalCard:)`, so the map keeps
+    its identity and only the card animates in — the same reason `CutsceneSequenceScreen` is one
+    view at two phases.
+  - **The card is `1108:2780`'s object** (`NewDiscoveryPopup`'s wash, width, radius and hugging
+    pill), with `.checkpointArrivedHeading` over the place name. Its scrim is **not** a control:
+    there is nothing to dismiss to, since the arrival is already recorded (`FR-RUN-01`) and the one
+    pill carries the walk into the story. Its mark is a still `mapMarker` dot rather than
+    `HisploraPulsingMapMarker` — a forever-repeating ring is the leading suspect behind the
+    XCUITest that never sees the app go idle, and a card shown for one tap has no reason to add one.
+  - **No new strings, tokens, type roles or art.** The card reads `.checkpointArrivedHeading` +
+    `.locationVerifiedBody` + `.locationVerifiedContinue`; the map's own card reads
+    `.arrivalHeading` ("Heading to %@") and `.arrivalDistanceRemaining`. `ArrivalRouteMap` gained a
+    `cornerRadius` parameter so the tiles can go full-bleed — nothing else changed in it, and the
+    `FR-MAP-01` deviation it carries (`docs/prd-amendments/fr-map-01-arrival-basemap.md`, still
+    unsigned) now reaches one screen further: the walk between checkpoints, not only the arrival
+    slot.
+  - **The frames were not readable.** The Figma MCP server is unauthenticated in this environment,
+    so `5:1608` and `1:5068` were worked from the instruction rather than sampled; the screens are
+    composed from this flow's existing vocabulary at their own measurements. Seen working on
+    iPhone 17 Pro / iOS 26.4, checkpoint 3: live map with the walker, the bearing and
+    "Distance remaining: 469 m" → the arrival card → `StoryRevealScreen`.
 - **A map with a beating dot stands between the cutscene and the story, and it leaves on its own.**
   `187:1103` is back as `approachTransition` — `cutscenePortrait` → `approachTransition` →
   `storyReveal`, on the walk's first checkpoint only, since it is the cutscene that it lands. It is

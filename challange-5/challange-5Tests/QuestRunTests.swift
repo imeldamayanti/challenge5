@@ -124,6 +124,7 @@ struct QuestRunTests {
             }
             switch harness.model.stage {
             case .locationVerified: harness.model.advanceFromLocationVerified()
+            case .arrivalNotice: harness.model.advanceFromArrivalNotice()
             case .cutsceneIntro: harness.model.advanceFromCutsceneIntro()
             case .cutscenePortrait: harness.model.advanceFromCutscenePortrait()
             case .approachTransition: harness.model.advanceFromApproachTransition()
@@ -351,9 +352,15 @@ struct QuestRunTests {
         #expect(QuestRunViewModel.isStoryFlow(.approachTransition))
     }
 
-    /// The second checkpoint confirms arrival too — the cutscene is once per walk, the
-    /// confirmation is once per arrival — and its Continue reaches the story reveal instead.
-    @Test func alaterArrivalConfirmsTheLocationAndThenGoesStraightToTheStory() throws {
+    /// `5:1608` — the second checkpoint does **not** get `1:4458` again. It arrives onto the
+    /// walking map's arrival card, and that card's one control reaches the story reveal.
+    ///
+    /// The confirmation screen is an explanation of what the app does with a walker's position, and
+    /// an explanation is worth a screen the first time it is needed and not the fourth. This is the
+    /// seam that would break silently if `usesNavigationMap` were ever widened to every checkpoint
+    /// (the first arrival would lose the explanation) or narrowed away (every arrival would get it
+    /// back).
+    @Test func alaterArrivalAnnouncesItselfOnTheMapAndGoesStraightToTheStory() throws {
         let harness = try harness()
         openArrival(harness)
         harness.provider.emit(offsetMetres: 5, accuracy: 8)
@@ -362,12 +369,32 @@ struct QuestRunTests {
         // second checkpoint — no separate `advance()` call is needed here any more.
         #expect(walkTheStoryStages(harness), "Story stages did not hand over cleanly")
         #expect(harness.model.stage == .awaitingArrival)
+        // The waiting screen is the live map from here on, not `223:2004`.
+        #expect(harness.model.usesNavigationMap)
 
         harness.provider.emit(offsetMetres: 5, accuracy: 8)
 
-        #expect(harness.model.stage == .locationVerified)
-        harness.model.advanceFromLocationVerified()
+        #expect(harness.model.stage == .arrivalNotice)
+        harness.model.advanceFromArrivalNotice()
         #expect(harness.model.stage == .storyReveal)
+    }
+
+    /// The walk's *first* checkpoint keeps both original screens — it is the one place the walker
+    /// is told what a fix means at all.
+    @Test func theFirstCheckpointDoesNotUseTheWalkingMap() throws {
+        let harness = try harness()
+        openArrival(harness)
+
+        #expect(!harness.model.usesNavigationMap)
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+        #expect(harness.model.stage == .locationVerified)
+    }
+
+    /// The map and its card are drawn on the Hisplora ground and carry their own header, so the
+    /// museum navigation bar must go away over them — the same rule every other story stage is
+    /// held to, and the one a new stage is easiest to leave out of.
+    @Test func theWalkingMapIsAStoryFlowStage() {
+        #expect(QuestRunViewModel.isStoryFlow(.arrivalNotice))
     }
 
     @Test func theCheckpointScreenCarriesTheStoryItsLabelsAndItsSources() throws {

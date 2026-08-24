@@ -39,6 +39,10 @@ struct ArrivalRouteMap: View {
     /// The default stays `true` for any surface that is about the route rather than about the
     /// walker not being at it yet.
     var drawsRoute: Bool = true
+    /// The rounding on the tiles. `223:2004` pastes its map into a card-shaped slot; `5:1608` is
+    /// the map, full-bleed, so it passes 0 — a rounded corner on a screen-filling map reads as a
+    /// picture of a map rather than as one.
+    var cornerRadius: CGFloat = KultaraMetrics.cardCornerRadius
 
     /// Set only by a load that failed. Never by a guess about connectivity.
     @State private var basemapFailed = false
@@ -55,7 +59,7 @@ struct ArrivalRouteMap: View {
                                    palette: .standard,
                                    drawsRoute: drawsRoute,
                                    onFailure: { basemapFailed = true })
-                    .clipShape(RoundedRectangle(cornerRadius: KultaraMetrics.cardCornerRadius,
+                    .clipShape(RoundedRectangle(cornerRadius: cornerRadius,
                                                 style: .continuous))
                     // Tiles are not readable by VoiceOver any more than a drawing is, so the same
                     // three facts `RunRouteMapView` states are stated here.
