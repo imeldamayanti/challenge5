@@ -450,7 +450,10 @@ public enum ContentValidator {
         }
 
         // V14 — referenced assets
-        for asset in [quest.route.geometryAsset, quest.route.previewImageAsset, quest.heroImageAsset].compactMap({ $0 }) {
+        for asset in [
+            quest.route.geometryAsset, quest.route.previewImageAsset, quest.heroImageAsset,
+            quest.cutsceneSubject?.portraitAsset
+        ].compactMap({ $0 }) {
             if !assets.exists(asset) {
                 findings.append(ValidationFinding(
                     rule: .v14, path: path, message: "Referenced asset \"\(asset)\" does not exist."))
@@ -478,6 +481,15 @@ public enum ContentValidator {
         let hookSourceCount = ordered.first.flatMap { bundle.place(id: $0.placeId)?.sources.count } ?? 0
         findings.append(contentsOf: loreFindings(
             quest.hookLore, sourceCount: hookSourceCount, path: path, label: "hookLore"))
+
+        // V3 — the cutscene's named sitter, resolved the same way hookLore is: a portrait of a
+        // named person is a claim, and `CutsceneSubject` carries one `LoreBlock`-shaped claim
+        // rather than a free-standing name.
+        if let subject = quest.cutsceneSubject {
+            findings.append(contentsOf: loreFindings(
+                [LoreBlock(text: subject.name, accuracy: subject.accuracy, sourceRefs: subject.sourceRefs)],
+                sourceCount: hookSourceCount, path: path, label: "cutsceneSubject"))
+        }
 
         // V9 — FR-CP-01
         if ordered.isEmpty {

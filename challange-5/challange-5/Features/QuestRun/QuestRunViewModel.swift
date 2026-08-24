@@ -924,6 +924,22 @@ final class QuestRunViewModel {
         return (try? repository.assetURL(asset)) ?? nil
     }
 
+    /// `187:866`'s sitter, when the quest ships one (`CutsceneSubject`). `nil` for every quest that
+    /// does not — `cutsceneSequence` then falls back to `cutsceneImageURL` and `currentPlaceName`,
+    /// which is what the frame drew before any quest carried a named subject.
+    var cutsceneSubjectPortraitURL: URL? {
+        guard let asset = quest.cutsceneSubject?.portraitAsset else { return nil }
+        return (try? repository.assetURL(asset)) ?? nil
+    }
+
+    var cutsceneSubjectName: String? {
+        quest.cutsceneSubject?.name.value(for: language)
+    }
+
+    var cutsceneSubjectSubtitle: String? {
+        quest.cutsceneSubject?.subtitle?.value(for: language)
+    }
+
     /// The drawing behind the current checkpoint's Story Reveal page — the Place's own
     /// `storyArtwork` when it ships one, `nil` where it does not (the screen falls back to its
     /// packaged art, and the first checkpoint's opening is the cutscene's). Content with a citation

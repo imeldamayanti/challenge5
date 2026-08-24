@@ -361,5 +361,18 @@
       "stampId": "stamp-badung-empat-wajah-5"
     }
   ],
-  "heroImageAsset": "quests/badung-empat-wajah/hero.png"
+  "heroImageAsset": "quests/badung-empat-wajah/hero.png",
+  "cutsceneSubject": {
+    "name": {
+      "id": "I Gusti Ngurah Made Agung",
+      "en": "I Gusti Ngurah Made Agung"
+    },
+    "subtitle": {
+      "id": "Raja Terakhir Badung",
+      "en": "The Last King of Badung"
+    },
+    "portraitAsset": "quests/badung-empat-wajah/cutscene-subject-portrait.png",
+    "accuracy": "documented",
+    "sourceRefs": [4]
+  }
 }

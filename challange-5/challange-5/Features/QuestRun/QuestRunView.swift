@@ -272,14 +272,15 @@ struct QuestRunView: View {
             language: language,
             phase: model.stage == .cutsceneIntro ? .legend : .portrait,
             questTitle: model.questTitle,
-            portraitURL: model.cutsceneImageURL,
-            portraitLabel: model.questTitle,
+            portraitURL: model.cutsceneSubjectPortraitURL ?? model.cutsceneImageURL,
+            portraitLabel: model.cutsceneSubjectName ?? model.questTitle,
             // The quest's name goes in the bar, as `447:1870` draws it; the name under the picture
-            // is the picture's *subject*. The frame's subject is a person the content tree does not
-            // hold, so the place being walked to stands in — it is what the hero image shows. The
-            // two must not both be the quest's title: `187:866` would then print it twice.
-            subjectName: model.currentPlaceName,
-            subjectSubtitle: nil,
+            // is the picture's *subject*. `187:866` draws a named person — `CutsceneSubject`, when
+            // the quest ships one — and the two must not both be the quest's title, or the page
+            // prints it twice. A quest with no subject falls back to the place being walked to,
+            // which is what the hero image shows in that case.
+            subjectName: model.cutsceneSubjectName ?? model.currentPlaceName,
+            subjectSubtitle: model.cutsceneSubjectSubtitle,
             hook: model.hookText,
             onAdvance: { model.advanceFromCutsceneIntro() },
             onStart: { model.advanceFromCutscenePortrait() },

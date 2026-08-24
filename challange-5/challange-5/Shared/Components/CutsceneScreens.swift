@@ -10,14 +10,20 @@ import UIStringsKit
 /// `cutscene` object to the schema would mean a validator rule, a consent question and a migration,
 /// for something `hookLore` already holds.
 ///
-/// **On the portrait.** The frames show a generated likeness of I Gusti Ngurah Made Agung. That
-/// image is not shipped here, and the reason is not squeamishness: a portrait of a named historical
-/// person is a claim, `FR-CP-05` requires every claim to carry its accuracy label and its source,
-/// and the sample content ships no such person, no consent record for one, and no citation. The
-/// frame is built to take *whatever image the content supplies* — `KultaraPortraitFrame` was
-/// written that way deliberately — so when a licensed or properly-labelled image exists it drops in
-/// without this file changing. Until then the frame carries the quest's own hero image, which is
-/// content with provenance behind it.
+/// **On the portrait.** The frames show a generated likeness of I Gusti Ngurah Made Agung. A
+/// portrait of a named historical person is a claim, and `FR-CP-05` requires every claim to carry
+/// its accuracy label and its source — so the picture is never a literal the view drops in, and
+/// `KultaraPortraitFrame` was written to take *whatever image the content supplies* for exactly this
+/// reason. `Quest.cutsceneSubject` (`CutsceneSubject`) is that content, and `badung-empat-wajah` is
+/// the one quest that carries it as of `contentBundleVersion` 2026.09.14: the identity is
+/// well-documented (he was the last Raja of Badung, killed in the 1906 Puputan Badung), but neither
+/// that citation nor a consent record for the *image* is real yet — the portrait is AI-generated,
+/// and the Place's `sources` entry says so plainly rather than dressing it up as a survey the way
+/// the site plan and the approach map do. **This is unresolved the same way those are**: it belongs
+/// beside the `docs/consent-log.md` blockers, not shipped publicly, until a licensed or
+/// properly-labelled image and a real citation replace it. A quest that ships no `cutsceneSubject`
+/// falls back to the current place's name and the quest's own hero image, which is what every quest
+/// but this one still does.
 
 
 /// `98:1588` into `187:866` — the covered frame the walker rubs clear, and the subject named once
@@ -238,8 +244,11 @@ struct CutsceneSequenceScreen: View {
     /// readers (`NFR-A11Y-04`, `NFR-A11Y-05`).
     @ViewBuilder private var footAction: some View {
         if !isLegend {
+            // `187:866` draws this pill white rather than the flow's usual near-black — the inverse
+            // pill `223:2004` draws, and for the same reason: white on `brownStone` clears WCAG
+            // 1.4.11's 3:1 boundary requirement on the fill alone, so it needs no ring.
             Button(UIStrings.string(.cutsceneStartAction, language), action: onStart)
-                .buttonStyle(.hisploraPill)
+                .buttonStyle(.hisploraLightPill)
                 .transition(wordsSwap)
         } else if !rubIsAvailable {
             Button(UIStrings.string(.cutsceneRevealAction, language), action: advanceOnce)

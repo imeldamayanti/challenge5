@@ -12,9 +12,9 @@ struct KultaraRootView: View {
 
     @State private var language: ContentLanguage
     @State private var showsOnboarding: Bool
-    /// The splash the app-flow chart opens with, which is still a wireframe. Held in `@State`
-    /// rather than persisted for exactly that reason: it is a drawing, and a persisted flag would
-    /// mean the team has to clear app data to see it again. One tap gets past it.
+    /// The splash the app-flow chart opens with (Figma `207:293`). Held in `@State` rather than
+    /// persisted: a persisted flag would mean the team has to clear app data to see it again. One
+    /// tap gets past it.
     @State private var showsSplash = true
     /// Whether the entry screens still have something to ask (Figma `791:5145`, `791:5109`,
     /// `822:2235`).
@@ -129,9 +129,8 @@ struct KultaraRootView: View {
     var body: some View {
         KultaraThemeProvider {
             // Splash → Onboarding → Sign up / Sign in / Guest → Home, as the flow chart opens.
-            // The splash is still a wireframe; onboarding and the three entry screens are built.
             if showsSplash {
-                SplashWireframeView(language: language, onFinish: { showsSplash = false })
+                SplashScreen(onFinish: { showsSplash = false })
             } else if showsOnboarding {
                 OnboardingView(
                     store: environment.preferences,
