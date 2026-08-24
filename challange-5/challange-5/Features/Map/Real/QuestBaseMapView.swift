@@ -376,6 +376,7 @@ struct QuestBaseMapView: UIViewRepresentable {
                         format: UIStrings.string(.questPopoverStopsFormat, language),
                         quest.stopCount),
                     startSpokenLabel: UIStrings.string(.runStartAction, language)),
+                artwork: quest.artwork,
                 palette: parent.hisploraPalette,
                 anchorCoordinate: quest.coordinate,
                 onStart: { [weak self] in

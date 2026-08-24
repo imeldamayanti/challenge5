@@ -1705,3 +1705,43 @@ New Discovery card, because that card only appears when the app is foregrounded.
 a place (in-app card)"** raises `onSideQuestNearby` directly, which is what a region firing with the
 app open does. Both are `#if DEBUG`, both skip `ProximityGate` for the reason `forceNotification`
 already gave.
+
+## The quest popover restyle (`1322:4256`) and the landmark redraw (`298:1021`, `1026:3382`, `298:1013`, `298:1037`)
+
+2026-08-24. The marker popover was redrawn from `1026:3514` to `1322:4256`, and the three landmark
+drawings were replaced with the new board's set. Three colours in the new frame have no token:
+
+- **`#5D4C44`** — the popover's meta ink (place, minutes, stops, and the three exported icons,
+  which ship tinted with it baked in). It is text on `paperSheet` at **7.3:1**, measured once here.
+  The nearest token, `inkMuted` `#5E5A5A`, is grey where the frame is warm brown, so the frame's own
+  value ships as a literal in `QuestMapPopoverCard` rather than as a near-miss token.
+- **`#E0BBAB`** — the foot of the card's vertical ground wash (`paperSheet` holds to 62% down, then
+  falls to this dusty rose behind the Start band). Decoration behind a band, not a surface anything
+  is measured against; literal in the same file.
+- The Start band itself needed nothing: its fill and border are `brownMid` and `brownStone`
+  **exactly**, and its label is `inkOnButton`.
+
+The landmark set is the same three subjects redrawn — the Besakih temple complex for `temple`
+(`298:1021`, and `298:1037` is the same drawing again), the candi bentar for `naga`
+(`1026:3382`, which is also the drawing the popover stands on its quest), and the legong stage for
+`dance` (`298:1013`). The fog is unchanged. What changed with them: each drawing now carries its own
+display box and depth in the cluster, read off the frames — 82×55 at (36, 3), 85×57.025 at (36, −6),
+85×61 at (37, −1) — where the old set shared one box. The dance stage's box is *not* its file's own
+proportions (the file is 344 × 287); the frame draws it cropped to fill and the figure reproduces
+the crop. The popover's tail moved to the frame's own shape and place — 6.5 × 19, its point at 155
+of 235.5 — so the card hangs off its marker at two thirds down, not by its centre.
+
+**Seen on iPhone 17 / iOS 26.5** through `DiscoveryFlowUITests
+.testTheMapSurfaceShowsAMarkerPerQuestAndOpensTheStoryFlow`, which passes —
+`docs/screenshots/m17-quest-popover-restyle.png`.
+
+### The exactness pass (same day, on the owner's screenshot)
+
+Three corrections against `1322:4256`'s own coordinates: the meta block is the frame's fixed 44
+tall, the title and the 12pt meta carry the frame's leading (1.2 and 16), the Start band's hairline
+rounds at the band's own 22 rather than the card's 23.5, and the card stands the gate at **(38, 0)**
+in its cluster — the marker frames use (36, −6), so `MapLandmarkFigure` takes a `buildingOffset:`
+override and the card passes its own number. On the map itself the marker dropped its caption — the
+name lives in the popover and the accessibility label, nowhere under the drawing — and grew from a
+120-point cluster to the figure's reference **159**, building 85 points, which is what the frames
+draw at 1:1. Re-verified through the same UI test; screenshot replaced in place.
