@@ -4,6 +4,7 @@
 // FR-CP-05, FR-TASK-02/06, AD-2, AD-4.
 import Foundation
 import Testing
+import UIKit
 @testable import challange_5
 import UIStringsKit
 @testable import ContentKit
@@ -16,6 +17,28 @@ struct TaskDetailTests {
         let model: QuestRunViewModel
         let provider: FakeLocationProvider
         let quest: Quest
+        let photoStore: InMemoryPhotoStore
+    }
+
+    /// Resolves a task the way its own mechanic is resolved — a photograph for a `photo` task, words
+    /// for the two written ones.
+    ///
+    /// The tests below used to write into `taskDrafts` and assume that answered the checkpoint's
+    /// first task. Since `2026.09.14` every stop carries three tasks and the first of several is a
+    /// photograph, and `saveTask` turns a written draft on a photo task into a *skip* — so the
+    /// assumption did not fail loudly, it resolved the task as the wrong kind. The answer has to
+    /// follow the mechanic the content authored.
+    @discardableResult
+    private func answer(_ task: ContentTask, on harness: Harness, words: String) -> String? {
+        if task.type == .photo {
+            // `photoDrafts` is private and the shutter is the only way in, so the sheet has to be
+            // open on this task — which is where a photograph is taken anyway.
+            harness.model.openTaskDetail(taskID: task.id)
+            harness.model.capturedPhoto(UIImage())
+            return nil
+        }
+        harness.model.taskDrafts[task.id] = words
+        return words
     }
 
     /// A walk standing at its first checkpoint with the task list on screen — the state `452:3132`
@@ -24,6 +47,7 @@ struct TaskDetailTests {
         let repository = try BundledContentRepository()
         let quest = try #require(try repository.quests().first)
         let provider = FakeLocationProvider(authorization: .whenInUse)
+        let photoStore = InMemoryPhotoStore()
         let model = try #require(QuestRunViewModel(
             engine: RunEngine(repository: repository, store: InMemoryRunStore()),
             repository: repository,
@@ -31,7 +55,8 @@ struct TaskDetailTests {
             locationProvider: provider,
             questID: quest.id,
             language: .id,
-            manualOverrideDelay: .milliseconds(20)))
+            manualOverrideDelay: .milliseconds(20),
+            photoStore: photoStore))
 
         model.advanceFromStoryPreview()
         if model.stage == .awaitingArrival, !provider.isSampling { model.screenAppeared() }
@@ -58,7 +83,7 @@ struct TaskDetailTests {
             }
         }
         try #require(model.stage == .checkpointDetail)
-        return Harness(model: model, provider: provider, quest: quest)
+        return Harness(model: model, provider: provider, quest: quest, photoStore: photoStore)
     }
 
     /// The same walk, stopped at the sacred-Place notice — `1:4592`, now the screen right after the
@@ -94,7 +119,8 @@ struct TaskDetailTests {
         }
         try #require(model.stage == .placeNotice,
                      "the first stop is a sacred Place, so the notice is on the path")
-        return Harness(model: model, provider: provider, quest: quest)
+        return Harness(model: model, provider: provider, quest: quest,
+                       photoStore: InMemoryPhotoStore())
     }
 
     // MARK: - `1:4592` → `921:3851` → `1:4586` → `1:4711` → `1:4904`
@@ -218,22 +244,25 @@ struct TaskDetailTests {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
 
-        harness.model.taskDrafts[task.id] = "Gerbangnya batu bata merah."
+        answer(task, on: harness, words: "Gerbangnya batu bata merah.")
         harness.model.saveTask(task)
 
         #expect(harness.model.resolvedTaskCount == 1)
         #expect(harness.model.resolution(for: task)?.skipped == false)
     }
 
-    /// The label the bar reads out. `452:3132` is titled "Quest 1/3" and draws three segments because
-    /// the mock-up invents three tasks; the shipped content carries one per checkpoint, so the total
-    /// is the run's and not the frame's (`AD-4`).
+    /// The label the bar reads out. `452:3132` is titled "Quest 1/3" and draws three segments, and
+    /// the mock-up's three are copy invented for it — the total the bar prints is the checkpoint's
+    /// own task list, whatever length content gives it (`AD-4`). Asserting the literal number is
+    /// what this test used to do, and a content edit made it red for no requirement's sake.
     @Test func theProgressLabelCountsTheRunsOwnTasksAndNotTheFramesThree() throws {
         let harness = try atTaskList()
+        let authored = try #require(harness.model.checkpoint?.tasks.count)
 
-        #expect(harness.model.taskCount == 1,
-                "shipped content carries one task per checkpoint; the bar must follow it")
-        #expect(harness.model.taskProgressLabel.contains("1"))
+        #expect(authored > 0)
+        #expect(harness.model.taskCount == authored,
+                "the bar must follow the checkpoint's authored tasks, not a drawn number")
+        #expect(harness.model.taskProgressLabel.contains("\(authored)"))
     }
 
     // MARK: - `452:3028` — the site plan
@@ -323,14 +352,15 @@ struct TaskDetailTests {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
-        harness.model.taskDrafts[task.id] = "Empat wajah menghadap empat arah."
+        let written = answer(task, on: harness, words: "Empat wajah menghadap empat arah.")
 
         harness.model.saveTaskFromDetail(task)
 
         #expect(harness.model.stage == .questExplanation(taskID: task.id))
         let resolution = try #require(harness.model.resolution(for: task))
         #expect(resolution.skipped == false)
-        #expect(resolution.text == "Empat wajah menghadap empat arah.")
+        #expect(resolution.text == written)
+        if task.type == .photo { #expect(resolution.photoRelativePath != nil) }
     }
 
     /// `FR-TASK-02` and `AD-2` — the skip is offered on the same screen, resolves the task just as

@@ -923,10 +923,33 @@ with the splash still auto-advancing and still a drawing.
     `StampArtworkResolver`, which must be handed **the active run alongside the finished ones** —
     the resolver builds its stamp → place table from the runs it is given, so finished-only means a
     first-time walker's quest is in no table and the window renders empty.
-- **`452:3132` renders one task row and one progress segment, not the frame's three.** The frame is
-  titled "Quest 1/3" and invents three tasks ("The Iron Statue", "The Ancient Script", "The Whip
-  Bearer") that exist nowhere in the content tree; the shipped checkpoints carry exactly one task
-  each. The bar counts the run's own tasks (`AD-4`).
+- **`452:3132` renders one row and one segment per authored task, never the frame's fixed three.**
+  The frame is titled "Quest 1/3" and invents three tasks ("The Iron Statue", "The Ancient Script",
+  "The Whip Bearer") that exist nowhere in the content tree. The bar counts the run's own tasks
+  (`AD-4`) — since `contentBundleVersion` **2026.09.14** that happens to be three per checkpoint,
+  and the guard reads the checkpoint's list rather than the literal number, which is what stopped
+  `theProgressLabelCountsTheRunsOwnTasksAndNotTheFramesThree` going red on a content edit.
+- **Every checkpoint carries three tasks now, and the single placeholder each shipped with is
+  gone.** `2026.09.14` re-authored all fifteen from the owner's own wording (2026-08-24), named in
+  the prompt's first sentence because the task rows and the sheet's masthead both print the *type*
+  as the title and content has no title field — three rows reading "Photo" with no other difference
+  would be unreadable. Four things about them:
+  - **Eleven of the fifteen are photo tasks**, which is fine at all five places (`FR-TASK-06`/V9:
+    none of the five is `prohibited`, four are `restricted`) — but it means **the start checkpoint
+    now has no written task at all**. Two `TaskDetailTests` had assumed the checkpoint's first task
+    took words and silently resolved a photo task as a *skip* when handed a written draft; they
+    answer by the task's own mechanic now (`answer(_:on:words:)`).
+    `QuestRunTests.aWrittenReflectionReachesTheSummary` still guards with a `first(where: != .photo)`
+    and now passes **vacuously** at the first stop — worth knowing before trusting it.
+  - **The two temple notes ride in the task prompt**, because `ContentTask` has one authored field
+    and no notes: whoever is ritually unable to enter, menstruation included, does not enter the
+    closed areas. Same for the market's "bring cash" and the museum's ticket money.
+  - **`FR-TASK-05` is intact and V7 checks it**: `photo`, `reflection` and `question` are the whole
+    of `TaskType`, and both sacred places take only those. Nothing gained `blocksProgression`
+    (`AD-2`, V8).
+  - **The Maospahit answer is a fill-in clue (`c _ n _ _ _`) and nothing verifies it.** `question`
+    tasks are recorded, never marked — the app has no answer key and `AD-2` means it could not gate
+    on one anyway.
 - **The Journal's stamps carry real artwork now, and it is tiered by walking.** Figma exports
   fifteen stamp SVGs (five places × three drawings) whose payload is an embedded base64 PNG — about
   90 MB of files nothing in this app can render, because every package image goes through

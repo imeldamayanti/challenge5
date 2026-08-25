@@ -80,8 +80,11 @@ struct BundledContentRepositoryTests {
         // `Place.storyArtwork`, with a citation each.
         // `2026.09.13` added `Checkpoint.narration` — an English reading of each of the five
         // checkpoints' passages, and a source entry on each Place saying the voice is synthesised.
+        // `2026.09.14` re-authored the checkpoint tasks: one task per checkpoint became three,
+        // named on the frames' own wording, and the single placeholder task each stop shipped with
+        // is gone.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.13")
+        #expect(try repository.contentBundleVersion() == "2026.09.14")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)
