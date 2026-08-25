@@ -789,7 +789,11 @@ final class QuestRunViewModel {
         guard let run, let stampID = orderedCheckpoints
             .first(where: { $0.orderIndex == currentIndex })?.stampId
         else { return nil }
-        let finished = (try? engine.completedRuns()) ?? []
+        // Excluded by id, then handed back: at the final checkpoint the walk is *already*
+        // completed (`FR-DONE-01` finishes it the instant the last place is reached), so it is in
+        // `completedRuns()` and appending it again would count that place twice — the last stamp of
+        // a first walk would show the second drawing, and the last stamp of a second walk the third.
+        let finished = ((try? engine.completedRuns()) ?? []).filter { $0.id != run.id }
         return StampArtworkResolver(runs: finished + [run], repository: repository)
             .artworkName(questID: run.questID, stampSourceID: stampID)
     }
