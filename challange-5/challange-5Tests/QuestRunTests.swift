@@ -501,6 +501,28 @@ struct QuestRunTests {
         #expect(summary.stops.allSatisfy { !$0.claims.isEmpty })
     }
 
+    /// The stamp's drawing is tiered by walks *finished before this one*, and the walk being
+    /// walked must not count itself.
+    ///
+    /// The last checkpoint is where this bites: `FR-DONE-01` completes the walk the instant it is
+    /// reached, so from that moment the run is in `completedRuns()` *and* is the model's own run.
+    /// Counted twice, the closing stamp of a first-ever walk shows the second drawing — a reader
+    /// who has finished nothing is handed the reward for finishing two.
+    @Test func theClosingStampOfAFirstWalkStillShowsTheFirstDrawing() throws {
+        let harness = try harness()
+        openArrival(harness)
+
+        for checkpoint in harness.quest.orderedCheckpoints {
+            harness.provider.emit(offsetMetres: 2, accuracy: 6)
+            #expect(walkTheStoryStages(harness),
+                    "Failed to arrive at checkpoint \(checkpoint.orderIndex)")
+        }
+
+        #expect(try #require(harness.model.run).state == .completed)
+        let artwork = try #require(harness.model.stampArtworkName)
+        #expect(artwork.hasSuffix("-stamp1"), "Closing stamp showed \(artwork)")
+    }
+
     @Test func aWrittenReflectionReachesTheSummary() throws {
         // FR-TASK-07.
         let harness = try harness()
