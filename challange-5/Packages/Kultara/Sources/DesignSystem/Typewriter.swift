@@ -128,22 +128,31 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
     /// The sheet itself, cut to the width of the paper standing in the photograph's roller and
     /// nudged onto its centre — the machine is photographed a few pixels off-centre, and a sheet
     /// centred on the *screen* meets it with a step down one edge.
-    private var page: some View {
-        sheet
-            .padding(.top, TypewriterMetrics.paperTopMargin)
-            .padding(.bottom, TypewriterMetrics.paperBottomMargin)
-            .padding(.horizontal, TypewriterMetrics.paperSideMargin)
-            // Measured off the machine, not off the container. The two are not the same width —
-            // the stage insets the typewriter — and a sheet cut to a fraction of the *screen*
-            // overhangs the paper it is supposed to be by exactly that inset.
-            .frame(width: paperWidth ?? 0)
-            .background(paper)
-            // After the background, not before it. `.offset` shifts what it is applied to and
-            // leaves the layout frame where it was, and `.background` places its content in that
-            // *unshifted* frame — so with the offset on the inside the typed text moved onto the
-            // photograph's centre line while the sheet it is typed on stayed on the screen's, and
-            // the page sat about 4 pt left of the paper in the roller with its own margins uneven.
-            .offset(x: machineWidth * TypewriterMetrics.paperCentreOffsetFraction)
+    ///
+    /// **Nothing is laid out until the machine has been measured.** It used to lay out at width
+    /// zero for the first frame and then again at the real width, which is two different heights —
+    /// and the second one arrives inside the feed's own animation, so the sheet's contents were
+    /// seen resizing on top of each other. Building nothing until there is a width to build at
+    /// costs one frame of an already-invisible page.
+    @ViewBuilder private var page: some View {
+        if let paperWidth {
+            sheet
+                .padding(.top, TypewriterMetrics.paperTopMargin)
+                .padding(.bottom, TypewriterMetrics.paperBottomMargin)
+                .padding(.horizontal, TypewriterMetrics.paperSideMargin)
+                // Measured off the machine, not off the container. The two are not the same width
+                // — the stage insets the typewriter — and a sheet cut to a fraction of the *screen*
+                // overhangs the paper it is supposed to be by exactly that inset.
+                .frame(width: paperWidth)
+                .background(paper)
+                // After the background, not before it. `.offset` shifts what it is applied to and
+                // leaves the layout frame where it was, and `.background` places its content in
+                // that *unshifted* frame — so with the offset on the inside the typed text moved
+                // onto the photograph's centre line while the sheet it is typed on stayed on the
+                // screen's, and the page sat about 4 pt left of the paper in the roller with its
+                // own margins uneven.
+                .offset(x: machineWidth * TypewriterMetrics.paperCentreOffsetFraction)
+        }
     }
 
     /// The sheet's width: the width of the paper standing in the photograph's roller. `nil` until
@@ -163,13 +172,19 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
     /// Feed the page in, once, and never under Reduce Motion — there the paper is simply already
     /// in the machine (`NFR-A11Y-05`). Nothing here gates content: the hook is legible at every
     /// point of the animation and complete before it starts.
+    ///
+    /// **It waits for the machine to have been measured.** The page lays out once at width zero
+    /// before that, and the height it reports there is not the height of the sheet — starting the
+    /// feed on it winds the paper in from the wrong place and then leaves `hasRisen` true, so the
+    /// real measurement never gets its own animation. The page is held invisible over exactly the
+    /// same condition, so nothing is on screen for the wait.
     private func rise() {
-        guard !hasRisen, paperHeight > 0 else { return }
+        guard !hasRisen, paperWidth != nil, paperHeight > 0 else { return }
         guard !reduceMotion else {
             hasRisen = true
             return
         }
-        withAnimation(.easeOut(duration: TypewriterMetrics.riseDuration)) { hasRisen = true }
+        withAnimation(.linear(duration: TypewriterMetrics.riseDuration)) { hasRisen = true }
     }
 
     /// The crest, sized against the container the way the sheet is, then pulled down into the paper
@@ -233,6 +248,10 @@ public struct KultaraTypewriter<Crest: View, Sheet: View>: View {
                             .onChange(of: proxy.size, initial: true) { _, size in
                                 machineWidth = size.width
                                 machineHeight = size.height
+                                // The width the page is cut to. `rise()` refuses to start without
+                                // it, and a sheet whose height happens not to change when the
+                                // width arrives would otherwise never get a second chance to ask.
+                                rise()
                             }
                     }
                 }
@@ -333,9 +352,19 @@ public enum TypewriterMetrics {
     public static let paperTone = SRGBColor(hex: "#E4D8CD")
 
 
-    /// How long the page takes to feed in. Long enough to read as paper moving through a roller,
-    /// short enough that it is over before the first typed character lands.
-    public static let riseDuration: Double = 0.55
+    /// How long the page takes to feed in.
+    ///
+    /// **It is a platen turning, so it is slow and it is linear.** At 0.55 s on an ease-out curve
+    /// the sheet was out before a reader had finished looking at it — the whole page arrived in one
+    /// movement, which reads as a card sliding into place rather than as paper being wound out of a
+    /// machine. A roller turns at the rate it is turned at: no acceleration, no settle, and the
+    /// page's contents therefore appear in order, a band at a time, top first.
+    ///
+    /// 2.4 s is deliberately shorter than the typing it runs under (up to 5 s for a full sheet at
+    /// `TypewriterProgress.charactersPerSecond`), so the passage is still being typed when the
+    /// paper stops moving. The other way round — paper still crawling after the last character —
+    /// is dead time, and a tap that completes the typing cannot shorten it.
+    public static let riseDuration: Double = 2.4
 
     /// How much of the screen the machine is allowed to take, top-cropped.
     ///

@@ -57,7 +57,7 @@ private struct JustifiedLabel: UIViewRepresentable {
     let lineSpacing: CGFloat
 
     func makeUIView(context: Context) -> UILabel {
-        let label = UILabel()
+        let label = TopAlignedLabel()
         label.numberOfLines = 0
         // Justification needs word wrapping: `byTruncatingTail` on a multi-line label silently
         // falls back to natural alignment on the last visible line.
@@ -76,10 +76,18 @@ private struct JustifiedLabel: UIViewRepresentable {
     /// its own width returns the width of its longest *unbroken* run, which for a paragraph is the
     /// whole paragraph on one line — and a justified paragraph one line long is not justified at
     /// all.
+    ///
+    /// **A proposal of zero is answered, not refused.** The typewriter lays its sheet out once at
+    /// width zero before the machine has been measured, and a `nil` here sends SwiftUI to the
+    /// label's intrinsic size — one enormously long line — so the page measured a single line tall.
+    /// Everything sized off that height was then wrong for a frame: the sheet fed in from the wrong
+    /// place, and the passage was drawn on top of the two figures instead of above them. `UILabel`
+    /// answers a zero width the way `Text` does, by breaking at every word, which is a wrong height
+    /// that is at least the right *kind* of wrong.
     func sizeThatFits(
         _ proposal: ProposedViewSize, uiView label: UILabel, context: Context
     ) -> CGSize? {
-        guard let width = proposal.width, width > 0, width.isFinite else { return nil }
+        guard let width = proposal.width, width.isFinite, width >= 0 else { return nil }
         label.attributedText = attributed()
         let fitted = label.sizeThatFits(CGSize(width: width, height: .greatestFiniteMagnitude))
         return CGSize(width: width, height: ceil(fitted.height))
@@ -105,6 +113,21 @@ private struct JustifiedLabel: UIViewRepresentable {
         string.addAttribute(
             .foregroundColor, value: UIColor.clear, range: NSRange(tail..<text.endIndex, in: text))
         return string
+    }
+}
+
+/// A `UILabel` that draws from the top of its bounds rather than the middle.
+///
+/// `UILabel` centres a multi-line block vertically, so a label whose bounds are ever shorter than
+/// its text — which is what happens for the frames of an animated height change — spills the block
+/// out of *both* ends. On the story preview that put the typed passage across the two figures ruled
+/// beneath it. The sheet no longer animates its height, and this makes sure the failure cannot come
+/// back by a different route.
+private final class TopAlignedLabel: UILabel {
+    override func drawText(in rect: CGRect) {
+        let fitted = textRect(forBounds: rect, limitedToNumberOfLines: numberOfLines)
+        super.drawText(in: CGRect(x: rect.minX, y: rect.minY,
+                                  width: rect.width, height: fitted.height))
     }
 }
 #endif
