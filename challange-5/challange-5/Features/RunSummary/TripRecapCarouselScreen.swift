@@ -29,16 +29,31 @@ struct TripRecapCarouselScreen: View {
     /// The current page's own segment, counting 0 → 1 across `pageDuration` — what makes the bar
     /// read as a countdown rather than a flat step indicator. Reset and restarted by `.task(id:)`
     /// on every page change, whether that change came from the timer, a tap, or a manual swipe.
-    @State private var segmentFill: CGFloat = 0
+    ///
+    /// **Tagged with the page it was counting**, because `.task(id:)` runs *after* the body that
+    /// the page change produced: an untagged fill renders the segment being entered at the fill the
+    /// page just left had reached, for the frame before the timer zeroes it. That one frame is the
+    /// flicker a mid-countdown swipe showed.
+    @State private var segment = SegmentFill(page: 0, fill: 0)
+    /// Which pages have been arrived at, in the walker's own order — the trigger every page's
+    /// entrance animation reads. Set on arrival rather than in each page's `onAppear`, because a
+    /// paged `TabView` builds the neighbouring page before it is on screen: an `onAppear` entrance
+    /// plays itself out behind the page the walker is still reading, and they swipe onto content
+    /// that has already finished settling.
+    ///
+    /// A `Set` rather than a "furthest reached" index so swiping *back* does not replay a page the
+    /// walker has already seen — an entrance is an arrival, not a scroll position.
+    @State private var arrivedPages: Set<Int> = []
     /// Opens the share-story picker (`921:2543`'s header). The card images are rendered *there*,
     /// when this turns true — never here, where a swipe through the carousel would pay for two
     /// 1080 px renders nobody asked for yet.
     @State private var showsShareStory = false
-    /// Drives the headline page's entrance — the artwork and the words settle in from below with a
-    /// fade, one after the other, rather than the carousel simply appearing (`921:2707`). One flag
-    /// rather than two: the stagger is each element's own `.animation(...).delay(...)`, the same way
-    /// `CutsceneSequenceScreen.wordsSwap` staggers a single transition rather than juggling states.
-    @State private var headlineContentIsIn = false
+
+    /// The countdown's own state: how far the bar has filled, and which page that fill belongs to.
+    private struct SegmentFill {
+        var page: Int
+        var fill: CGFloat
+    }
 
     private static let totalPages = 5
     /// How long each page holds before the bar hands the walker to the next one — five seconds, per
@@ -71,7 +86,14 @@ struct TripRecapCarouselScreen: View {
         // `.task(id:)` cancels and restarts itself on every `page` change, so there is one place
         // that owns the countdown rather than a manually-cancelled `Task` living beside it.
         .task(id: page) { await runPageTimer() }
+        .onAppear { arrivedPages.insert(page) }
+        .onChange(of: page) { _, newPage in arrivedPages.insert(newPage) }
     }
+
+    /// Whether the walker has reached page `index` — the one trigger every entrance on that page
+    /// hangs off, so a page's beats are one staggered sequence rather than several flags to keep
+    /// in step with each other.
+    private func hasArrived(at index: Int) -> Bool { arrivedPages.contains(index) }
 
     // MARK: - Chrome shared by every page
 
@@ -79,7 +101,9 @@ struct TripRecapCarouselScreen: View {
         HisploraCompletionProgress(
             currentPage: page,
             total: Self.totalPages,
-            currentFill: segmentFill,
+            // Scoped to the page being drawn: a fill left over from the page just left is not
+            // this segment's, and reads as a bar that jumps backwards on the swipe.
+            currentFill: segment.page == page ? segment.fill : 0,
             accessibilityLabel: String(
                 format: UIStrings.string(.onboardingProgress, language),
                 page + 1, Self.totalPages))
@@ -101,12 +125,12 @@ struct TripRecapCarouselScreen: View {
     /// under a screen reader mid-read has no right duration, and a tap or a swipe still moves it on.
     private func runPageTimer() async {
         guard !voiceOverEnabled, page < Self.totalPages - 1 else {
-            segmentFill = 1
+            segment = SegmentFill(page: page, fill: 1)
             return
         }
-        segmentFill = 0
+        segment = SegmentFill(page: page, fill: 0)
         withAnimation(reduceMotion ? nil : .linear(duration: Self.pageDuration)) {
-            segmentFill = 1
+            segment.fill = 1
         }
         try? await Task.sleep(for: .seconds(Self.pageDuration))
         guard !Task.isCancelled else { return }
@@ -138,10 +162,7 @@ struct TripRecapCarouselScreen: View {
         VStack(spacing: 0) {
             artwork
                 .padding(.top, 140)
-                .opacity(headlineContentIsIn ? 1 : 0)
-                .offset(y: headlineContentIsIn ? 0 : 24)
-                .animation(
-                    reduceMotion ? nil : .easeOut(duration: 0.45), value: headlineContentIsIn)
+                .recapEntrance(hasArrived(at: 0), delay: 0.05, scale: 0.9)
 
             // `921:2707`'s own entrance: the words rise and fade in a beat after the artwork
             // does, rather than the whole page appearing at once — the same staggered-settle
@@ -160,16 +181,11 @@ struct TripRecapCarouselScreen: View {
                     .multilineTextAlignment(.center)
             }
             .padding(.top, 48)
-            .opacity(headlineContentIsIn ? 1 : 0)
-            .offset(y: headlineContentIsIn ? 0 : 24)
-            .animation(
-                reduceMotion ? nil : .easeOut(duration: 0.45).delay(0.18),
-                value: headlineContentIsIn)
+            .recapEntrance(hasArrived(at: 0), delay: 0.23)
 
             Spacer(minLength: 0)
         }
         .padding(.horizontal, 50)
-        .onAppear { headlineContentIsIn = true }
     }
 
     /// `921:2689`'s `Ellipse 531` — a blurred warm disc standing behind the artwork, the halo the
@@ -196,33 +212,46 @@ struct TripRecapCarouselScreen: View {
         // Headline at the template's y≈151; the frame's grid starts at y 278, 52 below it.
         VStack(spacing: 52) {
             pageHeadline(UIStrings.string(.tripRecapGlanceTitle, language))
+                .recapEntrance(hasArrived(at: 1), delay: 0.05)
 
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 16) {
-                HisploraCompletionStatTile(
-                    systemImage: "location.fill",
-                    label: UIStrings.string(.tripRecapStatExploredPlaces, language),
-                    value: "\(summary.placesExploredCount)",
-                    fill: SRGBColor(hex: "#93C6DE"), border: SRGBColor(hex: "#A9D6EA"),
-                    ink: SRGBColor(hex: "#69311E"), textInk: SRGBColor(hex: "#61301A"))
-                HisploraCompletionStatTile(
-                    systemImage: "person.crop.circle.badge.clock.fill",
-                    label: UIStrings.string(.tripRecapStatTripDuration, language),
-                    value: "\(summary.durationMinutes)",
-                    unit: UIStrings.string(.tripRecapDurationUnit, language),
-                    fill: SRGBColor(hex: "#FEC964"), border: SRGBColor(hex: "#FDD790"),
-                    ink: SRGBColor(hex: "#69311E"))
-                HisploraCompletionStatTile(
-                    systemImage: "apple.books.pages.fill",
-                    label: UIStrings.string(.tripRecapStatCompletedQuests, language),
-                    value: "\(completedQuestsCount)",
-                    fill: SRGBColor(hex: "#B4965B"), border: SRGBColor(hex: "#C7AF7B"),
-                    ink: SRGBColor(hex: "#FFFBDF"))
-                HisploraCompletionStatTile(
-                    systemImage: "photo.on.rectangle.angled.fill",
-                    label: UIStrings.string(.tripRecapStatMemories, language),
-                    value: "\(summary.memoriesCount)",
-                    fill: SRGBColor(hex: "#FFF8CA"), border: SRGBColor(hex: "#F3E794"),
-                    ink: SRGBColor(hex: "#806836"))
+                glanceTile(0) {
+                    HisploraCompletionStatTile(
+                        systemImage: "location.fill",
+                        label: UIStrings.string(.tripRecapStatExploredPlaces, language),
+                        value: summary.placesExploredCount,
+                        countProgress: countProgress,
+                        fill: SRGBColor(hex: "#93C6DE"), border: SRGBColor(hex: "#A9D6EA"),
+                        ink: SRGBColor(hex: "#69311E"), textInk: SRGBColor(hex: "#61301A"))
+                }
+                glanceTile(1) {
+                    HisploraCompletionStatTile(
+                        systemImage: "person.crop.circle.badge.clock.fill",
+                        label: UIStrings.string(.tripRecapStatTripDuration, language),
+                        value: summary.durationMinutes,
+                        unit: UIStrings.string(.tripRecapDurationUnit, language),
+                        countProgress: countProgress,
+                        fill: SRGBColor(hex: "#FEC964"), border: SRGBColor(hex: "#FDD790"),
+                        ink: SRGBColor(hex: "#69311E"))
+                }
+                glanceTile(2) {
+                    HisploraCompletionStatTile(
+                        systemImage: "apple.books.pages.fill",
+                        label: UIStrings.string(.tripRecapStatCompletedQuests, language),
+                        value: completedQuestsCount,
+                        countProgress: countProgress,
+                        fill: SRGBColor(hex: "#B4965B"), border: SRGBColor(hex: "#C7AF7B"),
+                        ink: SRGBColor(hex: "#FFFBDF"))
+                }
+                glanceTile(3) {
+                    HisploraCompletionStatTile(
+                        systemImage: "photo.on.rectangle.angled.fill",
+                        label: UIStrings.string(.tripRecapStatMemories, language),
+                        value: summary.memoriesCount,
+                        countProgress: countProgress,
+                        fill: SRGBColor(hex: "#FFF8CA"), border: SRGBColor(hex: "#F3E794"),
+                        ink: SRGBColor(hex: "#806836"))
+                }
             }
             .padding(.horizontal, 53)
 
@@ -231,12 +260,31 @@ struct TripRecapCarouselScreen: View {
         .padding(.top, 89)
     }
 
+    /// 1 once the walker is on the glance page and 0 before it — the same flag the tiles enter on,
+    /// read a second time as the figure to count up to. Under Reduce Motion the tiles are handed the
+    /// finished figure with no animation attached, so it is simply printed.
+    private var countProgress: Double { hasArrived(at: 1) ? 1 : 0 }
+
+    /// One stat tile's two beats: the card lands, then its figure rolls up. Each card is a beat
+    /// behind the one before it, so the grid fills in reading order rather than as one block.
+    private func glanceTile(_ index: Int, @ViewBuilder _ tile: () -> some View) -> some View {
+        let arrived = hasArrived(at: 1)
+        let step = 0.08 * Double(index)
+        return tile()
+            // Inside the entrance, so it governs `countProgress` alone: the roll is a long ease
+            // that starts once the card it is printed on has settled.
+            .animation(
+                reduceMotion ? nil : .easeOut(duration: 0.9).delay(0.3 + step), value: arrived)
+            .recapEntrance(arrived, delay: 0.12 + step, offsetY: 28, scale: 0.94)
+    }
+
     // MARK: - Completion 3 (`205:205`, re-drawn `921:2773`) — the stamp collage
 
     private var stampsPage: some View {
         VStack(spacing: 0) {
             pageHeadline(exploredTitle)
                 .padding(.horizontal, 43)
+                .recapEntrance(hasArrived(at: 2), delay: 0.05)
 
             // The frame's collage centres at y≈488 of 874 — 98 points below the headline block.
             stampCollage
@@ -300,7 +348,10 @@ struct TripRecapCarouselScreen: View {
             }
         }
         .frame(height: 330)
-        .task { await revealStamps() }
+        // Keyed on the arrival rather than on the view existing: a paged `TabView` builds this page
+        // while the walker is still on the one before it, so a bare `.task` stuck all five stamps
+        // down behind their backs and they swiped onto a finished collage.
+        .task(id: hasArrived(at: 2)) { await revealStamps() }
     }
 
     /// Reveals the stamps one at a time, `stampRevealDelay` apart, each animating in with
@@ -308,7 +359,7 @@ struct TripRecapCarouselScreen: View {
     /// this carousel yields to it.
     @Sendable
     private func revealStamps() async {
-        guard revealedStampCount == 0, !stamps.isEmpty else { return }
+        guard hasArrived(at: 2), revealedStampCount == 0, !stamps.isEmpty else { return }
         guard !reduceMotion else {
             revealedStampCount = stamps.count
             return
@@ -342,6 +393,7 @@ struct TripRecapCarouselScreen: View {
                 UIStrings.string(.tripRecapMemoriesTitle, language)
                     .replacingOccurrences(of: " From ", with: " From\n"))
                 .padding(.horizontal, 43)
+                .recapEntrance(hasArrived(at: 3), delay: 0.05)
 
             ScrollView {
                 VStack(spacing: 32) {
@@ -365,6 +417,7 @@ struct TripRecapCarouselScreen: View {
                 HisploraTripArtworkImage(HisploraTripArtwork.legend, contentMode: .fill)
             }
             .frame(width: 175)
+            .recapEntrance(hasArrived(at: 3), delay: 0.18, scale: 0.92)
         }
     }
 
@@ -382,10 +435,15 @@ struct TripRecapCarouselScreen: View {
                 ],
                 spacing: 10.5
             ) {
-                ForEach(Array(photos.enumerated()), id: \.element.id) { _, photo in
+                ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
                     TripCollectionMedallion(frame: .tall, eyebrow: nil, caption: photo.placeName) {
                         TripPhotoImage(photoStore: photoStore, relativePath: photo.relativePath)
                     }
+                    // The photographs mount one after another, in the order they were taken —
+                    // the same beat the stamp collage is stuck down on, a page earlier.
+                    .recapEntrance(
+                        hasArrived(at: 3),
+                        delay: 0.22 + 0.07 * Double(index), offsetY: 20, scale: 0.92)
                 }
             }
         }
@@ -400,6 +458,7 @@ struct TripRecapCarouselScreen: View {
                 UIStrings.string(.tripRecapMemoriesTitle, language)
                     .replacingOccurrences(of: " From ", with: " From\n"))
                 .padding(.horizontal, 43)
+                .recapEntrance(hasArrived(at: 4), delay: 0.05)
 
             postcard
                 .accessibilityElement(children: .contain)
@@ -407,6 +466,9 @@ struct TripRecapCarouselScreen: View {
             Spacer()
 
             actionButtons
+                // Last in, and deliberately so: the two closing actions are the walker's to reach
+                // for once the card they are closing on has finished arriving.
+                .recapEntrance(hasArrived(at: 4), delay: 0.5, offsetY: 20)
         }
         .padding(.top, 89)
         .padding(.bottom, 28)
@@ -426,11 +488,19 @@ struct TripRecapCarouselScreen: View {
                 .frame(width: 337)
                 .rotationEffect(.degrees(-8))
                 .accessibilityHidden(true)
+                .recapEntrance(hasArrived(at: 4), delay: 0.14, offsetY: 34, scale: 0.9)
 
             VStack(spacing: 0) {
                 postcardCard
+                    .recapEntrance(hasArrived(at: 4), delay: 0.24, offsetY: 28, scale: 0.94)
                 postcardPhotoStamp
                     .padding(.top, -51)
+                    // The photograph is stuck onto the card after the card is down, which is the
+                    // order the object is assembled in — and the one beat on this page with a
+                    // spring, since it is a thing being pressed into place rather than settling.
+                    .recapEntrance(
+                        hasArrived(at: 4), delay: 0.38, offsetY: -12, scale: 0.88,
+                        animation: .spring(response: 0.45, dampingFraction: 0.72))
             }
         }
     }
@@ -643,5 +713,50 @@ struct TripRecapCarouselScreen: View {
          "\(UIStrings.string(.tripDuration, language)): \(summary.durationMinutes) "
             + UIStrings.string(.tripRecapDurationUnit, language)]
             .joined(separator: "\n")
+    }
+}
+
+// MARK: - The carousel's one entrance beat
+
+/// A piece of a page fading and rising into place — the single motion every page of this carousel
+/// is built out of, given a delay per element so a page arrives in reading order rather than all at
+/// once. That is the whole of the "Strava-style" pacing the design asks for: nothing on a page is
+/// already there when the walker gets to it.
+///
+/// One modifier rather than an `opacity`/`offset`/`animation` triple written out at each of the
+/// dozen places that needed it, because the load-bearing part is the *third* line: the animation has
+/// to be scoped to `isIn` with `.animation(_:value:)`, or the page's every other state change — the
+/// countdown, a photograph decoding, the stamps being stuck down — rides the entrance curve too.
+private struct RecapEntrance: ViewModifier {
+    let isIn: Bool
+    let delay: Double
+    let offsetY: CGFloat
+    let scale: CGFloat
+    let animation: Animation
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(isIn ? 1 : 0)
+            .scaleEffect(isIn ? 1 : scale)
+            .offset(y: isIn ? 0 : offsetY)
+            // Under Reduce Motion the element is still hidden until the page is arrived at and
+            // still shown once it is — it simply arrives whole, with nothing travelling.
+            .animation(reduceMotion ? nil : animation.delay(delay), value: isIn)
+    }
+}
+
+private extension View {
+    func recapEntrance(
+        _ isIn: Bool,
+        delay: Double = 0,
+        offsetY: CGFloat = 24,
+        scale: CGFloat = 1,
+        animation: Animation = .easeOut(duration: 0.45)
+    ) -> some View {
+        modifier(
+            RecapEntrance(
+                isIn: isIn, delay: delay, offsetY: offsetY, scale: scale, animation: animation))
     }
 }

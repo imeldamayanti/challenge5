@@ -56,6 +56,11 @@ public struct HisploraCompletionStage<Content: View>: View {
 /// segment after reads empty, and `currentPage`'s own segment fills by `currentFill` — the caller
 /// drives that from 0 to 1 over the page's on-screen duration, so the bar reads as counting down the
 /// way Instagram's or WhatsApp's does, rather than jumping between two fixed states on each swipe.
+///
+/// **`currentFill` belongs to `currentPage` and to no other page.** The caller must hand this view a
+/// fill already scoped to the page being drawn — a value left over from the page just left renders
+/// the segment being *entered* part-filled for a frame before the countdown resets it, which is the
+/// flicker a mid-countdown swipe used to show.
 public struct HisploraCompletionProgress: View {
     private let currentPage: Int
     private let total: Int
@@ -80,17 +85,33 @@ public struct HisploraCompletionProgress: View {
             ForEach(0..<max(total, 1), id: \.self) { index in
                 // No `GeometryReader`: reading the slot's own width back to compute a pixel
                 // `.frame(width:)` measured wrong inside this `HStack` — every segment rendered at
-                // roughly the same partial width regardless of `fraction`, which is what made all
-                // five look like they were counting down together instead of just the current one.
+                // roughly the same partial width regardless of the fill asked for, which is what
+                // made all five look like they were counting down together instead of just the
+                // current one.
                 // `scaleEffect` needs no measurement: the filled capsule is proposed the *same* size
                 // as the unfilled one behind it (that is what a plain `.overlay` does), and scaling
                 // it from its leading edge draws exactly the same growing-fill picture.
                 Capsule()
                     .fill(Self.unfilled.color)
                     .overlay(alignment: .leading) {
-                        Capsule()
-                            .fill(Self.filled.color)
-                            .scaleEffect(x: fraction(for: index), y: 1, anchor: .leading)
+                        // Three branches rather than one scale value, and the branch is the whole
+                        // point: a segment the walker has swiped *past* must read full the instant
+                        // they leave it, not carry on filling at the countdown's linear rate for
+                        // the rest of its five seconds. A single animated `scaleEffect` did carry
+                        // on — the in-flight animation simply retargeted from the interrupted
+                        // fraction to 1 and kept its own pace, which is the crawl reported here.
+                        // Switching branches gives the filled capsule a new identity, so the
+                        // completed segment is a freshly inserted, already-full view with no
+                        // animation to inherit, and the segment being entered starts from
+                        // whatever fill the caller hands it rather than from the last page's.
+                        if index < currentPage {
+                            Capsule().fill(Self.filled.color)
+                        } else if index == currentPage {
+                            Capsule()
+                                .fill(Self.filled.color)
+                                .scaleEffect(
+                                    x: min(max(currentFill, 0), 1), y: 1, anchor: .leading)
+                        }
                     }
                     .frame(height: 4)
             }
@@ -98,11 +119,42 @@ public struct HisploraCompletionProgress: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
     }
+}
 
-    private func fraction(for index: Int) -> CGFloat {
-        if index < currentPage { return 1 }
-        if index == currentPage { return min(max(currentFill, 0), 1) }
-        return 0
+/// A whole number that counts up to itself as `progress` animates 0 → 1 — the tally-rolling-up beat
+/// every trip-recap carousel of this kind ends a statistic on.
+///
+/// `Animatable` on the *view* rather than an animated `@State` string, because a `String` is not
+/// interpolated: only a view carrying `animatableData` gets its body re-evaluated on every frame of
+/// the animation. That it is its own view is the other half — the figure re-renders sixty times a
+/// second and its surroundings do not, which matters here because the card it sits on paints a
+/// procedural grain field that has no business being redrawn per frame.
+///
+/// Carries no font of its own: the caller styles it exactly as it would style a `Text`.
+public struct KultaraCountingNumber: View, Animatable {
+    private let target: Int
+    private var progress: Double
+
+    public init(to target: Int, progress: Double) {
+        self.target = target
+        self.progress = progress
+    }
+
+    /// `nonisolated` for the reason `HisploraScrollUnseal`'s is: the animation machinery drives
+    /// this off the main actor, and it is one `Double`.
+    public nonisolated var animatableData: Double {
+        get { progress }
+        set { progress = newValue }
+    }
+
+    public var body: some View {
+        Text("\(displayed)")
+    }
+
+    /// Never overshoots and never counts backwards past zero — a spring handed to `progress` can
+    /// leave the unit interval at both ends.
+    private var displayed: Int {
+        Int((Double(target) * min(max(progress, 0), 1)).rounded())
     }
 }
 
@@ -116,8 +168,13 @@ public struct HisploraCompletionProgress: View {
 public struct HisploraCompletionStatTile: View {
     let systemImage: String
     let label: String
-    let value: String
+    /// The figure itself rather than a rendered string, so the tile can count up to it. Every
+    /// statistic this card carries is a whole count — places, minutes, quests, memories.
+    let value: Int
     let unit: String?
+    /// 0 draws the figure as zero, 1 draws it whole; animating between the two is what rolls the
+    /// tally up. Defaults to 1, so a caller that wants no count-up says nothing.
+    let countProgress: Double
     let fill: SRGBColor
     let border: SRGBColor
     let ink: SRGBColor
@@ -126,13 +183,15 @@ public struct HisploraCompletionStatTile: View {
     let textInk: SRGBColor?
 
     public init(
-        systemImage: String, label: String, value: String, unit: String? = nil,
+        systemImage: String, label: String, value: Int, unit: String? = nil,
+        countProgress: Double = 1,
         fill: SRGBColor, border: SRGBColor, ink: SRGBColor, textInk: SRGBColor? = nil
     ) {
         self.systemImage = systemImage
         self.label = label
         self.value = value
         self.unit = unit
+        self.countProgress = countProgress
         self.fill = fill
         self.border = border
         self.ink = ink
@@ -161,7 +220,7 @@ public struct HisploraCompletionStatTile: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.8)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
-                    Text(value)
+                    KultaraCountingNumber(to: value, progress: countProgress)
                         .font(.system(size: 31, weight: .black, design: .serif))
                         .tracking(-0.93)
                         .foregroundStyle(text.color)
@@ -192,6 +251,8 @@ public struct HisploraCompletionStatTile: View {
                 .stroke(border.color, lineWidth: 1)
         }
         .accessibilityElement(children: .ignore)
+        // Spoken as the finished figure whatever the count-up is doing — a screen reader
+        // announcing a rolling tally would read a number that is wrong by the time it lands.
         .accessibilityLabel(unit.map { "\(label): \(value) \($0)" } ?? "\(label): \(value)")
     }
 }
