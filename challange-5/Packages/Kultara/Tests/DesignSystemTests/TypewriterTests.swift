@@ -121,9 +121,27 @@ struct TypewriterTests {
 
     /// The page feeds in; it does not appear. A zero here would silently delete the one piece of
     /// motion the screen has, and the code that produces it would still look like working code.
+    ///
+    /// The ceiling is the typing, not a round number. The paper has to have stopped moving while
+    /// the passage is still being typed onto it — the other way round leaves the sheet crawling
+    /// after the last character has landed, which is dead time a tap on the passage cannot
+    /// shorten. `maximumSheetCharacters` at `charactersPerSecond` is the longest a full sheet ever
+    /// takes to type, so it is the longest the feed may ever run.
+    ///
+    /// It read `< 1` while the feed was a 0.55-second ease-out, and that bound was the old
+    /// behaviour restated rather than a rule: the whole page arrived in one movement, which is a
+    /// card sliding into place rather than paper wound out of a machine.
     @Test func thePageRisesInReadableTime() {
+        let typingASheet = TypewriterProgress(
+            characterCount: TypewriterMetrics.maximumSheetCharacters,
+            elapsed: .zero,
+            rendersImmediately: false
+        ).totalDuration
+        let seconds = Double(typingASheet.components.seconds)
+            + Double(typingASheet.components.attoseconds) / 1e18
+
         #expect(TypewriterMetrics.riseDuration > 0)
-        #expect(TypewriterMetrics.riseDuration < 1)
+        #expect(TypewriterMetrics.riseDuration < seconds)
     }
 
     // MARK: The drawn sheet against the photographed one

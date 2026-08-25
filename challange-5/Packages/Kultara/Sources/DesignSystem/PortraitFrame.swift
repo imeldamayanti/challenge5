@@ -18,10 +18,21 @@ public struct KultaraPortraitFrame<Portrait: View>: View {
     @Environment(\.kultaraPalette) private var palette
 
     private let accessibilityLabel: String
+    private let portraitBlur: CGFloat
     private let portrait: Portrait
 
-    public init(accessibilityLabel: String, @ViewBuilder portrait: () -> Portrait) {
+    /// `portraitBlur` is a **fraction of the frame's width**, not a point value, because the frame
+    /// is drawn at two sizes already — 180 pt over the typewriter, 320 and 360 pt on the two
+    /// cutscene pages — and a radius in points that softens the small one erases the large one.
+    /// Zero by default: only the story preview's crest is drawn out of focus, and the cutscene
+    /// pages that present the portrait as the subject keep it sharp.
+    public init(
+        accessibilityLabel: String,
+        portraitBlur: CGFloat = 0,
+        @ViewBuilder portrait: () -> Portrait
+    ) {
         self.accessibilityLabel = accessibilityLabel
+        self.portraitBlur = portraitBlur
         self.portrait = portrait()
     }
 
@@ -30,6 +41,11 @@ public struct KultaraPortraitFrame<Portrait: View>: View {
             let size = proxy.size
             ZStack(alignment: .topLeading) {
                 portrait
+                    // Blurred *before* the clip, so the soft fringe a blur leaves at the picture's
+                    // own edges falls outside the oval and is cut away rather than printed as a
+                    // pale halo inside the opening. A `.fill` portrait overhangs the opening, which
+                    // is what leaves the fringe somewhere to fall.
+                    .blur(radius: size.width * portraitBlur)
                     .frame(width: size.width * PortraitFrameMetrics.openingSize.width,
                            height: size.height * PortraitFrameMetrics.openingSize.height)
                     .clipShape(Ellipse())
@@ -87,6 +103,16 @@ public enum PortraitFrameMetrics {
     /// one screen's rounding.
     public static let openingOrigin = CGPoint(x: 50.0 / 320.0, y: 52.5 / 400.0)
     public static let openingSize = CGSize(width: 231.25 / 320.0, height: 295.0 / 400.0)
+
+    /// How far out of focus the story preview's crest is drawn, as a fraction of the frame's width
+    /// (see `KultaraPortraitFrame.init`). 0.012 is about 2 points at the 180-point crest — enough
+    /// that the picture reads as a remembered face behind glass rather than as a photograph, and
+    /// short of the radius at which the sitter stops being a person at all.
+    ///
+    /// It is a look, not a measurement: `81:588` sets the same sharp asset the cutscene does, small.
+    /// The softening is the owner's instruction of 2026-08-25 and is recorded here rather than
+    /// passed as a number at the call site, so there is one place to change it.
+    public static let softFocusBlur: CGFloat = 0.012
 
     /// Loaded once from the package bundle. `Image(_:bundle:)` would resolve lazily and silently draw
     /// nothing if the resource were ever dropped from `Package.swift`; this way the miss is a value

@@ -62,6 +62,10 @@ public struct HisploraTypewriterText: View {
     private let font: Font
     private let ink: KeyPath<HisploraPalette, SRGBColor>
     private let lineSpacing: CGFloat
+    /// Set when the passage has to be flush on both edges. The role rather than a flag, because a
+    /// justified paragraph is laid out by UIKit and UIKit needs the role's `UIFont` — see
+    /// `JustifiedRevealText`.
+    private let justifiedRole: KultaraTypography.Role?
     private let onComplete: () -> Void
 
     @Environment(\.hisploraPalette) private var palette
@@ -79,6 +83,26 @@ public struct HisploraTypewriterText: View {
         self.font = font
         self.ink = ink
         self.lineSpacing = lineSpacing
+        self.justifiedRole = nil
+        self.onComplete = onComplete
+    }
+
+    /// The same passage set justified — flush left *and* right, as `81:588` sets the typed sheet.
+    ///
+    /// It takes the role rather than a `Font` because that is the only form UIKit can be given: the
+    /// face, the size and the Dynamic Type style all have to be resolved again as a `UIFont`, and
+    /// `KultaraFonts.uiFont(_:)` is what does it from the same table `font(_:)` reads.
+    public init(
+        _ text: String,
+        justifiedIn role: KultaraTypography.Role,
+        ink: KeyPath<HisploraPalette, SRGBColor> = \.inkBody,
+        onComplete: @escaping () -> Void = {}
+    ) {
+        self.text = text
+        self.font = KultaraTypography.font(role)
+        self.ink = ink
+        self.lineSpacing = role.lineSpacing
+        self.justifiedRole = role
         self.onComplete = onComplete
     }
 
@@ -90,25 +114,41 @@ public struct HisploraTypewriterText: View {
     }
 
     public var body: some View {
-        // The full passage is laid out invisibly underneath, so the block does not grow line by
-        // line and shove everything below it down the screen as it types.
-        Text(shown)
-            .font(font)
-            .foregroundStyle(palette[keyPath: ink].color)
-            .lineSpacing(lineSpacing)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                Text(text)
-                    .font(font)
-                    .lineSpacing(lineSpacing)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .hidden()
-                    .accessibilityHidden(true))
+        passage
             .contentShape(Rectangle())
             .onTapGesture { complete() }
             // VoiceOver reads the passage, whole, whatever is drawn.
             .accessibilityLabel(text)
             .task(id: text) { await run() }
+    }
+
+    /// Justified or ragged, the two draw the same passage and differ only in who lays it out.
+    @ViewBuilder private var passage: some View {
+        if let justifiedRole {
+            // No hidden twin underneath: this one always lays the *whole* passage out and paints
+            // the untyped tail clear, so its height is the finished height from the first frame.
+            JustifiedRevealText(
+                text: text,
+                visibleCharacters: rendersImmediately || isFinished ? text.count : visibleCharacters,
+                role: justifiedRole,
+                ink: palette[keyPath: ink].color,
+                lineSpacing: lineSpacing)
+        } else {
+            // The full passage is laid out invisibly underneath, so the block does not grow line by
+            // line and shove everything below it down the screen as it types.
+            Text(shown)
+                .font(font)
+                .foregroundStyle(palette[keyPath: ink].color)
+                .lineSpacing(lineSpacing)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(
+                    Text(text)
+                        .font(font)
+                        .lineSpacing(lineSpacing)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .hidden()
+                        .accessibilityHidden(true))
+        }
     }
 
     private func complete() {
