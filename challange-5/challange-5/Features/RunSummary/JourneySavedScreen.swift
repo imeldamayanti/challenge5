@@ -60,19 +60,30 @@ struct JourneySavedScreen: View {
                                     Color.white.opacity(0.45),
                                     in: RoundedRectangle(cornerRadius: 12))
                         }
-
-                        Button(UIStrings.string(.journeySavedRecapAction, language)) {
-                            onSeeRecap()
-                        }
-                        .buttonStyle(.hisploraPillOnPaper)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, KultaraMetrics.md)
                     .padding(.bottom, KultaraMetrics.lg)
                 }
+                .scrollBounceBehavior(.basedOnSize)
+                // Pinned above the home indicator rather than left at the end of the scroll, the
+                // way `WriteJournalScreen`'s Save sits: the collage is short enough that the page
+                // does not scroll, so a trailing button floats mid-screen with the rest of the
+                // page empty below it.
+                .safeAreaInset(edge: .bottom) { recapAction }
             }
         }
         .navigationBarBackButtonHidden()
+    }
+
+    /// The one control on the page, held at the foot.
+    private var recapAction: some View {
+        Button(UIStrings.string(.journeySavedRecapAction, language)) {
+            onSeeRecap()
+        }
+        .buttonStyle(.hisploraPillOnPaper)
+        .padding(.horizontal, 20)
+        .padding(.bottom, KultaraMetrics.lg)
     }
 
     // MARK: - The photographs and the medallion (`921:2937`/`2943`/`2946`)
