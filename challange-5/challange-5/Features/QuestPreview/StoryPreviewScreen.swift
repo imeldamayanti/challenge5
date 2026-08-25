@@ -68,8 +68,11 @@ struct StoryPreviewScreen: View {
                 }
                 .padding(.vertical, KultaraMetrics.xs)
                 .frame(maxHeight: .infinity, alignment: .top)
+                // White, as `81:594` draws it — a filled pill in `inkOnButton` with the label in
+                // `buttonFill`, which is `HisploraLightPillButtonStyle` and its 58-point metrics.
+                // It was the flow's near-black `hisploraPill`, which is the *other* frame's action.
                 Button(UIStrings.string(.storyPreviewReady, language), action: onReady)
-                    .buttonStyle(.hisploraPill)
+                    .buttonStyle(.hisploraLightPill)
             }
             .padding(KultaraMetrics.lg)
         }
@@ -82,7 +85,10 @@ struct StoryPreviewScreen: View {
     /// note at the head of `CutsceneScreens.swift`. It is still the design's object, so it is still
     /// drawn.
     private var crest: some View {
-        KultaraPortraitFrame(accessibilityLabel: title) {
+        KultaraPortraitFrame(
+            accessibilityLabel: title,
+            portraitBlur: PortraitFrameMetrics.softFocusBlur
+        ) {
             if let portraitURL, let image = BundledImage.load(portraitURL) {
                 image.resizable().aspectRatio(contentMode: .fill)
             } else {
@@ -101,11 +107,14 @@ struct StoryPreviewScreen: View {
             // so a hook longer than it fits would turn the photograph into a scroll view. This
             // trims the *display* only — `hookLore` is untouched, and the passage is not shown
             // anywhere else on this screen for the cut to disagree with.
+            //
+            // Set justified — flush on both edges, the way a page comes out of a machine that
+            // cannot rag a margin. Ragged-right is what shipped, and it is the one thing on this
+            // sheet that read as a text view rather than as typing.
             HisploraTypewriterText(
                 TypewriterMetrics.sheetText(hook),
-                font: KultaraTypography.font(.typedSheet),
-                ink: \.inkDark,
-                lineSpacing: KultaraTypography.Role.typedSheet.lineSpacing)
+                justifiedIn: .typedSheet,
+                ink: \.inkDark)
 
             // `.labelDistance` and `.labelTotalDuration` are the same two strings the preview
             // screen puts over the same two numbers. The board writes "Estimated Time" where the

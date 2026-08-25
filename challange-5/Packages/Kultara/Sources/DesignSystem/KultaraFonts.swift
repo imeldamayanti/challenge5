@@ -133,7 +133,101 @@ public enum KultaraFonts {
                            relativeTo: role.textStyle)
         }
     }
+
+    #if canImport(UIKit)
+    /// The UIKit twin of `font(_:)`, for the one thing SwiftUI cannot lay out: justified copy.
+    ///
+    /// `Text` has no justified alignment and ignores an `NSParagraphStyle`, so a passage set flush
+    /// on both edges is laid out by `UILabel` — and a `UILabel` needs a `UIFont`. Every decision is
+    /// still read off `KultaraTypography.Role`: the face, the base size, the text style it scales
+    /// against, and the same fallbacks `font(_:)` takes when a packaged face is missing. Neither
+    /// resolver holds a rule the other does not, which is the point of it living here rather than
+    /// at the one call site.
+    static func uiFont(_ role: KultaraTypography.Role) -> UIFont {
+        let metrics = UIFontMetrics(forTextStyle: role.uiTextStyle)
+
+        switch role.face {
+        case .sans:
+            return metrics.scaledFont(for: role.uiSystemFont(design: nil))
+
+        case .displaySerif:
+            return metrics.scaledFont(for: role.uiSystemFont(design: .serif))
+
+        case .typewriter:
+            guard typewriterIsAvailable,
+                  let face = UIFont(name: typewriterName, size: role.basePointSize)
+            else { return metrics.scaledFont(for: role.uiSystemFont(design: .monospaced)) }
+            return metrics.scaledFont(for: face)
+
+        case .serif:
+            guard isAvailable,
+                  let face = UIFont(name: role.isItalic ? italicName : regularName,
+                                    size: role.basePointSize)
+            else { return metrics.scaledFont(for: role.uiSystemFont(design: .serif)) }
+            return metrics.scaledFont(for: face)
+        }
+    }
+    #endif
 }
+
+#if canImport(UIKit)
+private extension KultaraTypography.Role {
+
+    /// `Font.TextStyle` and `UIFont.TextStyle` are two spellings of one table, and Swift knows no
+    /// conversion between them.
+    var uiTextStyle: UIFont.TextStyle {
+        switch textStyle {
+        case .largeTitle: .largeTitle
+        case .title: .title1
+        case .title2: .title2
+        case .title3: .title3
+        case .headline: .headline
+        case .subheadline: .subheadline
+        case .body: .body
+        case .callout: .callout
+        case .footnote: .footnote
+        case .caption: .caption1
+        case .caption2: .caption2
+        @unknown default: .body
+        }
+    }
+
+    /// The system face at this role's style, weight and design — the unscaled base
+    /// `UIFontMetrics` then scales, so the reader's text size still reaches it (`NFR-A11Y-01`).
+    ///
+    /// The italic is applied to the *descriptor* rather than by asking for an italic system font,
+    /// because `.serif` and `.italic` are both descriptor traits and asking for one drops the
+    /// other.
+    func uiSystemFont(design: UIFontDescriptor.SystemDesign?) -> UIFont {
+        let size = UIFont.preferredFont(forTextStyle: uiTextStyle).pointSize
+        let base = UIFont.systemFont(ofSize: size, weight: uiWeight)
+        var descriptor = base.fontDescriptor
+        if let design, let designed = descriptor.withDesign(design) { descriptor = designed }
+        if isItalic {
+            var traits = descriptor.symbolicTraits
+            traits.insert(.traitItalic)
+            if let italic = descriptor.withSymbolicTraits(traits) { descriptor = italic }
+        }
+        return UIFont(descriptor: descriptor, size: size)
+    }
+
+    /// `Font.Weight` is an opaque `Equatable` struct with no exhaustive case list, so this compares
+    /// rather than switches, and falls to regular for anything the table does not name.
+    var uiWeight: UIFont.Weight {
+        switch weight {
+        case .ultraLight: .ultraLight
+        case .thin: .thin
+        case .light: .light
+        case .medium: .medium
+        case .semibold: .semibold
+        case .bold: .bold
+        case .heavy: .heavy
+        case .black: .black
+        default: .regular
+        }
+    }
+}
+#endif
 
 private extension Font {
     func italic(_ isItalic: Bool) -> Font { isItalic ? self.italic() : self }
