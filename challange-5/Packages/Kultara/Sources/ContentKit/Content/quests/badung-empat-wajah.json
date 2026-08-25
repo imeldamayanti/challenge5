@@ -100,10 +100,28 @@
       "tasks": [
         {
           "id": "badung-empat-wajah-cp1-t1",
-          "type": "reflection",
+          "type": "photo",
           "prompt": {
-            "id": "Berdiri di depan gerbang. Catat satu hal yang menandakan tempat ini masih dipakai orang, bukan sekadar dilihat.",
-            "en": "Stand in front of the gate. Note one thing that shows this place is still lived in, not merely looked at."
+            "id": "Foto Puri Pemecutan. Temukan bagian depan Puri Agung Pemecutan dan ambil foto bangunan atau pintu masuk yang menunjukkan nama “Puri Pemecutan” sebagai bukti bahwa kamu telah sampai di lokasi.",
+            "en": "Photograph Puri Pemecutan. Find the front of Puri Agung Pemecutan and photograph the building or the entrance bearing the name “Puri Pemecutan” as proof that you have arrived."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp1-t2",
+          "type": "photo",
+          "prompt": {
+            "id": "Nama yang Terukir. Cari tulisan aksara “Puri Pemecutan” yang terdapat pada bagian pintu masuk, kemudian ambil foto sebagai bukti.",
+            "en": "The Name in Script. Look for the “Puri Pemecutan” writing in Balinese script on the entrance, then photograph it as proof."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp1-t3",
+          "type": "photo",
+          "prompt": {
+            "id": "Sang Pemegang Pecut. Masuk ke area pura dan temukan sosok atau patung yang menggambarkan seseorang memegang pecut. Amati detailnya sebelum mengambil foto. Area pura adalah tempat ibadah: pengunjung yang sedang berhalangan, termasuk sedang menstruasi, tidak memasuki area yang tidak diperbolehkan.",
+            "en": "The Whip Bearer. Enter the temple grounds and find the figure or statue of someone holding a whip. Study the detail before you take the photograph. The temple grounds are a place of worship: anyone who is ritually unable to enter, including those who are menstruating, does not enter the areas that are closed to them."
           },
           "blocksProgression": false
         }
@@ -159,10 +177,28 @@
       "tasks": [
         {
           "id": "badung-empat-wajah-cp2-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Foto Pura Maospahit. Temukan bagian depan Pura Maospahit Gerenceng dan ambil foto bangunan atau pintu masuk pura sebagai bukti bahwa kamu telah sampai di lokasi.",
+            "en": "Photograph Pura Maospahit. Find the front of Pura Maospahit Gerenceng and photograph the building or the temple gateway as proof that you have arrived."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp2-t2",
           "type": "question",
           "prompt": {
-            "id": "Berapa lapis halaman yang bisa kamu lihat dari luar, dan di lapis mana kamu berhenti?",
-            "en": "How many courtyard layers can you see from outside, and at which layer do you stop?"
+            "id": "Tebak Nama Sesembahan. Cari salah satu bentuk sesembahan yang digunakan dalam kegiatan sembahyang, lalu tuliskan namanya. Petunjuknya: c _ n _ _ _.",
+            "en": "Name the Offering. Find one of the offerings used during prayer here, then write down its name. The clue: c _ n _ _ _."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp2-t3",
+          "type": "photo",
+          "prompt": {
+            "id": "Batas yang Tidak Boleh Dilewati. Temukan area yang tidak boleh dimasuki pengunjung. Berhentilah di batas yang diperbolehkan, lalu ambil atau pilih gambar yang menunjukkan batas tersebut. Area pura adalah tempat ibadah: pengunjung yang sedang berhalangan, termasuk sedang menstruasi, tidak memasuki area yang tidak diperbolehkan.",
+            "en": "The Line You Do Not Cross. Find the area visitors may not enter. Stop at the boundary you are allowed to reach, then take or choose a picture that shows it. The temple grounds are a place of worship: anyone who is ritually unable to enter, including those who are menstruating, does not enter the areas that are closed to them."
           },
           "blocksProgression": false
         }
@@ -228,10 +264,28 @@
       "tasks": [
         {
           "id": "badung-empat-wajah-cp3-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Foto Pasar Badung. Temukan bagian depan atau papan nama Pasar Badung, kemudian ambil foto sebagai bukti bahwa kamu telah sampai di lokasi.",
+            "en": "Photograph Pasar Badung. Find the front of the market or its name board, then photograph it as proof that you have arrived."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp3-t2",
+          "type": "reflection",
+          "prompt": {
+            "id": "Jajanan Pasar. Pergilah ke lantai 3 dan cari salah satu jajanan atau kue yang dijual di pasar. Beli satu jajanan yang menarik perhatianmu, lalu catat yang mana yang kamu pilih. Bawa uang tunai.",
+            "en": "Market Snacks. Go up to the third floor and look for one of the snacks or cakes sold there. Buy the one that catches your eye, then note down which one you chose. Bring cash."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp3-t3",
           "type": "question",
           "prompt": {
-            "id": "Berdiri di lantai dasar dan lihat ke atas. Barang apa yang dijual tepat di lantai di atasmu?",
-            "en": "Stand on the ground floor and look up. What is sold on the floor directly above you?"
+            "id": "Kenali Jajananmu. Setelah membeli kue atau jajanan itu, tanyakan namanya kepada penjual. Tuliskan nama makanan yang kamu peroleh.",
+            "en": "Know Your Snack. Once you have bought that cake or snack, ask the seller what it is called. Write down the name you are given."
           },
           "blocksProgression": false
         }
@@ -299,8 +353,26 @@
           "id": "badung-empat-wajah-cp4-t1",
           "type": "photo",
           "prompt": {
-            "id": "Dari trotoar — bukan dari jalur kendaraan — foto satu wajah patung, lalu catat arah mana yang dilihatnya.",
-            "en": "From the pavement — not from the roadway — photograph one of the statue's faces, then note which direction it looks."
+            "id": "Foto Catur Muka. Temukan patung Catur Muka dan ambil foto patung tersebut sebagai bukti bahwa kamu telah sampai di lokasi. Foto dari trotoar, bukan dari jalur kendaraan.",
+            "en": "Photograph Catur Muka. Find the Catur Muka statue and photograph it as proof that you have arrived. Shoot from the pavement, not from the roadway."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp4-t2",
+          "type": "question",
+          "prompt": {
+            "id": "Empat Wajah. Amati patung Catur Muka dan tentukan berapa jumlah wajah yang terdapat pada patung tersebut.",
+            "en": "Four Faces. Look at the Catur Muka statue and work out how many faces it carries."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp4-t3",
+          "type": "photo",
+          "prompt": {
+            "id": "Wajah dari Arahmu. Dari arah kedatanganmu, tentukan wajah patung yang sedang menghadap ke arahmu. Ambil foto wajah tersebut dan cari tahu makna atau karakter yang diwakilinya.",
+            "en": "The Face Turned to You. From the direction you arrived, work out which of the statue’s faces looks towards you. Photograph that face and find out what it means or which character it stands for."
           },
           "blocksProgression": false
         }
@@ -345,10 +417,28 @@
       "tasks": [
         {
           "id": "badung-empat-wajah-cp5-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Foto Museum Bali. Temukan bagian depan atau papan nama Museum Bali, kemudian ambil foto sebagai bukti bahwa kamu telah sampai di lokasi. Siapkan uang untuk tiket masuk apabila diperlukan.",
+            "en": "Photograph Museum Bali. Find the front of the museum or its name board, then photograph it as proof that you have arrived. Have money ready for an entry ticket if one is required."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp5-t2",
           "type": "reflection",
           "prompt": {
-            "id": "Empat wajah sudah kamu lewati: kuasa, kepercayaan, penghidupan, dan sekarang ingatan. Wajah mana yang paling terasa masih hidup hari ini, dan kenapa?",
-            "en": "You have passed four faces: power, faith, livelihood, and now memory. Which one felt most alive today, and why?"
+            "id": "Temukan yang Paling Menarik. Jelajahi Museum Bali dan tentukan satu benda, ruang, atau koleksi yang paling menarik perhatianmu. Tuliskan alasan singkat mengapa bagian itu paling menarik.",
+            "en": "Find What Draws You Most. Walk through Museum Bali and settle on one object, room, or collection that holds your attention most. Write a short reason why that one."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "badung-empat-wajah-cp5-t3",
+          "type": "photo",
+          "prompt": {
+            "id": "Bunga Jepun. Cari bunga jepun di area museum, kemudian lakukan selfie bersama bunga tersebut sebagai foto penutup perjalanan.",
+            "en": "The Frangipani. Find a frangipani flower somewhere in the museum grounds, then take a selfie with it as the closing photograph of the walk."
           },
           "blocksProgression": false
         }
