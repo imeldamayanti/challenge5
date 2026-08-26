@@ -631,6 +631,17 @@ with the splash still auto-advancing and still a drawing.
     oral-tradition source was never added. The validator now reports the finding twice, once per
     quest. Fixing it means adding the missing source entry to the Place — a content decision with an
     owner, not a test edit.
+  - **Its map marker stands at Park 23, not at the puri, and that is a field rather than a
+    fudge.** Both quests start at Puri Agung Pemecutan, so both markers landed on the same pin and
+    the one underneath could not be tapped (`NFR-A11Y-01`, `NFR-A11Y-06`). `Quest.mapAnchorPlaceId`
+    (new at `2026.09.16`) names another Place **already in the manifest** — `park23`, the
+    exhibition venue — and the marker borrows that Place's authored `mapPoint` rather than carrying
+    a coordinate nobody fitted to the drawing. `Quest.mapMarkerPlaceId` is the one rule both map
+    surfaces read, so they cannot disagree; V17 reports an anchor that names no Place or a Place
+    with no `mapPoint`, which would drop the marker entirely. **It moves the marker and nothing
+    else**: the walk still starts at the puri and arrival is still gated on that Place's radius
+    (`FR-START-08`), so a tester standing at Park 23 still needs Developer tools → Simulate arrival
+    anywhere.
   - **Four content guards moved with it, and one gained coverage.** The bundle guards that read the
     live tree now name `badung-empat-wajah` where they used to take "the first quest", and
     `suppressedQuestsAreOmittedFromTheList` finally exercises FR-DISC-08's "some quests remain"

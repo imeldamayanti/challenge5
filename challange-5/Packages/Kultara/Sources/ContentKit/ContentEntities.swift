@@ -593,6 +593,18 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
     /// and the cutscene falls back to `heroImageAsset` and the current place's name, as it always
     /// did (`CutsceneSubject`).
     public let cutsceneSubject: CutsceneSubject?
+    /// Where the discovery map draws this quest's marker, when the start checkpoint's Place is the
+    /// wrong place to draw it.
+    ///
+    /// Nil — the usual case — and the marker stands on the Place the walk starts at, which is what
+    /// a reader looking for where to begin wants. It is set when two quests share a start and their
+    /// markers would land on top of one another (`NFR-A11Y-01`, `NFR-A11Y-06`): the second names
+    /// another Place already in the manifest and borrows its authored `mapPoint`, rather than
+    /// carrying a coordinate of its own that nobody fitted to the drawing.
+    ///
+    /// It moves the marker and nothing else. The walk still starts where its start checkpoint says
+    /// it does, and arrival is still gated on that Place's radius (`FR-START-08`).
+    public let mapAnchorPlaceId: String?
     public let checkpoints: [Checkpoint]
 
     public init(
@@ -614,6 +626,7 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         badgeId: String,
         heroImageAsset: String? = nil,
         cutsceneSubject: CutsceneSubject? = nil,
+        mapAnchorPlaceId: String? = nil,
         checkpoints: [Checkpoint]
     ) {
         self.id = id
@@ -634,6 +647,7 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         self.badgeId = badgeId
         self.heroImageAsset = heroImageAsset
         self.cutsceneSubject = cutsceneSubject
+        self.mapAnchorPlaceId = mapAnchorPlaceId
         self.checkpoints = checkpoints
     }
 
@@ -657,7 +671,15 @@ public struct Quest: Codable, Sendable, Equatable, Identifiable {
         badgeId = try c.decode(String.self, forKey: .badgeId)
         heroImageAsset = try c.decodeIfPresent(String.self, forKey: .heroImageAsset)
         cutsceneSubject = try c.decodeIfPresent(CutsceneSubject.self, forKey: .cutsceneSubject)
+        mapAnchorPlaceId = try c.decodeIfPresent(String.self, forKey: .mapAnchorPlaceId)
         checkpoints = try c.decode([Checkpoint].self, forKey: .checkpoints)
+    }
+
+    /// The Place the discovery map draws this quest's marker on: the anchor when content names
+    /// one, the start checkpoint's Place otherwise. One rule, so the two map surfaces cannot
+    /// disagree about where a quest sits.
+    public var mapMarkerPlaceId: String? {
+        mapAnchorPlaceId ?? startCheckpoint?.placeId
     }
 
     public var startCheckpoint: Checkpoint? {
