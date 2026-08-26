@@ -3,8 +3,8 @@ import Foundation
 import RunEngine
 import UIStringsKit
 
-/// What the home screen knows about the walker's own history: the walk still under way, and the
-/// walks already finished.
+/// What the home screen knows about the walker's own history: which quests are still under way,
+/// and the walks already finished.
 ///
 /// Built from `Run` snapshots rather than from content, so it renders with no content lookup and
 /// keeps naming a quest that has since been withdrawn (`FR-DONE-05`, `FR-RUN-06`).
@@ -26,16 +26,14 @@ struct RunJournalSummary: Sendable, Equatable {
         }
     }
 
-    let activeRun: Entry?
     let completed: [Entry]
     /// Every quest with a walk still open. A set, not the single most recent entry, because the
     /// tag answers "is *this* quest under way" and the store may hold more than one draft.
     let activeQuestIDs: Set<String>
 
-    static let empty = RunJournalSummary(activeRun: nil, completed: [], activeQuestIDs: [])
+    static let empty = RunJournalSummary(completed: [], activeQuestIDs: [])
 
-    init(activeRun: Entry?, completed: [Entry], activeQuestIDs: Set<String> = []) {
-        self.activeRun = activeRun
+    init(completed: [Entry], activeQuestIDs: Set<String> = []) {
         self.completed = completed
         self.activeQuestIDs = activeQuestIDs
     }
@@ -52,7 +50,6 @@ struct RunJournalSummary: Sendable, Equatable {
                     run.reachedCount, run.checkpointCount))
         }
         let all = (try? store.runs()) ?? []
-        activeRun = ((try? store.mostRecentActiveRun()) ?? nil).map(entry)
         completed = ((try? store.completedRuns()) ?? []).map(entry)
         activeQuestIDs = Set(all.filter { $0.state == .active }.map(\.questID))
     }
