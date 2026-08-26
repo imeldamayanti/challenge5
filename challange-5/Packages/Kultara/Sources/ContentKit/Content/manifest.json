@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "contentBundleVersion": "2026.09.14",
+  "contentBundleVersion": "2026.09.15",
   "languages": [
     "id",
     "en"
@@ -19,6 +19,7 @@
     "taman-ngurah-rai"
   ],
   "quests": [
+    "mini-badung",
     "badung-empat-wajah"
   ],
   "sideQuests": [

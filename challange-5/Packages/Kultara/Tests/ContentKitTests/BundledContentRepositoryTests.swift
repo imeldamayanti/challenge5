@@ -20,14 +20,24 @@ struct BundledContentRepositoryTests {
         let repository = try repository()
         let quests = try repository.quests()
 
-        #expect(quests.count == 1)
-        let quest = try #require(quests.first)
+        // `2026.09.15` added `mini-badung`, the exhibition route: the same three of the five
+        // Badung stops, first in the manifest so a tester at the stand meets it at the top of the
+        // list. Manifest order is the list order (`FR-DISC-03`), which is why it is asserted here.
+        #expect(quests.map(\.id) == ["mini-badung", "badung-empat-wajah"])
+        let quest = try #require(quests.first { $0.id == "badung-empat-wajah" })
         #expect(quest.orderedCheckpoints.count == 5)
         #expect(quest.orderedCheckpoints.map(\.orderIndex) == [0, 1, 2, 3, 4])
         #expect(quest.orderedCheckpoints.map(\.role) == [.start, .middle, .middle, .middle, .finish])
 
-        // Every checkpoint resolves to a Place, with lore and sources reachable.
-        for checkpoint in quest.orderedCheckpoints {
+        let mini = try #require(quests.first { $0.id == "mini-badung" })
+        #expect(mini.orderedCheckpoints.map(\.orderIndex) == [0, 1, 2])
+        #expect(mini.orderedCheckpoints.map(\.role) == [.start, .middle, .finish])
+        #expect(mini.orderedCheckpoints.map(\.placeId)
+                == ["badung-puri-agung-pemecutan", "badung-pura-maospahit", "badung-museum-bali"])
+
+        // Every checkpoint of every shipped quest resolves to a Place, with lore and sources
+        // reachable.
+        for checkpoint in quests.flatMap(\.orderedCheckpoints) {
             let place = try #require(try repository.place(id: checkpoint.placeId),
                                      "Checkpoint \(checkpoint.id) has no Place")
             #expect(!place.sources.isEmpty)
@@ -84,7 +94,8 @@ struct BundledContentRepositoryTests {
         // named on the frames' own wording, and the single placeholder task each stop shipped with
         // is gone.
         let repository = try repository()
-        #expect(try repository.contentBundleVersion() == "2026.09.14")
+        // `2026.09.15` added the `mini-badung` exhibition route and its route geometry.
+        #expect(try repository.contentBundleVersion() == "2026.09.15")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)
@@ -158,11 +169,9 @@ struct BundledContentRepositoryTests {
         let remaining = try repository.quests(suppressingQuestIDs: [victim], suppressingPlaceIDs: [])
         #expect(!remaining.contains { $0.id == victim })
         #expect(remaining.count == all.count - 1)
-        // TODO(content): the bundle ships one quest, so suppressing it leaves an empty list and the
-        // "some quests remain" branch of FR-DISC-08 is no longer exercised by shipped content. It
-        // regains coverage when a second region is authored; until then this only proves the
-        // suppressed quest leaves.
-        #expect(remaining.isEmpty)
+        // Since `2026.09.15` the bundle ships two quests, so the "some quests remain" branch of
+        // FR-DISC-08 is exercised again by shipped content rather than only the empty-list one.
+        #expect(!remaining.isEmpty)
     }
 
     @Test func aQuestIsSuppressedWhenAnyOfItsPlacesIsSuppressed() throws {
@@ -277,7 +286,12 @@ struct BundledContentRepositoryTests {
                 #expect(plan.sourceRef >= 0 && plan.sourceRef < place.sources.count)
             }
         }
-        #expect(withPlans == ["badung-puri-agung-pemecutan", "badung-pura-maospahit"])
+        // Manifest order, quest by quest: `mini-badung`'s two stops with plans, then
+        // `badung-empat-wajah`'s. The same two Places, walked by two quests.
+        #expect(withPlans == [
+            "badung-puri-agung-pemecutan", "badung-pura-maospahit",
+            "badung-puri-agung-pemecutan", "badung-pura-maospahit",
+        ])
     }
 
     @Test func theRegionMapAndEveryPinAreInTheBundle() throws {

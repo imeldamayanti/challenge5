@@ -221,7 +221,12 @@ struct QuestPreviewTests {
     }
 
     @Test func checkpointsAreListedInWalkingOrder() throws {
-        #expect(try model().checkpoints.map(\.orderIndex) == [0, 1, 2, 3, 4])
+        // Contiguous from 0, however many the first shipped quest carries. The literal [0…4] was
+        // the five-stop `badung-empat-wajah`; `2026.09.15` put the three-stop `mini-badung` in
+        // front of it, and the requirement is the ordering, not the count.
+        let indices = try model().checkpoints.map(\.orderIndex)
+        #expect(indices == Array(0..<indices.count))
+        #expect(!indices.isEmpty)
     }
 
     @Test func theCostBreakdownSumsToTheTotal() throws {
@@ -355,7 +360,7 @@ struct QuestPreviewTests {
         // Everything else must still be readable behind it.
         let model = try model(now: Self.at(hour: 20))
         #expect(model.lateStartWarning != nil)
-        #expect(model.checkpoints.count == 5)
+        #expect(!model.checkpoints.isEmpty)
         #expect(!model.safetyNotes.isEmpty)
     }
 
@@ -436,11 +441,15 @@ struct QuestCardAndMapTests {
     // MARK: - The card from the Home design, with the fields the mockup dropped
 
     @Test func theCardCarriesAHeroImageAndACheckpointCount() throws {
-        let row = try #require(QuestListViewModel(
-            repository: try BundledContentRepository(), language: .en).rows.first)
+        let repository = try BundledContentRepository()
+        let row = try #require(QuestListViewModel(repository: repository, language: .en).rows.first)
+        // The count is the quest's own (`AD-4`), read back from content rather than written here:
+        // the card used to be asserted at the five stops of `badung-empat-wajah`, and `2026.09.15`
+        // put the three-stop `mini-badung` at the top of the list.
+        let quest = try #require(try repository.quests().first)
         #expect(row.heroImageURL != nil)
-        #expect(row.checkpointCount == 5)
-        #expect(row.checkpointCountText.contains("5"))
+        #expect(row.checkpointCount == quest.checkpointCount)
+        #expect(row.checkpointCountText.contains("\(quest.checkpointCount)"))
     }
 
     @Test func theCardSaysCheckpointsRatherThanQuests() throws {
