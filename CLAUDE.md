@@ -993,24 +993,39 @@ with the splash still auto-advancing and still a drawing.
   whole, which is what the first pass did, ships a different picture from the design's. The
   **SVGs live in `docs/design-sources/stamps/` and are `.gitignore`d**; they must never go back into
   `Resources/Images`, because `Package.swift` copies that directory wholesale and the exports would
-  ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — answer one of a place's
+  ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — resolve one of a place's
   tasks and its stamp shows the first drawing, two the second, three or more the third, clamped at
   both ends — and `StampArtworkResolver` (`Shared/Lore/StampArtwork.swift`) does the counting from
-  **one Run**, per place. Four things about it, all changed on 2026-08-26 at the owner's
+  **one Run**, per place. Six things about it, all changed on 2026-08-26 at the owner's
   instruction:
   - **The tier is per place and per walk, not a history.** It used to count *finished walks*
     through a place across every Run, so the picture said what a walker had done in total rather
-    than what they had done here. It was reported on `452:3132`'s progress bar, where two answered
+    than what they had done here. It was reported on `452:3132`'s progress bar, where two resolved
     tasks at Puri Agung Pemecutan still drew the first plate.
-  - **Leaving a place unfinished is not a forfeit** (`AD-2`): walk on with one task answered and
+  - **Leaving a place unfinished is not a forfeit** (`AD-2`): walk on with one task resolved and
     that stamp keeps its first drawing, while the next place starts again at one.
-  - **A skip earns nothing.** `TaskResult.skipped` is a resolution and not the work, so counting it
-    would put the colour plate three taps of "skip" away.
-    `StampArtworkTests.aSkippedQuestEarnsNothing` and
-    `TaskDetailTests.skippingAQuestDoesNotMoveTheStamp` guard both halves.
-  - **The progress bar's stamp is the same object as the awarded one.** It used to draw the
-    *quest's hero image*, so it could not move whatever the rule said; it takes `stampArtworkName`
-    now.
+  - **A skip counts the same as an answer, and this reverses the first pass at this rule.** The
+    first cut excluded skips ("the drawing is what the work buys"), which was never asked for —
+    the owner's own report was two tasks resolved by tapping skip ("cuz we dont have checking
+    system"), with the stamp still stuck on the first drawing. `AD-2` gives the app no answer key,
+    so it has no way to grade a skip as less than an answer, and the row's own checkmark already
+    draws identically for both (`isResolved(_:)` in `CheckpointDetailScreen` — `resolutions[task.id]
+    != nil`, regardless of `skipped`). `Run.completedTaskCount(atCheckpoint:)` counts every
+    `TaskResult` now, not just the unskipped ones.
+    `StampArtworkTests.aSkipCountsTheSameAsAnAnswer` and
+    `TaskDetailTests.skippingAQuestMovesTheStampJustAsAnsweringDoes` guard both halves.
+  - **The progress bar's stamp is the same *object* as the awarded one, but not the same tier.** It
+    used to draw the *quest's hero image*, so it could not move whatever the rule said; it now
+    draws `HisploraStampArtwork`'s own drawings, same as everywhere else. But `452:3132`'s corner is
+    the one screen where a walker is still standing on the checkpoint reading, and — at the owner's
+    instruction — it previews rather than records: `QuestRunViewModel.progressStampArtworkName` is
+    one tier ahead of `stampArtworkName`, so none resolved shows the first drawing as a reason to do
+    one, one resolved shows the second, and so on, stopping at the third exactly where the record
+    does. Every other reader of the place's stamp — `StampAwardScreen`, the Journal, the Explorer's
+    Card, the Trip Recap — keeps reading `stampArtworkName` and shows the tier actually banked.
+    `StampArtworkTests.thePreviewIsOneTierAheadOfWhatWasActuallyEarned` guards the resolver's own
+    `previewArtworkName`; `TaskDetailTests.theCornerStampPreviewsOneTierAheadOfWhatIsActuallyEarned`
+    drives it through the view model and checks the two properties diverge exactly as they should.
 
   Place id → asset stem is **a table in the app target, not a field on `Place`**. A sixth authored
   place gets an empty window until that table is edited, which is the honest fallback and also the

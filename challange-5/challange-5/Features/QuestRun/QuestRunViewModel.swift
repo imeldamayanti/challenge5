@@ -785,11 +785,28 @@ final class QuestRunViewModel {
     /// they had just done here. Passing the one run keeps the answer local: the next place starts
     /// again at the first drawing however many walks came before.
     var stampArtworkName: String? {
-        guard let run, let stampID = orderedCheckpoints
-            .first(where: { $0.orderIndex == currentIndex })?.stampId
-        else { return nil }
+        guard let run, let stampID = currentStampID else { return nil }
         return StampArtworkResolver(runs: [run], repository: repository)
             .artworkName(run: run, stampSourceID: stampID)
+    }
+
+    /// `452:3132`'s corner stamp — one tier ahead of `stampArtworkName`, so a walker who has
+    /// resolved none of this place's tasks is shown the *first* drawing as something to work
+    /// towards rather than something already banked, one resolved shows the second, and so on.
+    ///
+    /// **A preview, not a record.** Every other screen that shows this place's stamp —
+    /// `StampAwardScreen`, the Journal, the Explorer's Card, the Trip Recap — reads
+    /// `stampArtworkName` and shows the tier the walk actually earned. This is the one screen a
+    /// walker is still standing on the checkpoint reading, where "one more quest gets you this" is
+    /// the point of showing it at all.
+    var progressStampArtworkName: String? {
+        guard let run, let stampID = currentStampID else { return nil }
+        return StampArtworkResolver(runs: [run], repository: repository)
+            .previewArtworkName(run: run, stampSourceID: stampID)
+    }
+
+    private var currentStampID: String? {
+        orderedCheckpoints.first(where: { $0.orderIndex == currentIndex })?.stampId
     }
 
     // MARK: The camera — `1:4681`

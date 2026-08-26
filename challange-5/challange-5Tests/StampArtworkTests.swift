@@ -5,7 +5,7 @@ import Testing
 @testable import challange_5
 
 /// The rule the reader is told: a place's stamp shows a richer drawing for each of *that place's*
-/// quests they answer, up to the third.
+/// quests they resolve, up to the third.
 ///
 /// The counting is what these guard. `HisploraStampArtworkTests` in the package guards the clamp
 /// and the file names; nothing there knows what a Run is, and nothing here re-tests the clamp.
@@ -88,9 +88,9 @@ struct StampArtworkTests {
             })
     }
 
-    /// The rule as it was asked for: one quest done at a place shows its first drawing, two the
+    /// The rule as it was asked for: one quest resolved at a place shows its first drawing, two the
     /// second, three or more the third.
-    @Test func eachAnsweredQuestMovesThePlaceUpItsOwnSet() {
+    @Test func eachResolvedQuestMovesThePlaceUpItsOwnSet() {
         let run = Self.run(answeredPerCheckpoint: [1, 2, 3, 4])
         #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp1")
         #expect(Self.artwork(run, 1) == "\(Self.slug(1))-stamp2")
@@ -98,8 +98,8 @@ struct StampArtworkTests {
         #expect(Self.artwork(run, 3) == "\(Self.slug(3))-stamp3")
     }
 
-    /// The walker's own example: two quests answered at the first place, then on to the next place
-    /// with the first one's tasks left unfinished, where one quest is answered. The two stamps do
+    /// The walker's own example: two quests resolved at the first place, then on to the next place
+    /// with the first one's tasks left unresolved, where one quest is resolved. The two stamps do
     /// not move together (`AD-2` — walking on is normal, not a forfeit).
     @Test func aPlaceLeftUnfinishedKeepsWhatItEarnedAndTheNextStartsAgain() {
         let run = Self.run(answeredPerCheckpoint: [2, 1])
@@ -107,15 +107,17 @@ struct StampArtworkTests {
         #expect(Self.artwork(run, 1) == "\(Self.slug(1))-stamp1")
     }
 
-    /// A skip resolves a task and moves the walk on; it does not buy a drawing. Three skips at a
-    /// place leave it on the first drawing.
-    @Test func aSkippedQuestEarnsNothing() {
-        let run = Self.run(answeredPerCheckpoint: [0, 1], skippedPerCheckpoint: [3, 2])
-        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp1")
+    /// A skip counts the same as an answer. `AD-2` means there is no answer key, so the app has no
+    /// way to grade one resolution as more of "the quest" than the other — and the row's own
+    /// checkmark already draws identically for both. Two skipped and one answered at a place is
+    /// three resolved, which is the third drawing.
+    @Test func aSkipCountsTheSameAsAnAnswer() {
+        let run = Self.run(answeredPerCheckpoint: [1, 0], skippedPerCheckpoint: [2, 1])
+        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp3")
         #expect(Self.artwork(run, 1) == "\(Self.slug(1))-stamp1")
     }
 
-    /// The stamp is franked on arrival (`FR-CP-07`), before any task is answered — so a place just
+    /// The stamp is franked on arrival (`FR-CP-07`), before any task is resolved — so a place just
     /// reached shows a drawing rather than an empty window.
     @Test func aPlaceJustArrivedAtStillHasAPicture() {
         let run = Self.run(answeredPerCheckpoint: [0])
@@ -138,6 +140,28 @@ struct StampArtworkTests {
         #expect(Self.resolver.artworkName(run: run, stampSourceID: "stamp-unknown") == nil)
         #expect(StampArtworkResolver(sourcesByStamp: [:])
             .artworkName(run: run, stampSourceID: "stamp-0") == nil)
+    }
+
+    /// `progressStampArtworkName`'s rule, at the resolver: the preview is always one tier ahead of
+    /// the record, so it teases what one more resolved quest gets rather than what has already
+    /// happened.
+    @Test func thePreviewIsOneTierAheadOfWhatWasActuallyEarned() {
+        let run = Self.run(answeredPerCheckpoint: [0, 1, 2])
+        #expect(Self.resolver.previewArtworkName(run: run, stampSourceID: "stamp-0")
+                == "\(Self.slug(0))-stamp1")
+        #expect(Self.resolver.previewArtworkName(run: run, stampSourceID: "stamp-1")
+                == "\(Self.slug(1))-stamp2")
+        #expect(Self.resolver.previewArtworkName(run: run, stampSourceID: "stamp-2")
+                == "\(Self.slug(2))-stamp3")
+    }
+
+    /// Past the third drawing there is nothing further to tease, so the preview stops climbing
+    /// exactly where the record does.
+    @Test func thePreviewStopsAtTheThirdJustAsTheRecordDoes() {
+        let run = Self.run(answeredPerCheckpoint: [3])
+        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp3")
+        #expect(Self.resolver.previewArtworkName(run: run, stampSourceID: "stamp-0")
+                == "\(Self.slug(0))-stamp3")
     }
 
     /// Every place the design drew is reachable by id, and every id maps to a stem the package

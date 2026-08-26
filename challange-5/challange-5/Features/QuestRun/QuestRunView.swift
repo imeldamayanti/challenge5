@@ -361,9 +361,10 @@ struct QuestRunView: View {
                 taskPrompts: checkpoint.taskPrompts,
                 resolutions: resolutions(for: checkpoint),
                 // `452:3142` fills the stamp with a generated temple sketch. This place's own
-                // tiered drawing goes in instead, so the bar's stamp and the one the walk awards
-                // are the same object at the same tier.
-                stampArtworkName: model.stampArtworkName,
+                // tiered drawing goes in instead — one tier ahead of what has actually been
+                // earned, since this corner is a preview of the next reward rather than a record
+                // of the current one (`progressStampArtworkName`).
+                stampArtworkName: model.progressStampArtworkName,
                 isFinal: checkpoint.isFinal,
                 nextPlaceName: model.nextPlaceName,
                 onSelectTask: { model.openTaskDetail(taskID: $0.id) },
