@@ -775,27 +775,21 @@ final class QuestRunViewModel {
     /// control rather than offering nothing.
     var unresolvedTaskCount: Int { taskCount - resolvedTaskCount }
 
-    /// The drawing franked into `1:4647`, tiered by how many quests through this place the walker has
-    /// *finished* (`HisploraStampArtwork`). A walk in progress has not finished, so a first-time
-    /// walker sees the first drawing here and the same one in the Journal afterwards.
+    /// The drawing franked into `1:4647`, tiered by how many of *this place's* quests the walker
+    /// has resolved (`HisploraStampArtwork`). None answered yet shows the first drawing, two the
+    /// second, three or more the third — and it moves while the walker is standing there, because
+    /// the count comes from the Run the tasks are being written into.
     ///
-    /// **This walk is passed in alongside the finished ones, and it has to be.** The resolver builds
-    /// its stamp → place table from the quests of the runs it is given, and counts visits only from
-    /// the ones that are `.completed`. Handing it the finished runs alone means a first-time walker's
-    /// quest is in no table at all, and the window comes back empty — which is the honest fallback for
-    /// a place the design never drew, and the wrong answer for a place it did. Adding the active run
-    /// contributes the mapping and no visits, and `HisploraStampArtwork.tier` floors at 1.
+    /// **This walk alone decides it.** The tier used to be a tally across every finished Run, which
+    /// meant the picture on this screen was about the walker's history rather than about the work
+    /// they had just done here. Passing the one run keeps the answer local: the next place starts
+    /// again at the first drawing however many walks came before.
     var stampArtworkName: String? {
         guard let run, let stampID = orderedCheckpoints
             .first(where: { $0.orderIndex == currentIndex })?.stampId
         else { return nil }
-        // Excluded by id, then handed back: at the final checkpoint the walk is *already*
-        // completed (`FR-DONE-01` finishes it the instant the last place is reached), so it is in
-        // `completedRuns()` and appending it again would count that place twice — the last stamp of
-        // a first walk would show the second drawing, and the last stamp of a second walk the third.
-        let finished = ((try? engine.completedRuns()) ?? []).filter { $0.id != run.id }
-        return StampArtworkResolver(runs: finished + [run], repository: repository)
-            .artworkName(questID: run.questID, stampSourceID: stampID)
+        return StampArtworkResolver(runs: [run], repository: repository)
+            .artworkName(run: run, stampSourceID: stampID)
     }
 
     // MARK: The camera — `1:4681`

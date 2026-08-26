@@ -360,10 +360,10 @@ struct QuestRunView: View {
                 tasks: checkpoint.tasks,
                 taskPrompts: checkpoint.taskPrompts,
                 resolutions: resolutions(for: checkpoint),
-                // `452:3142` fills the stamp with a generated temple sketch. The quest's own hero
-                // image goes in instead — content with provenance, rather than a picture introduced
-                // here (`FR-CP-05`), the same substitution `PlaceNoticeScreen` makes.
-                stampImageURL: model.cutsceneImageURL,
+                // `452:3142` fills the stamp with a generated temple sketch. This place's own
+                // tiered drawing goes in instead, so the bar's stamp and the one the walk awards
+                // are the same object at the same tier.
+                stampArtworkName: model.stampArtworkName,
                 isFinal: checkpoint.isFinal,
                 nextPlaceName: model.nextPlaceName,
                 onSelectTask: { model.openTaskDetail(taskID: $0.id) },

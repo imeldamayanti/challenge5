@@ -17,32 +17,32 @@ struct HisploraStampArtworkTests {
         #expect(Set(HisploraStampArtwork.allResourceNames).count == 15)
     }
 
-    /// The rule as the reader is told it: one finished quest through a place shows the first
+    /// The rule as the reader is told it: do one of a place's quests and its stamp shows the first
     /// drawing, two the second, three the third.
-    @Test func aTierPerFinishedWalk() {
-        #expect(HisploraStampArtwork.tier(completedVisits: 1) == 1)
-        #expect(HisploraStampArtwork.tier(completedVisits: 2) == 2)
-        #expect(HisploraStampArtwork.tier(completedVisits: 3) == 3)
+    @Test func aTierPerQuestDoneAtThePlace() {
+        #expect(HisploraStampArtwork.tier(completedTasks: 1) == 1)
+        #expect(HisploraStampArtwork.tier(completedTasks: 2) == 2)
+        #expect(HisploraStampArtwork.tier(completedTasks: 3) == 3)
     }
 
-    /// A fourth walk does not earn a fourth drawing, because there is not one. Clamping rather than
-    /// wrapping: wrapping would take a reader who walked a place four times *back* to the sketch.
+    /// A fourth answered task does not earn a fourth drawing, because there is not one. Clamping
+    /// rather than wrapping: wrapping would take a reader who did everything *back* to the sketch.
     @Test func pastThreeItStaysOnTheThird() {
-        #expect(HisploraStampArtwork.tier(completedVisits: 4) == 3)
-        #expect(HisploraStampArtwork.tier(completedVisits: 99) == 3)
-        #expect(HisploraStampArtwork.resourceName(slug: "caturmuka", completedVisits: 12)
+        #expect(HisploraStampArtwork.tier(completedTasks: 4) == 3)
+        #expect(HisploraStampArtwork.tier(completedTasks: 99) == 3)
+        #expect(HisploraStampArtwork.resourceName(slug: "caturmuka", completedTasks: 12)
                 == "caturmuka-stamp3")
     }
 
-    /// The floor is the first drawing, never a blank. A stamp is drawn only once it has been
-    /// earned, and a walk in flight has earned its stamps without having finished the quest — a
-    /// zero here would take back something the reader is holding.
-    @Test func anUnfinishedWalkStillShowsTheFirstDrawing() {
-        #expect(HisploraStampArtwork.tier(completedVisits: 0) == 1)
-        #expect(HisploraStampArtwork.resourceName(slug: "pemecutan", completedVisits: 0)
+    /// The floor is the first drawing, never a blank. The stamp is franked on arrival
+    /// (`FR-CP-07`), before any task exists to answer, so a reader who has done no work at a place
+    /// is already holding one — a zero here would take back something they have.
+    @Test func aPlaceWithNoAnsweredQuestsStillShowsTheFirstDrawing() {
+        #expect(HisploraStampArtwork.tier(completedTasks: 0) == 1)
+        #expect(HisploraStampArtwork.resourceName(slug: "pemecutan", completedTasks: 0)
                 == "pemecutan-stamp1")
         // And a negative count — which nothing should produce — is a bug, not a crash.
-        #expect(HisploraStampArtwork.tier(completedVisits: -3) == 1)
+        #expect(HisploraStampArtwork.tier(completedTasks: -3) == 1)
     }
 
     @Test func namesFollowTheDesignsOwnStems() {

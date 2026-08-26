@@ -4,8 +4,8 @@ import RunEngine
 import Testing
 @testable import challange_5
 
-/// The rule the reader is told: a place's stamp shows a richer drawing each time they *finish* a
-/// quest through it, up to the third.
+/// The rule the reader is told: a place's stamp shows a richer drawing for each of *that place's*
+/// quests they answer, up to the third.
 ///
 /// The counting is what these guard. `HisploraStampArtworkTests` in the package guards the clamp
 /// and the file names; nothing there knows what a Run is, and nothing here re-tests the clamp.
@@ -19,10 +19,13 @@ struct StampArtworkTests {
     private static let places = Array(StampArtworkResolver.slugsByPlaceID.keys).sorted()
     private static let questID = "test-quest"
 
-    /// stamp id → place id, in the shape the resolver gets it from a quest's checkpoints.
-    private static var route: [String: [String: String]] {
-        var stamps: [String: String] = [:]
-        for (index, placeID) in places.enumerated() { stamps["stamp-\(index)"] = placeID }
+    /// stamp id → where it came from, in the shape the resolver gets it from a quest's checkpoints.
+    private static var route: [String: [String: StampArtworkResolver.StampSource]] {
+        var stamps: [String: StampArtworkResolver.StampSource] = [:]
+        for (index, placeID) in places.enumerated() {
+            stamps["stamp-\(index)"] = StampArtworkResolver.StampSource(
+                placeID: placeID, checkpointID: "cp-\(index)")
+        }
         return [questID: stamps]
     }
 
@@ -30,9 +33,43 @@ struct StampArtworkTests {
         StampArtworkResolver.slugsByPlaceID[places[index]]!
     }
 
-    /// A walk that franked stamps at the first `stampCount` places on the route.
-    private static func run(stampCount: Int, state: RunState, day: Int) -> Run {
-        let started = Date(timeIntervalSince1970: TimeInterval(day) * 86_400)
+    private static let resolver = StampArtworkResolver(sourcesByStamp: route)
+
+    private static func artwork(_ run: Run, _ stampIndex: Int) -> String? {
+        resolver.artworkName(run: run, stampSourceID: "stamp-\(stampIndex)")
+    }
+
+    /// A task the walker answered, or skipped.
+    private static func task(_ id: String, skipped: Bool) -> TaskResult {
+        TaskResult(
+            taskID: id, type: .reflection, promptSnapshot: "prompt",
+            skipped: skipped, text: skipped ? nil : "an answer",
+            completedAt: Date(timeIntervalSince1970: 0))
+    }
+
+    /// A walk that reached `answered.count` places, answering that many tasks at each — index 0
+    /// first, in route order.
+    private static func run(
+        answeredPerCheckpoint: [Int], skippedPerCheckpoint: [Int] = [],
+        state: RunState = .active
+    ) -> Run {
+        let started = Date(timeIntervalSince1970: 86_400)
+        let results = answeredPerCheckpoint.enumerated().map { index, answered in
+            let skipped = skippedPerCheckpoint.indices.contains(index)
+                ? skippedPerCheckpoint[index] : 0
+            return CheckpointResult(
+                checkpointID: "cp-\(index)",
+                orderIndex: index,
+                arrivedAt: started,
+                arrivalMethod: .gps,
+                gpsAccuracyM: 8,
+                snapshotPlaceName: places[index],
+                snapshotLore: [],
+                snapshotClueToNext: nil,
+                snapshotContentVersion: "test",
+                taskResults: (0..<answered).map { task("answered-\(index)-\($0)", skipped: false) }
+                    + (0..<skipped).map { task("skipped-\(index)-\($0)", skipped: true) })
+        }
         return Run(
             questID: questID,
             contentVersion: "test",
@@ -40,80 +77,67 @@ struct StampArtworkTests {
             snapshotQuestTitle: "A walk",
             checkpointCount: places.count,
             state: state,
-            currentCheckpointIndex: max(stampCount - 1, 0),
+            currentCheckpointIndex: max(answeredPerCheckpoint.count - 1, 0),
             startedAt: started,
             updatedAt: started,
             completedAt: state == .completed ? started : nil,
-            awards: (0..<stampCount).map { index in
-                Award(type: .stamp, sourceID: "stamp-\(index)",
-                      snapshotName: places[index], awardedAt: started)
+            checkpointResults: results,
+            awards: results.map { result in
+                Award(type: .stamp, sourceID: "stamp-\(result.orderIndex)",
+                      snapshotName: result.snapshotPlaceName, awardedAt: started)
             })
     }
 
-    private static func resolver(_ runs: [Run]) -> StampArtworkResolver {
-        StampArtworkResolver(runs: runs, placesByStamp: route)
+    /// The rule as it was asked for: one quest done at a place shows its first drawing, two the
+    /// second, three or more the third.
+    @Test func eachAnsweredQuestMovesThePlaceUpItsOwnSet() {
+        let run = Self.run(answeredPerCheckpoint: [1, 2, 3, 4])
+        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp1")
+        #expect(Self.artwork(run, 1) == "\(Self.slug(1))-stamp2")
+        #expect(Self.artwork(run, 2) == "\(Self.slug(2))-stamp3")
+        #expect(Self.artwork(run, 3) == "\(Self.slug(3))-stamp3")
     }
 
-    @Test func oneFinishedWalkShowsTheFirstDrawingEverywhereItPassed() {
-        let resolver = Self.resolver([Self.run(stampCount: 3, state: .completed, day: 1)])
-        for index in 0..<3 {
-            #expect(resolver.artworkName(questID: Self.questID, stampSourceID: "stamp-\(index)")
-                    == "\(Self.slug(index))-stamp1")
-        }
+    /// The walker's own example: two quests answered at the first place, then on to the next place
+    /// with the first one's tasks left unfinished, where one quest is answered. The two stamps do
+    /// not move together (`AD-2` — walking on is normal, not a forfeit).
+    @Test func aPlaceLeftUnfinishedKeepsWhatItEarnedAndTheNextStartsAgain() {
+        let run = Self.run(answeredPerCheckpoint: [2, 1])
+        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp2")
+        #expect(Self.artwork(run, 1) == "\(Self.slug(1))-stamp1")
     }
 
-    /// The point of the whole feature: a place walked twice moves up, and its neighbours on the
-    /// same route do not move with it.
-    @Test func eachPlaceClimbsOnItsOwnCount() {
-        let resolver = Self.resolver([
-            Self.run(stampCount: 3, state: .completed, day: 1),
-            Self.run(stampCount: 2, state: .completed, day: 2),
-            Self.run(stampCount: 1, state: .completed, day: 3),
-        ])
-        #expect(resolver.artworkName(questID: Self.questID, stampSourceID: "stamp-0")
-                == "\(Self.slug(0))-stamp3")
-        #expect(resolver.artworkName(questID: Self.questID, stampSourceID: "stamp-1")
-                == "\(Self.slug(1))-stamp2")
-        #expect(resolver.artworkName(questID: Self.questID, stampSourceID: "stamp-2")
-                == "\(Self.slug(2))-stamp1")
+    /// A skip resolves a task and moves the walk on; it does not buy a drawing. Three skips at a
+    /// place leave it on the first drawing.
+    @Test func aSkippedQuestEarnsNothing() {
+        let run = Self.run(answeredPerCheckpoint: [0, 1], skippedPerCheckpoint: [3, 2])
+        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp1")
+        #expect(Self.artwork(run, 1) == "\(Self.slug(1))-stamp1")
     }
 
-    /// A fourth walk earns nothing new, because there is no fourth drawing.
-    @Test func afterThreeItStaysOnTheThird() {
-        let resolver = Self.resolver((1...5).map {
-            Self.run(stampCount: 1, state: .completed, day: $0)
-        })
-        #expect(resolver.artworkName(questID: Self.questID, stampSourceID: "stamp-0")
-                == "\(Self.slug(0))-stamp3")
+    /// The stamp is franked on arrival (`FR-CP-07`), before any task is answered — so a place just
+    /// reached shows a drawing rather than an empty window.
+    @Test func aPlaceJustArrivedAtStillHasAPicture() {
+        let run = Self.run(answeredPerCheckpoint: [0])
+        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp1")
     }
 
-    /// Only *finished* walks count. A walk in progress has earned its stamps and shows the first
-    /// drawing for them, but it has not moved the reader up the set — the drawing changes when a
-    /// quest is finished, which is what they were told.
-    @Test func onlyAFinishedWalkCounts() {
-        let resolver = Self.resolver([
-            Self.run(stampCount: 2, state: .completed, day: 1),
-            Self.run(stampCount: 2, state: .active, day: 2),
-            Self.run(stampCount: 2, state: .abandoned, day: 3),
-        ])
-        #expect(resolver.artworkName(questID: Self.questID, stampSourceID: "stamp-0")
-                == "\(Self.slug(0))-stamp1")
-    }
-
-    /// A place that has never been finished still shows a drawing for the stamp it has already
-    /// franked — the floor is the first drawing, not an empty window.
-    @Test func aStampEarnedOnAnUnfinishedWalkStillHasAPicture() {
-        let resolver = Self.resolver([Self.run(stampCount: 2, state: .active, day: 1)])
-        #expect(resolver.artworkName(questID: Self.questID, stampSourceID: "stamp-1")
-                == "\(Self.slug(1))-stamp1")
+    /// A finished walk keeps showing what it earned. The tier is the Run's own record, so a later
+    /// walk through the same place cannot re-grade a stamp already in the Journal.
+    @Test func aFinishedWalksStampsKeepTheirOwnTiers() {
+        let first = Self.run(answeredPerCheckpoint: [1], state: .completed)
+        let second = Self.run(answeredPerCheckpoint: [3], state: .completed)
+        #expect(Self.artwork(first, 0) == "\(Self.slug(0))-stamp1")
+        #expect(Self.artwork(second, 0) == "\(Self.slug(0))-stamp3")
     }
 
     /// Content withdrawn under a finished walk costs the picture and nothing else — the stamp still
     /// carries the name and region the Run recorded (`FR-DONE-05`, `FR-RUN-06`).
     @Test func aStampWithNoResolvablePlaceHasNoDrawing() {
-        let resolver = Self.resolver([Self.run(stampCount: 1, state: .completed, day: 1)])
-        #expect(resolver.artworkName(questID: Self.questID, stampSourceID: "stamp-unknown") == nil)
-        #expect(resolver.artworkName(questID: "another-quest", stampSourceID: "stamp-0") == nil)
+        let run = Self.run(answeredPerCheckpoint: [1])
+        #expect(Self.resolver.artworkName(run: run, stampSourceID: "stamp-unknown") == nil)
+        #expect(StampArtworkResolver(sourcesByStamp: [:])
+            .artworkName(run: run, stampSourceID: "stamp-0") == nil)
     }
 
     /// Every place the design drew is reachable by id, and every id maps to a stem the package

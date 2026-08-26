@@ -5,9 +5,14 @@ import SwiftUI
 ///
 /// **Three drawings per place, earned rather than chosen.** The design draws every place three
 /// times — a pale pencil sketch, a fuller one, and a finished colour illustration — and the reader
-/// moves up the set by walking: one finished quest through that place shows the sketch, two the
-/// second drawing, three or more the colour plate. Nothing here decides *how many* walks a reader
-/// has done; that is counted from their own records and arrives as a number.
+/// moves up the set by *doing the quests at that place*: resolve one of the place's tasks and its
+/// stamp shows the sketch, two the second drawing, three or more the colour plate. Nothing here
+/// decides how many a reader has done; that is counted from their own Run and arrives as a number.
+///
+/// **Per place, not per walk.** A walker who answers two tasks at Puri Agung Pemecutan and then
+/// leaves for the next place carries a second-tier Pemecutan stamp and a first-tier stamp wherever
+/// they answer one — the tiers move independently, because each is about the work done at its own
+/// place (`AD-2`: nothing here gates progression, so leaving with tasks unanswered is normal).
 ///
 /// **The pictures are packaged chrome, not content.** They depict real places, so the same rule
 /// `PortraitFrame.swift` sets out applies: what is *written under* a picture is a claim and takes a
@@ -26,14 +31,14 @@ public enum HisploraStampArtwork {
     /// Journal quietly emptying every window.
     public static let slugs = ["badung", "balimuseum", "caturmuka", "maospahit", "pemecutan"]
 
-    /// Which of the three drawings a reader who has finished `completedVisits` quests through this
-    /// place is looking at.
+    /// Which of the three drawings a reader who has resolved `completedTasks` of this place's
+    /// quests is looking at.
     ///
-    /// The floor is 1, not 0: a stamp is only ever drawn once it has been *earned*, and a walk in
-    /// progress has earned its stamps without having finished the quest yet. Showing that reader an
-    /// empty window would be the card taking back something they are holding.
-    public static func tier(completedVisits: Int) -> Int {
-        min(max(completedVisits, 1), highestTier)
+    /// The floor is 1, not 0: the stamp is franked on arrival (`FR-CP-07`), before any task has
+    /// been answered, so a reader standing at a place they have done no work at is already holding
+    /// one. An empty window there would be the card taking back something they have.
+    public static func tier(completedTasks: Int) -> Int {
+        min(max(completedTasks, 1), highestTier)
     }
 
     /// `"pemecutan-stamp2"` — the resource stem, which is also what the presentation layer passes
@@ -42,9 +47,9 @@ public enum HisploraStampArtwork {
         "\(slug)-stamp\(min(max(tier, 1), highestTier))"
     }
 
-    /// Convenience for the two callers that have a slug and a count rather than a name.
-    public static func resourceName(slug: String, completedVisits: Int) -> String {
-        resourceName(slug: slug, tier: tier(completedVisits: completedVisits))
+    /// Convenience for the callers that have a slug and a count rather than a name.
+    public static func resourceName(slug: String, completedTasks: Int) -> String {
+        resourceName(slug: slug, tier: tier(completedTasks: completedTasks))
     }
 
     /// The drawing, or `nil` when it is not packaged — which the stamp card renders as aged paper.

@@ -55,16 +55,15 @@ final class ExplorerCardViewModel {
         let stampAwards = runs
             .flatMap { run in run.awards.filter { $0.type == .stamp }.map { (run, $0) } }
             .sorted { $0.1.awardedAt > $1.1.awardedAt }
-        // Built once for the whole card: which of a place's three drawings the reader has earned is
-        // a question about every Run, not about the one this stamp came from.
+        // Built once for the whole card rather than per stamp: the content lookup behind it is the
+        // expensive half, and the counting it does is per-Run.
         let artwork = StampArtworkResolver(runs: runs, repository: repository)
         let stamps = stampAwards.map { run, award in
             StampPresentation(
                 id: "\(run.id)-\(award.sourceID)",
                 placeName: award.snapshotName,
                 region: (try? repository.quest(id: run.questID))??.region ?? "",
-                artworkName: artwork.artworkName(
-                    questID: run.questID, stampSourceID: award.sourceID))
+                artworkName: artwork.artworkName(run: run, stampSourceID: award.sourceID))
         }
 
         // Badges: a finished walk (`FR-DONE-01`) and a completed collection (`FR-SIDE-09`). Both

@@ -60,8 +60,8 @@ final class SealedLettersViewModel {
                 if (lhs.state == .active) != (rhs.state == .active) { return lhs.state == .active }
                 return lhs.updatedAt > rhs.updatedAt
             }
-        // Built once for the whole shelf rather than per letter: it counts finished walks per
-        // place, which is a question about every Run and not about this one.
+        // Built once for the whole shelf rather than per letter: the content lookup behind it is
+        // the expensive half, and the counting it does is per-Run.
         let artwork = StampArtworkResolver(runs: runs, repository: repository)
         letters = runs.map { presentation($0, artwork: artwork) }
         if !letters.indices.contains(selectedIndex) { selectedIndex = 0 }
@@ -180,8 +180,7 @@ final class SealedLettersViewModel {
                     id: $0.sourceID,
                     placeName: $0.snapshotName,
                     region: region,
-                    artworkName: artwork.artworkName(
-                        questID: run.questID, stampSourceID: $0.sourceID))
+                    artworkName: artwork.artworkName(run: run, stampSourceID: $0.sourceID))
             }
         let progress = String(
             format: UIStrings.string(.checkpointProgress, language),

@@ -5,10 +5,16 @@ import RunEngine
 
 /// Which of a place's three drawings a reader has earned, worked out from their own records.
 ///
-/// **The rule, in the reader's words:** finish one quest through a place and its stamp shows the
-/// first drawing; finish two and it shows the second; three or more and it stays on the third.
+/// **The rule, in the reader's words:** do one of a place's quests and its stamp shows the first
+/// drawing; do two and it shows the second; three or more and it stays on the third. Each place
+/// counts on its own — walking on with tasks unanswered (`AD-2` — nothing here gates progression)
+/// leaves that place on the tier its own work earned, and the next place starts again at one.
 /// `DesignSystem.HisploraStampArtwork` owns the clamping and the file naming; this owns the
-/// counting, because the count comes from Runs and Runs are not the design system's business.
+/// counting, because the count comes from a Run and a Run is not the design system's business.
+///
+/// **A skip is not a quest done.** `TaskResult.skipped` is a resolution — it closes the task and
+/// lets the walk move on — but it is the walker declining the work, and the drawing is what the
+/// work buys. Counting skips would hand the colour plate to somebody who skipped three times.
 ///
 /// **Two joins, both to decoration only.** Nothing here is allowed to decide what a walk *was* —
 /// `Run` already carries its own snapshots for that (`FR-DONE-05`, `FR-RUN-06`). It reaches into
@@ -33,21 +39,35 @@ struct StampArtworkResolver {
         "badung-puri-agung-pemecutan": "pemecutan",
     ]
 
-    /// How many *finished* walks have passed through each place. Abandoned and in-flight walks are
-    /// not counted — the reader was told the drawing changes when a quest is finished.
-    private let completedVisits: [String: Int]
-    /// quest id → (stamp id → place id), resolved once per screen rather than per stamp.
-    private let placesByStamp: [String: [String: String]]
+    /// What a stamp is *of*, and which checkpoint franked it.
+    ///
+    /// The checkpoint id is what carries the count: `Run.checkpointResults` is keyed by it, and the
+    /// tasks a walker answered at a place live there. The place id is what carries the drawing.
+    struct StampSource: Equatable {
+        let placeID: String
+        let checkpointID: String
+
+        init(placeID: String, checkpointID: String) {
+            self.placeID = placeID
+            self.checkpointID = checkpointID
+        }
+    }
+
+    /// quest id → (stamp id → where that stamp came from), resolved once per screen rather than
+    /// per stamp.
+    private let sourcesByStamp: [String: [String: StampSource]]
 
     init(runs: [Run], repository: any ContentRepository) {
-        var places: [String: [String: String]] = [:]
+        var sources: [String: [String: StampSource]] = [:]
         for questID in Set(runs.map(\.questID)) {
             guard let quest = (try? repository.quest(id: questID)) ?? nil else { continue }
-            places[questID] = Dictionary(
-                quest.checkpoints.map { ($0.stampId, $0.placeId) },
+            sources[questID] = Dictionary(
+                quest.checkpoints.map {
+                    ($0.stampId, StampSource(placeID: $0.placeId, checkpointID: $0.id))
+                },
                 uniquingKeysWith: { first, _ in first })
         }
-        self.init(runs: runs, placesByStamp: places)
+        self.init(sourcesByStamp: sources)
     }
 
     /// The counting on its own, with the content lookup already done.
@@ -55,27 +75,35 @@ struct StampArtworkResolver {
     /// Exists so the rule can be tested as the pure value it is — no repository, no bundle, and no
     /// dependence on what happens to be authored this week. The same argument
     /// `challange-5Tests/ContentFixtures.swift` opens with.
-    init(runs: [Run], placesByStamp: [String: [String: String]]) {
-        self.placesByStamp = placesByStamp
-
-        var visits: [String: Int] = [:]
-        for run in runs where run.state == .completed {
-            // A place counts once per finished walk however many stamps that walk franked there.
-            let visited = Set(run.awards
-                .filter { $0.type == .stamp }
-                .compactMap { placesByStamp[run.questID]?[$0.sourceID] })
-            for placeID in visited { visits[placeID, default: 0] += 1 }
-        }
-        self.completedVisits = visits
+    init(sourcesByStamp: [String: [String: StampSource]]) {
+        self.sourcesByStamp = sourcesByStamp
     }
 
-    /// The resource stem for the stamp a walk franked at `stampSourceID`, or `nil` when the place
-    /// is unknown or has no drawing.
-    func artworkName(questID: String, stampSourceID: String) -> String? {
-        guard let placeID = placesByStamp[questID]?[stampSourceID],
-              let slug = Self.slugsByPlaceID[placeID]
+    /// The resource stem for the stamp `run` franked at `stampSourceID`, or `nil` when the place is
+    /// unknown or has no drawing.
+    ///
+    /// **The Run is the argument, not a tally taken across every Run.** The reader is told the
+    /// drawing follows the quests they did at that place, and the quests they did at that place are
+    /// recorded on the walk that did them — so a stamp in the Journal keeps showing what its own
+    /// walk earned rather than being re-graded by a later one.
+    func artworkName(run: Run, stampSourceID: String) -> String? {
+        guard let source = sourcesByStamp[run.questID]?[stampSourceID],
+              let slug = Self.slugsByPlaceID[source.placeID]
         else { return nil }
         return HisploraStampArtwork.resourceName(
-            slug: slug, completedVisits: completedVisits[placeID] ?? 0)
+            slug: slug, completedTasks: run.completedTaskCount(atCheckpoint: source.checkpointID))
+    }
+}
+
+extension Run {
+    /// How many of a checkpoint's tasks the walker actually answered — skips excluded, for the
+    /// reason `StampArtworkResolver` gives. Zero for a checkpoint this walk never reached, which
+    /// `HisploraStampArtwork.tier` floors to the first drawing.
+    func completedTaskCount(atCheckpoint checkpointID: String) -> Int {
+        checkpointResults
+            .first { $0.checkpointID == checkpointID }?
+            .taskResults
+            .filter { !$0.skipped }
+            .count ?? 0
     }
 }
