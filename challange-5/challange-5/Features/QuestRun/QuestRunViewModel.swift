@@ -222,6 +222,9 @@ final class QuestRunViewModel {
         if stage == .atCheckpoint || stage == .finished {
             checkpoint = presentation(forOrderIndex: currentIndex)
         }
+        // A resumed walk opens on the task menu, and every later return to that menu has to land
+        // on the same stage it opened at — see `checkpointMenuStage`.
+        if stage == .atCheckpoint { checkpointMenuStage = .atCheckpoint }
 
         sampling.onArrival = { [weak self] method, accuracyM in
             self?.record(method: method, accuracyM: accuracyM)
@@ -660,7 +663,7 @@ final class QuestRunViewModel {
     var firstTask: ContentTask? { checkpoint?.tasks.first }
 
     private func firstTaskStage(from origin: Stage) -> Stage {
-        guard let first = firstTask else { return .checkpointDetail }
+        guard let first = firstTask else { return checkpointMenuStage }
         stageBeforeTaskDetail = origin
         return .taskDetail(taskID: first.id)
     }
@@ -685,6 +688,22 @@ final class QuestRunViewModel {
     /// once the first task is resolved it is indistinguishable from any other row, so "which task
     /// is this" cannot answer "where did the walker come from".
     private var stageBeforeTaskDetail: Stage = .checkpointDetail
+
+    /// Which of the two stages that draw the checkpoint's task menu this walk is using.
+    /// `.checkpointDetail` and `.atCheckpoint` render the same "All Quest" screen and differ only
+    /// in what stands before them — so a walk that *opened* on the menu, which is what a resumed
+    /// one does (`initialStage`), has to keep coming back to `.atCheckpoint`. Sending it to
+    /// `.checkpointDetail` instead hands the walker a back control that dives into the first task
+    /// of a checkpoint they have already worked through, rather than leaving a walk they have only
+    /// just re-opened.
+    private var checkpointMenuStage: Stage = .checkpointDetail
+
+    /// Where `.atCheckpoint` was reached from, or `nil` while it is the stage the walk opened on.
+    /// A resumed walk has nothing before its menu, so the back control there leaves the run screen
+    /// for whichever surface pushed it — Home's ongoing card, or the Profile list's unfinished row
+    /// (`backLeavesTheRun`). `stampAwardNextLocation` reaches the same stage mid-walk and records
+    /// the stamp it came from, so that back stays inside the walk.
+    private var stageBeforeAtCheckpoint: Stage?
 
     /// How tall `TaskDetailScreen` last drew its parchment, in points.
     ///
@@ -715,14 +734,17 @@ final class QuestRunViewModel {
     /// an empty sheet with a back button and no way to tell what went wrong.
     func openTaskDetail(taskID: String) {
         guard checkpoint?.tasks.contains(where: { $0.id == taskID }) == true else { return }
-        stageBeforeTaskDetail = .checkpointDetail
+        // The menu the walker is standing on, not the literal `.checkpointDetail`: a resumed walk
+        // is on `.atCheckpoint`, and backing out of a task there has to return to that stage or the
+        // walk quietly changes which menu it is on and loses its way out (`checkpointMenuStage`).
+        stageBeforeTaskDetail = stage
         stage = .taskDetail(taskID: taskID)
     }
 
     /// Leaving the sheet forwards without resolving anything — an already-answered task being
     /// re-read. It lands on the menu, which is the checkpoint's hub: `advanceFromCheckpointDetail`
     /// is the one way out of it.
-    func advanceFromTaskDetail() { stage = .checkpointDetail }
+    func advanceFromTaskDetail() { stage = checkpointMenuStage }
 
     /// Saving an answer from the sheet, then into the story behind it.
     ///
@@ -750,13 +772,16 @@ final class QuestRunViewModel {
     }
 
     /// `1:4654` — back to this checkpoint's task menu.
-    func stampAwardMoreQuests() { stage = .checkpointDetail }
+    func stampAwardMoreQuests() { stage = checkpointMenuStage }
 
     /// `15:2798` — on towards the next place, by way of `.atCheckpoint`'s own advance button. A
     /// walker reaching this from the checkpoint's *first* task has not seen the task menu at all,
     /// so unlike `advanceFromCheckpointDetail` this has no menu to skip past — `.atCheckpoint` is
     /// still where its lore, remaining tasks and clue live for that walker.
-    func stampAwardNextLocation() { stage = .atCheckpoint }
+    func stampAwardNextLocation() {
+        stageBeforeAtCheckpoint = stage
+        stage = .atCheckpoint
+    }
 
     /// The claims `1:4609` prints — the Place's own `loreStandalone`, with the accuracy label and the
     /// citations `FR-CP-05` asks for. Empty when the Place authors none, which the screen renders as
@@ -901,6 +926,16 @@ final class QuestRunViewModel {
                 stage = .transition
             }
         case .taskDetail: stage = stageBeforeTaskDetail
+        // `.atCheckpoint` draws the same "All Quest" screen as `.checkpointDetail` and used to fall
+        // to `default: break`, so its back arrow did nothing at all — which is every walk picked up
+        // from Home's ongoing card or the Profile list. Reached mid-walk from the stamp it returns
+        // there; opened on, it has nothing before it and the view leaves the run screen instead
+        // (`backLeavesTheRun`).
+        case .atCheckpoint:
+            if let origin = stageBeforeAtCheckpoint {
+                stageBeforeAtCheckpoint = nil
+                stage = origin
+            }
         // Backing out of the story returns to the task it belongs to, which by then is resolved —
         // so the sheet draws its saved answer and a plain Continue rather than the field again
         // (`FR-TASK-07`: the walker may want to re-read what they wrote).
@@ -909,6 +944,14 @@ final class QuestRunViewModel {
         default: break
         }
     }
+
+    /// Whether the back control on the current stage has to leave the run screen rather than step
+    /// back inside the walk, because the walk *opened* on this stage and there is nothing before it.
+    ///
+    /// True only on the task menu a resumed walk lands on. Where that leaves the walker is decided
+    /// by whoever pushed the run screen, which is the point: Home's ongoing card pops back to Home,
+    /// the Profile list's unfinished row pops back to the Profile list.
+    var backLeavesTheRun: Bool { stage == .atCheckpoint && stageBeforeAtCheckpoint == nil }
 
     /// Every `LoreBlock` at this checkpoint, joined into the one passage the story reveal shows, so
     /// a multi-block checkpoint reads as paragraphs rather than a pager (`46:120` restyle).
@@ -1046,6 +1089,10 @@ final class QuestRunViewModel {
         do {
             self.run = try engine.advanceToNextCheckpoint(runID: run.id)
             checkpoint = nil
+            // The next checkpoint's menu is reached forwards, through its own story, so it is
+            // `.checkpointDetail` again even for a walk that was resumed onto `.atCheckpoint`.
+            checkpointMenuStage = .checkpointDetail
+            stageBeforeAtCheckpoint = nil
             stage = .awaitingArrival
             beginSampling()
         } catch let error as RunEngineError {
