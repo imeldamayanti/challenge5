@@ -28,13 +28,20 @@ enum TaskSheetLayout {
     /// either empty or full and never anything else. Its old row (6 above, a 4-point bar, 14 each
     /// side of it) is folded into this one number, so the sheet keeps standing where the frame draws
     /// it instead of jumping 32 points up the screen when the bar went.
-    static let titleToSheet: CGFloat = 6 + 4 + 28
+    ///
+    /// **Tightened by request** — with the bar gone the folded row was holding open a gap for an
+    /// object that is no longer drawn, and the sheet read as floating away from the title. Its
+    /// three terms are kept rather than collapsed into one literal, so what the number is made of
+    /// is still legible.
+    static let titleToSheet: CGFloat = 6 + 4 + 10
 
-    /// The sheet is drawn at y = 190, 62 under the bar's box. Held at 44 rather than the frame's 62:
-    /// the frame draws a photo task, whose sheet is one pill deep, and a written task's field, save
-    /// and skip need those points back or the sheet runs past the foot of the screen with the map
-    /// hint printed across its lower roll.
-    static let sheetTop: CGFloat = 44
+    /// `1:4711` draws the sheet at y = 190, 62 under the bar's box. It was held at 44 rather than
+    /// that 62 — the frame draws a photo task, whose sheet is one pill deep, and a written task's
+    /// field, save and skip need those points back or the sheet runs past the foot of the screen
+    /// with the map hint printed across its lower roll — and is 20 now, by request: the head roll
+    /// stood too far under the title bar, which read as the parchment floating free of the screen
+    /// it belongs to.
+    static let sheetTop: CGFloat = 20
 
     /// How far the sheet's head roll stands below the top of the safe area — the number the
     /// transition screen has to land its unrolled parchment on.

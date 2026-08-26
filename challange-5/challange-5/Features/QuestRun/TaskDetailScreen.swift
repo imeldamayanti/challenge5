@@ -111,7 +111,8 @@ struct TaskDetailScreen: View {
                 // (`FR-TASK-02`, `NFR-A11Y-02`).
                 ViewThatFits(in: .vertical) {
                     VStack(spacing: 0) {
-                        // The sheet is drawn at y = 190, 62 under the bar's box.
+                        // See `TaskSheetLayout.sheetTop` for why the head roll sits where it
+                        // does rather than at the frame's own 62.
                         Spacer(minLength: TaskSheetLayout.sheetTop)
                         sheet
                         Spacer(minLength: 0)
