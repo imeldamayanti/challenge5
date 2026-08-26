@@ -976,9 +976,9 @@ with the splash still auto-advancing and still a drawing.
     *presented*. `saveTaskFromDetail` follows the same fork: `saveTask` records an empty draft as a
     skip, so an empty Save lands on the list too, and a save that *failed* leaves the sheet standing
     rather than moving on from a write that did not happen.
-    **The stamp tier is unaffected and still counts a skip like an answer** — `StampArtworkResolver`
-    was changed the other way the same day, and the two are about different things: which drawing
-    the place's stamp wears, versus whether the walker is shown a screen about it.
+    **The stamp tier went the same way**: `StampArtworkResolver` no longer counts a skip, and the
+    task row no longer ticks one. See the stamp bullet below for the full record — that rule was
+    written twice in opposite directions on the same day and both are worth knowing.
   - **`1:4616` is the same stock plate `293:1630` already is**, names baked in and all — so
     `QuestExplanationScreen` reuses `HisploraPlaquePanel` and `plaque-plate.png` rather than shipping
     a second copy of the same picture. Do not re-export it.
@@ -1037,7 +1037,7 @@ with the splash still auto-advancing and still a drawing.
   whole, which is what the first pass did, ships a different picture from the design's. The
   **SVGs live in `docs/design-sources/stamps/` and are `.gitignore`d**; they must never go back into
   `Resources/Images`, because `Package.swift` copies that directory wholesale and the exports would
-  ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — resolve one of a place's
+  ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — **answer** one of a place's
   tasks and its stamp shows the first drawing, two the second, three or more the third, clamped at
   both ends — and `StampArtworkResolver` (`Shared/Lore/StampArtwork.swift`) does the counting from
   **one Run**, per place. Six things about it, all changed on 2026-08-26 at the owner's
@@ -1046,18 +1046,29 @@ with the splash still auto-advancing and still a drawing.
     through a place across every Run, so the picture said what a walker had done in total rather
     than what they had done here. It was reported on `452:3132`'s progress bar, where two resolved
     tasks at Puri Agung Pemecutan still drew the first plate.
-  - **Leaving a place unfinished is not a forfeit** (`AD-2`): walk on with one task resolved and
+  - **Leaving a place unfinished is not a forfeit** (`AD-2`): walk on with one task answered and
     that stamp keeps its first drawing, while the next place starts again at one.
-  - **A skip counts the same as an answer, and this reverses the first pass at this rule.** The
-    first cut excluded skips ("the drawing is what the work buys"), which was never asked for —
-    the owner's own report was two tasks resolved by tapping skip ("cuz we dont have checking
-    system"), with the stamp still stuck on the first drawing. `AD-2` gives the app no answer key,
-    so it has no way to grade a skip as less than an answer, and the row's own checkmark already
-    draws identically for both (`isResolved(_:)` in `CheckpointDetailScreen` — `resolutions[task.id]
-    != nil`, regardless of `skipped`). `Run.completedTaskCount(atCheckpoint:)` counts every
-    `TaskResult` now, not just the unskipped ones.
-    `StampArtworkTests.aSkipCountsTheSameAsAnAnswer` and
-    `TaskDetailTests.skippingAQuestMovesTheStampJustAsAnsweringDoes` guard both halves.
+  - **A skip does not count towards the tier, and a skipped task draws no checkmark.** This rule
+    was written twice in opposite directions on the same day and the second one is what ships, so
+    both are recorded. First cut: skips excluded ("the drawing is what the work buys"). Second: the
+    owner reported two tasks resolved by tapping skip ("cuz we dont have checking system") with the
+    stamp stuck on the first drawing, so skips were made to count — the argument being that `AD-2`
+    gives the app no answer key and the row's own checkmark already drew identically for both.
+    Third, and current: the owner asked for the *checkmark* to go too, which removes that argument's
+    premise. A skip now reads as work not done, consistently in all three places —
+    `Run.completedTaskCount(atCheckpoint:)` counts only `!skipped`,
+    `CheckpointDetailScreen.isResolved` draws the chevron rather than the seal, and the segmented
+    bar fills no segment for it.
+    **The three must keep agreeing.** A row ticked green beside a stamp that did not move is the
+    version of this that reads as a bug, and it is the version that shipped in between.
+    `AD-2` is untouched throughout: no answer key is needed to tell a skip from an answer, because
+    `TaskResult.skipped` is the walker's own choice rather than a judgement of their words, and
+    nothing gates on any of these counts — `advanceFromCheckpointDetail` is unconditional. A
+    skipped task is still recorded, still re-openable, and still costs nothing; `unresolvedTaskCount`
+    keeps counting it, so `1:4654`'s "More Quests (N)" offers exactly the rows the list shows open.
+    `StampArtworkTests.aSkipDoesNotCountTowardsTheTier`,
+    `TaskDetailTests.skippingAQuestLeavesTheStampWhereItWas`, `aSkippedTaskFillsNoSegment` and
+    `aSkippedTaskStaysInTheRemainingCount` guard the four halves.
   - **The progress bar's stamp is the same *object* as the awarded one, but not the same tier.** It
     used to draw the *quest's hero image*, so it could not move whatever the rule said; it now
     draws `HisploraStampArtwork`'s own drawings, same as everywhere else. But `452:3132`'s corner is

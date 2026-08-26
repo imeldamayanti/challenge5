@@ -828,8 +828,10 @@ final class QuestRunViewModel {
 
     var stampTotal: Int { totalCheckpoints }
 
-    /// `1:4654`'s count — how many tasks at this checkpoint are still unresolved. Zero hides the
-    /// control rather than offering nothing.
+    /// `1:4654`'s count — how many tasks at this checkpoint are still open. A skipped one is
+    /// counted here, because a skip now leaves the row unticked: "More Quests" has to offer the
+    /// walker the same tasks the list they land on shows as open, or the two screens disagree
+    /// about the same checkpoint. Zero hides the control rather than offering nothing.
     var unresolvedTaskCount: Int { taskCount - resolvedTaskCount }
 
     /// The drawing franked into `1:4647`, tiered by how many of *this place's* quests the walker
@@ -901,11 +903,16 @@ final class QuestRunViewModel {
         return checkpoint?.tasks.first { $0.id == taskID }
     }
 
-    /// How many of this checkpoint's tasks have been resolved — answered or skipped, since
-    /// `FR-TASK-02` makes those the same kind of outcome and `AD-2` means neither gates anything.
-    /// This is what fills the segmented bar on `452:3138`.
+    /// How many of this checkpoint's tasks the walker actually **answered**. A skip is not one of
+    /// them, as of 2026-08-26: it closes the task in the record but leaves it reading as still open
+    /// on the list, drawing no checkmark and filling no segment of `452:3138`'s bar — the same rule
+    /// `StampArtworkResolver` tiers the stamp by, and the three have to keep agreeing.
+    ///
+    /// `AD-2` is untouched. Nothing reads this to decide whether the walk may leave the checkpoint;
+    /// `advanceFromCheckpointDetail` is unconditional, and a skipped task is still resolved, still
+    /// re-openable, and still costs nothing.
     var resolvedTaskCount: Int {
-        (checkpoint?.tasks ?? []).count { resolution(for: $0) != nil }
+        (checkpoint?.tasks ?? []).count { resolution(for: $0)?.skipped == false }
     }
 
     var taskCount: Int { checkpoint?.tasks.count ?? 0 }
