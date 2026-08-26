@@ -427,6 +427,24 @@ struct TaskDetailTests {
         #expect(harness.model.stage == .taskDetail(taskID: task.id))
     }
 
+    /// `.atCheckpoint` draws the same "All Quest" screen as `.checkpointDetail`, and a *resumed*
+    /// walk opens on it — which is why its back arrow now leaves the run screen entirely. Reached
+    /// mid-walk from the stamp it is not the walk's root, so it must still step back into the walk.
+    @Test func theMenuReachedFromTheStampStepsBackToTheStampRatherThanLeavingTheWalk() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+        harness.model.openTaskDetail(taskID: task.id)
+        harness.model.skipTaskFromDetail(task)
+        harness.model.advanceFromQuestExplanation()
+        harness.model.stampAwardNextLocation()
+        #expect(harness.model.stage == .atCheckpoint)
+        #expect(!harness.model.backLeavesTheRun)
+
+        harness.model.retreatFromStoryStage()
+
+        #expect(harness.model.stage == .stampAward(taskID: task.id))
+    }
+
     /// `1:4609` prints the Place's own `loreStandalone`, and it prints it as *claims* — the accuracy
     /// label and the citation `FR-CP-05` asks for, which the frame itself does not draw. A screen
     /// that rendered the text without them would be extending an exception the PRD has never signed.

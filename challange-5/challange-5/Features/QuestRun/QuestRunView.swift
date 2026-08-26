@@ -369,7 +369,13 @@ struct QuestRunView: View {
                 nextPlaceName: model.nextPlaceName,
                 onSelectTask: { model.openTaskDetail(taskID: $0.id) },
                 onContinue: { model.advanceFromCheckpointDetail() },
-                onBack: { model.retreatFromStoryStage() })
+                // The one stage of the walk whose back arrow can have nowhere to go inside the
+                // walk: a resumed one opens here, so backing out pops the run screen and lands the
+                // walker on whichever surface pushed it — Home's ongoing card, or the Profile
+                // list's unfinished row. Every other visit to this screen steps back into the walk.
+                onBack: {
+                    if model.backLeavesTheRun { dismiss() } else { model.retreatFromStoryStage() }
+                })
         } else {
             EmptyView()
         }

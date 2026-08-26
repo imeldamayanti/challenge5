@@ -199,6 +199,59 @@ struct QuestRunTests {
         #expect(resumed.stage != .storyPreview)
     }
 
+    // MARK: - The back arrow on the task menu a resumed walk opens on
+
+    /// A walk picked up from Home's ongoing card (or the Profile list's unfinished row) opens on
+    /// `.atCheckpoint`, which draws the same "All Quest" screen `.checkpointDetail` does. That case
+    /// was missing from `retreatFromStoryStage`, so it fell to `default: break` and the screen's
+    /// back arrow did nothing whatsoever.
+    ///
+    /// It has nothing before it *inside* the walk, so the answer is not another stage: the view
+    /// pops the run screen, which lands the walker back on whichever surface pushed it.
+    @Test func backingOutOfAResumedWalksMenuLeavesTheRunRatherThanDoingNothing() throws {
+        let resumed = try resumedHarness()
+        #expect(resumed.stage == .atCheckpoint)
+        #expect(resumed.backLeavesTheRun)
+
+        resumed.retreatFromStoryStage()
+
+        #expect(resumed.stage == .atCheckpoint, "no stage before it — the view leaves instead")
+    }
+
+    /// And backing out of a task opened from that menu returns to the menu the walker was standing
+    /// on. Hardcoding `.checkpointDetail` there quietly moved a resumed walk onto the other menu
+    /// stage, whose own back arrow dives into the checkpoint's first task — so the walker lost the
+    /// way out of a walk they had only just re-opened.
+    @Test func backingOutOfATaskInAResumedWalkReturnsToTheMenuItOpenedOn() throws {
+        let resumed = try resumedHarness()
+        let task = try #require(resumed.checkpoint?.tasks.first)
+
+        resumed.openTaskDetail(taskID: task.id)
+        resumed.retreatFromStoryStage()
+
+        #expect(resumed.stage == .atCheckpoint)
+        #expect(resumed.backLeavesTheRun)
+    }
+
+    /// A walk arrived at its first checkpoint and then re-opened from scratch, which is what
+    /// tapping Home's ongoing card does: a second view model over the same stored Run.
+    private func resumedHarness() throws -> QuestRunViewModel {
+        let harness = try harness()
+        openArrival(harness)
+        harness.provider.emit(offsetMetres: 5, accuracy: 8)
+        let run = try #require(harness.model.run)
+
+        return try #require(QuestRunViewModel(
+            engine: RunEngine(repository: try BundledContentRepository(),
+                              store: harness.store),
+            repository: try BundledContentRepository(),
+            preferences: InMemoryAppPreferencesStore(safetyNoticeAckedQuestIDs: [harness.quest.id]),
+            locationProvider: FakeLocationProvider(),
+            questID: harness.quest.id,
+            language: .id,
+            existingRun: run))
+    }
+
     @Test func anAlreadyAcknowledgedQuestGoesStraightToArrival() throws {
         let harness = try harness()
         // Straight to arrival — but still through the narrative opening, the one screen ahead of
