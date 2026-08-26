@@ -296,7 +296,7 @@
       }
     }
   ],
-  "heroImageAsset": "quests/badung-empat-wajah/hero.png",
+  "heroImageAsset": "quests/mini-badung/hero.png",
   "cutsceneSubject": {
     "name": {
       "id": "I Gusti Ngurah Made Agung",
