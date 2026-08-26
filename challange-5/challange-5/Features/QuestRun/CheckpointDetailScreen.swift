@@ -202,11 +202,13 @@ struct CheckpointDetailScreen: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    /// One row: the scroll, the type's name, the prompt, and the state glyph.
+    /// One row: the scroll, the type's name, a preview of the prompt, and the state glyph.
     ///
     /// The prompt is the row's subtitle rather than a title of its own, because the content has no
     /// title field — a task is a `type` and a `prompt`, and the frame's short imperative names are
-    /// copy invented for the mock-up.
+    /// copy invented for the mock-up. It is cut to `TaskPromptPreview.wordLimit` words here and
+    /// printed whole on `TaskDetailScreen`, which is the screen a row opens; the reasoning for the
+    /// cut, and for its being counted in words, is on that type.
     private func row(_ task: ContentTask) -> some View {
         Button { onSelectTask(task) } label: {
             HStack(spacing: 4) {
@@ -217,7 +219,7 @@ struct CheckpointDetailScreen: View {
                             .font(.system(size: 17, weight: .semibold))
                             .foregroundStyle(palette.inkTicket.color)
                             .fixedSize(horizontal: false, vertical: true)
-                        Text(taskPrompts[task.id] ?? "")
+                        Text(TaskPromptPreview.preview(of: taskPrompts[task.id] ?? ""))
                             .font(.system(size: 15, weight: .light))
                             .foregroundStyle(palette.inkBody.color)
                             .fixedSize(horizontal: false, vertical: true)
