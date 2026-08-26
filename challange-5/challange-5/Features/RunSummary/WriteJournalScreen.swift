@@ -24,7 +24,6 @@ struct WriteJournalScreen: View {
     let onSave: (_ text: String, _ placePhoto: UIImage?, _ selfiePhoto: UIImage?) -> Run?
     let onOpenRecap: (Run) -> Void
 
-    @FocusState private var experienceFocused: Bool
     @State private var text = ""
     @State private var placePhoto: UIImage?
     @State private var selfiePhoto: UIImage?
@@ -59,8 +58,7 @@ struct WriteJournalScreen: View {
                 }
                 // Tapping anywhere off the field puts the keyboard away — the field is the only
                 // text input on the screen, so there is no ambiguity about what a stray tap means.
-                .contentShape(Rectangle())
-                .onTapGesture { experienceFocused = false }
+                .kultaraDismissesKeyboardOnTap()
             }
         }
         .navigationBarBackButtonHidden()
@@ -174,7 +172,6 @@ struct WriteJournalScreen: View {
                 RoundedRectangle(cornerRadius: 12)
                     .stroke(SRGBColor(hex: "#D8D8D8").color, lineWidth: KultaraMetrics.hairline)
             }
-            .focused($experienceFocused)
             .onChange(of: text) { _, newValue in
                 if newValue.count > Self.characterLimit {
                     text = String(newValue.prefix(Self.characterLimit))

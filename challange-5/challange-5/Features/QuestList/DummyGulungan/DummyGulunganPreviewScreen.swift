@@ -37,7 +37,8 @@ struct DummyGulunganPreviewScreen: View {
                 .scrollBounceBehavior(.basedOnSize)
             }
             .padding(.horizontal, Self.margin)
-            .safeAreaInset(edge: .bottom) { mapHint }
+            .kultaraDismissesKeyboardOnTap()
+            .safeAreaInset(edge: .bottom) { mapHint.kultaraStaysBelowKeyboard() }
         }
     }
 
