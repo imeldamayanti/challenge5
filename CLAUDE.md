@@ -610,6 +610,32 @@ with the splash still auto-advancing and still a drawing.
   highest-priority two: Catur Muka's seed coordinate is in the **wrong quadrant** (~293 m out, right
   neighbourhood), and Museum Bali's `entryCost: 0` renders as "Gratis"/"Free" for a museum that
   sells a ticket.
+- **A second quest ships, and it is the exhibition route.** `mini-badung` ("Mini Badung
+  (Exhibition)") is `contentBundleVersion` **2026.09.15**: three of `badung-empat-wajah`'s five
+  stops — Puri Agung Pemecutan → Pura Maospahit → Museum Bali — with each checkpoint's lore, tasks,
+  bonus prompt and narration copied unchanged from the stop it came from. It is **first in
+  `manifest.quests`**, which is what puts its card at the top of Home: `BundledContentRepository`
+  reads manifest order and `QuestListViewModel` keeps the authored order (`FR-DISC-03`). Five
+  things about it:
+  - **Only three fields are genuinely new**: its own `route.geojson` (the same drawn corridor, three
+    stop markers), 1.8 km / 28 min walking / 75 min total, and `hardLatestStart` **11:15** — which
+    is derived, not chosen: V16 recomputes it as the earliest close across the three Places (Museum
+    Bali's Friday 12:30) minus the total duration. Changing the duration means changing that time.
+  - **Checkpoint 2's clue was rewritten and nothing else was.** The five-stop clue points at Pasar
+    Badung, which this route does not visit; it now sends the walker east along Jl. Gajah Mada to
+    Lapangan Puputan Badung. Every other string is the parent quest's.
+  - **Hero, route preview, cutscene portrait and the three readings are the parent quest's assets,
+    referenced by path.** Nothing is duplicated on disk, and the card is told apart by its title.
+  - **It inherits the parent's one open V3 defect.** `mini-badung-cp1`'s lore cites source index 5
+    at a Place with five sources, because it is a verbatim copy of `badung-empat-wajah-cp1`, whose
+    oral-tradition source was never added. The validator now reports the finding twice, once per
+    quest. Fixing it means adding the missing source entry to the Place — a content decision with an
+    owner, not a test edit.
+  - **Four content guards moved with it, and one gained coverage.** The bundle guards that read the
+    live tree now name `badung-empat-wajah` where they used to take "the first quest", and
+    `suppressedQuestsAreOmittedFromTheList` finally exercises FR-DISC-08's "some quests remain"
+    branch, which one shipped quest could not. Seen on iPhone 17 / iOS 26.5 —
+    `docs/screenshots/m18-mini-badung-quest-card.png`.
 - **The discovery map is one map with two grounds, and the wand swaps them.** `275:2309` and
   `276:2520` are not two screens: `Features/Map/Real/QuestMapScreen.swift` stands the illustrated
   chart over a live `MKMapView` as an `MKOverlay`, and `wand.and.sparkles` adds and removes that

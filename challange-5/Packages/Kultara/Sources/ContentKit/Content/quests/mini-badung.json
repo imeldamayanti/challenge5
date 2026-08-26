@@ -1,0 +1,314 @@
+{
+  "id": "mini-badung",
+  "contentVersion": "2026.09.0",
+  "title": {
+    "id": "Mini Badung (Pameran)",
+    "en": "Mini Badung (Exhibition)"
+  },
+  "region": "Badung",
+  "city": "Denpasar",
+  "hookLore": [
+    {
+      "text": {
+        "id": "Inti kota lama Denpasar tersusun di sekitar sebuah perempatan. Empat lengannya menahan empat hal yang berbeda: kuasa, kepercayaan, penghidupan, dan ingatan.",
+        "en": "The old core of Denpasar is arranged around a single crossroads. Its four arms hold four different things: power, faith, livelihood, and memory."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        1
+      ]
+    },
+    {
+      "text": {
+        "id": "Jalan ini mulai di sisi barat, di gerbang sebuah puri, dan berakhir di sisi timur, di ruang tempat benda-benda kota disimpan.",
+        "en": "This walk starts on the western side, at the gate of a puri, and ends on the eastern side, in the rooms where the city's objects are kept."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        0
+      ]
+    },
+    {
+      "text": {
+        "id": "Di titik keempat kamu akan berdiri di perempatan itu sendiri, dengan tiga titik sebelumnya di belakang punggungmu.",
+        "en": "At the fourth stop you will be standing at that crossroads itself, with the previous three behind your back."
+      },
+      "accuracy": "documented",
+      "sourceRefs": [
+        1
+      ]
+    }
+  ],
+  "description": {
+    "id": "Rute pameran: tiga titik dari lima titik “Jejak Terakhir Badung” — puri, pura, museum. Sekitar 1,8 km, kurang lebih 75 menit termasuk berhenti di tiap titik. Museum Bali menjual tiket masuk dan tarifnya belum diverifikasi — bawa uang tunai. Koordinat dan jarak masih perkiraan dan belum diverifikasi di lapangan.",
+    "en": "An exhibition route: three of the five stops on “The Last Traces of Badung” — the puri, the temple, the museum. About 1.8 km, roughly 75 minutes including a stop at each point. Museum Bali sells an entry ticket whose price has not been verified — bring cash. Coordinates and distances are estimates and have not been verified on the ground."
+  },
+  "route": {
+    "totalDistanceM": 1800,
+    "distanceSource": "walking-directions",
+    "walkingTimeMin": 28,
+    "totalDurationMin": 75,
+    "geometryAsset": "quests/mini-badung/route.geojson",
+    "previewImageAsset": "quests/badung-empat-wajah/route-preview.png"
+  },
+  "estimatedCost": {
+    "amount": 0,
+    "currency": "IDR",
+    "breakdown": []
+  },
+  "terrainSummary": {
+    "id": "Trotoar kota sepanjang Jl. Sutomo dan Jl. Gajah Mada. Halaman pura dan gedung museum umumnya berdiri di atas undakan. Jumlah anak tangga di tiap titik belum diverifikasi.",
+    "en": "City pavements along Jl. Sutomo and Jl. Gajah Mada. Temple courtyards and the museum buildings generally stand on steps. The step counts at each stop have not been verified."
+  },
+  "recommendedStartWindow": {
+    "from": "08:00",
+    "to": "10:00"
+  },
+  "hardLatestStart": "11:15",
+  "proximityRadiusM": 250,
+  "safetyNotes": {
+    "id": "Jl. Gajah Mada ramai dan sebagian penyeberangannya tanpa lampu. Simpan ponsel di kantong saat berjalan dan buka hanya di titik berhenti. Jumat, rute harus dimulai paling lambat pukul 11.15 agar masih sempat masuk Museum Bali sebelum tutup pukul 12.30.",
+    "en": "Jl. Gajah Mada is busy and some of its crossings have no lights. Keep your phone in your pocket while walking and take it out only at the stops. On Fridays the route must start by 11:15 to reach Museum Bali before it closes at 12:30."
+  },
+  "languages": [
+    "id",
+    "en"
+  ],
+  "badgeId": "badge-mini-badung",
+  "checkpoints": [
+    {
+      "id": "mini-badung-cp1",
+      "orderIndex": 0,
+      "placeId": "badung-puri-agung-pemecutan",
+      "role": "start",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Hampir 350 tahun lalu, di tempat inilah kisah Pemecutan bermula. Ketika Kyai Gede Raka kembali dari bertapa di Gunung Batur, membawa restu Bhatari Danu untuk mendirikan kerajaan baru.",
+            "en": "Nearly 350 years ago, this was where the story of Pemecutan began. When Kyai Gede Raka returned from his meditation on Mount Batur, carrying the blessing of Bhatari Danu to establish a new kingdom."
+          },
+          "accuracy": "oral",
+          "sourceRefs": [
+            5
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Ambil arah timur laut menuju Jl. Sutomo. Cari tembok dan gerbang bata merah — bukan batu abu-abu — di sisi jalan.",
+        "en": "Head north-east towards Jl. Sutomo. Look for red brick walls and a red brick gateway — not grey stone — on the side of the street."
+      },
+      "tasks": [
+        {
+          "id": "mini-badung-cp1-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Foto Puri Pemecutan. Temukan bagian depan Puri Agung Pemecutan dan ambil foto bangunan atau pintu masuk yang menunjukkan nama “Puri Pemecutan” sebagai bukti bahwa kamu telah sampai di lokasi.",
+            "en": "Photograph Puri Pemecutan. Find the front of Puri Agung Pemecutan and photograph the building or the entrance bearing the name “Puri Pemecutan” as proof that you have arrived."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "mini-badung-cp1-t2",
+          "type": "photo",
+          "prompt": {
+            "id": "Nama yang Terukir. Cari tulisan aksara “Puri Pemecutan” yang terdapat pada bagian pintu masuk, kemudian ambil foto sebagai bukti.",
+            "en": "The Name in Script. Look for the “Puri Pemecutan” writing in Balinese script on the entrance, then photograph it as proof."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "mini-badung-cp1-t3",
+          "type": "photo",
+          "prompt": {
+            "id": "Sang Pemegang Pecut. Masuk ke area pura dan temukan sosok atau patung yang menggambarkan seseorang memegang pecut. Amati detailnya sebelum mengambil foto. Area pura adalah tempat ibadah: pengunjung yang sedang berhalangan, termasuk sedang menstruasi, tidak memasuki area yang tidak diperbolehkan.",
+            "en": "The Whip Bearer. Enter the temple grounds and find the figure or statue of someone holding a whip. Study the detail before you take the photograph. The temple grounds are a place of worship: anyone who is ritually unable to enter, including those who are menstruating, does not enter the areas that are closed to them."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "bonusPrompts": [
+        {
+          "id": "mini-badung-cp1-s1",
+          "prompt": {
+            "id": "Jika ada penjaga di gerbang, tanyakan hari apa puri paling ramai.",
+            "en": "If someone is at the gate, ask which day the puri is busiest."
+          }
+        }
+      ],
+      "stampId": "stamp-mini-badung-1",
+      "narration": {
+        "en": {
+          "asset": "quests/badung-empat-wajah/narration/cp1-en.mp3",
+          "sourceRef": 4
+        }
+      }
+    },
+    {
+      "id": "mini-badung-cp2",
+      "orderIndex": 1,
+      "placeId": "badung-pura-maospahit",
+      "role": "middle",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Gerbang belah Pura Maospahit berdiri sebagai jejak hubungan kuno Bali dengan Jawa.",
+            "en": "The split gateway of Pura Maospahit stands as a trace of Bali's ancient connection with Java."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Pura ini dipercaya mencerminkan pengaruh Majapahit dan dikaitkan dengan Kebo Iwa, patih Bali legendaris — konon begitu tangguhnya hingga Gajah Mada sendiri enggan menghadapinya secara langsung.",
+            "en": "The temple is believed to reflect Majapahit influence and is associated with Kebo Iwa, a legendary Balinese patih said to have been so formidable that even Gajah Mada himself was reluctant to face him directly."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            1
+          ]
+        }
+      ],
+      "clueToNext": {
+        "id": "Kembali ke Jl. Sutomo lalu ambil arah timur mengikuti Jl. Gajah Mada sampai Lapangan Puputan Badung. Museumnya di sisi timur lapangan, di selatan pura besar berpagar putih.",
+        "en": "Return to Jl. Sutomo, then head east along Jl. Gajah Mada until you reach Lapangan Puputan Badung. The museum is on the east side of the square, south of the large white-walled temple."
+      },
+      "tasks": [
+        {
+          "id": "mini-badung-cp2-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Foto Pura Maospahit. Temukan bagian depan Pura Maospahit Gerenceng dan ambil foto bangunan atau pintu masuk pura sebagai bukti bahwa kamu telah sampai di lokasi.",
+            "en": "Photograph Pura Maospahit. Find the front of Pura Maospahit Gerenceng and photograph the building or the temple gateway as proof that you have arrived."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "mini-badung-cp2-t2",
+          "type": "question",
+          "prompt": {
+            "id": "Tebak Nama Sesembahan. Cari salah satu bentuk sesembahan yang digunakan dalam kegiatan sembahyang, lalu tuliskan namanya. Petunjuknya: c _ n _ _ _.",
+            "en": "Name the Offering. Find one of the offerings used during prayer here, then write down its name. The clue: c _ n _ _ _."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "mini-badung-cp2-t3",
+          "type": "photo",
+          "prompt": {
+            "id": "Batas yang Tidak Boleh Dilewati. Temukan area yang tidak boleh dimasuki pengunjung. Berhentilah di batas yang diperbolehkan, lalu ambil atau pilih gambar yang menunjukkan batas tersebut. Area pura adalah tempat ibadah: pengunjung yang sedang berhalangan, termasuk sedang menstruasi, tidak memasuki area yang tidak diperbolehkan.",
+            "en": "The Line You Do Not Cross. Find the area visitors may not enter. Stop at the boundary you are allowed to reach, then take or choose a picture that shows it. The temple grounds are a place of worship: anyone who is ritually unable to enter, including those who are menstruating, does not enter the areas that are closed to them."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "bonusPrompts": [
+        {
+          "id": "mini-badung-cp2-s1",
+          "prompt": {
+            "id": "Perhatikan bata merahnya. Cari satu bagian yang jelas lebih baru daripada bagian di sebelahnya.",
+            "en": "Look closely at the red brick. Find one section that is visibly newer than the section beside it."
+          }
+        }
+      ],
+      "stampId": "stamp-mini-badung-2",
+      "narration": {
+        "en": {
+          "asset": "quests/badung-empat-wajah/narration/cp2-en.mp3",
+          "sourceRef": 3
+        }
+      }
+    },
+    {
+      "id": "mini-badung-cp3",
+      "orderIndex": 2,
+      "placeId": "badung-museum-bali",
+      "role": "finish",
+      "loreSegment": [
+        {
+          "text": {
+            "id": "Di sisi timur lapangan yang sama berdiri Museum Bali,",
+            "en": "On the eastern side of the same field stands Museum Bali,"
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            0
+          ]
+        },
+        {
+          "text": {
+            "id": "Lahir dari keprihatinan seorang pejabat kolonial karena terlalu banyak pusaka Bali meninggalkan pulau ini setelah 1906. Selesai dibangun dan dibuka pada 1932, museum ini menjadi tempat menjaga ingatan, budaya, dan warisan Bali sebelum hilang oleh waktu.",
+            "en": "Born from a colonial official's concern that too many Balinese heirlooms were leaving the island after 1906. Completed and opened in 1932, the museum became a place to preserve the memory, culture, and heritage of Bali before they were lost to time."
+          },
+          "accuracy": "documented",
+          "sourceRefs": [
+            2
+          ]
+        }
+      ],
+      "clueToNext": null,
+      "tasks": [
+        {
+          "id": "mini-badung-cp3-t1",
+          "type": "photo",
+          "prompt": {
+            "id": "Foto Museum Bali. Temukan bagian depan atau papan nama Museum Bali, kemudian ambil foto sebagai bukti bahwa kamu telah sampai di lokasi. Siapkan uang untuk tiket masuk apabila diperlukan.",
+            "en": "Photograph Museum Bali. Find the front of the museum or its name board, then photograph it as proof that you have arrived. Have money ready for an entry ticket if one is required."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "mini-badung-cp3-t2",
+          "type": "reflection",
+          "prompt": {
+            "id": "Temukan yang Paling Menarik. Jelajahi Museum Bali dan tentukan satu benda, ruang, atau koleksi yang paling menarik perhatianmu. Tuliskan alasan singkat mengapa bagian itu paling menarik.",
+            "en": "Find What Draws You Most. Walk through Museum Bali and settle on one object, room, or collection that holds your attention most. Write a short reason why that one."
+          },
+          "blocksProgression": false
+        },
+        {
+          "id": "mini-badung-cp3-t3",
+          "type": "photo",
+          "prompt": {
+            "id": "Bunga Jepun. Cari bunga jepun di area museum, kemudian lakukan selfie bersama bunga tersebut sebagai foto penutup perjalanan.",
+            "en": "The Frangipani. Find a frangipani flower somewhere in the museum grounds, then take a selfie with it as the closing photograph of the walk."
+          },
+          "blocksProgression": false
+        }
+      ],
+      "bonusPrompts": [
+        {
+          "id": "mini-badung-cp3-s1",
+          "prompt": {
+            "id": "Cari satu benda di ruang pameran yang bisa saja berasal dari salah satu dari empat titik sebelumnya.",
+            "en": "Find one object in the galleries that could plausibly have come from one of the four earlier stops."
+          }
+        }
+      ],
+      "stampId": "stamp-mini-badung-3",
+      "narration": {
+        "en": {
+          "asset": "quests/badung-empat-wajah/narration/cp5-en.mp3",
+          "sourceRef": 4
+        }
+      }
+    }
+  ],
+  "heroImageAsset": "quests/badung-empat-wajah/hero.png",
+  "cutsceneSubject": {
+    "name": {
+      "id": "I Gusti Ngurah Made Agung",
+      "en": "I Gusti Ngurah Made Agung"
+    },
+    "subtitle": {
+      "id": "Raja Terakhir Badung",
+      "en": "The Last King of Badung"
+    },
+    "portraitAsset": "quests/badung-empat-wajah/cutscene-subject-portrait.png",
+    "accuracy": "documented",
+    "sourceRefs": [
+      4
+    ]
+  }
+}
