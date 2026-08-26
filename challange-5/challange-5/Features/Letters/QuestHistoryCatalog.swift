@@ -63,8 +63,18 @@ struct QuestHistoryText: Sendable, Equatable {
 
     /// The pages that exist. A quest absent from this table falls back to the lore-chapter page,
     /// which is built from that walk's own snapshots and needs nobody to author anything.
+    ///
+    /// `mini-badung` is the same page deliberately, not a copy waiting to be written. The
+    /// exhibition route is three of `badung-empat-wajah`'s own five stops — Puri Agung Pemecutan,
+    /// Pura Maospahit, Museum Bali — walking the same city under the same kingdom, and every lore
+    /// block, hook and clue it ships was copied unchanged from the stop it came from. The fall of
+    /// Badung is the story behind both walks, so a shorter route does not earn a different history;
+    /// it earns the same one. What it did have before this entry was the `TripHistoryChapters`
+    /// fallback, which is the walk's own lore snapshots — correct, cited, and not the page
+    /// `791:6537` draws.
     static let byQuestID: [String: QuestHistoryText] = [
-        "badung-empat-wajah": badungEmpatWajah
+        "badung-empat-wajah": badungEmpatWajah,
+        "mini-badung": badungEmpatWajah
     ]
 
     static let badungEmpatWajah = QuestHistoryText(
