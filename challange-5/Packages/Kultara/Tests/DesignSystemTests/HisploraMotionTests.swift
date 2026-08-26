@@ -46,6 +46,28 @@ struct TypewriterProgressTests {
         #expect(progress(100, after: -5).visibleCharacters == 0)
     }
 
+    /// A passage may set its own rate — the typed sheet does — and the default has to stay the
+    /// reveal rate, or every screen that never asked for one would quietly change speed.
+    @Test func aPassageMayRunAtItsOwnRateAndDefaultsToTheRevealRate() {
+        #expect(progress(100, after: 1).visibleCharacters == 42)
+        let slow = TypewriterProgress(
+            characterCount: 100, elapsed: .seconds(1), rendersImmediately: false,
+            charactersPerSecond: 20)
+        #expect(slow.visibleCharacters == 20)
+        #expect(slow.totalDuration == .seconds(5))
+    }
+
+    /// The rhythm, held as a rule rather than as a feel. A clause ends and the hand stops; an
+    /// ordinary letter is followed by the next letter. Without the rest the reveal is a constant
+    /// interval, which is what reads as a wipe rather than as typing.
+    @Test func theTypistRestsAtTheEndOfAClauseAndNowhereElse() {
+        #expect(TypewriterProgress.dwell(after: "a") == 0)
+        #expect(TypewriterProgress.dwell(after: " ") == 0)
+        #expect(TypewriterProgress.dwell(after: ",") > 0)
+        #expect(TypewriterProgress.dwell(after: ".") > TypewriterProgress.dwell(after: ","))
+        #expect(TypewriterProgress.dwell(after: "\n") > TypewriterProgress.dwell(after: "."))
+    }
+
     @Test func anEmptyPassageIsImmediatelyComplete() {
         #expect(progress(0, after: 0).isComplete)
     }

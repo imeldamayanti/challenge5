@@ -9,6 +9,10 @@ public struct TypewriterProgress: Sendable, Equatable {
 
     /// Characters per second. Slow enough to read along with, fast enough that a three-line
     /// passage does not become a wait.
+    ///
+    /// This is the *reveal* rate — a passage appearing, which is what the story reveal and the
+    /// place notice do. A page being typed on a machine is a different thing and runs at
+    /// `TypewriterMetrics.sheetCharactersPerSecond`, which is slower on purpose.
     public static let charactersPerSecond: Double = 42
 
     public let characterCount: Int
@@ -16,11 +20,36 @@ public struct TypewriterProgress: Sendable, Equatable {
     /// `accessibilityReduceMotion`, or VoiceOver running. Either one renders the passage complete
     /// at once: a screen reader must receive the whole string, not a character at a time.
     public let rendersImmediately: Bool
+    /// The rate this particular passage runs at. Defaulted, so every existing caller keeps the
+    /// reveal rate and only a caller that means "typed, not revealed" pays for the difference.
+    public let charactersPerSecond: Double
 
-    public init(characterCount: Int, elapsed: Duration, rendersImmediately: Bool) {
+    public init(
+        characterCount: Int,
+        elapsed: Duration,
+        rendersImmediately: Bool,
+        charactersPerSecond: Double = TypewriterProgress.charactersPerSecond
+    ) {
         self.characterCount = characterCount
         self.elapsed = elapsed
         self.rendersImmediately = rendersImmediately
+        self.charactersPerSecond = charactersPerSecond
+    }
+
+    /// How long a typist rests *after* a character, as a multiple of one character's own interval.
+    ///
+    /// A constant interval is what makes a reveal read as a wipe rather than as typing: real typing
+    /// is a run of keys and then a hand stopping at the end of a clause. The multiples are small —
+    /// nothing here is a pause a reader waits *through*, and a tap ends the whole passage anyway.
+    ///
+    /// Pure, and separate from `visibleCharacters`, because the two answer different questions:
+    /// this one is the rhythm the view types at, that one is the rule a test can hold. A time-based
+    /// reveal cannot carry rhythm without becoming a scan of the whole string per frame.
+    public static func dwell(after character: Character) -> Double {
+        if character.isNewline { return 8 }
+        if ".!?…".contains(character) { return 6 }
+        if ",;:".contains(character) { return 3 }
+        return 0
     }
 
     private var elapsedSeconds: Double {
@@ -30,7 +59,7 @@ public struct TypewriterProgress: Sendable, Equatable {
     /// How many characters are on screen now.
     public var visibleCharacters: Int {
         guard !rendersImmediately else { return characterCount }
-        let shown = Int((max(0, elapsedSeconds) * Self.charactersPerSecond).rounded(.down))
+        let shown = Int((max(0, elapsedSeconds) * charactersPerSecond).rounded(.down))
         return min(characterCount, max(0, shown))
     }
 
@@ -39,8 +68,8 @@ public struct TypewriterProgress: Sendable, Equatable {
     /// How long the whole passage takes. A tap skips to the end, so this is the ceiling on
     /// patience, never a gate.
     public var totalDuration: Duration {
-        guard !rendersImmediately, Self.charactersPerSecond > 0 else { return .zero }
-        return .seconds(Double(characterCount) / Self.charactersPerSecond)
+        guard !rendersImmediately, charactersPerSecond > 0 else { return .zero }
+        return .seconds(Double(characterCount) / charactersPerSecond)
     }
 }
 
@@ -66,6 +95,9 @@ public struct HisploraTypewriterText: View {
     /// justified paragraph is laid out by UIKit and UIKit needs the role's `UIFont` — see
     /// `JustifiedRevealText`.
     private let justifiedRole: KultaraTypography.Role?
+    /// How fast this passage types. The story preview's sheet is the one caller that slows it: a
+    /// page coming out of a machine is typed, and typing that runs at reveal speed reads as a wipe.
+    private let charactersPerSecond: Double
     private let onComplete: () -> Void
 
     @Environment(\.hisploraPalette) private var palette
@@ -77,6 +109,7 @@ public struct HisploraTypewriterText: View {
         font: Font = .system(size: 17),
         ink: KeyPath<HisploraPalette, SRGBColor> = \.inkBody,
         lineSpacing: CGFloat = 4,
+        charactersPerSecond: Double = TypewriterProgress.charactersPerSecond,
         onComplete: @escaping () -> Void = {}
     ) {
         self.text = text
@@ -84,6 +117,7 @@ public struct HisploraTypewriterText: View {
         self.ink = ink
         self.lineSpacing = lineSpacing
         self.justifiedRole = nil
+        self.charactersPerSecond = charactersPerSecond
         self.onComplete = onComplete
     }
 
@@ -96,6 +130,7 @@ public struct HisploraTypewriterText: View {
         _ text: String,
         justifiedIn role: KultaraTypography.Role,
         ink: KeyPath<HisploraPalette, SRGBColor> = \.inkBody,
+        charactersPerSecond: Double = TypewriterProgress.charactersPerSecond,
         onComplete: @escaping () -> Void = {}
     ) {
         self.text = text
@@ -103,6 +138,7 @@ public struct HisploraTypewriterText: View {
         self.ink = ink
         self.lineSpacing = role.lineSpacing
         self.justifiedRole = role
+        self.charactersPerSecond = charactersPerSecond
         self.onComplete = onComplete
     }
 
@@ -158,6 +194,14 @@ public struct HisploraTypewriterText: View {
         onComplete()
     }
 
+    /// Types the passage in, one character at a time, resting where a typist rests.
+    ///
+    /// The rest is what makes it typing rather than a wipe — a run of keys, then a hand stopping at
+    /// the end of a clause (`TypewriterProgress.dwell(after:)`). It is drawn from the character just
+    /// typed, so it costs one comparison per character and nothing per frame.
+    ///
+    /// Nothing here gates anything: a tap completes the passage at any point, and the whole string
+    /// is already the accessibility label.
     private func run() async {
         guard !rendersImmediately else {
             complete()
@@ -165,12 +209,17 @@ public struct HisploraTypewriterText: View {
         }
         isFinished = false
         visibleCharacters = 0
-        let interval = Duration.seconds(1 / TypewriterProgress.charactersPerSecond)
-        while visibleCharacters < text.count && !isFinished {
-            try? await Task.sleep(for: interval)
+        let keystroke = 1 / charactersPerSecond
+        for character in text {
+            try? await Task.sleep(for: .seconds(keystroke))
             guard !Task.isCancelled else { return }
             guard !isFinished else { return }
             visibleCharacters += 1
+            let rest = TypewriterProgress.dwell(after: character)
+            guard rest > 0 else { continue }
+            try? await Task.sleep(for: .seconds(keystroke * rest))
+            guard !Task.isCancelled else { return }
+            guard !isFinished else { return }
         }
         complete()
     }

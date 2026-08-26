@@ -352,6 +352,17 @@ public enum TypewriterMetrics {
     public static let paperTone = SRGBColor(hex: "#E4D8CD")
 
 
+    /// How fast the sheet is typed on, in characters per second.
+    ///
+    /// Less than half `TypewriterProgress.charactersPerSecond`, which is the rate a passage
+    /// *appears* at on the story reveal and the place notice. This screen's conceit is a machine
+    /// with a page in it, and at reveal speed a full sheet lands in about five seconds — read as a
+    /// wipe passing over the paper rather than as anything being typed. At 20 the keys are
+    /// separable, the clause rests in `TypewriterProgress.dwell(after:)` are audible as rhythm, and
+    /// a full sheet takes roughly twelve seconds — which is a ceiling, never a gate: the action
+    /// below is live throughout, and a tap on the passage finishes it at once.
+    public static let sheetCharactersPerSecond: Double = 20
+
     /// How long the page takes to feed in.
     ///
     /// **It is a platen turning, so it is slow and it is linear.** At 0.55 s on an ease-out curve

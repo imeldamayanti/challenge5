@@ -135,13 +135,34 @@ struct TypewriterTests {
         let typingASheet = TypewriterProgress(
             characterCount: TypewriterMetrics.maximumSheetCharacters,
             elapsed: .zero,
-            rendersImmediately: false
+            rendersImmediately: false,
+            charactersPerSecond: TypewriterMetrics.sheetCharactersPerSecond
         ).totalDuration
         let seconds = Double(typingASheet.components.seconds)
             + Double(typingASheet.components.attoseconds) / 1e18
 
         #expect(TypewriterMetrics.riseDuration > 0)
         #expect(TypewriterMetrics.riseDuration < seconds)
+    }
+
+    /// The sheet is *typed*, not revealed. It runs at less than half the rate a passage appears at
+    /// on the story reveal, which is the difference between a machine printing a page and a wipe
+    /// passing over one — and it is a number, so it drifts back silently unless something holds it.
+    @Test func theSheetIsTypedSlowerThanAPassageIsRevealed() {
+        #expect(TypewriterMetrics.sheetCharactersPerSecond * 2 < TypewriterProgress.charactersPerSecond)
+        #expect(TypewriterMetrics.sheetCharactersPerSecond > 0)
+    }
+
+    /// A ceiling, not a gate: the action below the machine is live from the first frame and a tap on
+    /// the passage finishes it. Still — a full sheet that took half a minute to type would be a
+    /// screen a reader waits out rather than reads along with.
+    @Test func aFullSheetTypesInsideAReadersPatience() {
+        let sheet = TypewriterProgress(
+            characterCount: TypewriterMetrics.maximumSheetCharacters,
+            elapsed: .zero,
+            rendersImmediately: false,
+            charactersPerSecond: TypewriterMetrics.sheetCharactersPerSecond)
+        #expect(sheet.totalDuration <= .seconds(15), "\(sheet.totalDuration)")
     }
 
     // MARK: The drawn sheet against the photographed one
