@@ -966,18 +966,36 @@ with the splash still auto-advancing and still a drawing.
 - **Two screens now sit between resolving a task and the task menu.** `1:4609` ("Explanation per
   Quest") is the story behind the task, and `1:4641` ("Quest") is the stamp; `taskDetail` →
   `questExplanation` → `stampAward` → `checkpointDetail`/`atCheckpoint`. Four things worth knowing:
-  - **It is reached on a skip as well as on an answer.** `AD-2` and `FR-TASK-02` make the two
-    resolutions the same kind of outcome; withholding the story from a walker who skipped would turn
-    "offered without apology" into a penalty.
+  - **They follow an answer only. A skip goes straight back to the task list**, as of 2026-08-26 on
+    the owner's instruction — the story and the stamp plate are what doing a task buys, and a walker
+    who tapped Skip is returned to `checkpointDetail` without being shown either. This **reverses**
+    the earlier rule, which is worth knowing because the earlier rule had a reason: `AD-2` and
+    `FR-TASK-02` make the two resolutions the same kind of outcome, so showing the story to a
+    skipper was how the skip stayed "offered without apology". `AD-2` is still intact — the skip
+    resolves the task, gates nothing, and costs nothing — what changed is only which screens are
+    *presented*. `saveTaskFromDetail` follows the same fork: `saveTask` records an empty draft as a
+    skip, so an empty Save lands on the list too, and a save that *failed* leaves the sheet standing
+    rather than moving on from a write that did not happen.
+    **The stamp tier is unaffected and still counts a skip like an answer** — `StampArtworkResolver`
+    was changed the other way the same day, and the two are about different things: which drawing
+    the place's stamp wears, versus whether the walker is shown a screen about it.
   - **`1:4616` is the same stock plate `293:1630` already is**, names baked in and all — so
     `QuestExplanationScreen` reuses `HisploraPlaquePanel` and `plaque-plate.png` rather than shipping
     a second copy of the same picture. Do not re-export it.
-  - **The explanation renders `Place.loreStandalone`, and at a sacred Place that is the same text
-    `PlaceNoticeScreen` already printed.** `ContentTask` has no explanation field; adding one is a
-    schema change, a validator rule, a `contentBundleVersion` bump and five newly authored sourced
-    passages, which is a content decision with an owner. It carries the accuracy label and the
-    citation the frame does not, because the Story Reveal's `FR-CP-05` exception is still unsigned
-    and `s0` D6 forbids extending one by inference.
+  - **The explanation renders the owner's own passage, per Place, from a table in the app target.**
+    `QuestExplanationText` (`Features/QuestRun/QuestExplanationText.swift`) carries a hook line and a
+    paragraph for each of the five Badung places, in both languages, supplied 2026-08-26. All three
+    of a checkpoint's tasks share it: the intent is a topic per task, `ContentTask` has no field for
+    one, and authoring fifteen passages is a content decision with an owner — so one per place is
+    the stated interim. Splitting it later means keying by task id and nothing else.
+    **Those sentences are unsourced and print no accuracy label and no citation**, which is the same
+    unsigned deviation `QuestHistoryText`'s nine paragraphs carry and a pre-public blocker on the
+    same list. They make checkable claims — Lempad, 1973, nine metres of granite; Bali's oldest
+    museum — and none of them went through `sources`.
+    **The cited path is still there and is what an unnamed Place gets**: `Place.loreStandalone`
+    rendered as claims, accuracy label and citation included. A sixth authored place falls back to
+    it, which is also where the sacred-place double-reading problem lives (`PlaceNoticeScreen`
+    prints the same text before the first task) — no shipped place hits it now.
   - **The stamp is presented there, not granted there.** `FR-CP-07` awards it on arrival in
     `RunEngine.applyArrival`; `StampAwardScreen` writes nothing. Its artwork comes from
     `StampArtworkResolver`, which is handed **the walk itself** — the tier is that Run's own record

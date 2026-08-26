@@ -750,17 +750,32 @@ final class QuestRunViewModel {
     ///
     /// `saveTask` falls back to a skip on an empty draft, so the walk never stalls on a sheet whose
     /// field was left blank — `AD-2` means a task gates nothing, and that has to stay true of the
-    /// screen the walk now opens on.
+    /// screen the walk now opens on. A draft that fell back that way lands where `skipTaskFromDetail`
+    /// lands, not on the story: what the walker did is a skip whichever control they reached it by.
+    ///
+    /// A write that *failed* leaves the sheet standing. `message` is already carrying the reason,
+    /// and moving on from a screen whose save did not happen is the one outcome worse than staying.
     func saveTaskFromDetail(_ task: ContentTask) {
         saveTask(task)
-        stage = .questExplanation(taskID: task.id)
+        guard let resolution = resolution(for: task) else { return }
+        stage = resolution.skipped ? checkpointMenuStage : .questExplanation(taskID: task.id)
     }
 
-    /// `FR-TASK-02`'s skip, from the sheet. Same weight as saving and the same destination — the
-    /// story follows a skip too, because withholding it would make the skip a penalty.
+    /// `FR-TASK-02`'s skip, from the sheet — resolved and back to the checkpoint's task menu.
+    ///
+    /// **The story and the stamp follow an answer, not a skip.** They used to follow both, on the
+    /// reasoning that withholding them would make the skip a penalty; the owner's rule as of
+    /// 2026-08-26 is the other one — a stamp is what doing a task buys, so a walker who skips is
+    /// returned to the list rather than shown a plate and a franking they did not earn. `AD-2` is
+    /// untouched: the skip still resolves the task, still costs nothing, and still gates nothing.
+    /// What it no longer does is *present* the reward screens.
+    ///
+    /// The stamp itself is unaffected — `FR-CP-07` grants it on arrival, and
+    /// `StampArtworkResolver` still counts a skip and an answer alike when it picks which drawing
+    /// that place's stamp wears.
     func skipTaskFromDetail(_ task: ContentTask) {
         skipTask(task)
-        stage = .questExplanation(taskID: task.id)
+        stage = checkpointMenuStage
     }
 
     // MARK: The story behind a task — `1:4609` — and the stamp — `1:4641`
@@ -783,10 +798,27 @@ final class QuestRunViewModel {
         stage = .atCheckpoint
     }
 
-    /// The claims `1:4609` prints — the Place's own `loreStandalone`, with the accuracy label and the
-    /// citations `FR-CP-05` asks for. Empty when the Place authors none, which the screen renders as
-    /// the lead alone rather than as an error.
+    /// The claims `1:4609` prints when this Place has no passage of its own — the Place's own
+    /// `loreStandalone`, with the accuracy label and the citations `FR-CP-05` asks for. Empty when
+    /// the Place authors none, which the screen renders as the lead alone rather than as an error.
     var explanationClaims: [LoreClaimPresentation] { checkpoint?.standaloneClaims ?? [] }
+
+    /// This Place's own entry in `QuestExplanationText`, or nil where the table does not name it.
+    private var explanationText: QuestExplanationText? {
+        guard let place = place(for: currentCheckpoint) else { return nil }
+        return QuestExplanationText.byPlaceID[place.id]
+    }
+
+    /// `1:4621`'s first line. The Place's own hook where the table has one, and the generic
+    /// "Let me tell you something…" everywhere else.
+    var explanationLead: String {
+        explanationText?.lead.value(for: language)
+            ?? UIStrings.string(.questExplanationLead, language)
+    }
+
+    /// The Place's own passage, or nil — in which case the screen falls back to `explanationClaims`
+    /// and prints their provenance under them.
+    var explanationPassage: String? { explanationText?.body.value(for: language) }
 
     /// Which of this walk's stamps the checkpoint just reached franked, counting from one.
     ///

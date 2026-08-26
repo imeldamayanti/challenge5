@@ -366,17 +366,39 @@ struct TaskDetailTests {
         if task.type == .photo { #expect(resolution.photoRelativePath != nil) }
     }
 
-    /// `FR-TASK-02` and `AD-2` — the skip is offered on the same screen, resolves the task just as
-    /// saving does, and reaches the same place, story included. A skip that was sent somewhere
-    /// duller than an answer would be the penalty `FR-TASK-02` says the skip must not carry.
-    @Test func skippingOnTheSheetResolvesTheTaskAndOpensTheSameStory() throws {
+    /// `FR-TASK-02` and `AD-2` — the skip is offered on the same screen and resolves the task just
+    /// as saving does. Where it goes is the owner's rule of 2026-08-26 and the one thing that is
+    /// *not* the same as saving: the story and the stamp are what doing a task buys, so a skip is
+    /// returned to the checkpoint's task list rather than shown a plate and a franking. `AD-2` is
+    /// untouched — the task is resolved, nothing is gated, and the walk can leave the checkpoint.
+    @Test func skippingOnTheSheetResolvesTheTaskAndReturnsToTheTaskList() throws {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
 
         harness.model.skipTaskFromDetail(task)
 
-        #expect(harness.model.stage == .questExplanation(taskID: task.id))
+        #expect(harness.model.stage == .checkpointDetail)
+        #expect(harness.model.resolution(for: task)?.skipped == true)
+    }
+
+    /// The blank-field fallback goes where the skip goes, not where an answer goes. `saveTask`
+    /// records an empty draft as a skip (`AD-2`), and a walker who tapped Save on an empty sheet
+    /// did the same thing as one who tapped Skip — showing one of them a stamp would make the two
+    /// controls mean different things for no reason the walker could see.
+    @Test func savingAnEmptySheetIsASkipAndLandsWhereASkipLands() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+        harness.model.openTaskDetail(taskID: task.id)
+        // Nothing supplied by either mechanic — no words, no photograph. Written by the task's own
+        // kind rather than by assuming one: the start checkpoint's three tasks are all photographs
+        // since `2026.09.14`, and a written draft on a photo task is a skip for a different reason
+        // than the one under test.
+        harness.model.taskDrafts[task.id] = "   "
+
+        harness.model.saveTaskFromDetail(task)
+
+        #expect(harness.model.stage == .checkpointDetail)
         #expect(harness.model.resolution(for: task)?.skipped == true)
     }
 
@@ -388,7 +410,8 @@ struct TaskDetailTests {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
-        harness.model.skipTaskFromDetail(task)
+        answer(task, on: harness, words: "Sebuah jawaban.")
+        harness.model.saveTaskFromDetail(task)
 
         harness.model.advanceFromQuestExplanation()
         #expect(harness.model.stage == .stampAward(taskID: task.id))
@@ -403,7 +426,8 @@ struct TaskDetailTests {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
-        harness.model.skipTaskFromDetail(task)
+        answer(task, on: harness, words: "Sebuah jawaban.")
+        harness.model.saveTaskFromDetail(task)
         harness.model.advanceFromQuestExplanation()
 
         harness.model.stampAwardNextLocation()
@@ -417,7 +441,8 @@ struct TaskDetailTests {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
-        harness.model.skipTaskFromDetail(task)
+        answer(task, on: harness, words: "Sebuah jawaban.")
+        harness.model.saveTaskFromDetail(task)
         harness.model.advanceFromQuestExplanation()
 
         harness.model.retreatFromStoryStage()
@@ -434,7 +459,8 @@ struct TaskDetailTests {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         harness.model.openTaskDetail(taskID: task.id)
-        harness.model.skipTaskFromDetail(task)
+        answer(task, on: harness, words: "Sebuah jawaban.")
+        harness.model.saveTaskFromDetail(task)
         harness.model.advanceFromQuestExplanation()
         harness.model.stampAwardNextLocation()
         #expect(harness.model.stage == .atCheckpoint)
@@ -445,10 +471,38 @@ struct TaskDetailTests {
         #expect(harness.model.stage == .stampAward(taskID: task.id))
     }
 
-    /// `1:4609` prints the Place's own `loreStandalone`, and it prints it as *claims* — the accuracy
-    /// label and the citation `FR-CP-05` asks for, which the frame itself does not draw. A screen
-    /// that rendered the text without them would be extending an exception the PRD has never signed.
-    @Test func theStoryScreenCarriesThePlacesOwnClaimsWithTheirProvenance() throws {
+    /// `1:4609` prints the Place's own passage from `QuestExplanationText` — the owner's copy of
+    /// 2026-08-26, one per Place, shared by that checkpoint's tasks until each has its own topic.
+    /// The lead is that Place's own hook rather than the generic "Let me tell you something…".
+    @Test func theStoryScreenCarriesThePlacesOwnPassage() throws {
+        let harness = try atTaskList()
+
+        let passage = try #require(harness.model.explanationPassage)
+
+        #expect(passage.contains("pecut"))
+        #expect(harness.model.explanationLead
+            == QuestExplanationText.puriAgungPemecutan.lead.value(for: .id))
+        #expect(harness.model.explanationLead
+            != UIStrings.string(.questExplanationLead, .id))
+    }
+
+    /// Every shipped Place carries both languages. `LocalizedText`'s no-fallback rule reaches this
+    /// table too: an Indonesian walker handed an English passage is the mixed-language page
+    /// `NFR-I18N-03` exists to prevent, arriving through a door content validation cannot see.
+    @Test func everyPlaceInTheTableCarriesBothLanguages() {
+        #expect(!QuestExplanationText.byPlaceID.isEmpty)
+        for (_, text) in QuestExplanationText.byPlaceID {
+            #expect(!text.lead.id.isEmpty)
+            #expect(!text.lead.en.isEmpty)
+            #expect(!text.body.id.isEmpty)
+            #expect(!text.body.en.isEmpty)
+        }
+    }
+
+    /// The fallback path is still there and still sourced. A Place the table does not name gets the
+    /// cited `loreStandalone` with its accuracy label — which is what a sixth authored place gets,
+    /// and the reason the citation rendering was kept rather than deleted (`FR-CP-05`).
+    @Test func thePlacesCitedLoreIsStillWhatAnUnnamedPlaceWouldPrint() throws {
         let harness = try atTaskList()
 
         let claims = harness.model.explanationClaims
