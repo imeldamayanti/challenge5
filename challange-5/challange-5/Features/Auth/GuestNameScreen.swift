@@ -69,6 +69,7 @@ struct GuestNameScreen: View {
                 .padding(.bottom, KultaraMetrics.xxl)
             }
             .scrollDismissesKeyboard(.interactively)
+            .kultaraDismissesKeyboardOnTap()
         }
     }
 

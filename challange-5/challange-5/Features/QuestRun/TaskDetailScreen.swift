@@ -114,11 +114,22 @@ struct TaskDetailScreen: View {
                 }
             }
             .padding(.horizontal, Self.margin)
+            // Tapping anywhere off the answer field puts the keyboard away. The field is a
+            // vertical-axis `TextField`, so its Return key inserts a newline rather than
+            // submitting, and the sheet draws no Done — without this there is no way back out of a
+            // keyboard that covers the save and the skip (`FR-TASK-02`).
+            .kultaraDismissesKeyboardOnTap()
             // `1:4827` replaces the map hint with Submit once a photograph is waiting. One inset,
             // not two stacked: the frame draws a single control at that distance from the home
             // indicator, and a hint under a primary action reads as a second action.
             .safeAreaInset(edge: .bottom) {
-                if photoDraft != nil { submitBar } else { mapHint }
+                Group {
+                    if photoDraft != nil { submitBar } else { mapHint }
+                }
+                // The foot of the screen is where the frame draws it, keyboard or no keyboard —
+                // see `kultaraStaysBelowKeyboard()` for why the keyboard's lift is measured and
+                // cancelled rather than opted out of.
+                .kultaraStaysBelowKeyboard()
             }
         }
     }

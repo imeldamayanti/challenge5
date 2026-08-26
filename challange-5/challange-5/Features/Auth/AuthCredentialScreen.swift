@@ -77,6 +77,9 @@ struct AuthCredentialScreen: View {
             // over the page puts the keyboard away rather than the walker having to find a Done key
             // this design does not draw.
             .scrollDismissesKeyboard(.interactively)
+            // A swipe is not the only way out: a tap on the page's own quiet areas puts the
+            // keyboard away too, which is what a walker who has finished a field reaches for.
+            .kultaraDismissesKeyboardOnTap()
         }
     }
 
