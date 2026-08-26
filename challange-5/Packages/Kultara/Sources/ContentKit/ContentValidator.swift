@@ -601,6 +601,23 @@ public enum ContentValidator {
             }
         }
 
+        // V17 — the marker's Place, when content moves it off the start checkpoint. A named Place
+        // that is not in the bundle, or one carrying no `mapPoint`, drops the quest's marker off
+        // the map entirely — the same silent loss V17 exists to catch one stop at a time.
+        if let anchorID = quest.mapAnchorPlaceId {
+            if let anchor = bundle.place(id: anchorID) {
+                if anchor.mapPoint == nil {
+                    findings.append(ValidationFinding(
+                        rule: .v17, path: path,
+                        message: "mapAnchorPlaceId names \"\(anchorID)\", which carries no mapPoint; the quest would draw no marker."))
+                }
+            } else {
+                findings.append(ValidationFinding(
+                    rule: .v17, path: path,
+                    message: "mapAnchorPlaceId names \"\(anchorID)\", which is not a Place in the manifest."))
+            }
+        }
+
         // V12 — FR-PROX-11
         if let start = quest.startCheckpoint, let startPlace = bundle.place(id: start.placeId) {
             if quest.proximityRadiusM <= startPlace.arrivalRadiusM {

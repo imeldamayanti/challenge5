@@ -94,8 +94,10 @@ struct BundledContentRepositoryTests {
         // named on the frames' own wording, and the single placeholder task each stop shipped with
         // is gone.
         let repository = try repository()
-        // `2026.09.15` added the `mini-badung` exhibition route and its route geometry.
-        #expect(try repository.contentBundleVersion() == "2026.09.15")
+        // `2026.09.15` added the `mini-badung` exhibition route and its route geometry;
+        // `2026.09.16` gave it a `mapAnchorPlaceId` so its marker stops sitting on top of
+        // `badung-empat-wajah`'s.
+        #expect(try repository.contentBundleVersion() == "2026.09.16")
     }
 
     // MARK: - PRD §5.15 — the sidequest seam, five places deep (`s5`, Phase E's 5-place scope)

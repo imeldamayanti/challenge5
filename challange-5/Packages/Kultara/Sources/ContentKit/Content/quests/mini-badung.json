@@ -75,6 +75,7 @@
     "en"
   ],
   "badgeId": "badge-mini-badung",
+  "mapAnchorPlaceId": "park23",
   "checkpoints": [
     {
       "id": "mini-badung-cp1",

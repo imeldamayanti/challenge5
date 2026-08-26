@@ -108,8 +108,12 @@ final class RegionMapViewModel {
             suppressingPlaceIDs: suppressedPlaceIDs)) ?? []
 
         pins = quests.compactMap { quest -> RegionMapPin? in
-            guard let start = quest.startCheckpoint,
-                  let place = (try? repository.place(id: start.placeId)) ?? nil,
+            // `Quest.mapMarkerPlaceId` — the anchor Place when content names one, the start
+            // checkpoint's Place otherwise. Two quests starting at the same gate would otherwise
+            // draw one marker on top of the other, and the one underneath cannot be tapped
+            // (`NFR-A11Y-01`, `NFR-A11Y-06`).
+            guard let markerPlaceID = quest.mapMarkerPlaceId,
+                  let place = (try? repository.place(id: markerPlaceID)) ?? nil,
                   let point = place.mapPoint
             else { return nil }
 
