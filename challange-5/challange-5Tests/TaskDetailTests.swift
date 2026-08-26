@@ -249,6 +249,33 @@ struct TaskDetailTests {
                 "the skip is still recorded — it is the *reading* that changed, not the record")
     }
 
+    /// **A skipped task can still be worked on.** The walker's own report: a task tapped past shows
+    /// as open on the list, so the sheet it opens has to take an answer rather than greet them with
+    /// "Skipped" and a Continue. `RunEngine.recordTaskResult` replaces a task's result rather than
+    /// stacking, so the answer simply overwrites the skip — and everything the skip left alone
+    /// (`TaskDetailScreen.answered` is nil for it, so the field, Save and Skip all stay on screen)
+    /// moves at that point: the checkmark, the segment and the stamp.
+    @Test func aSkippedTaskCanStillBeAnsweredAfterwards() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+
+        harness.model.openTaskDetail(taskID: task.id)
+        harness.model.skipTaskFromDetail(task)
+        #expect(harness.model.resolution(for: task)?.skipped == true)
+        #expect(harness.model.resolvedTaskCount == 0)
+
+        harness.model.openTaskDetail(taskID: task.id)
+        answer(task, on: harness, words: "Ternyata saya ingin menjawabnya.")
+        harness.model.saveTaskFromDetail(task)
+
+        let resolution = try #require(harness.model.resolution(for: task))
+        #expect(resolution.skipped == false, "the answer must replace the skip, not stack behind it")
+        #expect(harness.model.resolvedTaskCount == 1)
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
+        // And it takes the story it would have taken had it never been skipped.
+        #expect(harness.model.stage == .questExplanation(taskID: task.id))
+    }
+
     /// A skipped task is still open work, so it stays in the count "More Quests (N)" offers. The
     /// stamp screen and the task list have to agree about the same checkpoint.
     @Test func aSkippedTaskStaysInTheRemainingCount() throws {

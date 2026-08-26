@@ -37,10 +37,25 @@ struct TaskDetailScreen: View {
     let placeName: String
     let task: ContentTask
     let prompt: String
-    /// Nil until the task has been answered or skipped. Once set, the field and its two controls give
-    /// way to the note and a plain continue: the walker may want to re-read what they wrote
-    /// (`FR-TASK-07`), and re-answering is the checkpoint screen's job, not this sheet's.
+    /// This task's record, if it has one. **Only an *answered* one closes the sheet**: the field and
+    /// its two controls give way to the note and a plain continue, because the walker may want to
+    /// re-read what they wrote (`FR-TASK-07`).
+    ///
+    /// A **skipped** record leaves the sheet exactly as it was before the skip — the field, the
+    /// camera, Save and Skip, and no note saying "Skipped". A skip is not work the walker did, it is
+    /// work they postponed, and the checkpoint's list already draws the row as still open
+    /// (`CheckpointDetailScreen.isResolved`); a sheet that then refused to take an answer would be
+    /// the one screen in the walk contradicting the one before it. `RunEngine.recordTaskResult`
+    /// replaces a task's result rather than stacking, so answering after skipping simply overwrites
+    /// the skip.
     let resolution: TaskResult?
+
+    /// The record that actually closes this sheet — an answer, never a skip. Every branch below
+    /// reads this rather than `resolution`, so the two cannot drift apart.
+    private var answered: TaskResult? {
+        guard let resolution, !resolution.skipped else { return nil }
+        return resolution
+    }
     /// The answer being typed. Not persisted until saved — `FR-RUN-01` is about completed actions,
     /// and a half-typed sentence is not one.
     @Binding var draft: String
@@ -229,7 +244,7 @@ struct TaskDetailScreen: View {
                 // three-line field, a save and a skip below this point, and keeping 72 there grew
                 // the sheet past the viewport and printed the skip across the foot roll. The written
                 // case takes half.
-                Spacer(minLength: task.type == .photo || resolution != nil ? 72 : 20)
+                Spacer(minLength: task.type == .photo || answered != nil ? 72 : 20)
                 answerSection
             }
             .frame(maxWidth: .infinity)
@@ -242,8 +257,8 @@ struct TaskDetailScreen: View {
     /// The shapes the foot of the sheet takes: resolved, a photo task in one of its three states, or
     /// a written task waiting for an answer.
     @ViewBuilder private var answerSection: some View {
-        if let resolution {
-            resolutionNote(resolution)
+        if let answered {
+            resolutionNote(answered)
             Spacer(minLength: KultaraMetrics.lg)
             pill(title: UIStrings.string(.checkpointDetailContinue, language), action: onContinue)
         } else if task.type == .photo {
@@ -395,11 +410,12 @@ struct TaskDetailScreen: View {
         .buttonStyle(.plain)
     }
 
+    /// Only ever drawn for an answer — a skip does not reach here, so there is no "Skipped" caption
+    /// any more. `UIStrings.taskSkippedNote` is left in the table deliberately: it costs nothing,
+    /// and it is what a surface that *does* want to name a postponed task would read.
     private func resolutionNote(_ resolution: TaskResult) -> some View {
         VStack(spacing: KultaraMetrics.xs) {
-            Text(resolution.skipped
-                 ? UIStrings.string(.taskSkippedNote, language)
-                 : UIStrings.string(.taskAnsweredNote, language))
+            Text(UIStrings.string(.taskAnsweredNote, language))
                 .font(.system(size: 13, weight: .semibold))
                 .foregroundStyle(palette.inkMuted.color)
             if let text = resolution.text {
