@@ -136,8 +136,16 @@ struct ShareStoryCard: View {
     private static let dieSize = CGSize(width: 164, height: 121)
     private static let dieCentre = CGPoint(x: 123, y: 249)
     private static let dieRotation: Double = 5.41
+    /// How much of the die the picture takes, leaving the rest as printed paper — the carousel's
+    /// own 250.9 x 181.5 photo on a 279.185 x 205.7 die, kept as fractions so this canvas and that
+    /// one cut the same object at two sizes.
+    private static let diePictureWidthRatio: CGFloat = 250.9 / 279.185
+    private static let diePictureHeightRatio: CGFloat = 181.5 / 205.7
 
     private static let footerCentre = CGPoint(x: 123, y: 351)
+    /// Who the card is from. A working title rather than a settled product name — the one string
+    /// on this card that is not a snapshot, and the one place to change it when the app is named.
+    private static let brandName = "Hisplora"
 
     let input: Input
 
@@ -335,40 +343,81 @@ struct ShareStoryCard: View {
     /// over the postcard's lower edge. No photograph is the dark pane, not an empty gap — there is
     /// no camera-less fallback anywhere else in the design system either, and the same argument the
     /// on-screen version records applies here.
+    ///
+    /// **The picture is inset onto white paper and the perforation is cut into the paper**, which
+    /// is what makes the object read as a stamp. Clipping the photograph itself to the die — which
+    /// is what this drew first — leaves the teeth cut out of the picture, and on the photo ground
+    /// the bites are then dark-on-dark: the die loses its edge entirely and comes out a scalloped
+    /// smudge rather than a franked object. The margin is the stamp.
+    ///
+    /// The cut is `921:2938`/`2943`'s own vector — nine bites across, thirteen down, spaced apart —
+    /// the same one `TripRecapCarouselScreen.postcardPhotoStamp` sets on screen, so the shared card
+    /// and the card the walker was just looking at are the same die at two sizes. A count derived
+    /// from this canvas instead (the twenty touching bites that shipped) is a different object.
     private var photoDie: some View {
         ZStack {
-            if let photo = input.ground.photograph {
-                Image(uiImage: photo)
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } else {
-                SRGBColor(hex: "#221D1D").color
-            }
+            Color.white
+            picture
+                .frame(
+                    width: Self.dieSize.width * Self.diePictureWidthRatio,
+                    height: Self.dieSize.height * Self.diePictureHeightRatio)
+                .clipped()
         }
         .frame(width: Self.dieSize.width, height: Self.dieSize.height)
-        .clipShape(HisploraStampShape(teethAcross: 20), style: HisploraStampShape.fillStyle)
+        .clipShape(
+            HisploraStampShape(teethAcross: 9, teethDown: 13, biteSpan: 0.71),
+            style: HisploraStampShape.fillStyle)
         .rotationEffect(.degrees(Self.dieRotation))
         .shadow(color: .black.opacity(0.25), radius: 8, y: 4)
         .accessibilityHidden(true)
         .position(x: Self.dieCentre.x, y: Self.dieCentre.y)
     }
 
+    /// What the die prints: the walk's photograph, or the documented dark pane when it has none.
+    @ViewBuilder private var picture: some View {
+        if let photo = input.ground.photograph {
+            Image(uiImage: photo)
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+        } else {
+            SRGBColor(hex: "#221D1D").color
+        }
+    }
+
     // MARK: - Footer
 
     private var footer: some View {
-        HStack(spacing: 3) {
-            Text(String(
-                format: UIStrings.string(.shareStoryFromBrand, input.language), "Hisplora"))
-                .font(.system(size: 12))
-                .foregroundStyle(
-                    SRGBColor(hex: "#FDF2DE").color
-                        .opacity(input.ground.footerInkIsFullOpacity ? 1 : 0.48))
-            Text("Hisplora")
-                .font(.system(size: 12, weight: .medium, design: .serif))
-                .italic()
-                .foregroundStyle(Color.white)
+        brandLine.position(x: Self.footerCentre.x, y: Self.footerCentre.y)
+    }
+
+    /// "story from *Hisplora*" — the localized format split around its placeholder so the brand
+    /// leans in the serif while the connective stays quiet, without either language losing its
+    /// word order. The same move `fromLine` makes on the postcard above.
+    ///
+    /// **Split, never substituted and then drawn again.** Formatting the name *into* the template
+    /// and printing a second italic copy beside it is what set "story from Hisplora Hisplora"
+    /// across the foot of every card.
+    private var brandLine: Text {
+        let template = UIStrings.string(.shareStoryFromBrand, input.language)
+        let parts = template.components(separatedBy: "%@")
+        let connectiveFont = Font.system(size: 12)
+        let quiet = SRGBColor(hex: "#FDF2DE").color
+            .opacity(input.ground.footerInkIsFullOpacity ? 1 : 0.48)
+        let brand = Text(Self.brandName)
+            .font(.system(size: 12, weight: .medium, design: .serif))
+            .italic()
+            .foregroundStyle(Color.white)
+        guard parts.count > 1 else {
+            // No placeholder in the table: print the line and then the name, rather than sign the
+            // card with nothing.
+            return Text(template).font(connectiveFont).foregroundStyle(quiet)
+                + Text(" ").font(connectiveFont) + brand
         }
-        .position(x: Self.footerCentre.x, y: Self.footerCentre.y)
+        var line = Text(parts[0]).font(connectiveFont).foregroundStyle(quiet) + brand
+        if !parts[1].isEmpty {
+            line = line + Text(parts[1]).font(connectiveFont).foregroundStyle(quiet)
+        }
+        return line
     }
 
     // MARK: - Faces
