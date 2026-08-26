@@ -18,22 +18,27 @@ import UIStringsKit
 /// **What fills it, and the honest problem with that.** The frame's copy ("The Iron Statue represents
 /// Ratu Patih…") is lore about the *thing the task pointed at*, and the content tree has no such
 /// field: `ContentTask` carries an `id`, a `type`, a `prompt` and `blocksProgression`, and nothing
-/// else. What it does carry, on the Place rather than the task, is `loreStandalone` — the place's own
-/// documented description, separate from the walk's narrative `loreSegment`. That is what this screen
-/// renders, because it is authored, cited, and not the passage the story reveal already showed.
+/// else. As of 2026-08-26 the owner supplies that copy per **Place** instead —
+/// `QuestExplanationText`, a table in the app target, one passage shared by the checkpoint's three
+/// tasks until somebody authors fifteen. That passage is what this screen prints where it exists.
 ///
-/// The cost, named rather than buried: at a **sacred** Place, `PlaceNoticeScreen` prints the same
-/// `loreStandalone` before the first task, so a walker at Pura Maospahit or Puri Agung Pemecutan
-/// reads those sentences twice. The fix is a per-task `explanation` on `ContentTask` — a schema
-/// change, a validator rule, a `contentBundleVersion` bump and five newly authored passages about
-/// real places, each needing a source. That is a content decision with an owner, not something to
-/// invent here (`AD-4`, `FR-CP-05`).
+/// Where it does not, the screen falls back to the Place's own `loreStandalone` — the documented
+/// description, separate from the walk's narrative `loreSegment` — rendered as *claims*, with the
+/// accuracy label and the citation `FR-CP-05` asks for, which the frame itself does not draw. That
+/// path is the one that is properly sourced, and it is the one a sixth place gets for free.
 ///
-/// **This screen carries the accuracy label and the citation, and the frame does not.** The Story
-/// Reveal's unlabelled treatment is a `FR-CP-05` exception that is *still unsigned* — the PRD lists
-/// it as outstanding in §10 with no owner named — and `s0` D6 is explicit that an exception taken for
-/// one surface does not extend to a new one by inference. So the passage is set as the frame sets it
-/// and its provenance is printed under it, quietly, in the plate's own muted ink.
+/// **The passage path prints no provenance, and that is a decision with an owner rather than an
+/// oversight.** `QuestExplanationText`'s sentences went through nobody's `sources`, so there is no
+/// citation to print and no accuracy to label; inventing either would be worse than printing
+/// neither. It ships on the same footing as `QuestHistoryText`'s nine paragraphs, and that type's
+/// doc comment carries the full record and what has to happen before anything public. This screen
+/// does not *extend* the Story Reveal's unsigned `FR-CP-05` exception by inference (`s0` D6) — it
+/// inherits the History page's separate, equally unsigned one.
+///
+/// The cost the fallback path carries, named rather than buried: at a **sacred** Place,
+/// `PlaceNoticeScreen` prints the same `loreStandalone` before the first task, so a walker there
+/// reads those sentences twice. The five shipped places all have a passage now, so nothing on the
+/// shipped quests hits it.
 ///
 /// **The portrait is the quest's hero, not the frame's sitter.** `1:4623` frames a generated likeness
 /// of a named historical person, which `FR-CP-05` wants a source and a consent record for and the
@@ -43,8 +48,13 @@ struct QuestExplanationScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
     let language: ContentLanguage
+    /// `1:4621`'s opening line — the Place's own hook, or the generic lead where it has none.
+    let lead: String
+    /// The Place's own passage from `QuestExplanationText`. When it is there it is the whole of the
+    /// printed matter and `claims` goes unread; when it is nil the claims are what print.
+    let passage: String?
     /// The Place's own documented lore, as claims rather than prose — the accuracy label and the
-    /// citations come with them.
+    /// citations come with them. The fallback for a Place `QuestExplanationText` does not name.
     let claims: [LoreClaimPresentation]
     let portraitURL: URL?
     /// Names the portrait for a reader who cannot see it. The place, not a person: the picture is the
@@ -128,17 +138,26 @@ struct QuestExplanationScreen: View {
 
     private var printedMatter: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.md) {
-            Text(UIStrings.string(.questExplanationLead, language))
-                .font(.system(size: 15))
-                .tracking(-0.3)
-                .lineSpacing(15 * 0.4)
-                .foregroundStyle(palette.inkBody.color)
-                .fixedSize(horizontal: false, vertical: true)
-            ForEach(claims) { claim in
-                passage(claim)
+            prose(lead)
+            if let passage {
+                prose(passage)
+            } else {
+                ForEach(claims) { claim in
+                    citedPassage(claim)
+                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// One paragraph, set the way `1:4621` sets its lines.
+    private func prose(_ text: String) -> some View {
+        Text(text)
+            .font(.system(size: 15))
+            .tracking(-0.3)
+            .lineSpacing(15 * 0.4)
+            .foregroundStyle(palette.inkBody.color)
+            .fixedSize(horizontal: false, vertical: true)
     }
 
     /// One claim: the sentences as the frame sets them, then the label and the citation the frame
@@ -148,14 +167,9 @@ struct QuestExplanationScreen: View {
     /// the museum theme — and this plate is a Hisplora surface. Dropping a museum-inked component
     /// onto a Hisplora ground is the specific mistake `RunRouteMapView`'s `showsChrome:` exists to
     /// prevent, and `JournalLetterView` already redraws its claims for the same reason.
-    private func passage(_ claim: LoreClaimPresentation) -> some View {
+    private func citedPassage(_ claim: LoreClaimPresentation) -> some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
-            Text(claim.block.text)
-                .font(.system(size: 15))
-                .tracking(-0.3)
-                .lineSpacing(15 * 0.4)
-                .foregroundStyle(palette.inkBody.color)
-                .fixedSize(horizontal: false, vertical: true)
+            prose(claim.block.text)
             Text(claim.block.accuracyLabel)
                 .font(.system(size: 11, weight: .semibold))
                 .textCase(.uppercase)

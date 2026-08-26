@@ -444,6 +444,8 @@ struct QuestRunView: View {
     private var questExplanation: some View {
         QuestExplanationScreen(
             language: language,
+            lead: model.explanationLead,
+            passage: model.explanationPassage,
             claims: model.explanationClaims,
             // The frame's sitter is a generated likeness of a named historical person, which the
             // content tree carries neither a source nor a consent record for (`FR-CP-05`) — the
