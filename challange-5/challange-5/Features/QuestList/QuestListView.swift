@@ -147,9 +147,16 @@ struct QuestListView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: KultaraMetrics.md) {
             HStack(alignment: .center, spacing: KultaraMetrics.md) {
+                // Owner spec, 2026-08-27: the masthead is set at the frame's own values —
+                // SF Pro Display Medium 31 / 0.38 tracking / #141212 — rather than at
+                // `.questTitleLarge` on `palette.seal`. Two deliberate bends: the size is fixed,
+                // so it does not answer Dynamic Type (NFR-A11Y-01, the same bend the quest card's
+                // caption makes), and the ink is a literal rather than a measured token
+                // (18.6:1 on `paper`, so contrast is not what it costs).
                 Text(UIStrings.string(.homeMasthead, language))
-                    .kultaraFont(.questTitleLarge)
-                    .foregroundStyle(palette.seal.color)
+                    .font(Font.custom("SF Pro Display", size: 31).weight(.medium))
+                    .kerning(0.38)
+                    .foregroundColor(Color(red: 0.08, green: 0.07, blue: 0.07))
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
 
