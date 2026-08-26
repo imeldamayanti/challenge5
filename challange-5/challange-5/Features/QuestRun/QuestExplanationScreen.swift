@@ -68,7 +68,13 @@ struct QuestExplanationScreen: View {
     // print on the same plate at the same size, and two sets of numbers for one object would drift.
     private static let margin: CGFloat = 20
     private static let plaqueInset: CGFloat = 22
-    private static let plaqueColumn: CGFloat = 44
+    /// The inset the printed matter is set inside the plate — so a *larger* number is a *narrower*
+    /// column. Set 20 tighter than the place notice's 44 at the owner's instruction of 2026-08-26:
+    /// this screen prints whole paragraphs rather than a name and a line, and at the frame's measure
+    /// the prose ran nearly to the plate's engraved border. The two screens still share a plate and
+    /// deliberately no longer share this one number — the note above is what that costs, and it is
+    /// paid for the one screen carrying a passage.
+    private static let plaqueColumn: CGFloat = 64
     private static let portraitWidth: CGFloat = 157
     private static let portraitTopOffset: CGFloat = HisploraPlaqueMetrics.crestHeight - 13
     /// The room the panel reserves above its first line: the oval's 196, plus the air `1:4620` leaves
