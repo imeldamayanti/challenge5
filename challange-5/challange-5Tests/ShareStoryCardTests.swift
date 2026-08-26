@@ -87,6 +87,27 @@ struct ShareStoryCardTests {
         #expect(abs(Int(sample.blue) - 0x1D) < 14)
     }
 
+    /// **The die is a stamp, which means paper between the picture and the teeth.** The card drew
+    /// the photograph clipped straight to the perforation once, so the bites were cut out of the
+    /// picture itself — and on the photo ground that is dark-on-dark: the die lost its edge and
+    /// came out a scalloped smudge rather than a franked object.
+    ///
+    /// Sampled in the margin below the picture, on the die's lower edge where it hangs clear of the
+    /// postcard, midway between two bites (die space (-9.1, 57), rotated 5.41° about (123, 249)).
+    /// White there means paper; anything dark means the picture has bled to the teeth again. A
+    /// re-cut die moves this point — recompute it from the die's own geometry rather than widening
+    /// the tolerance.
+    @Test func theDieKeepsPrintedPaperBetweenThePictureAndTheTeeth() throws {
+        let image = try #require(ShareStoryCard(input: Self.journallessInput).render())
+        let sample = try #require(Self.pixel(
+            atCanvasPoint: CGPoint(x: 108.6, y: 304.9), in: image))
+        #expect(sample.red > 210 && sample.green > 210 && sample.blue > 210,
+                """
+                the die's paper margin sampled \(sample) rather than white — \
+                the picture is bleeding to the perforation
+                """)
+    }
+
     /// A walk that earned no stamps omits the corner stamp and postmark whole — absent means
     /// absent — and rendering neither crashes nor blanks.
     @Test func aWalkWithNoStampsRendersWithoutCrashing() throws {
