@@ -181,6 +181,56 @@ public struct HisploraPalette: Sendable, Equatable {
     /// than this token being asked to do a job it fails.
     public let fieldRing: SRGBColor
 
+    // MARK: The login / register frames (`1429:2829`, `1429:3260`)
+    //
+    // A second entry design, drawn on a deep-brown masthead over a white card rather than on the
+    // cream page `791:5145` used. Every value below is the frame's own, sampled rather than rounded
+    // to a token already here — the two screens sit at the very front of the app and are the one
+    // place a walker compares against a mock-up.
+    //
+    // `brownDeep` is the masthead's ground (`#6E2717`, exactly), `paperStamp` the card, `buttonFill`
+    // the action and `inkOnButton` its label, so those four are reused rather than duplicated.
+
+    /// `1429:2829`'s page under the card — a warm near-white the masthead and the card stand on.
+    ///
+    /// Not `paperSheet` rounded to: that one is the printed sheet the museum and Journal screens
+    /// stand on (`#FDF2DE`, visibly cream), and these two frames are drawn on a neutral. They never
+    /// appear on the same screen.
+    public let authGround: SRGBColor
+    /// The masthead's type on the brown (`1429:3237`, `1429:3238`) — the frames' `--white`, which
+    /// is `#EEE` rather than pure white.
+    public let authHeadInk: SRGBColor
+    /// What a walker's own text is set in inside a field (`I1429:3243;3:6014`).
+    public let authFieldInk: SRGBColor
+    /// The quiet grey the frames set every secondary label in: "Remember me", "Or login with", and
+    /// the question half of the closing line.
+    ///
+    /// It is also what the eye toggle and a field's placeholder are drawn in. **Both moved here
+    /// from the frames' `#ACB5BB`**, which measures 2.19:1 on the card — nowhere near body text,
+    /// and under the 3:1 WCAG 1.4.11 asks of a control's own glyph. The theme yields to the
+    /// threshold, the same move `inkDusty` and `fieldRing` made. Deviation recorded in
+    /// `docs/hisplora-tokens.md`.
+    public let authQuiet: SRGBColor
+    /// "Forgot Password ?" (`1429:3249`), the one small label the frames set almost black.
+    public let authEmphasis: SRGBColor
+    /// A field's hairline and the two rules beside "Or login with" — one value, drawn twice
+    /// (`I1429:3243;3:6011`, `1429:3253`).
+    ///
+    /// **This one does not pass and ships as drawn.** It measures 1.09:1 on the card, where WCAG
+    /// 1.4.11 asks 3:1 of a control's visual boundary, and it is the only thing that says where a
+    /// field is. It is kept at the frame's value at the owner's explicit instruction of 2026-08-26
+    /// ("padding, color, assets, etc need to be precise"); darkening it to 3:1 would print grey
+    /// boxes across a card the design draws as barely-ruled. Named in
+    /// `HisploraThemeTests.everyTokenIsMeasuredExceptTheDrawnAnnotation`'s exclusion list rather
+    /// than silently skipped, and `theEntryHairlinesShipAsDrawnAndDoNotPass` is what keeps the
+    /// number visible. The text on either side of it is measured and passes.
+    public let authRule: SRGBColor
+    /// The provider row's outline (`1429:3256`). The same deviation as `authRule`, at its own
+    /// sampled value — 1.16:1 on the card.
+    public let authProviderRing: SRGBColor
+    /// The provider row's label (`I1429:3256;68:15376`).
+    public let authProviderInk: SRGBColor
+
     // Inks on the paper grounds.
     public let inkDark: SRGBColor
     public let inkBody: SRGBColor
@@ -223,6 +273,14 @@ public struct HisploraPalette: Sendable, Equatable {
         mapMarker: SRGBColor,
         brownSeal: SRGBColor,
         fieldRing: SRGBColor,
+        authGround: SRGBColor,
+        authHeadInk: SRGBColor,
+        authFieldInk: SRGBColor,
+        authQuiet: SRGBColor,
+        authEmphasis: SRGBColor,
+        authRule: SRGBColor,
+        authProviderRing: SRGBColor,
+        authProviderInk: SRGBColor,
         inkCream: SRGBColor,
         inkDusty: SRGBColor,
         inkGilt: SRGBColor,
@@ -264,6 +322,14 @@ public struct HisploraPalette: Sendable, Equatable {
         self.mapMarker = mapMarker
         self.brownSeal = brownSeal
         self.fieldRing = fieldRing
+        self.authGround = authGround
+        self.authHeadInk = authHeadInk
+        self.authFieldInk = authFieldInk
+        self.authQuiet = authQuiet
+        self.authEmphasis = authEmphasis
+        self.authRule = authRule
+        self.authProviderRing = authProviderRing
+        self.authProviderInk = authProviderInk
         self.inkCream = inkCream
         self.inkDusty = inkDusty
         self.inkGilt = inkGilt
@@ -322,6 +388,14 @@ public struct HisploraPalette: Sendable, Equatable {
         mapMarker: SRGBColor(hex: "#B44934"),     // 4.31:1 on paperCream, 3.43:1 on mapGround
         brownSeal: SRGBColor(hex: "#6E2D26"),     // 8.77:1 on paperSheet, 9.73:1 under inkOnButton
         fieldRing: SRGBColor(hex: "#8F8B88"),     // moved from the drawn #918D8A; 3.05:1 on paperSheet
+        authGround: SRGBColor(hex: "#FAF7F6"),    // 4.56:1 under authQuiet
+        authHeadInk: SRGBColor(hex: "#EEEEEE"),   // 9.21:1 on brownDeep
+        authFieldInk: SRGBColor(hex: "#1A1C1E"),  // 17.09:1 on the card
+        authQuiet: SRGBColor(hex: "#6C7278"),     // moved from the drawn #ACB5BB; 4.87:1 on the card
+        authEmphasis: SRGBColor(hex: "#1A1A1A"),  // 17.40:1 on the card
+        authRule: SRGBColor(hex: "#EDF1F3"),      // ships as drawn at 1.09:1 — see the declaration
+        authProviderRing: SRGBColor(hex: "#ECECEC"), // ships as drawn at 1.16:1 — same deviation
+        authProviderInk: SRGBColor(hex: "#3A383F"), // 11.56:1 on the card
         inkCream: SRGBColor(hex: "#FDF2DE"),      // 9.63:1 on brownDeep, 8.11:1 on brownStone
         inkDusty: SRGBColor(hex: "#D0B5AE"),      // moved from the drawn #AA9B8E; 4.67:1 on brownStone
         inkGilt: SRGBColor(hex: "#FFDE7C"),       // 7.22:1 on brownMid, 8.46:1 on brownDeep
@@ -352,6 +426,10 @@ public struct HisploraPalette: Sendable, Equatable {
          ("paperRow", paperRow), ("paperStamp", paperStamp),
          ("mapGround", mapGround), ("mapMarker", mapMarker),
          ("brownSeal", brownSeal), ("fieldRing", fieldRing),
+         ("authGround", authGround), ("authHeadInk", authHeadInk),
+         ("authFieldInk", authFieldInk), ("authQuiet", authQuiet),
+         ("authEmphasis", authEmphasis), ("authRule", authRule),
+         ("authProviderRing", authProviderRing), ("authProviderInk", authProviderInk),
          ("inkCream", inkCream), ("inkDusty", inkDusty), ("inkGilt", inkGilt),
          ("paperTrip", paperTrip), ("paperTile", paperTile), ("brownBand", brownBand),
          ("paperTan", paperTan), ("inkCard", inkCard), ("inkCreamWhite", inkCreamWhite),
@@ -584,6 +662,25 @@ public struct HisploraPalette: Sendable, Equatable {
         pairs.append(ContrastPair(label: "fieldRing on paperSheet",
                                   foreground: fieldRing, background: paperSheet,
                                   requirement: .nonTextEssential))
+
+        // The login / register frames (`1429:2829`, `1429:3260`). Every word printed on the brown
+        // masthead, on the white card and on the page under it — including the two greys the
+        // frames set their secondary labels in, which is where this design's one contrast risk
+        // was. The two hairlines are *not* here: they ship as drawn and do not pass, which is
+        // named in `authRule`'s declaration and asserted in `HisploraThemeTests`.
+        pairs.append(ContrastPair(label: "authHeadInk on brownDeep",
+                                  foreground: authHeadInk, background: brownDeep,
+                                  requirement: .bodyText))
+        for (name, ink) in [("authFieldInk", authFieldInk), ("authQuiet", authQuiet),
+                            ("authEmphasis", authEmphasis), ("authProviderInk", authProviderInk),
+                            ("brownDeep", brownDeep)] {
+            pairs.append(ContrastPair(label: "\(name) on the entry card",
+                                      foreground: ink, background: paperStamp,
+                                      requirement: .bodyText))
+        }
+        pairs.append(ContrastPair(label: "authQuiet on authGround",
+                                  foreground: authQuiet, background: authGround,
+                                  requirement: .bodyText))
 
         return pairs
     }

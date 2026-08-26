@@ -49,8 +49,17 @@ public enum UIStrings {
             en: "Collect stamps from every site you visit, earn sealed badges for completed quests, and build a personal journal of your discoveries."),
 
         // MARK: Entry — sign up, sign in, guest
-        .authSignUpTitle: LocalizedText(id: "Ayo Mulai", en: "Get Started"),
-        .authSignInTitle: LocalizedText(id: "Selamat Datang Kembali", en: "Welcome Back"),
+        // The mastheads of `1429:3260` and `1429:2829`. They were "Ayo Mulai"/"Get Started" and
+        // "Selamat Datang Kembali"/"Welcome Back" on the cream frames these replaced; the new
+        // frames name the action rather than greeting the reader.
+        .authSignUpTitle: LocalizedText(id: "Daftar untuk Memulai", en: "Register to Get Started"),
+        .authSignInTitle: LocalizedText(id: "Masuk ke Akunmu", en: "Sign in to your Account"),
+        .authSignUpSubtitle: LocalizedText(
+            id: "Masukkan email dan kata sandimu untuk mendaftar",
+            en: "Enter your email and password to register"),
+        .authSignInSubtitle: LocalizedText(
+            id: "Masukkan email dan kata sandimu untuk masuk",
+            en: "Enter your email and password to log in"),
         .authGuestTitle: LocalizedText(
             id: "Kami panggil kamu siapa?",
             en: "What should we call you?"),
@@ -61,11 +70,27 @@ public enum UIStrings {
         .authGuestNamePlaceholder: LocalizedText(id: "Nama tampilan", en: "Display name"),
         .authEmailPlaceholder: LocalizedText(id: "Email", en: "Email"),
         .authPasswordPlaceholder: LocalizedText(id: "Kata sandi", en: "Password"),
-        .authSignUpAction: LocalizedText(id: "Daftar", en: "Sign Up"),
-        .authSignInAction: LocalizedText(id: "Masuk", en: "Sign in"),
+        .authConfirmPasswordPlaceholder: LocalizedText(
+            id: "Ulangi kata sandi", en: "Confirm password"),
+        .authRememberMe: LocalizedText(id: "Ingat saya", en: "Remember me"),
+        // The frame prints a space before the question mark. Kept, because it is the frame's own
+        // typography and this line is drawn rather than functional.
+        .authForgotPassword: LocalizedText(id: "Lupa kata sandi ?", en: "Forgot Password ?"),
+        // What `1429:3245` is announced as. It says the row is not a control, because a drawing
+        // announced as a checkbox is exactly the failure `NFR-A11Y-05` is about.
+        .authRememberRowSpoken: LocalizedText(
+            id: "Ingat saya dan lupa kata sandi belum tersedia di versi ini.",
+            en: "Remember me and forgot password are not available in this version."),
+        .authRevealPassword: LocalizedText(id: "Tampilkan kata sandi", en: "Show password"),
+        .authHidePassword: LocalizedText(id: "Sembunyikan kata sandi", en: "Hide password"),
+        .authSignUpAction: LocalizedText(id: "Daftar", en: "Register"),
+        .authSignInAction: LocalizedText(id: "Masuk", en: "Sign In"),
         .authGuestAction: LocalizedText(id: "Mulai Menjelajah", en: "Start Exploring"),
-        .authOr: LocalizedText(id: "ATAU", en: "OR"),
-        .authOrSpoken: LocalizedText(id: "Atau lanjutkan dengan", en: "Or continue with"),
+        // `1429:3254`. It was "ATAU"/"OR" between two rules on the cream frames; these ones
+        // spell out what the rules divide, so the visible label and the spoken one are the
+        // same words and `authOrSpoken` is no longer a different string.
+        .authOr: LocalizedText(id: "Atau masuk dengan", en: "Or login with"),
+        .authOrSpoken: LocalizedText(id: "Atau masuk dengan", en: "Or login with"),
         .authContinueWithApple: LocalizedText(
             id: "Lanjut dengan Apple",
             en: "Continue with Apple"),
@@ -73,9 +98,9 @@ public enum UIStrings {
             id: "Lanjut sebagai tamu",
             en: "Continue as a guest"),
         .authHaveAccount: LocalizedText(id: "Sudah punya akun?", en: "Already have an account?"),
-        .authSignInLink: LocalizedText(id: "Masuk", en: "Sign in"),
+        .authSignInLink: LocalizedText(id: "Masuk", en: "Sign In"),
         .authNoAccount: LocalizedText(id: "Belum punya akun?", en: "Don't have an account?"),
-        .authSignUpLink: LocalizedText(id: "Daftar", en: "Sign up"),
+        .authSignUpLink: LocalizedText(id: "Daftar", en: "Register"),
         .authBack: LocalizedText(id: "Kembali", en: "Back"),
         .authInvalidEmail: LocalizedText(
             id: "Masukkan alamat email yang benar.",
@@ -87,6 +112,9 @@ public enum UIStrings {
             id: "Masukkan kata sandimu.",
             en: "Enter your password."),
         .authMissingName: LocalizedText(id: "Isi namamu dulu.", en: "Enter a name first."),
+        .authPasswordMismatch: LocalizedText(
+            id: "Kedua kata sandi belum sama.",
+            en: "The two passwords do not match."),
 
         // MARK: Discovery
         .questListTitle: LocalizedText(id: "Kuis", en: "Quests"),

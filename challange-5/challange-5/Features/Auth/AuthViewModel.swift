@@ -42,6 +42,10 @@ final class AuthViewModel {
         case name
         case email
         case password
+        /// `1429:3677` — the register frame's second password box. Its own case rather than
+        /// reusing `password`: a mismatch is a mistake about the *second* box, and printing it
+        /// under the first one would point at the field the walker got right.
+        case confirmPassword
     }
 
     /// What a submission was wrong about: the field, and the words to print under it.
@@ -61,6 +65,8 @@ final class AuthViewModel {
     var name = ""
     var email = ""
     var password = ""
+    /// `1429:3677`. Only the register frame draws it; the sign-in frame never reads it.
+    var confirmPassword = ""
     /// The guest screen's one field. Separate from `name` rather than shared: backing out of the
     /// guest screen returns to the sign-up form, and a walker who had typed a name there should
     /// find it still there.
@@ -125,7 +131,8 @@ final class AuthViewModel {
     // MARK: Submission
 
     func submitSignUp() {
-        if let problem = Self.problemWithSignUp(name: name, email: email, password: password) {
+        if let problem = Self.problemWithSignUp(
+            name: name, email: email, password: password, confirmation: confirmPassword) {
             self.problem = problem
             return
         }
@@ -236,14 +243,23 @@ final class AuthViewModel {
     // Pure and static so they are testable without a store, a view, or a simulator — the same
     // argument `ArrivalEvaluator` and `OnboardingGate` make about the rules they own.
 
+    /// - Parameter confirmation: `1429:3677`'s repeat of the password.
+    ///
+    ///   Checked last, and only once the password itself is long enough: telling a walker their two
+    ///   passwords do not match while the first one is also too short is two messages about one
+    ///   mistake, and the form can only print one.
     static func problemWithSignUp(
         name: String,
         email: String,
-        password: String
+        password: String,
+        confirmation: String
     ) -> Problem? {
         if !isPresent(name) { return Problem(field: .name, message: .authMissingName) }
         if !isPlausibleEmail(email) { return Problem(field: .email, message: .authInvalidEmail) }
         if !isLongEnough(password) { return Problem(field: .password, message: .authShortPassword) }
+        if confirmation != password {
+            return Problem(field: .confirmPassword, message: .authPasswordMismatch)
+        }
         return nil
     }
 

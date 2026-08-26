@@ -44,7 +44,8 @@ struct AuthTests {
 
     @Test func signingUpAsksForAName() {
         let problem = AuthViewModel.problemWithSignUp(
-            name: "   ", email: "walker@example.com", password: "aaaaaaaa")
+            name: "   ", email: "walker@example.com", password: "aaaaaaaa",
+            confirmation: "aaaaaaaa")
         #expect(problem == AuthViewModel.Problem(field: .name, message: .authMissingName))
     }
 
@@ -52,16 +53,36 @@ struct AuthTests {
         // Both are wrong. The message names the field nearer the top of the form, so a walker
         // fixes the page in the order they filled it in.
         let problem = AuthViewModel.problemWithSignUp(
-            name: "Ayu", email: "nope", password: "short")
+            name: "Ayu", email: "nope", password: "short", confirmation: "short")
         #expect(problem == AuthViewModel.Problem(field: .email, message: .authInvalidEmail))
     }
 
     @Test func signingUpHoldsThePasswordToTheLengthFloor() {
         let problem = AuthViewModel.problemWithSignUp(
-            name: "Ayu", email: "walker@example.com", password: "1234567")
+            name: "Ayu", email: "walker@example.com", password: "1234567",
+            confirmation: "1234567")
         #expect(problem == AuthViewModel.Problem(field: .password, message: .authShortPassword))
         #expect(AuthViewModel.problemWithSignUp(
-            name: "Ayu", email: "walker@example.com", password: "12345678") == nil)
+            name: "Ayu", email: "walker@example.com", password: "12345678",
+            confirmation: "12345678") == nil)
+    }
+
+    /// `1429:3677` — the register frame asks for the password twice, so there is a fourth thing the
+    /// form can be wrong about, and it belongs under the *second* box.
+    @Test func registeringChecksThatTheTwoPasswordsMatch() {
+        let problem = AuthViewModel.problemWithSignUp(
+            name: "Ayu", email: "walker@example.com", password: "kembang123",
+            confirmation: "kembang124")
+        #expect(problem
+            == AuthViewModel.Problem(field: .confirmPassword, message: .authPasswordMismatch))
+    }
+
+    /// The mismatch is checked *after* the length floor, so a short password typed twice says one
+    /// thing about the password rather than two things about two boxes.
+    @Test func aShortPasswordIsReportedBeforeAMismatch() {
+        let problem = AuthViewModel.problemWithSignUp(
+            name: "Ayu", email: "walker@example.com", password: "abc", confirmation: "xyz")
+        #expect(problem == AuthViewModel.Problem(field: .password, message: .authShortPassword))
     }
 
     /// The rule that is easy to "tidy" into a bug: a length floor is about *choosing* a password,
@@ -89,6 +110,7 @@ struct AuthTests {
         model.name = "  Ayu  "
         model.email = "walker@example.com"
         model.password = "kembang123"
+        model.confirmPassword = "kembang123"
         model.submitSignUp()
 
         #expect(model.isFinished)
