@@ -738,8 +738,7 @@ struct KultaraRootView: View {
                     id: "\(run.id)-\(award.sourceID)",
                     placeName: award.snapshotName,
                     region: region,
-                    artworkName: resolver.artworkName(
-                        questID: run.questID, stampSourceID: award.sourceID))
+                    artworkName: resolver.artworkName(run: run, stampSourceID: award.sourceID))
             }
         return TripRecapCarouselScreen(
             language: language,

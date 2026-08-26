@@ -537,4 +537,44 @@ struct TaskDetailTests {
         #expect(place.photoPolicy.level != .prohibited,
                 "a photo task at a prohibited Place must not be authored (V9)")
     }
+
+    // MARK: - The stamp in the progress bar (`452:3142`)
+
+    /// The walker's own report: two of this place's quests answered, and the stamp above the
+    /// progress bar still showed the first drawing.
+    ///
+    /// Two things were wrong and both are fixed here. The bar's stamp was filled with the *quest's
+    /// hero image*, so it could never move at all; and the tier was counted from walks finished
+    /// across the whole history rather than from the work done at this place. `stampArtworkName` is
+    /// what the bar draws now, and it climbs a drawing per answered task while the walker stands
+    /// there.
+    @Test func theStampClimbsADrawingPerQuestAnsweredAtThisPlace() throws {
+        let harness = try atTaskList()
+        let tasks = try #require(harness.model.checkpoint?.tasks)
+        try #require(tasks.count >= 3)
+
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
+
+        for (index, expected) in [(0, "pemecutan-stamp1"), (1, "pemecutan-stamp2"),
+                                  (2, "pemecutan-stamp3")] {
+            answer(tasks[index], on: harness, words: "Sebuah jawaban.")
+            harness.model.saveTask(tasks[index])
+            #expect(harness.model.stampArtworkName == expected,
+                    "After \(index + 1) answered task(s)")
+        }
+    }
+
+    /// A skip resolves the task and moves the walk on (`AD-2`, `FR-TASK-02`) — it does not buy the
+    /// next drawing. Without this, the richest plate is three taps of "skip" away.
+    @Test func skippingAQuestDoesNotMoveTheStamp() throws {
+        let harness = try atTaskList()
+        let tasks = try #require(harness.model.checkpoint?.tasks)
+
+        harness.model.skipTask(tasks[0])
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
+
+        answer(tasks[1], on: harness, words: "Sebuah jawaban.")
+        harness.model.saveTask(tasks[1])
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
+    }
 }

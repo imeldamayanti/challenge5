@@ -954,9 +954,9 @@ with the splash still auto-advancing and still a drawing.
     and `s0` D6 forbids extending one by inference.
   - **The stamp is presented there, not granted there.** `FR-CP-07` awards it on arrival in
     `RunEngine.applyArrival`; `StampAwardScreen` writes nothing. Its artwork comes from
-    `StampArtworkResolver`, which must be handed **the active run alongside the finished ones** —
-    the resolver builds its stamp → place table from the runs it is given, so finished-only means a
-    first-time walker's quest is in no table and the window renders empty.
+    `StampArtworkResolver`, which is handed **the walk itself** — the tier is that Run's own record
+    of the tasks answered at that place, so a stamp already in the Journal is never re-graded by a
+    later walk.
 - **`452:3132` renders one row and one segment per authored task, never the frame's fixed three.**
   The frame is titled "Quest 1/3" and invents three tasks ("The Iron Statue", "The Ancient Script",
   "The Whip Bearer") that exist nowhere in the content tree. The bar counts the run's own tasks
@@ -984,8 +984,8 @@ with the splash still auto-advancing and still a drawing.
   - **The Maospahit answer is a fill-in clue (`c _ n _ _ _`) and nothing verifies it.** `question`
     tasks are recorded, never marked — the app has no answer key and `AD-2` means it could not gate
     on one anyway.
-- **The Journal's stamps carry real artwork now, and it is tiered by walking.** Figma exports
-  fifteen stamp SVGs (five places × three drawings) whose payload is an embedded base64 PNG — about
+- **The Journal's stamps carry real artwork now, and it is tiered by the quests done at each
+  place.** Figma exports fifteen stamp SVGs (five places × three drawings) whose payload is an embedded base64 PNG — about
   90 MB of files nothing in this app can render, because every package image goes through
   `UIImage(data:)`. What ships is each file's picture **composited the way the file composites it**
   — the topmost `<rect>`'s pattern image, cropped by that pattern's own matrix — at 480 × 519:
@@ -993,11 +993,28 @@ with the splash still auto-advancing and still a drawing.
   whole, which is what the first pass did, ships a different picture from the design's. The
   **SVGs live in `docs/design-sources/stamps/` and are `.gitignore`d**; they must never go back into
   `Resources/Images`, because `Package.swift` copies that directory wholesale and the exports would
-  ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — one finished quest through a place shows
-  the first drawing, two the second, three or more the third, clamped at both ends —
-  `StampArtworkResolver` (`Shared/Lore/StampArtwork.swift`) counts finished walks per place, and place
-  id → asset stem is **a table in the app target, not a field on `Place`**. A sixth authored place
-  gets an empty window until that table is edited, which is the honest fallback and also the debt.
+  ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — answer one of a place's
+  tasks and its stamp shows the first drawing, two the second, three or more the third, clamped at
+  both ends — and `StampArtworkResolver` (`Shared/Lore/StampArtwork.swift`) does the counting from
+  **one Run**, per place. Four things about it, all changed on 2026-08-26 at the owner's
+  instruction:
+  - **The tier is per place and per walk, not a history.** It used to count *finished walks*
+    through a place across every Run, so the picture said what a walker had done in total rather
+    than what they had done here. It was reported on `452:3132`'s progress bar, where two answered
+    tasks at Puri Agung Pemecutan still drew the first plate.
+  - **Leaving a place unfinished is not a forfeit** (`AD-2`): walk on with one task answered and
+    that stamp keeps its first drawing, while the next place starts again at one.
+  - **A skip earns nothing.** `TaskResult.skipped` is a resolution and not the work, so counting it
+    would put the colour plate three taps of "skip" away.
+    `StampArtworkTests.aSkippedQuestEarnsNothing` and
+    `TaskDetailTests.skippingAQuestDoesNotMoveTheStamp` guard both halves.
+  - **The progress bar's stamp is the same object as the awarded one.** It used to draw the
+    *quest's hero image*, so it could not move whatever the rule said; it takes `stampArtworkName`
+    now.
+
+  Place id → asset stem is **a table in the app target, not a field on `Place`**. A sixth authored
+  place gets an empty window until that table is edited, which is the honest fallback and also the
+  debt.
   `docs/hisplora-tokens.md` has the extraction detail.
 - **The Profile tab's Quests surface lists walks — both kinds — behind a filter, and never
   sidequests.** It listed `SideQuestRecord`s once, which are not quests; then Runs with

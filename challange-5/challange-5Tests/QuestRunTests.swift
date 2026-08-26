@@ -501,13 +501,13 @@ struct QuestRunTests {
         #expect(summary.stops.allSatisfy { !$0.claims.isEmpty })
     }
 
-    /// The stamp's drawing is tiered by walks *finished before this one*, and the walk being
-    /// walked must not count itself.
+    /// The stamp's drawing is tiered by the quests answered *at that place*, so a walk that
+    /// answered none of the last place's tasks closes on the first drawing however much walking
+    /// came before it.
     ///
-    /// The last checkpoint is where this bites: `FR-DONE-01` completes the walk the instant it is
-    /// reached, so from that moment the run is in `completedRuns()` *and* is the model's own run.
-    /// Counted twice, the closing stamp of a first-ever walk shows the second drawing — a reader
-    /// who has finished nothing is handed the reward for finishing two.
+    /// This walk answers nothing, which is legal (`AD-2`) and is what the helper simulates. It is
+    /// also the guard that the tier is local: an earlier rule counted finished walks across the
+    /// whole history and the closing stamp of a first-ever walk came out as the second drawing.
     @Test func theClosingStampOfAFirstWalkStillShowsTheFirstDrawing() throws {
         let harness = try harness()
         openArrival(harness)

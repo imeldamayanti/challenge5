@@ -20,10 +20,13 @@ import UIStringsKit
 /// `TaskType` — and the progress bar draws one segment where the frame draws three, because the bar
 /// is the run's state and not the mock-up's (`AD-4`, `FR-RUN-06`).
 ///
-/// **The stamp's picture is the quest's own hero image.** `452:3142` fills it with a generated sketch
-/// of a temple gate; a picture presented as a particular place is a claim `FR-CP-05` wants a source
-/// for, and the content tree ships one hero image with provenance behind it. Same decision, and same
-/// reason, as `PlaceNoticeScreen`'s portrait.
+/// **The stamp in the bar is the place's own tiered drawing.** `452:3142` fills it with a generated
+/// sketch of a temple gate. It used to be filled with the quest's hero image, which was honest
+/// about provenance and wrong about what the object *is*: this is the stamp the walker was franked
+/// at this place, so it shows what `StampAwardScreen` and the Journal show for it — the drawing
+/// tiered by how many of this place's quests they have answered (`HisploraStampArtwork`). The
+/// picture is packaged chrome rather than a sourced claim about a place, which is the same footing
+/// every other stamp window in the app stands on.
 struct CheckpointDetailScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -33,9 +36,9 @@ struct CheckpointDetailScreen: View {
     let taskPrompts: [String: String]
     /// Nil for a task nobody has answered or skipped yet. Drives the trailing glyph and the bar.
     let resolutions: [String: TaskResult]
-    /// The quest's hero image, for the stamp. Nil ships a plain cream stamp rather than an empty
-    /// perforated hole.
-    let stampImageURL: URL?
+    /// The tiered drawing for this place's stamp, by resource name. Nil — a place the design never
+    /// drew — ships a plain cream stamp rather than a borrowed picture.
+    let stampArtworkName: String?
     /// Whether this is the walk's last checkpoint — `197:148`'s footer reads differently there,
     /// since there is no next place to leave for.
     let isFinal: Bool
@@ -180,11 +183,7 @@ struct CheckpointDetailScreen: View {
         HisploraStamp(
             accessibilityLabel: UIStrings.string(.checkpointDetailStampLabel, language)
         ) {
-            if let stampImageURL, let image = BundledImage.load(stampImageURL) {
-                image.resizable().scaledToFill()
-            } else {
-                Color.clear
-            }
+            HisploraStampArtworkImage(name: stampArtworkName)
         }
         // 64 × 60.91 as drawn; the tilt is inside `HisploraStamp` and grows the drawn box, which is
         // why the frame's own 71.7 × 69.1 is the *rotated* bounds and not the stamp's size.
