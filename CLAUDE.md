@@ -1066,6 +1066,13 @@ with the splash still auto-advancing and still a drawing.
     nothing gates on any of these counts — `advanceFromCheckpointDetail` is unconditional. A
     skipped task is still recorded, still re-openable, and still costs nothing; `unresolvedTaskCount`
     keeps counting it, so `1:4654`'s "More Quests (N)" offers exactly the rows the list shows open.
+    **And the sheet a skipped row opens still takes an answer.** `TaskDetailScreen` used to close
+    on any `TaskResult` — a skipped task greeted the walker with "Skipped" and a Continue, which is
+    the one screen in the walk contradicting the one before it. It reads `answered` now (a
+    resolution that is not a skip), so a postponed task gets its field, its camera, Save and Skip
+    back, and `RunEngine.recordTaskResult` overwrites the skip rather than stacking behind it.
+    `UIStrings.taskSkippedNote` is now unread and deliberately left in the table.
+    `TaskDetailTests.aSkippedTaskCanStillBeAnsweredAfterwards` walks the whole path.
     `StampArtworkTests.aSkipDoesNotCountTowardsTheTier`,
     `TaskDetailTests.skippingAQuestLeavesTheStampWhereItWas`, `aSkippedTaskFillsNoSegment` and
     `aSkippedTaskStaysInTheRemainingCount` guard the four halves.
