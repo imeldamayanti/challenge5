@@ -342,10 +342,14 @@ struct TripCollectionMedallion<Picture: View>: View {
     let caption: String
     /// `791:6460` sets the tall frame's caption a point under it; `791:6465` gives the square one 11.
     var captionGap: CGFloat = 1
+    /// The Trip Recap's memory grid draws its medallions bare (`921:2823` captions nothing under
+    /// them). The caption is still *spoken* when this is false — a photograph with no name on the
+    /// page and none in its label would be an unidentifiable picture (`NFR-A11Y-05`).
+    var showsCaption: Bool = true
     @ViewBuilder let picture: Picture
 
     var body: some View {
-        VStack(spacing: captionGap) {
+        VStack(spacing: showsCaption ? captionGap : 0) {
             ZStack(alignment: .topLeading) {
                 picture
                     .frame(width: frame.window.width, height: frame.window.height)
@@ -356,24 +360,29 @@ struct TripCollectionMedallion<Picture: View>: View {
             }
             .frame(width: frame.size.width, height: frame.size.height)
 
-            VStack(spacing: 0) {
-                if let eyebrow {
-                    Text(eyebrow)
-                        .font(.system(size: 15, design: .serif).italic())
+            if showsCaption {
+                VStack(spacing: 0) {
+                    if let eyebrow {
+                        Text(eyebrow)
+                            .font(.system(size: 15, design: .serif).italic())
+                            .tracking(-0.3)
+                            .lineSpacing(15 * 1.4 - 15 * 1.19)
+                            .foregroundStyle(palette.inkDark.color)
+                    }
+                    Text(caption)
+                        .font(.system(size: 15))
                         .tracking(-0.3)
                         .lineSpacing(15 * 1.4 - 15 * 1.19)
                         .foregroundStyle(palette.inkDark.color)
                 }
-                Text(caption)
-                    .font(.system(size: 15))
-                    .tracking(-0.3)
-                    .lineSpacing(15 * 1.4 - 15 * 1.19)
-                    .foregroundStyle(palette.inkDark.color)
+                .multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
             }
-            .multilineTextAlignment(.center)
-            .fixedSize(horizontal: false, vertical: true)
         }
         .accessibilityElement(children: .combine)
+        // Spelled out rather than left to `.combine`, so the two configurations read the same to
+        // VoiceOver whether or not the words are drawn.
+        .accessibilityLabel([eyebrow, caption].compactMap { $0 }.joined(separator: ", "))
     }
 }
 

@@ -436,7 +436,11 @@ struct TripRecapCarouselScreen: View {
                 spacing: 10.5
             ) {
                 ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
-                    TripCollectionMedallion(frame: .tall, eyebrow: nil, caption: photo.placeName) {
+                    // Bare frames: the page captions nothing under its windows. The place name
+                    // is still the medallion's accessibility label.
+                    TripCollectionMedallion(
+                        frame: .tall, eyebrow: nil, caption: photo.placeName, showsCaption: false
+                    ) {
                         TripPhotoImage(photoStore: photoStore, relativePath: photo.relativePath)
                     }
                     // The photographs mount one after another, in the order they were taken —
