@@ -174,17 +174,10 @@ struct QuestListView: View {
     private var list: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: KultaraMetrics.lg) {
-                // `FR-RUN-03` — a walk in progress has a visible entry point on the home screen,
-                // naming the quest and how far it got. Above the catalogue, because an unfinished
-                // walk is the one thing on this screen with a claim on the user's attention.
-                if let active = journal.activeRun {
-                    JournalEntryCard(
-                        heading: UIStrings.string(.homeActiveRunHeading, language),
-                        entry: active,
-                        actionTitle: UIStrings.string(.homeActiveRunAction, language),
-                        language: language,
-                        action: { onOpenRun(active.id) })
-                }
+                // `FR-RUN-03` — a walk in progress is still reachable from this screen, but not
+                // as a second card: its own catalogue card wears the ongoing tag
+                // (`journal.activeQuestIDs`) and tapping it resumes the walk. A separate
+                // "In Progress" entry above the list said the same thing twice.
 
                 if model.isEmpty || model.hasNoSearchResults {
                     KultaraCard {
