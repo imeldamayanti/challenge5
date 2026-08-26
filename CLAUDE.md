@@ -1126,6 +1126,30 @@ with the splash still auto-advancing and still a drawing.
   fractions of the die rather than by points, and `705:2769`'s drop shadow — which the envelope's
   26-point franking deliberately does not get. The perforation is still drawn rather than exported,
   for the reason `HisploraStampShape` gives.
+- **The Explorer's Card counts finished walks only, and both Badung badges wear the envelope's own
+  seal.** Two changes on 2026-08-26, at the owner's instruction. Four things about them:
+  - **Stamps came from every Run, including active and abandoned ones.** `FR-CP-07` awards a stamp
+    the moment a checkpoint is arrived at, so an unfinished walk genuinely holds some — and listing
+    them here put stamps for quests nobody had completed on the surface the card is read as a
+    *record*. `ExplorerCardViewModel` now takes its stamps (and its Quests count) from
+    `state == .completed` only. An unfinished walk is still listed on the Quests tab, where it is the
+    one route back into it; its stamps land here when it closes.
+  - **The seal is a per-badge table in the app target** — `Features/Explorer/BadgeSealCatalog.swift`,
+    same shape and same debt as `StampArtworkResolver.slugsByPlaceID` and `MapLandmarkCatalog`. It is
+    keyed on the **badge id** (`Award.sourceID`), not a quest id, so it works for a collection's
+    badge (`FR-SIDE-09`) as well as a walk's and keeps resolving after a quest is withdrawn
+    (`FR-DONE-05`). `badge-badung-empat-wajah` and `badge-mini-badung` both map to `wax-seal` — the
+    Journal envelope's own crimson candi-bentar seal (`511:1430`), which is the point: the badge and
+    the letter come from one walk. A badge with no entry keeps the four coloured waxes cycled by
+    position, which is what every badge did before.
+  - **No new art and no new export.** `HisploraWaxSeal` gained an `init(resourceName:)` and
+    `HisploraSealBadge` an `artworkName:`; a name nothing answers to falls back to the ruled disc,
+    exactly as a dropped export does.
+  - **The reported symptom was reproduced on a fresh install and the cause was `RunRestorer`.** A
+    device with an empty store restores the walker's walks from the backend, unfinished ones
+    included — so a reinstall showed stamps for walks the reader had never finished on this device.
+    Seen on iPhone 17 / iOS 26.5: `docs/screenshots/m19-profile-stamps-completed-only.png`,
+    `m19-profile-badge-envelope-seal.png`.
 - **The Journal's envelope turns itself over, holds two papers, and hands over to a modal.**
   Four frames from the New Hisplora board landed 2026-08-20: `791:5637` (the flip), `791:5585` (the
   open envelope with both sheets), `791:5533` (the sheets rising) and `791:5551` (the modal). Five

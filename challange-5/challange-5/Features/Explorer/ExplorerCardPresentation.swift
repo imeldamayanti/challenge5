@@ -125,14 +125,20 @@ struct QuestRowPresentation: Sendable, Equatable, Identifiable {
 /// `waxIndex` is a position, not a colour. The view turns it into one of the four seals the frames
 /// cast; keeping the colour out of the model is the same rule `LoreBlockPresentation.Ink` follows —
 /// a presentation type that knows a palette can hold one.
+///
+/// `sealArtworkName` overrides that position when the design casts this badge in a seal of its own
+/// (`BadgeSealCatalog`). Named, never held — a resource name rather than an `Image`, for the same
+/// reason `StampPresentation.artworkName` is one.
 struct BadgePresentation: Sendable, Equatable, Identifiable {
     let id: String
     let name: String
     let waxIndex: Int
+    let sealArtworkName: String?
 
-    init(id: String, name: String, waxIndex: Int) {
+    init(id: String, name: String, waxIndex: Int, sealArtworkName: String? = nil) {
         self.id = id
         self.name = name
         self.waxIndex = waxIndex
+        self.sealArtworkName = sealArtworkName
     }
 }

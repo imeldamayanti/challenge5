@@ -286,7 +286,8 @@ struct ExplorerCardView: View {
                 ForEach(model.presentation.badges) { badge in
                     HisploraSealBadge(
                         name: badge.name,
-                        wax: HisploraWaxSealMetrics.Wax.forIndex(badge.waxIndex))
+                        wax: HisploraWaxSealMetrics.Wax.forIndex(badge.waxIndex),
+                        artworkName: badge.sealArtworkName)
                 }
             }
         }

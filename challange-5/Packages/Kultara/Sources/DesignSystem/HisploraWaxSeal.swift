@@ -73,10 +73,20 @@ public struct HisploraWaxSeal: View {
     @Environment(\.hisploraPalette) private var palette
 
     private let wax: HisploraWaxSealMetrics.Wax?
+    /// A seal named directly, for a badge the design casts in one of its own. Wins over `wax`.
+    private let resourceName: String?
 
     /// `nil` casts the envelope's own crimson seal rather than one of the badge four.
     public init(wax: HisploraWaxSealMetrics.Wax? = nil) {
         self.wax = wax
+        self.resourceName = nil
+    }
+
+    /// A seal by name — `HisploraWaxSealMetrics.allResourceNames` is what this module ships. A name
+    /// nothing answers to falls back to the ruled disc, exactly as a dropped export does.
+    public init(resourceName: String) {
+        self.wax = nil
+        self.resourceName = resourceName
     }
 
     public var body: some View {
@@ -96,6 +106,7 @@ public struct HisploraWaxSeal: View {
     }
 
     private var loaded: Image? {
+        if let resourceName { return HisploraWaxSealMetrics.image(named: resourceName) }
         guard let wax else { return HisploraWaxSealMetrics.envelopeSeal }
         return HisploraWaxSealMetrics.image(named: wax.resourceName)
     }
@@ -107,15 +118,18 @@ public struct HisploraSealBadge: View {
 
     private let name: String
     private let wax: HisploraWaxSealMetrics.Wax
+    /// A seal the design casts for this badge in particular. `nil` keeps the wax for its position.
+    private let artworkName: String?
 
-    public init(name: String, wax: HisploraWaxSealMetrics.Wax) {
+    public init(name: String, wax: HisploraWaxSealMetrics.Wax, artworkName: String? = nil) {
         self.name = name
         self.wax = wax
+        self.artworkName = artworkName
     }
 
     public var body: some View {
         VStack(spacing: KultaraMetrics.sm) {
-            HisploraWaxSeal(wax: wax)
+            seal
                 .frame(maxWidth: .infinity)
             // `inkDark`, not `inkCream`: the Explorer's Card that sets these badges stands on
             // `275:2179`'s cream sheet as of 2026-08-19, and a cream label on it is invisible.
@@ -127,5 +141,13 @@ public struct HisploraSealBadge: View {
         }
         .frame(maxWidth: .infinity)
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private var seal: some View {
+        if let artworkName {
+            HisploraWaxSeal(resourceName: artworkName)
+        } else {
+            HisploraWaxSeal(wax: wax)
+        }
     }
 }

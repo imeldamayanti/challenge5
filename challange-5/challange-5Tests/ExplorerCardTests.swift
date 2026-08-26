@@ -1,4 +1,6 @@
+import ContentKit
 import Foundation
+import RunEngine
 import Testing
 @testable import challange_5
 
@@ -59,5 +61,114 @@ struct ExplorerCardQuestFilterTests {
     @Test func theFilterOffersEverythingUnfinishedAndDone() {
         #expect(ExplorerCardPresentation.QuestFilter.allCases.map(\.rawValue)
                 == ["all", "unfinished", "done"])
+    }
+}
+
+/// What the Explorer's Card counts as the reader's record: the Stamps and Badges tabs.
+///
+/// These read a hand-built store rather than the shipped bundle, the way `StampArtworkTests` does —
+/// what is asserted is which walks contribute, not what any quest happens to contain.
+@MainActor
+struct ExplorerCardRecordTests {
+
+    private static let questID = "test-quest"
+
+    /// A walk that reached `checkpoints` places, in the given state, carrying a stamp per arrival
+    /// and — when it finished — the badge `FR-DONE-01` awards with the last one.
+    private static func run(
+        state: RunState, checkpoints: Int = 2, badgeID: String = "badge-test-quest"
+    ) -> Run {
+        let at = Date(timeIntervalSince1970: 86_400)
+        let results = (0..<checkpoints).map { index in
+            CheckpointResult(
+                checkpointID: "cp-\(index)",
+                orderIndex: index,
+                arrivedAt: at,
+                arrivalMethod: .gps,
+                gpsAccuracyM: 8,
+                snapshotPlaceName: "Place \(index)",
+                snapshotLore: [],
+                snapshotClueToNext: nil,
+                snapshotContentVersion: "test",
+                taskResults: [])
+        }
+        var awards = results.map { result in
+            Award(type: .stamp, sourceID: "stamp-\(result.orderIndex)",
+                  snapshotName: result.snapshotPlaceName, awardedAt: at)
+        }
+        if state == .completed {
+            awards.append(Award(type: .badge, sourceID: badgeID,
+                                snapshotName: "A walk", awardedAt: at))
+        }
+        return Run(
+            questID: questID,
+            contentVersion: "test",
+            language: .en,
+            snapshotQuestTitle: "A walk",
+            checkpointCount: checkpoints,
+            state: state,
+            currentCheckpointIndex: checkpoints - 1,
+            startedAt: at,
+            updatedAt: at,
+            completedAt: state == .completed ? at : nil,
+            checkpointResults: results,
+            awards: awards)
+    }
+
+    private static func card(_ runs: [Run]) -> ExplorerCardViewModel {
+        ExplorerCardViewModel(
+            runStore: InMemoryRunStore(runs),
+            sideQuestStore: InMemorySideQuestStore(),
+            repository: FixtureContentRepository(),
+            preferences: InMemoryAppPreferencesStore(),
+            language: .en)
+    }
+
+    /// The reported defect: stamps for quests nobody had finished stood on the card. `FR-CP-07`
+    /// awards a stamp on arrival, so a walk still under way genuinely holds some — they belong to
+    /// the Quests tab, where the walk can be resumed, and land here when it closes.
+    @Test func anUnfinishedWalkPutsNoStampsOnTheCard() {
+        let model = Self.card([Self.run(state: .active)])
+        #expect(model.presentation.stamps.isEmpty)
+        #expect(model.presentation.stampCount == 0)
+    }
+
+    /// A walk explicitly put down (`FR-RUN-05`) is not a record of anything either.
+    @Test func anAbandonedWalkPutsNoStampsOnTheCard() {
+        let model = Self.card([Self.run(state: .abandoned)])
+        #expect(model.presentation.stamps.isEmpty)
+    }
+
+    @Test func aFinishedWalkPutsOneStampPerCheckpointItReached() {
+        let model = Self.card([Self.run(state: .completed, checkpoints: 3)])
+        #expect(model.presentation.stamps.count == 3)
+        #expect(model.presentation.stampCount == 3)
+    }
+
+    /// The unfinished walk is still listed — it is only its stamps that wait.
+    @Test func anUnfinishedWalkIsStillOnTheQuestsTab() {
+        let model = Self.card([Self.run(state: .active)])
+        #expect(model.presentation.quests.count == 1)
+        #expect(model.presentation.quests.first?.resumeRunID != nil)
+    }
+
+    /// Both Badung walks are marked with the seal their letter is closed with (`511:1430`), and the
+    /// view model is what carries the name — a badge with no entry keeps the wax for its position.
+    @Test func theBadungWalksAreSealedWithTheEnvelopesOwnSeal() {
+        let model = Self.card([
+            Self.run(state: .completed, badgeID: "badge-badung-empat-wajah"),
+        ])
+        #expect(model.presentation.badges.first?.sealArtworkName == "wax-seal")
+    }
+
+    @Test func aBadgeTheDesignCastsNoSealForKeepsTheWaxForItsPosition() {
+        let model = Self.card([Self.run(state: .completed, badgeID: "badge-something-else")])
+        #expect(model.presentation.badges.first?.sealArtworkName == nil)
+    }
+
+    /// The catalogue names both shipped quests' badges and nothing that does not ship.
+    @Test func bothBadungQuestsAreInTheSealCatalogue() {
+        #expect(BadgeSealCatalog.artworkName(forBadgeID: "badge-badung-empat-wajah") == "wax-seal")
+        #expect(BadgeSealCatalog.artworkName(forBadgeID: "badge-mini-badung") == "wax-seal")
     }
 }

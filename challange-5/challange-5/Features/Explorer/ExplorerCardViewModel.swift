@@ -50,9 +50,15 @@ final class ExplorerCardViewModel {
         let runs = (try? runStore.runs()) ?? []
         let records = (try? sideQuestStore.records()) ?? []
 
-        // Stamps: one per checkpoint actually reached, newest walk first so the card opens on what
-        // the reader just did.
-        let stampAwards = runs
+        // Stamps: one per checkpoint reached **on a walk the reader finished**, newest first so the
+        // card opens on what they just did.
+        //
+        // `FR-CP-07` awards a stamp the moment a checkpoint is arrived at, so an unfinished walk
+        // carries real stamps — and listing them here put stamps for quests nobody had completed on
+        // the Explorer's Card, which is what this surface is read as a record of. A walk still open
+        // is shown on the Quests tab, where it can be resumed; its stamps land here when it closes.
+        let completedRuns = runs.filter { $0.state == .completed }
+        let stampAwards = completedRuns
             .flatMap { run in run.awards.filter { $0.type == .stamp }.map { (run, $0) } }
             .sorted { $0.1.awardedAt > $1.1.awardedAt }
         // Built once for the whole card rather than per stamp: the content lookup behind it is the
@@ -72,7 +78,13 @@ final class ExplorerCardViewModel {
             .filter { $0.type == .badge }
             .sorted { $0.awardedAt > $1.awardedAt }
         let badges = badgeAwards.enumerated().map { index, award in
-            BadgePresentation(id: award.id.uuidString, name: award.snapshotName, waxIndex: index)
+            BadgePresentation(
+                id: award.id.uuidString,
+                name: award.snapshotName,
+                waxIndex: index,
+                // `Award.sourceID` is the badge id the quest or collection declared, snapshotted at
+                // the moment it was won — so the seal survives the quest being withdrawn.
+                sealArtworkName: BadgeSealCatalog.artworkName(forBadgeID: award.sourceID))
         }
 
         // The Quests tab: walks under way first, then walks finished, each most recently touched
@@ -90,8 +102,7 @@ final class ExplorerCardViewModel {
                     isComplete: false,
                     resumeRunID: run.id)
             }
-        let finished = runs
-            .filter { $0.state == .completed }
+        let finished = completedRuns
             .sorted { $0.updatedAt > $1.updatedAt }
             .map { run in
                 // The region is content, not a snapshot, so a withdrawn quest leaves it empty — and
@@ -115,7 +126,7 @@ final class ExplorerCardViewModel {
             name: preferences.explorerDisplayName
                 ?? UIStrings.string(.profileExplorerName, language),
             isNamed: preferences.explorerDisplayName != nil,
-            questCount: runs.filter { $0.state == .completed }.count,
+            questCount: completedRuns.count,
             stampCount: stamps.count,
             badgeCount: badges.count,
             quests: unfinished + finished,
