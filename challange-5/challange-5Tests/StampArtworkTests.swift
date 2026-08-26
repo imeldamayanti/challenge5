@@ -142,6 +142,28 @@ struct StampArtworkTests {
             .artworkName(run: run, stampSourceID: "stamp-0") == nil)
     }
 
+    /// `progressStampArtworkName`'s rule, at the resolver: the preview is always one tier ahead of
+    /// the record, so it teases what one more resolved quest gets rather than what has already
+    /// happened.
+    @Test func thePreviewIsOneTierAheadOfWhatWasActuallyEarned() {
+        let run = Self.run(answeredPerCheckpoint: [0, 1, 2])
+        #expect(Self.resolver.previewArtworkName(run: run, stampSourceID: "stamp-0")
+                == "\(Self.slug(0))-stamp1")
+        #expect(Self.resolver.previewArtworkName(run: run, stampSourceID: "stamp-1")
+                == "\(Self.slug(1))-stamp2")
+        #expect(Self.resolver.previewArtworkName(run: run, stampSourceID: "stamp-2")
+                == "\(Self.slug(2))-stamp3")
+    }
+
+    /// Past the third drawing there is nothing further to tease, so the preview stops climbing
+    /// exactly where the record does.
+    @Test func thePreviewStopsAtTheThirdJustAsTheRecordDoes() {
+        let run = Self.run(answeredPerCheckpoint: [3])
+        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp3")
+        #expect(Self.resolver.previewArtworkName(run: run, stampSourceID: "stamp-0")
+                == "\(Self.slug(0))-stamp3")
+    }
+
     /// Every place the design drew is reachable by id, and every id maps to a stem the package
     /// actually ships. Without this, renaming a place in content silently empties its window.
     @Test func theCatalogCoversTheDesignsFivePlaces() {

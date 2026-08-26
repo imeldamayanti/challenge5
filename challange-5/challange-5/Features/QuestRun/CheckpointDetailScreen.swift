@@ -20,13 +20,15 @@ import UIStringsKit
 /// `TaskType` — and the progress bar draws one segment where the frame draws three, because the bar
 /// is the run's state and not the mock-up's (`AD-4`, `FR-RUN-06`).
 ///
-/// **The stamp in the bar is the place's own tiered drawing.** `452:3142` fills it with a generated
-/// sketch of a temple gate. It used to be filled with the quest's hero image, which was honest
-/// about provenance and wrong about what the object *is*: this is the stamp the walker was franked
-/// at this place, so it shows what `StampAwardScreen` and the Journal show for it — the drawing
-/// tiered by how many of this place's quests they have answered (`HisploraStampArtwork`). The
-/// picture is packaged chrome rather than a sourced claim about a place, which is the same footing
-/// every other stamp window in the app stands on.
+/// **The stamp in the bar is the place's own tiered drawing, and it previews rather than records.**
+/// `452:3142` fills it with a generated sketch of a temple gate. It used to be filled with the
+/// quest's hero image, which was honest about provenance and wrong about what the object *is*.
+/// What it draws now (`QuestRunViewModel.progressStampArtworkName`) is one tier ahead of what
+/// `StampAwardScreen` and the Journal show for this place — none resolved yet draws the first
+/// drawing as a reason to do one, one resolved draws the second, and so on — because a walker still
+/// reading this list is looking at what one more quest gets them, not at a record of what has
+/// already happened. The picture is packaged chrome rather than a sourced claim about a place,
+/// which is the same footing every other stamp window in the app stands on.
 struct CheckpointDetailScreen: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -36,8 +38,9 @@ struct CheckpointDetailScreen: View {
     let taskPrompts: [String: String]
     /// Nil for a task nobody has answered or skipped yet. Drives the trailing glyph and the bar.
     let resolutions: [String: TaskResult]
-    /// The tiered drawing for this place's stamp, by resource name. Nil — a place the design never
-    /// drew — ships a plain cream stamp rather than a borrowed picture.
+    /// The tiered drawing to preview here, by resource name — one tier ahead of what this place has
+    /// actually earned (see this file's own doc comment). Nil — a place the design never drew —
+    /// ships a plain cream stamp rather than a borrowed picture.
     let stampArtworkName: String?
     /// Whether this is the walk's last checkpoint — `197:148`'s footer reads differently there,
     /// since there is no next place to leave for.

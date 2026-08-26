@@ -996,7 +996,7 @@ with the splash still auto-advancing and still a drawing.
   ride into the app bundle. `HisploraStampArtwork.tier` holds the rule — resolve one of a place's
   tasks and its stamp shows the first drawing, two the second, three or more the third, clamped at
   both ends — and `StampArtworkResolver` (`Shared/Lore/StampArtwork.swift`) does the counting from
-  **one Run**, per place. Five things about it, all changed on 2026-08-26 at the owner's
+  **one Run**, per place. Six things about it, all changed on 2026-08-26 at the owner's
   instruction:
   - **The tier is per place and per walk, not a history.** It used to count *finished walks*
     through a place across every Run, so the picture said what a walker had done in total rather
@@ -1014,9 +1014,18 @@ with the splash still auto-advancing and still a drawing.
     `TaskResult` now, not just the unskipped ones.
     `StampArtworkTests.aSkipCountsTheSameAsAnAnswer` and
     `TaskDetailTests.skippingAQuestMovesTheStampJustAsAnsweringDoes` guard both halves.
-  - **The progress bar's stamp is the same object as the awarded one.** It used to draw the
-    *quest's hero image*, so it could not move whatever the rule said; it takes `stampArtworkName`
-    now.
+  - **The progress bar's stamp is the same *object* as the awarded one, but not the same tier.** It
+    used to draw the *quest's hero image*, so it could not move whatever the rule said; it now
+    draws `HisploraStampArtwork`'s own drawings, same as everywhere else. But `452:3132`'s corner is
+    the one screen where a walker is still standing on the checkpoint reading, and — at the owner's
+    instruction — it previews rather than records: `QuestRunViewModel.progressStampArtworkName` is
+    one tier ahead of `stampArtworkName`, so none resolved shows the first drawing as a reason to do
+    one, one resolved shows the second, and so on, stopping at the third exactly where the record
+    does. Every other reader of the place's stamp — `StampAwardScreen`, the Journal, the Explorer's
+    Card, the Trip Recap — keeps reading `stampArtworkName` and shows the tier actually banked.
+    `StampArtworkTests.thePreviewIsOneTierAheadOfWhatWasActuallyEarned` guards the resolver's own
+    `previewArtworkName`; `TaskDetailTests.theCornerStampPreviewsOneTierAheadOfWhatIsActuallyEarned`
+    drives it through the view model and checks the two properties diverge exactly as they should.
 
   Place id → asset stem is **a table in the app target, not a field on `Place`**. A sixth authored
   place gets an empty window until that table is edited, which is the honest fallback and also the

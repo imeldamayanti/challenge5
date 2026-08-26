@@ -585,4 +585,41 @@ struct TaskDetailTests {
         harness.model.saveTask(tasks[2])
         #expect(harness.model.stampArtworkName == "pemecutan-stamp3")
     }
+
+    /// The corner stamp on this screen previews the *next* drawing rather than recording the one
+    /// already earned: none resolved shows the first as something to work towards, one resolved
+    /// shows the second — "the stamp the user will get if they do next quest" — and two resolved
+    /// shows the third. `stampArtworkName` (the award screen, the Journal) stays one tier behind
+    /// this the whole way, which is the split the two tests above and these two guard between them.
+    @Test func theCornerStampPreviewsOneTierAheadOfWhatIsActuallyEarned() throws {
+        let harness = try atTaskList()
+        let tasks = try #require(harness.model.checkpoint?.tasks)
+        try #require(tasks.count >= 3)
+
+        #expect(harness.model.progressStampArtworkName == "pemecutan-stamp1")
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
+
+        answer(tasks[0], on: harness, words: "Sebuah jawaban.")
+        harness.model.saveTask(tasks[0])
+        #expect(harness.model.progressStampArtworkName == "pemecutan-stamp2")
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
+
+        answer(tasks[1], on: harness, words: "Sebuah jawaban.")
+        harness.model.saveTask(tasks[1])
+        #expect(harness.model.progressStampArtworkName == "pemecutan-stamp3")
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp2")
+    }
+
+    /// Once every task at a place is resolved there is no further drawing to tease, so the preview
+    /// stops one tier ahead exactly where the record does — both read the third drawing.
+    @Test func theCornerStampStopsPreviewingOnceThePlaceIsFullyResolved() throws {
+        let harness = try atTaskList()
+        let tasks = try #require(harness.model.checkpoint?.tasks)
+        try #require(tasks.count == 3)
+
+        for task in tasks { harness.model.skipTask(task) }
+
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp3")
+        #expect(harness.model.progressStampArtworkName == "pemecutan-stamp3")
+    }
 }

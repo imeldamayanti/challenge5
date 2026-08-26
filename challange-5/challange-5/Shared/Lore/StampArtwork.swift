@@ -88,11 +88,37 @@ struct StampArtworkResolver {
     /// recorded on the walk that did them — so a stamp in the Journal keeps showing what its own
     /// walk earned rather than being re-graded by a later one.
     func artworkName(run: Run, stampSourceID: String) -> String? {
+        guard let (slug, checkpointID) = slugAndCheckpoint(forRun: run, stampSourceID: stampSourceID)
+        else { return nil }
+        return HisploraStampArtwork.resourceName(
+            slug: slug, completedTasks: run.completedTaskCount(atCheckpoint: checkpointID))
+    }
+
+    /// The drawing the progress bar teases — one tier ahead of what `artworkName` would show, so
+    /// resolving zero of a place's tasks previews the first, resolving one previews the second, and
+    /// so on. `HisploraStampArtwork.tier`'s own clamp is what stops this running past the third once
+    /// the place is fully resolved, so this needs none of its own.
+    ///
+    /// **This is the one screen that shows a stamp nobody has earned yet.** Every other caller —
+    /// `StampAwardScreen`, the Journal, the Explorer's Card, the Trip Recap — reads `artworkName`
+    /// unchanged and keeps showing the tier a walk actually banked. Only `452:3132`'s corner stamp
+    /// is a preview rather than a record, because it is the one screen a walker is still standing
+    /// on the checkpoint reading, where "the next drawing is one quest away" is a reason to keep
+    /// going rather than a claim about what has already happened.
+    func previewArtworkName(run: Run, stampSourceID: String) -> String? {
+        guard let (slug, checkpointID) = slugAndCheckpoint(forRun: run, stampSourceID: stampSourceID)
+        else { return nil }
+        return HisploraStampArtwork.resourceName(
+            slug: slug, completedTasks: run.completedTaskCount(atCheckpoint: checkpointID) + 1)
+    }
+
+    private func slugAndCheckpoint(
+        forRun run: Run, stampSourceID: String
+    ) -> (slug: String, checkpointID: String)? {
         guard let source = sourcesByStamp[run.questID]?[stampSourceID],
               let slug = Self.slugsByPlaceID[source.placeID]
         else { return nil }
-        return HisploraStampArtwork.resourceName(
-            slug: slug, completedTasks: run.completedTaskCount(atCheckpoint: source.checkpointID))
+        return (slug, source.checkpointID)
     }
 }
 
