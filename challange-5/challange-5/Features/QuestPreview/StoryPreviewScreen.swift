@@ -111,10 +111,14 @@ struct StoryPreviewScreen: View {
             // Set justified — flush on both edges, the way a page comes out of a machine that
             // cannot rag a margin. Ragged-right is what shipped, and it is the one thing on this
             // sheet that read as a text view rather than as typing.
+            // Typed at the machine's own pace — `TypewriterMetrics.sheetCharactersPerSecond`,
+            // less than half the rate a passage is *revealed* at elsewhere, with a rest at the end
+            // of each clause. This page is a sheet in a roller, not a paragraph fading up.
             HisploraTypewriterText(
                 TypewriterMetrics.sheetText(hook),
                 justifiedIn: .typedSheet,
-                ink: \.inkDark)
+                ink: \.inkDark,
+                charactersPerSecond: TypewriterMetrics.sheetCharactersPerSecond)
 
             // `.labelDistance` and `.labelTotalDuration` are the same two strings the preview
             // screen puts over the same two numbers. The board writes "Estimated Time" where the
