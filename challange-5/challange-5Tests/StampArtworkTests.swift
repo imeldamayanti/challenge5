@@ -107,13 +107,18 @@ struct StampArtworkTests {
         #expect(Self.artwork(run, 1) == "\(Self.slug(1))-stamp1")
     }
 
-    /// A skip counts the same as an answer. `AD-2` means there is no answer key, so the app has no
-    /// way to grade one resolution as more of "the quest" than the other — and the row's own
-    /// checkmark already draws identically for both. Two skipped and one answered at a place is
-    /// three resolved, which is the third drawing.
-    @Test func aSkipCountsTheSameAsAnAnswer() {
+    /// **A skip does not count**, as of 2026-08-26. The drawing is what doing a quest buys, so two
+    /// skipped and one answered at a place is *one* answered, which is the first drawing — and a
+    /// place where everything was skipped stays on the first drawing too.
+    ///
+    /// This inverts what this test asserted earlier the same day. `AD-2` is untouched: no answer
+    /// key is needed to tell a skip from an answer, because `TaskResult.skipped` is the walker's
+    /// own choice rather than a judgement of their words. The checkpoint's task row was inverted
+    /// with it — a skipped task now draws no checkmark and fills no segment, so the picture and the
+    /// list still say the same thing about the same place.
+    @Test func aSkipDoesNotCountTowardsTheTier() {
         let run = Self.run(answeredPerCheckpoint: [1, 0], skippedPerCheckpoint: [2, 1])
-        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp3")
+        #expect(Self.artwork(run, 0) == "\(Self.slug(0))-stamp1")
         #expect(Self.artwork(run, 1) == "\(Self.slug(1))-stamp1")
     }
 
@@ -143,7 +148,7 @@ struct StampArtworkTests {
     }
 
     /// `progressStampArtworkName`'s rule, at the resolver: the preview is always one tier ahead of
-    /// the record, so it teases what one more resolved quest gets rather than what has already
+    /// the record, so it teases what one more *answered* quest gets rather than what has already
     /// happened.
     @Test func thePreviewIsOneTierAheadOfWhatWasActuallyEarned() {
         let run = Self.run(answeredPerCheckpoint: [0, 1, 2])

@@ -227,10 +227,15 @@ struct TaskDetailTests {
 
     // MARK: - The segmented bar on `452:3138`
 
-    /// The bar is task *resolution*, and `FR-TASK-02` plus `AD-2` make answering and skipping the
-    /// same kind of outcome — a skipped task is done with, not outstanding. Counting only answers
-    /// would leave the bar permanently short of full for a walker who skipped one.
-    @Test func aSkippedTaskFillsItsSegmentJustAsAnAnsweredOneDoes() throws {
+    /// The bar counts *answers*, as of 2026-08-26. A skipped task fills no segment and draws no
+    /// checkmark: it reads as still open, because the walker can come back to it and the stamp it
+    /// would move has not moved. This inverts the rule that stood earlier the same day, and the
+    /// cost it accepts is the one that argued against it — a walker who skips a task leaves the bar
+    /// permanently short of full. That is now the intended reading rather than a defect.
+    ///
+    /// `AD-2` is untouched: nothing gates on this, and `advanceFromCheckpointDetail` leaves the
+    /// checkpoint whatever the bar says.
+    @Test func aSkippedTaskFillsNoSegment() throws {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
 
@@ -239,7 +244,21 @@ struct TaskDetailTests {
 
         harness.model.skipTask(task)
 
-        #expect(harness.model.resolvedTaskCount == 1)
+        #expect(harness.model.resolvedTaskCount == 0)
+        #expect(harness.model.resolution(for: task)?.skipped == true,
+                "the skip is still recorded — it is the *reading* that changed, not the record")
+    }
+
+    /// A skipped task is still open work, so it stays in the count "More Quests (N)" offers. The
+    /// stamp screen and the task list have to agree about the same checkpoint.
+    @Test func aSkippedTaskStaysInTheRemainingCount() throws {
+        let harness = try atTaskList()
+        let task = try #require(harness.model.checkpoint?.tasks.first)
+        let before = harness.model.unresolvedTaskCount
+
+        harness.model.skipTask(task)
+
+        #expect(harness.model.unresolvedTaskCount == before)
     }
 
     @Test func answeringATaskFillsItsSegment() throws {
@@ -513,15 +532,17 @@ struct TaskDetailTests {
         #expect(claims.contains { !$0.citations.isEmpty })
     }
 
-    /// `1:4654`'s count is this checkpoint's *unresolved* tasks, so resolving the last one empties it
-    /// and the control goes rather than offering nothing.
-    @Test func theStampsMoreQuestsCountFallsAsTasksAreResolved() throws {
+    /// `1:4654`'s count is this checkpoint's still-open tasks, so answering the last one empties it
+    /// and the control goes rather than offering nothing. A skip does not move it — see
+    /// `aSkippedTaskStaysInTheRemainingCount`.
+    @Test func theStampsMoreQuestsCountFallsAsTasksAreAnswered() throws {
         let harness = try atTaskList()
         let task = try #require(harness.model.checkpoint?.tasks.first)
         let before = harness.model.unresolvedTaskCount
 
         harness.model.openTaskDetail(taskID: task.id)
-        harness.model.skipTaskFromDetail(task)
+        answer(task, on: harness, words: "Sebuah jawaban.")
+        harness.model.saveTaskFromDetail(task)
 
         #expect(harness.model.unresolvedTaskCount == before - 1)
     }
@@ -618,11 +639,14 @@ struct TaskDetailTests {
     ///
     /// Three things were wrong and all three are fixed here. The bar's stamp was filled with the
     /// *quest's hero image*, so it could never move at all; the tier was counted from walks
-    /// finished across the whole history rather than from the work done at this place; and a skip
-    /// was excluded from the count even though it draws the same resolved checkmark an answer does
-    /// and `AD-2` gives the app no answer key to grade one above the other. `stampArtworkName` is
-    /// what the bar draws now, and it climbs a drawing per resolved task — skip or answer — while
-    /// the walker stands there.
+    /// finished across the whole history rather than from the work done at this place; and the bar
+    /// could not move at all. `stampArtworkName` is what the bar draws now, and it climbs a drawing
+    /// per **answered** task while the walker stands there.
+    ///
+    /// The skip half of that report was fixed twice, in opposite directions. It was first made to
+    /// count like an answer, on the grounds that the row's checkmark drew the same either way; on
+    /// 2026-08-26 the owner's rule inverted, and the checkmark went with it — see
+    /// `skippingAQuestLeavesTheStampWhereItWas`.
     @Test func theStampClimbsADrawingPerQuestResolvedAtThisPlace() throws {
         let harness = try atTaskList()
         let tasks = try #require(harness.model.checkpoint?.tasks)
@@ -639,23 +663,29 @@ struct TaskDetailTests {
         }
     }
 
-    /// A skip counts the same as an answer (`AD-2`, `FR-TASK-02`) — there is no answer key, so the
-    /// app cannot tell a skip from a real answer any better than the row's own checkmark can.
-    /// Without this, a walker who skips their way through a place is shown the first drawing
-    /// forever, which does not match what the checkmarks in front of them say.
-    @Test func skippingAQuestMovesTheStampJustAsAnsweringDoes() throws {
+    /// **A skip does not move the stamp**, as of 2026-08-26 — the inversion of what this test
+    /// asserted earlier the same day. The drawing is what doing a quest buys, and a walker who
+    /// skips their way through a place stays on the first plate. The row in front of them agrees:
+    /// a skipped task draws no checkmark and fills no segment either, which is what the earlier
+    /// rule was protecting and what makes this consistent rather than merely stricter.
+    ///
+    /// `AD-2` still holds — no answer key is needed to tell a skip from an answer, because
+    /// `TaskResult.skipped` records the walker's own choice rather than a judgement of their words.
+    @Test func skippingAQuestLeavesTheStampWhereItWas() throws {
         let harness = try atTaskList()
         let tasks = try #require(harness.model.checkpoint?.tasks)
+        try #require(tasks.count >= 3)
 
         harness.model.skipTask(tasks[0])
         #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
 
         harness.model.skipTask(tasks[1])
-        #expect(harness.model.stampArtworkName == "pemecutan-stamp2")
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
 
         answer(tasks[2], on: harness, words: "Sebuah jawaban.")
         harness.model.saveTask(tasks[2])
-        #expect(harness.model.stampArtworkName == "pemecutan-stamp3")
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1",
+                "one answer among two skips is one answer — the first drawing")
     }
 
     /// The corner stamp on this screen previews the *next* drawing rather than recording the one
@@ -682,16 +712,33 @@ struct TaskDetailTests {
         #expect(harness.model.stampArtworkName == "pemecutan-stamp2")
     }
 
-    /// Once every task at a place is resolved there is no further drawing to tease, so the preview
+    /// Once every task at a place is answered there is no further drawing to tease, so the preview
     /// stops one tier ahead exactly where the record does — both read the third drawing.
-    @Test func theCornerStampStopsPreviewingOnceThePlaceIsFullyResolved() throws {
+    @Test func theCornerStampStopsPreviewingOnceThePlaceIsFullyAnswered() throws {
+        let harness = try atTaskList()
+        let tasks = try #require(harness.model.checkpoint?.tasks)
+        try #require(tasks.count == 3)
+
+        for task in tasks {
+            answer(task, on: harness, words: "Sebuah jawaban.")
+            harness.model.saveTask(task)
+        }
+
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp3")
+        #expect(harness.model.progressStampArtworkName == "pemecutan-stamp3")
+    }
+
+    /// Skipping every task at a place leaves both readings where they started. The preview is still
+    /// one tier ahead of the record — it is teasing the drawing the *first* answer would buy, which
+    /// is the reason the corner previews at all.
+    @Test func skippingEveryTaskLeavesBothTheRecordAndThePreviewWhereTheyBegan() throws {
         let harness = try atTaskList()
         let tasks = try #require(harness.model.checkpoint?.tasks)
         try #require(tasks.count == 3)
 
         for task in tasks { harness.model.skipTask(task) }
 
-        #expect(harness.model.stampArtworkName == "pemecutan-stamp3")
-        #expect(harness.model.progressStampArtworkName == "pemecutan-stamp3")
+        #expect(harness.model.stampArtworkName == "pemecutan-stamp1")
+        #expect(harness.model.progressStampArtworkName == "pemecutan-stamp2")
     }
 }

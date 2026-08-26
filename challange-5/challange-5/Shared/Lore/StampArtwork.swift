@@ -5,17 +5,25 @@ import RunEngine
 
 /// Which of a place's three drawings a reader has earned, worked out from their own records.
 ///
-/// **The rule, in the reader's words:** resolve one of a place's quests and its stamp shows the
-/// first drawing; resolve two and it shows the second; three or more and it stays on the third.
-/// Each place counts on its own — leaving with tasks unresolved (`AD-2` — nothing here gates
+/// **The rule, in the reader's words:** answer one of a place's quests and its stamp shows the
+/// first drawing; answer two and it shows the second; three or more and it stays on the third.
+/// Each place counts on its own — leaving with tasks unanswered (`AD-2` — nothing here gates
 /// progression) leaves that place on the tier its own work earned, and the next place starts again
 /// at one. `DesignSystem.HisploraStampArtwork` owns the clamping and the file naming; this owns the
 /// counting, because the count comes from a Run and a Run is not the design system's business.
 ///
-/// **A skip counts.** `TaskResult.skipped` closes a task the same as an answer does, and `AD-2`
-/// means the app has no way to grade one resolution as more of "the quest" than the other — there
-/// is no answer key, so a skip is not a lesser outcome the tier is entitled to discount. It is the
-/// same resolution `stateGlyph` already draws the same checkmark for.
+/// **A skip does not count, as of 2026-08-26.** The drawing is what doing a quest buys, so a task
+/// closed by tapping Skip leaves the tier where it was. This reverses the rule that stood earlier
+/// the same day, and the argument it reversed is worth keeping because it is the good one: `AD-2`
+/// means the app has no answer key, so it cannot grade one *answer* as better than another — but
+/// the distinction being drawn here is not answer-quality, it is whether the walker engaged with
+/// the task at all, and `TaskResult.skipped` records exactly that with no judgement needed.
+///
+/// `AD-2` is untouched either way. A skip still resolves the task, still gates nothing, and still
+/// lets the walk leave the checkpoint; what it no longer does is advance a picture. The
+/// checkpoint's task row draws no checkmark for it either (`CheckpointDetailScreen.isResolved`),
+/// and the two must keep agreeing — a row ticked green beside a stamp that did not move is the
+/// version of this that reads as a bug.
 ///
 /// **Two joins, both to decoration only.** Nothing here is allowed to decide what a walk *was* —
 /// `Run` already carries its own snapshots for that (`FR-DONE-05`, `FR-RUN-06`). It reaches into
@@ -123,13 +131,12 @@ struct StampArtworkResolver {
 }
 
 extension Run {
-    /// How many of a checkpoint's tasks the walker has resolved — a skip counts the same as an
-    /// answer, for the reason `StampArtworkResolver` gives. Zero for a checkpoint this walk never
-    /// reached, which `HisploraStampArtwork.tier` floors to the first drawing.
+    /// How many of a checkpoint's tasks the walker actually answered — a skip does not count, for
+    /// the reason `StampArtworkResolver` gives. Zero for a checkpoint this walk never reached, which
+    /// `HisploraStampArtwork.tier` floors to the first drawing.
     func completedTaskCount(atCheckpoint checkpointID: String) -> Int {
-        checkpointResults
-            .first { $0.checkpointID == checkpointID }?
-            .taskResults
-            .count ?? 0
+        guard let results = checkpointResults.first(where: { $0.checkpointID == checkpointID })
+        else { return 0 }
+        return results.taskResults.count { !$0.skipped }
     }
 }

@@ -167,11 +167,11 @@ struct CheckpointDetailScreen: View {
     /// the row cannot hang past its own row.
     private var progressRow: some View {
         HisploraSegmentedProgress(
-            completed: resolutions.count,
+            completed: answeredCount,
             total: tasks.count,
             accessibilityLabel: String(
                 format: UIStrings.string(.checkpointDetailProgressLabel, language),
-                resolutions.count, tasks.count))
+                answeredCount, tasks.count))
             // 356 of the 362-point column, as drawn — 3 in on each side.
             .padding(.horizontal, 3)
             .overlay(alignment: .trailing) {
@@ -242,8 +242,8 @@ struct CheckpointDetailScreen: View {
                             : UIStrings.string(.checkpointDetailTaskOpen, language))
     }
 
-    /// `checkmark.seal.fill` for a resolved task, `chevron.forward` for one still open — and both are
-    /// named in the row's accessibility value above, because a glyph difference is not a label
+    /// `checkmark.seal.fill` for an answered task, `chevron.forward` for one still open — and both
+    /// are named in the row's accessibility value above, because a glyph difference is not a label
     /// (`NFR-A11Y-05`).
     private func stateGlyph(for task: ContentTask) -> some View {
         Image(systemName: isResolved(task) ? "checkmark.seal.fill" : "chevron.forward")
@@ -253,7 +253,21 @@ struct CheckpointDetailScreen: View {
             .accessibilityHidden(true)
     }
 
-    private func isResolved(_ task: ContentTask) -> Bool { resolutions[task.id] != nil }
+    /// **A skipped task draws no checkmark and fills no segment**, as of 2026-08-26 — it reads as
+    /// still open, because to the walker it is: they can come back and answer it, and the stamp it
+    /// would move has not moved. The row is still a `TaskResult` in the walk's record, so nothing is
+    /// lost and nothing is re-asked; what the tick claims is that the quest was *done*, and a skip
+    /// is the one resolution that says it was not.
+    ///
+    /// This is the same rule `StampArtworkResolver` counts by, and the two have to keep agreeing:
+    /// a row ticked green beside a stamp that did not move is the version of this that reads as a
+    /// bug. `AD-2` is untouched — nothing here gates the walk, and `onContinue` leaves the
+    /// checkpoint whatever these say.
+    private func isResolved(_ task: ContentTask) -> Bool {
+        resolutions[task.id].map { !$0.skipped } ?? false
+    }
+
+    private var answeredCount: Int { tasks.count { isResolved($0) } }
 
     private func taskTypeLabel(_ type: TaskType) -> String {
         switch type {
