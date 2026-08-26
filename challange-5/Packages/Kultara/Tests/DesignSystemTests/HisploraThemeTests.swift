@@ -23,8 +23,42 @@ struct HisploraThemeTests {
         let declared = Set(palette.allTokens.map(\.value))
         let unmeasured = declared.subtracting(measured)
 
-        #expect(unmeasured == [palette.highlight],
+        #expect(unmeasured == [palette.highlight, palette.authRule, palette.authProviderRing],
                 "unmeasured: \(unmeasured.map(\.hex).sorted())")
+    }
+
+    /// The login / register frames' two hairlines (`1429:2829`, `1429:3260`). Both are the visual
+    /// boundary of a control drawn white-on-white, and both are far under the 3:1 WCAG 1.4.11 asks
+    /// — 1.09:1 for a field's rule, 1.16:1 for the provider row's.
+    ///
+    /// They ship as drawn at the owner's explicit instruction of 2026-08-26. This test is not a
+    /// claim that they pass: it is what keeps the number in the suite rather than in a commit
+    /// message, so raising the boundary later is a one-line change here rather than a rediscovery.
+    /// If either value is ever moved to pass, this test fails and says the deviation is closed.
+    @Test func theEntryHairlinesShipAsDrawnAndDoNotPass() {
+        #expect(contrastRatio(palette.authRule, palette.paperStamp) < 3.0)
+        #expect(contrastRatio(palette.authProviderRing, palette.paperStamp) < 3.0)
+        // ...and the text on either side of them is measured and does pass, so what fails is the
+        // outline of the box and never the words in it.
+        #expect(contrastRatio(palette.authFieldInk, palette.paperStamp) >= 4.5)
+        #expect(contrastRatio(palette.authProviderInk, palette.paperStamp) >= 4.5)
+    }
+
+    /// The frames set their quiet labels, their placeholders and the password eye in `#ACB5BB`,
+    /// which is 2.19:1 on the card — under body text and under what 1.4.11 asks of a control's own
+    /// glyph. `authQuiet` is what ships instead. Restoring the drawn value to match Figma fails the
+    /// pair test above; this one says why not.
+    @Test func theEntryQuietInkWasDarkenedToPassRatherThanTheThresholdLowered() {
+        let asDrawn = SRGBColor(hex: "#ACB5BB")
+        #expect(contrastRatio(asDrawn, palette.paperStamp) < 4.5)
+        #expect(contrastRatio(palette.authQuiet, palette.paperStamp) >= 4.5)
+    }
+
+    /// The masthead's ground is the frames' `#6E2717` and `brownDeep` already *is* that value, so
+    /// the design reuses it rather than adding a ninth brown. If `brownDeep` is ever re-sampled for
+    /// the story flow, this is what says the entry screens moved with it on purpose.
+    @Test func theEntryMastheadStandsOnTheStoryFlowsOwnDeepBrown() {
+        #expect(palette.brownDeep == SRGBColor(hex: "#6E2717"))
     }
 
     /// The pill is near-black on mid-brown, which is 2.04:1 — below what WCAG 1.4.11 asks of a

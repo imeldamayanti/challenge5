@@ -1283,6 +1283,40 @@ with the splash still auto-advancing and still a drawing.
     (`NoCredentialLinking`), which is a normal working app and not a defect — but it is
     indistinguishable on screen from the mismatch above. `Library/Application Support/supabase-trace.log`
     is where the two separate.
+- **The login and register screens were redrawn on 2026-08-26**, and the bullet below describes
+  what they were, not what they are. `1429:2829` ("Login") and `1429:3260` ("Register") replace
+  `791:5109` and `791:5145`: a deep-brown masthead (`brownDeep`, the frames' own `#6E2717`, with
+  `1429:2831`'s starfield exported whole as `auth-head-texture.png`) over a white card of boxed
+  46-point fields. **`822:2235` was not redrawn**, so the guest screen is still the cream page the
+  bullet below describes, and the seam between the two directions still falls between screens.
+  `DesignSystem/HisploraAuthCard.swift` holds the components and `AuthCardMetrics` the frames'
+  numbers. Seven things about it:
+  - **The frames' vertical coordinates are held *below the status bar*.** Everything is measured on
+    an 812-point canvas whose status bar is 44, so the masthead is 397 − 44 and the card starts
+    257 − 44 — which keeps the 140 points by which the card overlaps the brown exact on a phone
+    whose status bar is not 44. `HisploraAuthCardTests` pins both halves.
+  - **Eight new palette tokens**, and four reused rather than duplicated (`brownDeep` is the
+    masthead's ground exactly, `paperStamp` the card, `buttonFill`/`inkOnButton` the action).
+  - **Two of them ship failing contrast, deliberately and at the owner's instruction.** `authRule`
+    (a field's hairline) is 1.09:1 on the card and `authProviderRing` 1.16:1, where WCAG 1.4.11
+    asks 3:1 of a control's visual boundary — and the hairline is the only thing that says where a
+    field is. They are named in `HisploraThemeTests`' exclusion list rather than silently skipped,
+    and `theEntryHairlinesShipAsDrawnAndDoNotPass` keeps the numbers in the suite. **This is an
+    open deviation.** The frames' `#ACB5BB` quiet ink went the other way and *was* moved, to
+    `authQuiet` `#6C7278`.
+  - **Type is set at the frames' point sizes and does not scale**, the same bend the Trip pages and
+    the quest card's caption make. Every box is a floor, so a grown label makes its control taller.
+  - **"Remember me" and "Forgot Password ?" are drawn and do nothing**, at the owner's instruction.
+    There is no account backend in front of these screens, so the row is one *static* accessibility
+    element saying as much rather than two controls VoiceOver would offer to activate.
+  - **The guest row is not in the frames.** It is added under Apple's at the same size, also at the
+    owner's instruction: the frames offer no way in that is not an account, and this build's
+    account is a local profile.
+  - **Register asks for the password twice** (`1429:3677`), which is a fourth thing the form can be
+    wrong about — checked *after* the length floor, so a short password typed twice says one thing
+    rather than two. Seen on iPhone 17 / iOS 26.5 from a fresh install:
+    `docs/screenshots/m19-auth-sign-in.png`, `m19-auth-register.png`. Full record, including every
+    measured ratio and the seven deviations, in `docs/hisplora-tokens.md`.
 - **The three entry screens ship, and there is still no account behind them.** `791:5145`
   (Sign Up), `791:5109` (Sign In) and `822:2235` (Guest) landed 2026-08-21 as `Features/Auth/`,
   replacing `AuthWireframeView`. Six things about them:

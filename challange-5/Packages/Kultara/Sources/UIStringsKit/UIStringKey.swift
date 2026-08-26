@@ -44,6 +44,25 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     // `AuthViewModel` for the whole account of what is and is not connected.
     case authSignUpTitle
     case authSignInTitle
+    /// The line under each masthead (`1429:3238`, `1429:3669`) — one sentence saying what the card
+    /// below asks for. New with the `1429:2829`/`1429:3260` redesign; the cream frames these
+    /// replaced set a masthead with nothing under it.
+    case authSignUpSubtitle
+    case authSignInSubtitle
+    /// `1429:3244`'s second password box on the register frame, which the sign-in frame has no
+    /// counterpart for.
+    case authConfirmPasswordPlaceholder
+    /// The two halves of `1429:3245`, and what the row is announced as.
+    ///
+    /// **Both are drawn and neither does anything** — there is no account backend in front of
+    /// these screens, so the row is one static element rather than two controls, and the spoken
+    /// string is what says so instead of VoiceOver offering to activate a drawing.
+    case authRememberMe
+    case authForgotPassword
+    case authRememberRowSpoken
+    /// The password field's eye, in the two states it announces.
+    case authRevealPassword
+    case authHidePassword
     case authGuestTitle
     /// The line under the guest title, which is the one place the app says where a name is used.
     case authGuestBody
@@ -69,6 +88,9 @@ public enum UIStringKey: String, Sendable, CaseIterable {
     /// than as an alert.
     case authInvalidEmail
     case authShortPassword
+    /// The register frame asks for a password twice, so there is a fourth thing a form can be
+    /// wrong about.
+    case authPasswordMismatch
     /// An empty password box, which is a different mistake from a short one — telling a walker
     /// their blank field is under eight characters is technically true and useless.
     case authMissingPassword

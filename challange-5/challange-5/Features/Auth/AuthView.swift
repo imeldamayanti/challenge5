@@ -3,8 +3,15 @@ import DesignSystem
 import SwiftUI
 import UIStringsKit
 
-/// The entry screens, on the Hisplora direction — Figma `791:5145` (Sign Up), `791:5109` (Sign In)
-/// and `822:2235` (Guest).
+/// The entry screens — Figma `1429:2829` ("Login"), `1429:3260` ("Register") and `822:2235`
+/// (Guest).
+///
+/// **The first two were redrawn on 2026-08-26.** They were `791:5145` and `791:5109`: a cream page
+/// in the story flow's own language, with a serif masthead and capsule fields. The board now draws
+/// the entry as a deep-brown masthead over a white card, which is a form rather than a page of the
+/// book, and the whole screen moved rather than half of it — the two visual directions are separated
+/// at a screen boundary and that has not changed. The guest screen is still `822:2235` and is still
+/// on the cream, because the board did not redraw it.
 ///
 /// They replace `AuthWireframeView`, which was a drawing of this flow with a "Skip for now" on it,
 /// and they are reached where it was: splash → onboarding → **here** → Home. Onboarding is the
@@ -32,7 +39,7 @@ struct AuthView: View {
     }
 
     var body: some View {
-        HisploraStage(ground: \.paperSheet) {
+        HisploraStage(ground: model.stage == .guestName ? \.paperSheet : \.authGround) {
             Group {
                 switch model.stage {
                 case .signUp:
@@ -57,26 +64,20 @@ struct AuthView: View {
     }
 }
 
-// MARK: - The page these three frames share
+// MARK: - The guest page
 
-/// The entry frames' own margins, in their own 402-point terms: a 314-point control inside a
-/// 44-point page margin. Not on `KultaraMetrics`' spacing scale, for the reason `OnboardingView`
-/// gives about its own 20 — this is the board's page margin, not a step of the museum's rhythm.
+/// `822:2235`'s own margins, in its own 402-point terms: a 314-point control inside a 44-point page
+/// margin. Not on `KultaraMetrics`' spacing scale, for the reason `OnboardingView` gives about its
+/// own 20 — this is the board's page margin, not a step of the museum's rhythm.
+///
+/// Only the guest screen reads these now. The login and register screens moved to
+/// `AuthCardMetrics`, which carries `1429:2829`'s and `1429:3260`'s numbers instead.
 enum AuthMetrics {
     static let margin: CGFloat = 44
-    /// 233 − 127 − 41: the air the frames leave under the masthead before the form starts.
-    static let titleBand: CGFloat = 65
-    /// 127 on the frame, under a 62-point status bar.
-    static let titleTop: CGFloat = 65
-    /// The 10 between two stacked controls, and the 30 between the form's three blocks.
+    /// The 10 between two stacked controls on that screen.
     static let controlGap: CGFloat = 10
-    static let blockGap: CGFloat = 30
-    /// 184 − 158 on `791:5145`, 126 − 102 on `791:5109`: the step between the last field and the
-    /// action under it. The two frames differ by two points, which is a rounding of the fields'
-    /// own heights rather than a decision.
+    /// 372 − 312 − 46: the step the guest frame puts between its field and its action.
     static let actionGap: CGFloat = 25
-    /// 173 − 158 and 117 − 102: the step between the last provider row and the closing line.
-    static let footerGap: CGFloat = 15
 }
 
 /// The message a submission left under one of the fields.
@@ -94,10 +95,51 @@ struct AuthFieldMessage: View {
     var body: some View {
         Text(UIStrings.string(key, language))
             .kultaraFont(.caption)
-            .foregroundStyle(palette.brownSeal.color)
+            // The masthead's own brown. `brownSeal` is the cream page's red and reads as a
+            // different colour beside a `#6E2717` band, which is the one place on these two screens
+            // where two nearly-identical browns would sit within 300 points of each other.
+            .foregroundStyle(palette.brownDeep.color)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, 17)
+            .padding(.horizontal, AuthCardMetrics.fieldPadding)
             .accessibilityAddTraits(.isStaticText)
+    }
+}
+
+/// A boxed field on the card, with whatever the last submission said about it printed underneath
+/// (`I1429:3243;3:6011`).
+///
+/// Its own type beside `AuthField` rather than a style flag on it: the guest screen is still
+/// `822:2235`, still on cream, and still draws the capsule. One field type that could be either
+/// would be a field somebody eventually puts on the wrong ground.
+struct AuthCardField: View {
+    let kind: HisploraAuthField.Kind
+    let placeholder: UIStringKey
+    let field: AuthViewModel.Field
+    @Bindable var model: AuthViewModel
+    let language: ContentLanguage
+    @Binding var text: String
+
+    private var problem: AuthViewModel.Problem? {
+        model.problem?.field == field ? model.problem : nil
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: KultaraMetrics.xs) {
+            HisploraAuthField(
+                kind: kind,
+                placeholder: UIStrings.string(placeholder, language),
+                accessibilityLabel: UIStrings.string(placeholder, language),
+                revealLabel: UIStrings.string(.authRevealPassword, language),
+                hideLabel: UIStrings.string(.authHidePassword, language),
+                text: $text)
+            if let problem {
+                AuthFieldMessage(key: problem.message, language: language)
+            }
+        }
+        // The message is the field's own hint as well as a line under it: a reader who has moved
+        // focus to the box hears what is wrong with it there, rather than only where it is drawn.
+        .accessibilityHint(problem.map { UIStrings.string($0.message, language) } ?? "")
+        .onChange(of: text) { _, _ in model.clearProblem() }
     }
 }
 
@@ -132,14 +174,19 @@ struct AuthField: View {
     }
 }
 
-/// The Apple row, the guest row on the sign-up frame, and a line under them.
+/// The Apple row (`1429:3256`), the guest row under it on the register frame, and a line under both.
 ///
-/// `791:5170` and `791:5180`. **Apple is wired to `c2` phase 6's `CredentialLinking`.** Google's
-/// row was removed rather than left drawn-and-disabled: with no `[auth.external.google]` block and
-/// no OAuth client behind it, a "Continue with Google" pill is a promise the app cannot keep — and
-/// Google's brand terms allow their mark only on a working Google Sign-In control, which made the
-/// shipped mark itself a pre-public blocker (`docs/hisplora-tokens.md`). A failed sign-in says so
-/// under the block rather than leaving a walker looking at buttons that did nothing.
+/// **Apple is wired to `c2` phase 6's `CredentialLinking`.** Google's row was removed rather than
+/// left drawn-and-disabled: with no `[auth.external.google]` block and no OAuth client behind it, a
+/// "Continue with Google" pill is a promise the app cannot keep — and Google's brand terms allow
+/// their mark only on a working Google Sign-In control, which made the shipped mark itself a
+/// pre-public blocker (`docs/hisplora-tokens.md`). A failed sign-in says so under the block rather
+/// than leaving a walker looking at a button that did nothing.
+///
+/// **The guest row is not in the frames.** It is added at the owner's instruction of 2026-08-26, at
+/// Apple's own size and in Apple's own style, and it is the one entry this build can honestly
+/// complete — see `AuthCredentialScreen`. The two rows are 16 apart rather than the card's own 24,
+/// so they read as one block with two ways through it rather than as two of the card's five blocks.
 struct AuthProviderBlock: View {
     @Environment(\.hisploraPalette) private var palette
 
@@ -153,30 +200,29 @@ struct AuthProviderBlock: View {
     @State private var appleSignIn = AppleSignInCoordinator()
 
     var body: some View {
-        VStack(spacing: AuthMetrics.controlGap) {
+        VStack(spacing: AuthCardMetrics.fieldGap) {
             Button {
                 Task { await startAppleSignIn() }
             } label: {
                 providerLabel(.apple, .authContinueWithApple)
             }
-            .buttonStyle(.hisploraProviderDark)
+            .buttonStyle(.hisploraAuthProvider)
             .disabled(model.isSigningInWithApple)
 
             if showsGuestRow {
                 Button(action: onGuest) {
                     providerLabel(.guest, .authContinueAsGuest)
                 }
-                .buttonStyle(.hisploraProviderGuest)
+                .buttonStyle(.hisploraAuthProvider)
             }
 
             if let message = model.providerMessage {
                 Text(UIStrings.string(message, language))
                     .kultaraFont(.caption)
-                    // The seal red for a real outcome (something happened, worth noticing).
-                    .foregroundStyle(palette.brownSeal.color)
+                    // The masthead's brown for a real outcome (something happened, worth noticing).
+                    .foregroundStyle(palette.brownDeep.color)
                     .multilineTextAlignment(.center)
                     .fixedSize(horizontal: false, vertical: true)
-                    .padding(.top, KultaraMetrics.xs)
                     .accessibilityAddTraits(.isStaticText)
             }
         }
@@ -198,48 +244,16 @@ struct AuthProviderBlock: View {
         }
     }
 
+    /// `I1429:3256;68:15375` — a 20-point mark, 8 from its label, the pair centred in the row.
     private func providerLabel(
         _ provider: HisploraProviderMark.Provider,
         _ key: UIStringKey
     ) -> some View {
-        HStack(spacing: AuthMetrics.controlGap) {
+        HStack(spacing: AuthCardMetrics.providerMarkGap) {
             HisploraProviderMark(provider: provider)
+                .frame(width: AuthCardMetrics.providerMarkSize,
+                       height: AuthCardMetrics.providerMarkSize)
             Text(UIStrings.string(key, language))
         }
-    }
-}
-
-/// The closing line: a question in the quiet ink and the other screen's name in the seal red
-/// (`791:5183`, `791:5144`).
-///
-/// The whole line is one `Button` rather than a `Text` with a tappable run. A tap target inside a
-/// paragraph is not something VoiceOver announces or activates, and the words either side of it are
-/// what say where it goes — so the control is the sentence, labelled with the sentence.
-struct AuthSwitchLine: View {
-    @Environment(\.hisploraPalette) private var palette
-
-    let question: UIStringKey
-    let action: UIStringKey
-    let language: ContentLanguage
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: KultaraMetrics.xs) {
-                Text(UIStrings.string(question, language))
-                    .foregroundStyle(palette.inkMuted.color)
-                Text(UIStrings.string(action, language))
-                    .fontWeight(.bold)
-                    .foregroundStyle(palette.brownSeal.color)
-            }
-            .font(.system(size: 15))
-            .tracking(-0.23)
-            .frame(maxWidth: .infinity)
-            .frame(minHeight: KultaraMetrics.minimumTapTarget)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(UIStrings.string(action, language))
-        .accessibilityHint(UIStrings.string(question, language))
     }
 }

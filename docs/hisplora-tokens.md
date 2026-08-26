@@ -1761,3 +1761,116 @@ and `FR-DISC-05` (cost) and `NFR-CONT-06` (walking vs total as two figures) are 
 *for VoiceOver* — `QuestCard.accessibilitySummary` speaks all six labelled facts — but the drawing
 the owner approved shows three, so the visible card deviates. Like `FR-ONB-03`'s deletion, this
 wants a signed amendment with an owner before anything public.
+
+## The login and register frames (`1429:2829`, `1429:3260`, 2026-08-26)
+
+A **second** entry design, replacing `791:5145`/`791:5109` — the cream page with the serif masthead
+and capsule fields. These two frames draw the entry as a deep-brown masthead over a white card: a
+form, not a page of the book. The seam between the two visual directions still falls at a screen
+boundary, so the whole screen moved rather than half of it. `822:2235` (guest) was **not** redrawn
+and is untouched, so the guest screen is still on the cream.
+
+### Tokens
+
+Four of the frames' colours were already in the palette and are reused rather than duplicated:
+`brownDeep` `#6E2717` is the masthead's ground *exactly*, `paperStamp` `#FFFFFF` the card,
+`buttonFill` `#151311` the action and `inkOnButton` its label.
+
+Eight are new:
+
+| Token | Value | Where |
+|---|---|---|
+| `authGround` | `#FAF7F6` | the page under the card |
+| `authHeadInk` | `#EEEEEE` | the masthead's title and its line (the frames' `--white`) |
+| `authFieldInk` | `#1A1C1E` | what a walker types |
+| `authQuiet` | `#6C7278` | "Remember me", "Or login with", the closing question, placeholders, the eye |
+| `authEmphasis` | `#1A1A1A` | "Forgot Password ?" |
+| `authRule` | `#EDF1F3` | a field's hairline and the two rules beside "Or login with" |
+| `authProviderRing` | `#ECECEC` | the provider row's outline |
+| `authProviderInk` | `#3A383F` | the provider row's label |
+
+Measured: `authHeadInk` on `brownDeep` 9.21:1; on the card `authFieldInk` 17.09:1, `authEmphasis`
+17.40:1, `authProviderInk` 11.56:1, `authQuiet` 4.87:1, `brownDeep` (the closing link) 10.68:1;
+`authQuiet` on `authGround` 4.56:1.
+
+### Deviations
+
+1. **The quiet ink moved.** The frames set every secondary label, every placeholder and the password
+   eye in `#ACB5BB`, which is **2.19:1** on the white card — under body text, and under the 3:1 WCAG
+   1.4.11 asks of a control's own glyph. `authQuiet` `#6C7278` — the frames' own grey, used for
+   "Remember me" — carries all of it instead. Guarded by
+   `HisploraThemeTests.theEntryQuietInkWasDarkenedToPassRatherThanTheThresholdLowered`.
+2. **The two hairlines ship as drawn and do not pass.** `authRule` measures **1.09:1** on the card
+   and `authProviderRing` **1.16:1**, where 1.4.11 asks 3:1 of a control's visual boundary — and on
+   this design the hairline is the *only* thing that says where a field is. They are kept at the
+   frames' values at the owner's explicit instruction of 2026-08-26 ("padding, color, assets, etc
+   need to be precise"); darkening them to pass would print grey boxes across a card the design
+   draws as barely-ruled. **This is an open accessibility deviation, not a closed one.** Both are
+   named in `HisploraThemeTests.everyTokenIsMeasuredExceptTheDrawnAnnotation`'s exclusion list
+   rather than silently skipped, and `theEntryHairlinesShipAsDrawnAndDoNotPass` keeps the numbers in
+   the suite. The text on either side of them is measured and passes.
+3. **Type is set at the frames' point sizes and does not scale with Dynamic Type** — the same bend
+   `TripSummaryScreen`, `TripHistoryScreen` and `PhotoQuestCard`'s caption already make, and for the
+   same reason: a role that scales cannot hold a 12-point label beside a 32-point masthead at the
+   ratio the frames draw. Every box is a *floor* rather than a fixed height, so a grown label makes
+   its control taller instead of being clipped.
+4. **Two of the three named faces are substituted.** The frames name SF Pro Display (which ships
+   with iOS), **Inter** (the subtitle and "Or login with") and **Roboto** (the provider label).
+   Neither of the last two ships with iOS and neither is packaged for one label each; both are drawn
+   in the system face at the frames' own size and weight.
+5. **The masthead's title block is centred on the screen.** Both frames place the headline group at
+   x 70 with a width of 235, which centres it on x 187.5 of a 402-point canvas — 13.5 points left of
+   the screen's own centre. The two frames share the offset because one was duplicated from the
+   other; it reads as a slip rather than a decision, and it is not reproduced.
+6. **The subtitle is not held to the title's 235 points.** The frames set both inside 235 and the
+   sentence fits on one line in Inter; in the system face at the same size it wraps onto two. The
+   title keeps 235 (which is what wraps *it* onto two lines, as drawn); the line under it runs to
+   the card's width.
+7. **The password eye is a working toggle**, where the frames draw only the crossed-out state. A
+   crossed eye beside a row of dots is the one control on the card a walker will try to press, and a
+   drawn one that does not respond is worse than none.
+
+### What is drawn and does nothing
+
+**"Remember me" and "Forgot Password ?"** (`1429:3245`), at the owner's instruction of 2026-08-26.
+There is no account backend in front of these screens — what a walker types builds a local profile
+and nothing else — so a checkbox would be storing something about nothing and a "Forgot Password ?"
+control would open a flow this build does not have. Neither is a control: the row is one *static*
+accessibility element announced as "Remember me and forgot password are not available in this
+version", rather than two `Button`s VoiceOver would offer to activate.
+
+### What is here that the frames do not draw
+
+**The guest row**, under Apple's and at the same size, at the owner's instruction of the same day.
+The frames offer no way in that is not an account, and this build's "account" is a local profile —
+dropping the guest route would have removed the one entry the app can honestly complete. The two
+provider rows sit 16 apart rather than the card's own 24, so they read as one block with two ways
+through it.
+
+### Assets
+
+Two new PNGs in `DesignSystem/Resources/Images`, 31 KB for the pair:
+
+- **`auth-head-texture.png`** (1206 × 1191, the frame's 402 × 397 at 3×) — `1429:2831` exported
+  whole. It is a diamond gradient masked into a starfield with a 10 % ruled grid over it, about a
+  hundred and forty layers in the file; re-deriving that in SwiftUI would be re-deriving geometry
+  that is already decided. The export carries the frame's own `#6E2717`, so it is drawn *over*
+  `brownDeep` and the two agree exactly. **Figma bakes the device-corner rounding into the export's
+  corners**, which printed two pale notches under the status bar — those pixels are flood-filled
+  back to the same brown before it ships.
+- **`auth-shield.png`** (84 × 84, 28 pt at 3×) — `1429:3235`. Rendered from the node's SVG by
+  recolouring its two white paths to black, rasterising with `qlmanage` at 336 px, and taking
+  `alpha = 255 − luminance` over white; then resampled to 84. The same alpha-recovery habit
+  `HisploraOnboardingArt` uses, for the same reason: `qlmanage` renders onto white and a white glyph
+  would otherwise come back blank.
+
+The frames' three remaining vector nodes are **not** packaged. The eye is `eye.slash`/`eye`, the
+Apple mark is `applelogo` — both SF Symbols, which is the one place a system glyph is the correct
+asset rather than a stand-in — and the checkbox is drawn (`1429:3247` is an 11.08-point square with
+a 1.583 radius stroked 1.5, centred in a 19-point box), because a packaged one could not carry a
+state.
+
+### Seen rendering
+
+iPhone 17 / iOS 26.5, both frames from a fresh install —
+`docs/screenshots/m19-auth-sign-in.png`, `m19-auth-register.png`.
