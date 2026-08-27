@@ -31,8 +31,12 @@ struct SettingsView: View {
                 deletionSection
                 attributionSection
                 reportSection
-                #if DEBUG
-                developerSection
+                #if KULTARA_DEV_TOOLS
+                // Present in Debug, and in a TestFlight build so a tester can walk the quest from
+                // wherever they are. An App Store install answers `false` and shows nothing.
+                if DeveloperToolsAvailability.isEnabled {
+                    developerSection
+                }
                 #endif
             }
             .padding(KultaraMetrics.lg)
@@ -236,7 +240,7 @@ struct SettingsView: View {
     }
 }
 
-#if DEBUG
+#if KULTARA_DEV_TOOLS
 extension SettingsView {
     var developerSection: some View {
         DeveloperToolsSection(model: model)

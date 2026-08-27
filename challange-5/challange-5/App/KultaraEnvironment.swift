@@ -178,12 +178,12 @@ struct KultaraEnvironment {
         SideQuestEngine(repository: repository, store: sideQuestStore)
     }
 
-    /// In a debug build the provider can be switched to a simulator from Settings, so the loop can
-    /// be walked from a desk. In a release build that type does not exist and this is the radios,
-    /// with no branch to take.
+    /// In a debug or TestFlight build the provider can be switched to a simulator from Settings, so
+    /// the loop can be walked from a desk. In an App Store build that type does not exist and this
+    /// is the radios, with no branch to take.
     @MainActor
     private static func defaultLocationProvider() -> any LocationProviding {
-        #if DEBUG
+        #if KULTARA_DEV_TOOLS
         DeveloperSwitchableLocationProvider(system: SystemLocationProvider())
         #else
         SystemLocationProvider()
