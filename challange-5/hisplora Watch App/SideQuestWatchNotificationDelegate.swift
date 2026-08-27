@@ -8,7 +8,7 @@ import UIKit
 import UserNotifications
 import os
 
-private let log = Logger(subsystem: "com.umar.hisplora", category: "watch-notif")
+private let log = Logger(subsystem: "com.astungkara.hisplora", category: "watch-notif")
 
 /// What a tap on a sidequest notification resolves to. Three already-decided values, not a
 /// `UNNotification` — the same shape `SideQuestLongLookView` and `SideQuestWatchCardView` take, so

@@ -160,7 +160,7 @@ struct UnconfiguredSupabaseSession: SupabaseSessionProviding {
 /// Debug only, so a release build contains neither this type nor a call to it, and capped so a long
 /// session cannot fill a device.
 ///
-///     xcrun simctl get_app_container <udid> com.umar.hisplora data
+///     xcrun simctl get_app_container <udid> com.astungkara.hisplora data
 ///     cat "<that>/Library/Application Support/supabase-trace.log"
 struct ConsoleSupabaseLogger: SupabaseLogger {
 

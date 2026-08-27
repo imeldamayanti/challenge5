@@ -11,7 +11,7 @@ import os
 
 /// Same reasoning as the phone side (`s14` D5): a notification that never arrives on a real walk
 /// cannot be debugged with `print`, which only exists while Xcode is attached.
-private let log = Logger(subsystem: "com.umar.hisplora", category: "watch-notif")
+private let log = Logger(subsystem: "com.astungkara.hisplora", category: "watch-notif")
 
 /// `s9` Phase B, `FR-WATCH-05` — hosts `SideQuestLongLookView` for the `"sidequest-nearby"` category,
 /// registered as a `WKNotificationScene` in `hisploraApp.swift`. `didReceive(_:)` resolves everything

@@ -1562,7 +1562,7 @@ respond to the simulator MCP's synthesized taps reliably, which is the same clas
 screenshots are what show it against the frame.
 
 A resumed walk lands on `.atCheckpoint` and skips all three, so reaching them from a desk means a
-fresh install (`xcrun simctl uninstall com.umar.hisplora`) rather than relaunching.
+fresh install (`xcrun simctl uninstall com.astungkara.hisplora`) rather than relaunching.
 
 **`791:5145`, `791:5109` and `822:2235` were verified on iPhone 17 Pro / iOS 26.5 on 2026-08-21**,
 from a fresh install: onboarding (Skip) → Sign Up → the closing line to Sign In and back → an empty
@@ -1616,7 +1616,7 @@ Screenshots are in `docs/screenshots/m13-*.png`.
 Reaching them from a desk does not need a walked route. `FileRunStore` writes one JSON document per
 Run into `Library/Application Support/Kultara/runs` in the app container, so a completed Run
 generated from the shipped content and copied in with
-`xcrun simctl get_app_container <udid> com.umar.hisplora data` puts a letter on the shelf directly.
+`xcrun simctl get_app_container <udid> com.astungkara.hisplora data` puts a letter on the shelf directly.
 That is a fixture for looking at a screen, not a way to test the engine — nothing about arrival,
 ordering or awards is exercised by it.
 
