@@ -11,7 +11,7 @@ import UserNotifications
 /// notification never arrives during a real walk" — happens on a wrist far from a Mac, and `print`
 /// is visible only while Xcode's debugger is attached, i.e. in exactly the situation that is *not*
 /// being debugged. `.debug` costs nothing until someone streams or collects it.
-private let log = Logger(subsystem: "com.umar.hisplora", category: "proximity")
+private let log = Logger(subsystem: "com.astungkara.hisplora", category: "proximity")
 
 /// The background half of `AD-1`'s location split — region monitoring plus the notification it
 /// produces, for the sidequests a walker has not yet completed (`s3`).
