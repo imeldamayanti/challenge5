@@ -449,29 +449,12 @@ struct KultaraRootView: View {
                     suppressedPlaceIDs: environment.governance.suppressedPlaceIDs),
                 surface: $questSurface,
                 journal: journal,
-                // `FR-SIDE-07` — a way into a sidequest that does not wait for a notification.
-                nearby: nearbySideQuests,
                 makeLocationProvider: environment.makeLocationProvider,
-                onSelect: { startOrResumeRun(questID: $0) },
-                onOpenRun: openRun,
-                onOpenSideQuest: { router.pendingSideQuestID = $0 })
+                onSelect: { startOrResumeRun(questID: $0) })
                 .navigationDestination(item: $runDestination) { destination in
                     runScreen(destination)
                 }
         }
-    }
-
-    private var nearbySideQuests: [NearbySideQuestRow] {
-        // Read so the list is recomputed when a sidequest record changes.
-        _ = sideQuestRevision
-        return NearbySideQuestListViewModel(
-            repository: environment.repository,
-            engine: environment.sideQuestEngine,
-            language: language,
-            // `FR-SIDE-14` — a withdrawn sidequest, or one standing at a withdrawn place,
-            // disappears from every surface.
-            suppressedSideQuestIDs: environment.governance.suppressedSideQuestIDs,
-            suppressedPlaceIDs: environment.governance.suppressedPlaceIDs).rows
     }
 
     private func sideQuestFlow(_ sideQuestID: String) -> some View {
@@ -522,11 +505,9 @@ struct KultaraRootView: View {
                 SealedLettersView(
                     model: model,
                     language: language,
-                    collections: collectionIDs,
                     onOpenPapers: { runID in
                         journalPapers = model.letters.first { $0.id == runID }
-                    },
-                    onOpenCollection: { collectionDestination = $0 })
+                    })
             }
             .toolbar(.hidden, for: .navigationBar)
             // `FR-SIDE-08` — the collection lives in the Journal tab. It stays museum: it is a
@@ -595,13 +576,6 @@ struct KultaraRootView: View {
                 })
         } else {
             Color.clear.onAppear { journalLetter = nil }
-        }
-    }
-
-    private var collectionIDs: [(id: String, title: String)] {
-        _ = sideQuestRevision
-        return ((try? environment.repository.collections()) ?? []).map {
-            (id: $0.id, title: $0.title.value(for: language))
         }
     }
 

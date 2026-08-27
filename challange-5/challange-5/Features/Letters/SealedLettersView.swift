@@ -24,22 +24,15 @@ struct SealedLettersView: View {
     /// Presented by the root rather than here, because the floating tab bar sits above this tab's
     /// own content and a modal underneath it is not a modal.
     let onOpenPapers: (UUID) -> Void
-    /// The letter collections, which live in this tab (`FR-SIDE-08`) and are a museum screen.
-    var collections: [(id: String, title: String)] = []
-    var onOpenCollection: (String) -> Void = { _ in }
 
     init(
         model: SealedLettersViewModel,
         language: ContentLanguage,
-        collections: [(id: String, title: String)] = [],
-        onOpenPapers: @escaping (UUID) -> Void,
-        onOpenCollection: @escaping (String) -> Void = { _ in }
+        onOpenPapers: @escaping (UUID) -> Void
     ) {
         self.model = model
         self.language = language
-        self.collections = collections
         self.onOpenPapers = onOpenPapers
-        self.onOpenCollection = onOpenCollection
     }
 
     var body: some View {
@@ -68,10 +61,12 @@ struct SealedLettersView: View {
 
     // MARK: - Header
 
-    /// The frame's header row is a `justify-between` with one child in it. The second slot is where
-    /// the collections go: they have to be reachable from this tab (`FR-SIDE-08`) and the design
-    /// leaves exactly one place for them — `791:5630` is a hidden instance sitting in exactly that
-    /// slot, so the row is drawn for two children whether or not the frame fills the second.
+    /// The frame's header row carries the screen's label and nothing else. `791:5630` draws a
+    /// second, hidden slot beside it where the collections link used to sit; that link was removed
+    /// at the owner's instruction, so the row is a single child again. The collection is still
+    /// reachable — a finished sidequest hands over to it directly (`SideQuestFlowView`
+    /// → `KultaraRootView.collectionDestination`), which is the one route left to it
+    /// (`FR-SIDE-08`).
     private var header: some View {
         HStack(alignment: .firstTextBaseline) {
             Text(UIStrings.string(.journalSealedHeading, language))
@@ -82,14 +77,6 @@ struct SealedLettersView: View {
                 .foregroundStyle(palette.inkDark.color)
                 .accessibilityAddTraits(.isHeader)
             Spacer(minLength: KultaraMetrics.sm)
-            if let collection = collections.first {
-                Button(UIStrings.string(.journalCollectionsAction, language)) {
-                    onOpenCollection(collection.id)
-                }
-                .font(.system(size: 15, weight: .medium))
-                .foregroundStyle(palette.inkDark.color)
-                .kultaraTapTarget()
-            }
         }
         .padding(.horizontal, KultaraMetrics.xl)
         .padding(.top, KultaraMetrics.lg)

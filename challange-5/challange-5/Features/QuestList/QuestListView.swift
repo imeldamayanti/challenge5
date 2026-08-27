@@ -17,43 +17,29 @@ struct QuestListView: View {
     private let model: QuestListViewModel
     private let mapModel: RegionMapViewModel?
     private let journal: RunJournalSummary
-    /// `FR-SIDE-07` — "Places nearby", the way into a sidequest that does not wait for a
-    /// notification. Empty until `s5` authors any.
-    private let nearby: [NearbySideQuestRow]
     private let makeLocationProvider: (@MainActor () -> any LocationProviding)?
     private let onSelect: (String) -> Void
-    private let onOpenRun: (UUID) -> Void
-    private let onOpenSideQuest: (String) -> Void
 
     /// Owned by whatever presents this screen rather than held here, because the map is full-bleed
     /// and the floating tab bar belongs to the root: the root cannot hide a bar for a surface it
     /// cannot see.
     @Binding private var surface: Surface
     @State private var mapScope: MapScope = .denpasar
-    /// DUMMY / TRY-OUT ONLY — see `DummyGulunganPreviewScreen`. Delete alongside it once the
-    /// gulungan-video review is done.
-    @State private var showsDummyGulunganPreview = false
 
     init(
         model: QuestListViewModel,
         mapModel: RegionMapViewModel? = nil,
         surface: Binding<Surface>,
         journal: RunJournalSummary = .empty,
-        nearby: [NearbySideQuestRow] = [],
         makeLocationProvider: (@MainActor () -> any LocationProviding)? = nil,
-        onSelect: @escaping (String) -> Void,
-        onOpenRun: @escaping (UUID) -> Void = { _ in },
-        onOpenSideQuest: @escaping (String) -> Void = { _ in }
+        onSelect: @escaping (String) -> Void
     ) {
         self.model = model
         self.mapModel = mapModel
         _surface = surface
         self.journal = journal
-        self.nearby = nearby
         self.makeLocationProvider = makeLocationProvider
         self.onSelect = onSelect
-        self.onOpenRun = onOpenRun
-        self.onOpenSideQuest = onOpenSideQuest
     }
 
     private var language: ContentLanguage { model.language }
@@ -75,10 +61,6 @@ struct QuestListView: View {
         // full-bleed. The title above stays set for VoiceOver's rotor and for the back button of
         // whatever pushes on top of this.
         .kultaraHiddenNavigationBar()
-        // DUMMY / TRY-OUT ONLY — see the `showsDummyGulunganPreview` declaration above.
-        .sheet(isPresented: $showsDummyGulunganPreview) {
-            DummyGulunganPreviewScreen()
-        }
     }
 
     @ViewBuilder private var mapSurface: some View {
@@ -216,51 +198,11 @@ struct QuestListView: View {
                     }
                 }
 
-                // `FR-SIDE-07` — sidequests are reachable without waiting for a notification.
-                // Below the catalogue and above the finished walks: a place you happen to be near
-                // is not a planned walk, and it does not outrank one.
-                if !nearby.isEmpty || model.searchText.isEmpty {
-                    NearbySideQuestList(
-                        rows: nearby, language: language, onSelect: onOpenSideQuest)
-                }
-
-                // DUMMY / TRY-OUT ONLY — a temporary way into `DummyGulunganPreviewScreen` to
-                // review the `gulungan.mov` scroll-unroll video. Not a real feature entry point;
-                // remove this button and the sheet below once the review is done.
-                Button("View gulungan (dummy)") { showsDummyGulunganPreview = true }
-                    .buttonStyle(.plain)
-                    .kultaraFont(.body)
-                    .foregroundStyle(palette.seal.color)
-
-                // `FR-DONE-06` — completed walks are listed and re-openable before the Journal
-                // exists. Below the catalogue: these are finished, and they keep.
-                if !journal.completed.isEmpty {
-                    KultaraSectionHeading(UIStrings.string(.homeCompletedHeading, language))
-                    ForEach(journal.completed) { entry in
-                        JournalEntryCard(
-                            heading: UIStrings.string(.summaryHeading, language),
-                            entry: entry,
-                            actionTitle: UIStrings.string(.summaryOpenAction, language),
-                            language: language,
-                            action: { onOpenRun(entry.id) })
-                    }
-                }
-
-                // The footer the header used to carry. The frame's masthead is a title and a search
-                // field and nothing else, so the two things the page still has to say — `AD-3`'s
-                // promise that this works with no network, and what the filler cards are — are said
-                // at the foot instead of being dropped.
-                VStack(alignment: .leading, spacing: KultaraMetrics.sm) {
-                    Text(UIStrings.string(.questListSubtitle, language))
-                    if model.searchText.isEmpty {
-                        Text(UIStrings.string(.homePlaceholderCardsNotice, language))
-                    }
-                    Text(UIStrings.string(.settingsPlaceholderContentNotice, language))
-                }
-                .kultaraFont(.caption)
-                .foregroundStyle(palette.inkMuted.color)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, KultaraMetrics.sm)
+                // Owner instruction, 2026-08-27: nothing but quest cards stands on this screen.
+                // What used to follow them is gone — the nearby-sidequest list (`FR-SIDE-07`),
+                // the dummy gulungan entry, the finished-walks section (`FR-DONE-06`, still
+                // listed in the Journal and on Profile → Quests) and the footer notices about
+                // the offline promise, the filler cards and the sample content.
             }
             .padding(.horizontal, KultaraMetrics.xl)
             .kultaraFloatingTabBarClearance()

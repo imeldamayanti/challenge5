@@ -21,8 +21,16 @@ final class SideQuestFlowUITests: XCTestCase {
     private let correctOptionEN = "Ask, because it may be closed without notice"
     private let awardedLetter = "E"
 
-    override func setUp() {
+    override func setUpWithError() throws {
         continueAfterFailure = false
+        // Owner instruction, 2026-08-27: the quest list carries quest cards and nothing else, so
+        // the "Places near you" list these tests enter through is gone (`FR-SIDE-07`). Nothing
+        // else in the shipped app opens `SideQuestFlowView` from a cold start — the proximity
+        // notification opens the discovery card instead, and the collection screen is reached by
+        // finishing a sidequest — so both tests below have no route in rather than a broken one.
+        // Skipped rather than deleted: they are the only end-to-end cover of the sidequest flow,
+        // and they work again the moment a way in exists.
+        throw XCTSkip("The nearby-sidequest list was removed from the quest list; no entry point.")
     }
 
     private func launch() -> XCUIApplication {
