@@ -265,13 +265,29 @@ The permanent fix needs the user's password, so it is theirs to run, not yours: 
 ### Walking a quest without walking
 
 A quest starts only inside its first checkpoint's radius (`FR-START-08`), which makes the run loop
-untestable from a desk. Debug builds carry a switch — **Settings → Developer tools → Simulate arrival
-anywhere** — that reports a position at the next checkpoint. The arrival rule still runs on it: the
-radius and accuracy gate in `ArrivalEvaluator` is unmodified, so what gets exercised is the walker's
-code path with a different input. The switch (`Services/LocationService.swift`), its provider, and the
-Settings section (`Features/Settings/DeveloperToolsSection.swift`) are all inside `#if DEBUG`; a release
-build does not contain them, which is verifiable by grepping the Release binary for
-`SimulatedLocationProvider`.
+untestable from a desk. Debug **and TestFlight** builds carry a switch — **Settings → Developer tools →
+Simulate arrival anywhere** — that reports a position at the next checkpoint. The arrival rule still
+runs on it: the radius and accuracy gate in `ArrivalEvaluator` is unmodified, so what gets exercised is
+the walker's code path with a different input.
+
+**As of 2026-08-27 the gate is two-part, because a TestFlight tester is not in Denpasar either.** The
+switch (`Services/LocationService.swift`), its provider, and the Settings section
+(`Features/Settings/DeveloperToolsSection.swift`) are behind `#if KULTARA_DEV_TOOLS`, which the app
+target sets in **both** Debug and Release (`SWIFT_ACTIVE_COMPILATION_CONDITIONS`) — so the code
+survives an archive and `SimulatedLocationProvider` *is* now in the Release binary. What keeps it out
+of a published build is the second half: `Services/DeveloperToolsAvailability.swift` reads
+`Bundle.main.appStoreReceiptURL`, and everything is reachable only when that receipt is named
+`sandboxReceipt` (TestFlight) or the build is Debug. An App Store install carries `receipt`, so the
+Settings section does not render and `DeveloperPreferences.simulatesArrivalAnywhere` answers `false`
+whatever is stored — which also means a flag left on by a TestFlight build cannot carry into an App
+Store one on the same device. Release acceptance criterion 13 is therefore met at runtime rather than
+by the linker, and grepping the Release binary is **no longer** the way to check it.
+
+Two consequences worth knowing: the receipt test is untestable from a desk — a simulator has no
+receipt and answers `false` outside Debug, so the TestFlight path is only ever proved by installing a
+TestFlight build — and only the **arrival** switch ships that far. The sidequest-proximity and
+notification buttons in the same section stay `#if DEBUG`, because they force OS-level behaviour that
+is only meaningful next to a debugger.
 
 ## The specs are authoritative
 

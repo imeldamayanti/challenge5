@@ -3,15 +3,20 @@ import DesignSystem
 import SwiftUI
 import UIStringsKit
 
-#if DEBUG
-/// Debug builds only.
+#if KULTARA_DEV_TOOLS
+/// Debug and TestFlight builds only.
 ///
 /// `FR-START-08` says a quest must not be startable from outside its start radius *by any path*,
 /// and release acceptance criterion 13 tests exactly that. This switch does not weaken it: the
-/// whole section, and the provider it drives, are inside `#if DEBUG`, so a release build contains
-/// no code that could reach it. What it changes is where the app thinks it is — the radius and
-/// accuracy gate in `ArrivalEvaluator` still runs, unmodified, which is the point. A bypass that
-/// skipped the gate would test a code path no walker ever takes.
+/// whole section, and the provider it drives, are inside `#if KULTARA_DEV_TOOLS`, and the call site
+/// additionally asks `DeveloperToolsAvailability.isEnabled` — `false` in an App Store install — so
+/// a published build contains no path a walker could reach. What it changes is where the app thinks
+/// it is — the radius and accuracy gate in `ArrivalEvaluator` still runs, unmodified, which is the
+/// point. A bypass that skipped the gate would test a code path no walker ever takes.
+///
+/// The arrival switch is the half a TestFlight tester needs: they are reviewing a walk around
+/// Denpasar from wherever they are. The sidequest-proximity and notification buttons below it stay
+/// `#if DEBUG`, because they force OS-level behaviour that is only meaningful next to a debugger.
 ///
 /// A view of its own rather than a computed property on `SettingsView`, because the switch needs
 /// `@AppStorage` and only a view can hold one. A hand-rolled `Binding` over `UserDefaults` reads
@@ -42,12 +47,15 @@ struct DeveloperToolsSection: View {
                     .foregroundStyle(palette.warning.color)
                     .fixedSize(horizontal: false, vertical: true)
 
+                #if DEBUG
                 KultaraRule()
                 simulatePassingSection
+                #endif
             }
         }
     }
 
+    #if DEBUG
     /// `s3` §8 — fires the same `didEnterRegion` handler `SystemProximityMonitor` uses for a real
     /// region entry. The position is simulated; `ProximityGate` — quiet hours, the cooldown, the
     /// daily cap — is not.
@@ -119,5 +127,6 @@ struct DeveloperToolsSection: View {
             }
         }
     }
+    #endif
 }
 #endif

@@ -125,10 +125,12 @@ final class SystemLocationProvider: NSObject, LocationProviding, CLLocationManag
 
 // MARK: - Developer simulation
 
-#if DEBUG
+#if KULTARA_DEV_TOOLS
 /// Places the walker exactly where the next checkpoint is, so the quest loop can be walked from a
-/// desk. Debug builds only — the whole type is behind `#if DEBUG`, so a release build does not
-/// contain it and `FR-START-08` cannot be reached through it.
+/// desk. Debug and TestFlight builds only — the whole type is behind `#if KULTARA_DEV_TOOLS`, which
+/// the app target sets on Debug and Release, and the switch that reaches it additionally asks
+/// `DeveloperToolsAvailability.isEnabled`, which is `false` in an App Store install. So an App Store
+/// build reaches none of this and `FR-START-08` cannot be walked around there.
 ///
 /// It is a `LocationProviding` rather than a shortcut around the gate on purpose: the arrival rule
 /// in `ArrivalEvaluator` still runs, still checks radius and accuracy, and still records
@@ -173,10 +175,13 @@ final class SimulatedLocationProvider: LocationProviding {
     }
 }
 
-/// The debug-only switch that decides which provider the app uses.
+/// The developer switch that decides which provider the app uses.
 ///
 /// Stored in `UserDefaults` rather than in `AppPreferencesStore`: this is not a user preference and
-/// must not appear in the schema that ships, get synced in v2, or survive into a release build.
+/// must not appear in the schema that ships or get synced in v2.
+///
+/// The getter answers `false` whatever is stored unless `DeveloperToolsAvailability.isEnabled`, so a
+/// flag left set by a TestFlight build cannot carry into an App Store one on the same device.
 @MainActor
 enum DeveloperPreferences {
 
@@ -185,7 +190,10 @@ enum DeveloperPreferences {
     nonisolated static let simulateArrivalKey = "kultara.debug.simulateArrivalAnywhere"
 
     static var simulatesArrivalAnywhere: Bool {
-        get { UserDefaults.standard.bool(forKey: simulateArrivalKey) }
+        get {
+            DeveloperToolsAvailability.isEnabled
+                && UserDefaults.standard.bool(forKey: simulateArrivalKey)
+        }
         set { UserDefaults.standard.set(newValue, forKey: simulateArrivalKey) }
     }
 }
